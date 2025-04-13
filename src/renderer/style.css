@@ -21,4 +21,23 @@ body {
   height: 100vh;
   display: flex;
   flex-direction: column;
+}
+
+/* Custom scrollbar styles */
+.modal-box::-webkit-scrollbar {
+  width: 8px;
+}
+
+.modal-box::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.1);
+  border-radius: 10px;
+}
+
+.modal-box::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+}
+
+.modal-box::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.2);
 } 

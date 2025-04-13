@@ -1,5 +1,5 @@
 <template>
-  <div v-if="message" class="fixed bottom-4 right-4 z-50 max-w-sm">
+  <div v-if="message" class="fixed bottom-4 right-4 z-[9999] max-w-sm">
     <div :class="['alert', alertClass]">
       <span>{{ message }}</span>
       <button @click="close" class="btn btn-ghost btn-sm btn-circle">✕</button>

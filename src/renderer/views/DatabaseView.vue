@@ -57,42 +57,14 @@
     </div>
 
     <div class="flex flex-1 overflow-hidden">
-      <div class="w-64 bg-sidebar border-r border-gray-800 flex flex-col" :style="{ width: sidebarWidth + 'px' }">
-        <div class="p-3 border-b border-gray-800">
-          <div class="relative">
-            <input type="text" placeholder="Search tables..." 
-              class="input input-sm input-bordered w-full bg-base-300 pl-9" 
-              v-model="searchTerm" />
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" 
-              stroke="currentColor" class="w-5 h-5 absolute left-2 top-1/2 transform -translate-y-1/2 text-gray-400">
-              <path stroke-linecap="round" stroke-linejoin="round" 
-                d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
-            </svg>
-          </div>
-        </div>
-
-        <div class="overflow-y-auto flex-1">
-          <div v-if="isLoading" class="p-4 text-center">
-            <span class="loading loading-spinner loading-md"></span>
-          </div>
-          
-          <ul v-else class="menu menu-sm">
-            <li v-for="table in filteredTables" :key="table.name" class="hover:bg-base-300">
-              <a @click="openTable(table)" :class="{ 'bg-base-300': isTableActive(table.name) }">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" 
-                  stroke="currentColor" class="w-4 h-4">
-                  <path stroke-linecap="round" stroke-linejoin="round" 
-                    d="M3.375 19.5h17.25m-17.25 0a1.125 1.125 0 01-1.125-1.125M3.375 19.5h7.5c.621 0 1.125-.504 1.125-1.125m-9.75 0V5.625m0 12.75v-1.5c0-.621.504-1.125 1.125-1.125m18.375 2.625V5.625m0 12.75c0 .621-.504 1.125-1.125 1.125m1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125m0 3.75h-7.5A1.125 1.125 0 0112 18.375m9.75-12.75c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125m19.5 0v1.5c0 .621-.504 1.125-1.125 1.125M2.25 5.625v1.5c0 .621.504 1.125 1.125 1.125m0 0h17.25m-17.25 0h7.5c.621 0 1.125.504 1.125 1.125M3.375 8.25c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125m1.125-3.75H3.375m0 0h1.125m0 0h7.5c.621 0 1.125.504 1.125 1.125M3.375 8.25h7.5c.621 0 1.125.504 1.125 1.125m-9.75 0v1.5m0-1.5h18.75m0 1.5c0 .621-.504 1.125-1.125 1.125m1.125-1.125v-1.5m0 0h-1.5m-16.5-3.75v-1.5m0 0c0-.621.504-1.125 1.125-1.125h15.75c.621 0 1.125.504 1.125 1.125v1.5m-16.5 0h16.5m-16.5 0h1.5m-1.5 0h-1.5m-12 3.75H15m-12.75 0h1.5m-1.5 0H1.5m3.75 0h16.5" />
-                </svg>
-                <span class="truncate">{{ table.name }}</span>
-                <span class="badge badge-sm">{{ table.columnCount }}</span>
-              </a>
-            </li>
-          </ul>
-        </div>
-      </div>
-
-      <div class="resize-handle cursor-col-resize" @mousedown="startResize" />
+      <TablesSidebar 
+        :connectionId="connectionId"
+        :activeTabName="activeTab?.tableName"
+        :sidebarWidth="sidebarWidth"
+        @resize-start="startResize"
+        @table-open="openTable"
+        @update:sidebarWidth="sidebarWidth = $event"
+      />
 
       <div class="flex-1 bg-base-100 overflow-hidden">
         <div v-if="!activeTab" class="flex items-center justify-center h-full text-gray-500">
@@ -125,6 +97,16 @@
       </div>
     </footer>
   </div>
+
+  <div class="modal" :class="{ 'modal-open': connectionError }">
+    <div class="modal-box bg-base-300">
+      <h3 class="font-bold text-lg">Connection Error</h3>
+      <p class="py-4">{{ connectionErrorMessage }}</p>
+      <div class="modal-action">
+        <button class="btn btn-primary" @click="goBack">Back to Home</button>
+      </div>
+    </div>
+  </div>
 </template>
 
 <script setup>
@@ -134,6 +116,7 @@ import {useConnectionsStore} from '@/store/connections';
 import {useDatabaseStore} from '@/store/database';
 import {useTabsStore} from '@/store/tabs';
 import TableContent from '../components/TableContent.vue';
+import TablesSidebar from '../components/TablesSidebar.vue';
 
 const TableContentComponent = markRaw(TableContent);
 
@@ -147,31 +130,20 @@ const connectionsStore = useConnectionsStore();
 const databaseStore = useDatabaseStore();
 const tabsStore = useTabsStore();
 
-const searchTerm = ref('');
 const sidebarWidth = ref(240);
 const isResizing = ref(false);
+const connectionError = ref(false);
+const connectionErrorMessage = ref('');
 
 const connection = computed(() => {
   return connectionsStore.getConnection(connectionId.value);
 });
 
-const isLoading = computed(() => databaseStore.isLoading);
-const tables = computed(() => databaseStore.tablesList);
-const totalTables = computed(() => tables.value.length);
-
-const filteredTables = computed(() => {
-  if (!searchTerm.value) return tables.value;
-  const term = searchTerm.value.toLowerCase();
-  return tables.value.filter(table => table.name.toLowerCase().includes(term));
-});
+const totalTables = computed(() => databaseStore.tablesList.length);
 
 const openTabs = computed(() => tabsStore.openTabs);
 const activeTabId = computed(() => tabsStore.activeTabId);
 const activeTab = computed(() => tabsStore.activeTab);
-
-function isTableActive(tableName) {
-  return activeTab.value && activeTab.value.tableName === tableName;
-}
 
 function openTable(table) {
   try {
@@ -222,22 +194,58 @@ function stopResize() {
   document.removeEventListener('mouseup', stopResize);
 }
 
+async function testConnection() {
+  if (!connection.value) {
+    connectionError.value = true;
+    connectionErrorMessage.value = 'Connection not found';
+    return false;
+  }
+
+  try {
+    const testResult = await window.api.testMySQLConnection({
+      host: connection.value.host,
+      port: connection.value.port,
+      username: connection.value.username,
+      password: connection.value.password,
+      database: connection.value.database
+    });
+
+    if (!testResult.success) {
+      connectionError.value = true;
+      connectionErrorMessage.value = `Failed to connect to database: ${testResult.message}`;
+      return false;
+    }
+
+    return true;
+  } catch (error) {
+    connectionError.value = true;
+    connectionErrorMessage.value = `Error testing connection: ${error.message}`;
+    return false;
+  }
+}
+
 onMounted(async () => {
   try {
     await tabsStore.loadSavedTabs();
 
     if (!connection.value) {
-      showAlert('Connection not found', 'error');
-      await router.push('/');
+      connectionError.value = true;
+      connectionErrorMessage.value = 'Connection not found';
       return;
     }
     
+    const connectionValid = await testConnection();
+    if (!connectionValid) {
+      return;
+    }
+
     showAlert(`Connected to ${connection.value.name}`, 'success');
     await databaseStore.loadTables(connectionId.value);
     
   } catch (error) {
     console.error(error);
-    showAlert(error.message, 'error');
+    connectionError.value = true;
+    connectionErrorMessage.value = error.message || 'Unknown error occurred';
   }
 });
 
@@ -258,17 +266,6 @@ function getConnectionColor(type) {
 </script>
 
 <style scoped>
-.resize-handle {
-  width: 5px;
-  background-color: #2d2d30;
-  cursor: col-resize;
-  transition: background-color 0.2s;
-}
-
-.resize-handle:hover {
-  background-color: #4e4e50;
-}
-
 .no-scrollbar {
   scrollbar-width: none;
   -ms-overflow-style: none;
