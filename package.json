@@ -1,0 +1,64 @@
+{
+  "name": "larabase",
+  "version": "1.0.0",
+  "description": "Database management tool like TablePlus",
+  "main": "src/main/index.js",
+  "scripts": {
+    "start": "vite",
+    "dev": "vite",
+    "electron": "wait-on tcp:5173 && cross-env NODE_ENV=development electron .",
+    "dev:all": "concurrently -k \"npm run dev\" \"npm run electron\"",
+    "build": "vite build && electron-builder",
+    "build:vite": "vite build",
+    "build:electron": "electron-builder"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "daisyui": "^3.9.3",
+    "electron-store": "^8.1.0",
+    "pinia": "^2.1.6",
+    "tailwindcss": "^3.3.3",
+    "vue": "^3.3.4",
+    "vue-router": "^4.2.4"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^4.3.4",
+    "autoprefixer": "^10.4.15",
+    "concurrently": "^8.2.2",
+    "cross-env": "^7.0.3",
+    "electron": "^26.1.0",
+    "electron-builder": "^24.6.4",
+    "electron-reload": "^2.0.0-alpha.1",
+    "postcss": "^8.4.29",
+    "vite": "^4.4.9",
+    "wait-on": "^8.0.3"
+  },
+  "build": {
+    "appId": "com.larabase.app",
+    "productName": "Larabase",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "dist/**/*",
+      "src/main/**/*"
+    ],
+    "mac": {
+      "category": "public.app-category.developer-tools"
+    },
+    "win": {
+      "target": [
+        "nsis"
+      ]
+    },
+    "linux": {
+      "target": [
+        "AppImage",
+        "deb"
+      ],
+      "category": "Development"
+    }
+  }
+}

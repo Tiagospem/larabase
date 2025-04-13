@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200" viewBox="0 0 200 200">
+  <defs>
+    <clipPath id="clip-path">
+      <rect width="100" height="100" fill="none"/>
+    </clipPath>
+  </defs>
+  <!-- Fundo vermelho -->
+  <rect width="200" height="200" fill="#FF2D20"/>
+  <!-- Ícone do Laravel (simplificado) -->
+  <path d="M90,40 L110,40 L150,140 L130,140 L90,40 Z M70,40 L50,80 L90,120 L60,140 L20,60 L70,40 Z" fill="#FFFFFF"/>
+  <!-- Ícone de banco de dados -->
+  <ellipse cx="115" cy="150" rx="40" ry="15" fill="#FFFFFF"/>
+  <path d="M75,130 Q75,100 115,100 Q155,100 155,130" stroke="#FFFFFF" stroke-width="6" fill="none"/>
+  <path d="M75,150 Q75,180 115,180 Q155,180 155,150" stroke="#FFFFFF" stroke-width="6" fill="none"/>
+</svg> 
