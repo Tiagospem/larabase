@@ -71,19 +71,21 @@ export const useConnectionsStore = defineStore('connections', () => {
           if (savedConnections && savedConnections.length) {
             connections.value = savedConnections;
           } else {
-            connections.value = [...mockConnections];
+            connections.value = [];
           }
         } catch (err) {
-          connections.value = [...mockConnections];
+          console.error('Error loading connections:', err);
+          connections.value = [];
         }
       } else {
-        connections.value = [...mockConnections];
+        console.warn('API not available, unable to load connections');
+        connections.value = [];
       }
       
       return connections.value;
     } catch (error) {
-      console.error(error);
-      connections.value = [...mockConnections];
+      console.error('Error in loadConnections:', error);
+      connections.value = [];
       return connections.value;
     } finally {
       isLoading.value = false;
@@ -96,7 +98,7 @@ export const useConnectionsStore = defineStore('connections', () => {
         await window.api.saveConnections(connections.value);
       }
     } catch (error) {
-      console.error(error);
+      console.error('Error saving connections:', error);
     }
   }
 
@@ -138,9 +140,9 @@ export const useConnectionsStore = defineStore('connections', () => {
     connections,
     isLoading,
     loadConnections,
-    // addConnection,
-    // removeConnection,
-    // updateConnection,
+    addConnection,
+    removeConnection,
+    updateConnection,
     getConnection
   };
 }); 

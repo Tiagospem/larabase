@@ -1,6 +1,7 @@
-const { app, BrowserWindow, ipcMain, globalShortcut } = require('electron');
+const { app, BrowserWindow, ipcMain, globalShortcut, dialog } = require('electron');
 const path = require('path');
 const Store = require('electron-store');
+const fs = require('fs');
 
 const store = new Store();
 
@@ -115,4 +116,76 @@ ipcMain.handle('get-open-tabs', () => {
 ipcMain.handle('save-open-tabs', (event, tabData) => {
   store.set('openTabs', tabData);
   return true;
+});
+
+// Selecionar diretório
+ipcMain.handle('select-directory', async () => {
+  try {
+    const result = await dialog.showOpenDialog(mainWindow, {
+      properties: ['openDirectory']
+    });
+    return result;
+  } catch (error) {
+    console.error('Error selecting directory:', error);
+    throw error;
+  }
+});
+
+// Validar se é um projeto Laravel
+ipcMain.handle('validate-laravel-project', async (event, projectPath) => {
+  try {
+    // Verificar se existe o .env, artisan e composer.json
+    const hasEnv = fs.existsSync(path.join(projectPath, '.env'));
+    const hasArtisan = fs.existsSync(path.join(projectPath, 'artisan'));
+    const hasComposerJson = fs.existsSync(path.join(projectPath, 'composer.json'));
+    
+    // Se tiver os três arquivos, é provável que seja um projeto Laravel
+    return hasEnv && hasArtisan && hasComposerJson;
+  } catch (error) {
+    console.error('Error validating Laravel project:', error);
+    return false;
+  }
+});
+
+// Ler arquivo .env e extrair configurações
+ipcMain.handle('read-env-file', async (event, projectPath) => {
+  try {
+    const envPath = path.join(projectPath, '.env');
+    
+    if (!fs.existsSync(envPath)) {
+      console.error('.env file not found at:', envPath);
+      return null;
+    }
+    
+    const envContent = fs.readFileSync(envPath, 'utf8');
+    const envConfig = {};
+    
+    // Processar cada linha do arquivo .env
+    envContent.split('\n').forEach(line => {
+      // Ignorar comentários e linhas vazias
+      if (line.startsWith('#') || line.trim() === '') {
+        return;
+      }
+      
+      // Extrair chave e valor (format: KEY=VALUE)
+      const match = line.match(/^\s*([\w.-]+)\s*=\s*(.*)?\s*$/);
+      if (match) {
+        const key = match[1];
+        let value = match[2] || '';
+        
+        // Remover aspas se presentes
+        if (value.startsWith('"') && value.endsWith('"')) {
+          value = value.slice(1, -1);
+        }
+        
+        envConfig[key] = value;
+      }
+    });
+    
+    console.log('Extracted env config:', JSON.stringify(envConfig, null, 2));
+    return envConfig;
+  } catch (error) {
+    console.error('Error reading .env file:', error);
+    return null;
+  }
 }); 
