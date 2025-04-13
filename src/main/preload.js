@@ -20,7 +20,8 @@ try {
       selectDirectory: () => safeIpcRenderer.invoke('select-directory'),
       validateLaravelProject: (projectPath) => safeIpcRenderer.invoke('validate-laravel-project', projectPath),
       readEnvFile: (projectPath) => safeIpcRenderer.invoke('read-env-file', projectPath),
-      testMySQLConnection: (config) => safeIpcRenderer.invoke('test-mysql-connection', config)
+      testMySQLConnection: (config) => safeIpcRenderer.invoke('test-mysql-connection', config),
+      listTables: (config) => safeIpcRenderer.invoke('list-tables', config)
     }
   );
 } catch (error) {

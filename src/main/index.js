@@ -242,4 +242,61 @@ ipcMain.handle('test-mysql-connection', async (event, config) => {
       }
     }
   }
+});
+
+ipcMain.handle('list-tables', async (event, config) => {
+  let connection;
+
+  try {
+    if (!config.host || !config.port || !config.username || !config.database) {
+      return { 
+        success: false, 
+        message: 'Missing connection parameters',
+        tables: []
+      };
+    }
+
+    connection = await mysql.createConnection({
+      host: config.host,
+      port: config.port,
+      user: config.username,
+      password: config.password || '',
+      database: config.database,
+      connectTimeout: 10000
+    });
+
+    const [rows] = await connection.query(`
+      SELECT 
+        table_name as name, 
+        COUNT(*) as columnCount
+      FROM 
+        information_schema.columns 
+      WHERE 
+        table_schema = ? 
+      GROUP BY 
+        table_name
+      ORDER BY 
+        table_name ASC
+    `, [config.database]);
+    
+    return { 
+      success: true, 
+      tables: rows
+    };
+  } catch (error) {
+    console.error('Error listing tables:', error);
+    return { 
+      success: false, 
+      message: error.message || 'Failed to list tables from database',
+      tables: []
+    };
+  } finally {
+    if (connection) {
+      try {
+        await connection.end();
+      } catch (err) {
+        console.error('Error closing MySQL connection:', err);
+      }
+    }
+  }
 }); 

@@ -1,9 +1,11 @@
 import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
+import { useConnectionsStore } from './connections';
 
 export const useDatabaseStore = defineStore('database', () => {
   const tables = ref({});
   const isLoading = ref(false);
+  const usedConnectionsStore = useConnectionsStore;
 
   const mockDatabases = {
     1: {
@@ -122,15 +124,39 @@ export const useDatabaseStore = defineStore('database', () => {
   async function loadTables(connectionId) {
     isLoading.value = true;
     try {
-      await new Promise(resolve => setTimeout(resolve, 300));
+      const connection = usedConnectionsStore().getConnection(connectionId);
       
-      if (mockDatabases[connectionId]) {
-        tables.value = mockDatabases[connectionId];
+      if (!connection) {
+        console.error("Connection not found");
+        tables.value = { tables: [] };
+        return;
+      }
+
+      if (connection.type !== 'mysql') {
+        if (mockDatabases[connectionId]) {
+          tables.value = mockDatabases[connectionId];
+        } else {
+          tables.value = { tables: [] };
+        }
+        return;
+      }
+
+      const result = await window.api.listTables({
+        host: connection.host,
+        port: connection.port,
+        username: connection.username,
+        password: connection.password,
+        database: connection.database
+      });
+      
+      if (result.success && result.tables) {
+        tables.value = { tables: result.tables };
       } else {
+        console.error("Failed to load tables:", result.message);
         tables.value = { tables: [] };
       }
     } catch (error) {
-      console.error(error);
+      console.error("Error loading tables:", error);
       tables.value = { tables: [] };
     } finally {
       isLoading.value = false;
