@@ -104,7 +104,7 @@ export const useTabsStore = defineStore('tabs', () => {
       console.error(error);
     }
   }
-  
+
   const activeTab = computed(() => {
     return openTabs.value.find(tab => tab.id === activeTabId.value) || null;
   });

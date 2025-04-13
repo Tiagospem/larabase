@@ -1,6 +1,5 @@
 <template>
   <div class="flex flex-col h-full">
-    <!-- Header com informações do banco -->
     <header class="bg-neutral px-4 py-2 border-b border-gray-800 flex items-center justify-between">
       <div class="flex items-center">
         <button class="btn btn-ghost btn-sm mr-2" @click="goBack">
@@ -40,7 +39,6 @@
       </div>
     </header>
 
-    <!-- Tabs para navegar entre tabelas abertas -->
     <div v-if="openTabs.length > 0" class="bg-base-300 px-2 pt-1 border-b border-gray-800 flex items-center overflow-x-auto">
       <div v-for="tab in openTabs" :key="tab.id" 
         :class="['tab', 'tab-bordered', 'px-4', 'py-2', 'rounded-t-md', 'mr-1', 'flex', 'items-center', 'gap-2', 
@@ -56,11 +54,8 @@
       </div>
     </div>
 
-    <!-- Main content area -->
     <div class="flex flex-1 overflow-hidden">
-      <!-- Sidebar com lista de tabelas -->
       <div class="w-64 bg-sidebar border-r border-gray-800 flex flex-col" :style="{ width: sidebarWidth + 'px' }">
-        <!-- Search box -->
         <div class="p-3 border-b border-gray-800">
           <div class="relative">
             <input type="text" placeholder="Search tables..." 
@@ -73,8 +68,7 @@
             </svg>
           </div>
         </div>
-        
-        <!-- Tables list -->
+
         <div class="overflow-y-auto flex-1">
           <div v-if="isLoading" class="p-4 text-center">
             <span class="loading loading-spinner loading-md"></span>
@@ -95,11 +89,9 @@
           </ul>
         </div>
       </div>
-      
-      <!-- Resize handle -->
+
       <div class="resize-handle cursor-col-resize" @mousedown="startResize" />
-      
-      <!-- Table content area -->
+
       <div class="flex-1 bg-base-100 overflow-hidden">
         <div v-if="!activeTab" class="flex items-center justify-center h-full text-gray-500">
           <div class="text-center">
@@ -108,7 +100,7 @@
               <path stroke-linecap="round" stroke-linejoin="round" 
                 d="M3.375 19.5h17.25m-17.25 0a1.125 1.125 0 01-1.125-1.125M3.375 19.5h7.5c.621 0 1.125-.504 1.125-1.125m-9.75 0V5.625m0 12.75v-1.5c0-.621.504-1.125 1.125-1.125m18.375 2.625V5.625m0 12.75c0 .621-.504 1.125-1.125 1.125m1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125m0 3.75h-7.5A1.125 1.125 0 0112 18.375m9.75-12.75c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125m19.5 0v1.5c0 .621-.504 1.125-1.125 1.125M2.25 5.625v1.5c0 .621.504 1.125 1.125 1.125m0 0h17.25m-17.25 0h7.5c.621 0 1.125.504 1.125 1.125M3.375 8.25c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125m1.125-3.75H3.375m0 0h1.125m0 0h7.5c.621 0 1.125.504 1.125 1.125M3.375 8.25h7.5c.621 0 1.125.504 1.125 1.125m-9.75 0v1.5m0-1.5h18.75m0 1.5c0 .621-.504 1.125-1.125 1.125m1.125-1.125v-1.5m0 0h-1.5m-16.5-3.75v-1.5m0 0c0-.621.504-1.125 1.125-1.125h15.75c.621 0 1.125.504 1.125 1.125v1.5m-16.5 0h16.5m-16.5 0h1.5m-1.5 0h-1.5m-12 3.75H15m-12.75 0h1.5m-1.5 0H1.5m3.75 0h16.5" />
             </svg>
-            <p>Selecione uma tabela para visualizar seu conteúdo</p>
+            <p>Select a table</p>
           </div>
         </div>
         
@@ -120,7 +112,6 @@
       </div>
     </div>
 
-    <!-- Status bar -->
     <footer class="bg-neutral px-4 py-1 text-xs text-gray-400 border-t border-gray-800">
       <div class="flex justify-between">
         <div>{{ connection?.type.toUpperCase() }} | {{ connection?.host || connection?.path }}</div>
@@ -131,111 +122,77 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch, inject } from 'vue';
-import { useRoute, useRouter } from 'vue-router';
-import { useConnectionsStore } from '../store/connections';
-import { useDatabaseStore } from '../store/database';
-import { useTabsStore } from '../store/tabs';
+import {computed, inject, onMounted, ref} from 'vue';
+import {useRoute, useRouter} from 'vue-router';
+import {useConnectionsStore} from '@/store/connections';
+import {useDatabaseStore} from '@/store/database';
+import {useTabsStore} from '@/store/tabs';
 import TableContent from '../components/TableContent.vue';
 
-// Router
 const route = useRoute();
 const router = useRouter();
 const connectionId = computed(() => parseInt(route.params.id, 10));
 
-// Funções de alerta
 const showAlert = inject('showAlert');
 
-// Stores
 const connectionsStore = useConnectionsStore();
 const databaseStore = useDatabaseStore();
 const tabsStore = useTabsStore();
 
-// Estado local
 const searchTerm = ref('');
-const sidebarWidth = ref(240); // Largura inicial do sidebar
+const sidebarWidth = ref(240);
 const isResizing = ref(false);
 
-// Conexão atual
 const connection = computed(() => {
-  const conn = connectionsStore.getConnection(connectionId.value);
-  console.log('Conexão atual:', conn);
-  return conn;
+  return connectionsStore.getConnection(connectionId.value);
 });
 
-// Tabelas disponíveis
 const isLoading = computed(() => databaseStore.isLoading);
 const tables = computed(() => databaseStore.tablesList);
 const totalTables = computed(() => tables.value.length);
 
-// Filtragem de tabelas por busca
 const filteredTables = computed(() => {
   if (!searchTerm.value) return tables.value;
   const term = searchTerm.value.toLowerCase();
   return tables.value.filter(table => table.name.toLowerCase().includes(term));
 });
 
-// Abas abertas
 const openTabs = computed(() => tabsStore.openTabs);
 const activeTabId = computed(() => tabsStore.activeTabId);
 const activeTab = computed(() => tabsStore.activeTab);
 
-// Log para debug
-watch(connection, (newVal) => {
-  console.log('Conexão alterada:', newVal);
-}, { immediate: true });
-
-watch(tables, (newVal) => {
-  console.log('Tabelas carregadas:', newVal);
-  showAlert(`${newVal.length} tabelas carregadas`, 'success');
-}, { immediate: true });
-
-// Verificar se uma tabela está ativa
 function isTableActive(tableName) {
   return activeTab.value && activeTab.value.tableName === tableName;
 }
 
-// Abrir uma tabela
 function openTable(table) {
   try {
-    console.log('Abrindo tabela:', table);
-    const tab = tabsStore.addTab({
+    tabsStore.addTab({
       connectionId: connectionId.value,
       tableName: table.name,
       columnCount: table.columnCount
     });
-    console.log('Tab criada:', tab);
-    showAlert(`Tabela ${table.name} aberta`, 'success');
   } catch (error) {
-    console.error('Erro ao abrir tabela:', error);
-    showAlert(`Erro ao abrir tabela: ${error.message}`, 'error');
+    console.error(error);
   }
 }
 
-// Ativar uma aba
 function activateTab(tabId) {
-  console.log('Ativando aba:', tabId);
   tabsStore.activateTab(tabId);
 }
 
-// Fechar uma aba
 function closeTab(tabId) {
-  console.log('Fechando aba:', tabId);
   tabsStore.removeTab(tabId);
 }
 
-// Atualizar dados da aba
 function handleUpdateTabData(tabId, data) {
-  console.log('Atualizando dados da aba:', tabId, data);
   tabsStore.updateTabData(tabId, data);
 }
 
-// Voltar para a página inicial
 function goBack() {
   router.push('/');
 }
 
-// Redimensionamento do sidebar
 function startResize(e) {
   isResizing.value = true;
   document.addEventListener('mousemove', onResize);
@@ -244,9 +201,7 @@ function startResize(e) {
 
 function onResize(e) {
   if (isResizing.value) {
-    // Limitar tamanho mínimo e máximo
-    const newWidth = Math.max(160, Math.min(500, e.clientX));
-    sidebarWidth.value = newWidth;
+    sidebarWidth.value = Math.max(160, Math.min(500, e.clientX));
   }
 }
 
@@ -256,36 +211,28 @@ function stopResize() {
   document.removeEventListener('mouseup', stopResize);
 }
 
-// Inicialização
 onMounted(async () => {
-  console.log('DatabaseView montado, ID da conexão:', connectionId.value);
-  
   try {
-    // Carregar abas salvas
     await tabsStore.loadSavedTabs();
-    console.log('Abas carregadas:', tabsStore.openTabs);
-    
+
     if (!connection.value) {
-      console.error('Conexão não encontrada:', connectionId.value);
-      showAlert('Conexão não encontrada', 'error');
-      // Se a conexão não existir, voltar para a home
-      router.push('/');
+      console.error(connectionId.value);
+      showAlert('Connection not found', 'error');
+
+      await router.push('/');
       return;
     }
     
-    showAlert(`Conectado a ${connection.value.name}`, 'success');
-    
-    // Carregar tabelas do banco de dados
+    showAlert(`Connection to a ${connection.value.name}`, 'success');
+
     await databaseStore.loadTables(connectionId.value);
-    console.log('Tabelas carregadas:', databaseStore.tablesList);
     
   } catch (error) {
-    console.error('Erro na inicialização:', error);
-    showAlert(`Erro: ${error.message}`, 'error');
+    console.error(error);
+    showAlert(error.message, 'error');
   }
 });
 
-// Cores para cada tipo de conexão
 function getConnectionColor(type) {
   switch (type) {
     case 'mysql':
