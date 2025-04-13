@@ -117,8 +117,8 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, inject } from 'vue';
-import { useDatabaseStore } from '@/store/database';
+import {computed, inject, onMounted, ref} from 'vue';
+import {useDatabaseStore} from '@/store/database';
 
 const showAlert = inject('showAlert');
 
@@ -170,90 +170,8 @@ async function loadStructure() {
   loadError.value = null;
   
   try {
-    // In a real application, implement this method in the database store
-    // For now, we'll use mock data since we don't have the actual implementation
-    
-    // Mock data - replace with actual API call
-    await new Promise(resolve => setTimeout(resolve, 500)); // Simulate loading
-    
-    // This would be the actual API call in a real application:
-    // const structure = await databaseStore.getTableStructure(props.connectionId, props.tableName);
-    
-    // Mock structure data
-    const structure = [
-      {
-        name: 'id',
-        type: 'int(10) unsigned',
-        nullable: false,
-        default: null,
-        primary_key: true,
-        foreign_key: false,
-        unique: false,
-        extra: 'auto_increment'
-      },
-      {
-        name: 'name',
-        type: 'varchar(255)',
-        nullable: false,
-        default: null,
-        primary_key: false,
-        foreign_key: false,
-        unique: false,
-        extra: ''
-      },
-      {
-        name: 'email',
-        type: 'varchar(255)',
-        nullable: false,
-        default: null,
-        primary_key: false,
-        foreign_key: false,
-        unique: true,
-        extra: ''
-      },
-      {
-        name: 'password',
-        type: 'varchar(255)',
-        nullable: false,
-        default: null,
-        primary_key: false,
-        foreign_key: false,
-        unique: false,
-        extra: ''
-      },
-      {
-        name: 'user_type_id',
-        type: 'int(10) unsigned',
-        nullable: true,
-        default: null,
-        primary_key: false,
-        foreign_key: true,
-        unique: false,
-        extra: 'foreign key (user_types)'
-      },
-      {
-        name: 'created_at',
-        type: 'timestamp',
-        nullable: true,
-        default: null,
-        primary_key: false,
-        foreign_key: false,
-        unique: false,
-        extra: ''
-      },
-      {
-        name: 'updated_at',
-        type: 'timestamp',
-        nullable: true,
-        default: null,
-        primary_key: false,
-        foreign_key: false,
-        unique: false,
-        extra: ''
-      }
-    ];
-    
-    columns.value = structure;
+    // Use the store's getTableStructure method
+    columns.value = await databaseStore.getTableStructure(props.connectionId, props.tableName);
     
     // Notify parent component
     props.onLoad({

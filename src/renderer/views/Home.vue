@@ -98,15 +98,16 @@
             <span class="label-text">Laravel Project Path</span>
           </label>
           <div class="flex gap-2">
-            <input type="text" v-model="newConnection.path" placeholder="Select Laravel project directory" 
-              class="input input-bordered w-full" :readonly="!isEditMode" />
-            <button class="btn btn-primary" @click="selectDirectory">
+            <input type="text" v-model="newConnection.projectPath" placeholder="Select Laravel project directory" 
+              class="input input-bordered w-full" :readonly="true" />
+            <button class="btn btn-primary" @click="selectProjectDirectory">
               Browse
             </button>
           </div>
-          <label class="label" v-if="pathError">
-            <span class="label-text-alt text-error">{{ pathError }}</span>
+          <label class="label" v-if="projectPathError">
+            <span class="label-text-alt text-error">{{ projectPathError }}</span>
           </label>
+          <p class="text-xs text-gray-500 mt-1">Path to your Laravel project (.env file will be read from this location)</p>
         </div>
         
         <div class="form-control w-full mb-4">
@@ -211,7 +212,7 @@
         
         <div class="modal-action">
           <button class="btn" @click="isCreateModalOpen = false">Cancel</button>
-          <button class="btn btn-primary" @click="saveNewConnection" :disabled="isLoading || !newConnection.path">
+          <button class="btn btn-primary" @click="saveNewConnection" :disabled="isLoading || !newConnection.projectPath">
             <span v-if="isSaving" class="loading loading-spinner loading-xs mr-2"></span>
             {{ isEditMode ? 'Update Connection' : 'Save Connection' }}
           </button>
@@ -239,10 +240,10 @@ const isSaving = ref(false);
 const isCreateModalOpen = ref(false);
 const isEditMode = ref(false);
 const editConnectionId = ref(null);
-const pathError = ref('');
+const projectPathError = ref('');
 
 const newConnection = ref({
-  path: '',
+  projectPath: '',
   name: '',
   type: 'mysql',
   host: '',
@@ -269,7 +270,7 @@ function openCreateConnectionModal() {
   isEditMode.value = false;
   editConnectionId.value = null;
   newConnection.value = {
-    path: '',
+    projectPath: '',
     name: '',
     type: 'mysql',
     host: '',
@@ -282,7 +283,11 @@ function openCreateConnectionModal() {
     redisPort: '6379',
     redisPassword: ''
   };
-  pathError.value = '';
+  
+  // Limpar todas as mensagens de erro
+  projectPathError.value = '';
+  
+  // Abrir o modal
   isCreateModalOpen.value = true;
 }
 
@@ -291,7 +296,7 @@ function editConnection(connection) {
   editConnectionId.value = connection.id;
 
   newConnection.value = {
-    path: connection.path || '',
+    projectPath: connection.projectPath || '',
     name: connection.name || '',
     type: connection.type || 'mysql',
     host: connection.host || '',
@@ -305,11 +310,11 @@ function editConnection(connection) {
     redisPassword: connection.redis?.password || ''
   };
   
-  pathError.value = '';
+  projectPathError.value = '';
   isCreateModalOpen.value = true;
 }
 
-async function selectDirectory() {
+async function selectProjectDirectory() {
   try {
     const result = await window.api.selectDirectory();
     
@@ -318,55 +323,83 @@ async function selectDirectory() {
     }
     
     const selectedPath = result.filePaths[0];
-    newConnection.value.path = selectedPath;
-    pathError.value = '';
+    newConnection.value.projectPath = selectedPath;
+    projectPathError.value = '';
 
     const isLaravelProject = await window.api.validateLaravelProject(selectedPath);
     
     if (!isLaravelProject) {
-      pathError.value = 'Selected directory does not appear to be a valid Laravel project';
+      projectPathError.value = 'Selected directory does not appear to be a valid Laravel project';
       return;
     }
 
     const envConfig = await window.api.readEnvFile(selectedPath);
     
     if (envConfig) {
-      newConnection.value.name = envConfig.APP_NAME || selectedPath.split('/').pop();
-      newConnection.value.host = envConfig.DB_HOST || 'localhost';
-      newConnection.value.port = envConfig.DB_PORT || '3306';
-      newConnection.value.database = envConfig.DB_DATABASE || '';
-      newConnection.value.username = envConfig.DB_USERNAME || 'root';
-      newConnection.value.password = envConfig.DB_PASSWORD || '';
+      if (!newConnection.value.name || newConnection.value.name === '') {
+        newConnection.value.name = envConfig.APP_NAME || selectedPath.split('/').pop();
+      }
+      
+      if (!newConnection.value.host || newConnection.value.host === '') {
+        newConnection.value.host = envConfig.DB_HOST || 'localhost';
+      }
+      
+      if (!newConnection.value.port || newConnection.value.port === '') {
+        newConnection.value.port = envConfig.DB_PORT || '3306';
+      }
+      
+      if (!newConnection.value.database || newConnection.value.database === '') {
+        newConnection.value.database = envConfig.DB_DATABASE || '';
+      }
+      
+      if (!newConnection.value.username || newConnection.value.username === '') {
+        newConnection.value.username = envConfig.DB_USERNAME || 'root';
+      }
+      
+      if (!newConnection.value.password || newConnection.value.password === '') {
+        newConnection.value.password = envConfig.DB_PASSWORD || '';
+      }
 
-      newConnection.value.redisHost = envConfig.REDIS_HOST || '127.0.0.1';
-      newConnection.value.redisPort = envConfig.REDIS_PORT || '6379';
-      newConnection.value.redisPassword = envConfig.REDIS_PASSWORD || '';
+      if (!newConnection.value.redisHost || newConnection.value.redisHost === '') {
+        newConnection.value.redisHost = envConfig.REDIS_HOST || '127.0.0.1';
+      }
+      
+      if (!newConnection.value.redisPort || newConnection.value.redisPort === '') {
+        newConnection.value.redisPort = envConfig.REDIS_PORT || '6379';
+      }
+      
+      if (!newConnection.value.redisPassword || newConnection.value.redisPassword === '') {
+        newConnection.value.redisPassword = envConfig.REDIS_PASSWORD || '';
+      }
     }
   } catch (error) {
     console.error(error);
-    showAlert('Error to select dir', 'error');
+    showAlert('Error selecting project directory', 'error');
   }
 }
 
 async function saveNewConnection() {
   try {
-    if (!newConnection.value.path) {
-      pathError.value = 'Project path is required';
+    // Verificar se o caminho do projeto está preenchido
+    if (!newConnection.value.projectPath) {
+      projectPathError.value = 'Project path is required';
       return;
     }
     
+    // Verificar campos obrigatórios
     if (!newConnection.value.name || !newConnection.value.host || !newConnection.value.database || !newConnection.value.username) {
       showAlert('Please fill all required fields', 'error');
       return;
     }
 
+    // Verificar se já existe uma conexão com o mesmo nome ou caminho
     const exists = connectionsStore.connections.some(conn => 
-      (conn.path === newConnection.value.path || conn.name === newConnection.value.name) && 
-      conn.id !== editConnectionId.value
+      ((conn.projectPath === newConnection.value.projectPath || conn.name === newConnection.value.name) && 
+      conn.id !== editConnectionId.value)
     );
     
     if (exists) {
-      showAlert('A connection with this name or path already exists', 'error');
+      showAlert('A connection with this name or project path already exists', 'error');
       return;
     }
 
@@ -399,7 +432,7 @@ async function saveNewConnection() {
       database: newConnection.value.database,
       username: newConnection.value.username,
       password: newConnection.value.password,
-      path: newConnection.value.path,
+      projectPath: newConnection.value.projectPath,
       usingSail: newConnection.value.usingSail,
       status: 'ready',
       redis: {

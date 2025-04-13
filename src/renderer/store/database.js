@@ -7,6 +7,10 @@ export const useDatabaseStore = defineStore('database', () => {
   const isLoading = ref(false);
   const usedConnectionsStore = useConnectionsStore;
   const tableRecords = ref({});
+  const tableStructures = ref({});
+  const tableIndexes = ref({});
+  const tableForeignKeys = ref({});
+  const tableMigrations = ref({});
 
   const mockDatabases = {
     1: {
@@ -270,6 +274,489 @@ export const useDatabaseStore = defineStore('database', () => {
     }
   }
 
+  // New functions for tab functionality
+  async function getTableStructure(connectionId, tableName) {
+    const cacheKey = `${connectionId}:${tableName}:structure`;
+    if (tableStructures.value[cacheKey]) {
+      return tableStructures.value[cacheKey];
+    }
+
+    try {
+      const connection = usedConnectionsStore().getConnection(connectionId);
+      
+      if (!connection) {
+        console.error("Connection not found");
+        return [];
+      }
+
+      if (connection.type !== 'mysql') {
+        // Use mock data for non-MySQL databases
+        await new Promise(resolve => setTimeout(resolve, 500)); // Simulate loading
+        
+        // For a real application, this would make an API call to get the structure
+        // For now we'll use mock data
+        let structure = [];
+        
+        if (tableName === 'users') {
+          structure = [
+            {
+              name: 'id',
+              type: 'int(10) unsigned',
+              nullable: false,
+              default: null,
+              primary_key: true,
+              foreign_key: false,
+              unique: false,
+              extra: 'auto_increment'
+            },
+            {
+              name: 'name',
+              type: 'varchar(255)',
+              nullable: false,
+              default: null,
+              primary_key: false,
+              foreign_key: false,
+              unique: false,
+              extra: ''
+            },
+            {
+              name: 'email',
+              type: 'varchar(255)',
+              nullable: false,
+              default: null,
+              primary_key: false,
+              foreign_key: false,
+              unique: true,
+              extra: ''
+            },
+            {
+              name: 'password',
+              type: 'varchar(255)',
+              nullable: false,
+              default: null,
+              primary_key: false,
+              foreign_key: false,
+              unique: false,
+              extra: ''
+            },
+            {
+              name: 'user_type_id',
+              type: 'int(10) unsigned',
+              nullable: true,
+              default: null,
+              primary_key: false,
+              foreign_key: true,
+              unique: false,
+              extra: 'foreign key (user_types)'
+            },
+            {
+              name: 'avatar',
+              type: 'varchar(255)',
+              nullable: true,
+              default: null,
+              primary_key: false,
+              foreign_key: false,
+              unique: false,
+              extra: ''
+            },
+            {
+              name: 'created_at',
+              type: 'timestamp',
+              nullable: true,
+              default: null,
+              primary_key: false,
+              foreign_key: false,
+              unique: false,
+              extra: ''
+            },
+            {
+              name: 'updated_at',
+              type: 'timestamp',
+              nullable: true,
+              default: null,
+              primary_key: false,
+              foreign_key: false,
+              unique: false,
+              extra: ''
+            }
+          ];
+        } else if (tableName === 'products') {
+          structure = [
+            {
+              name: 'id',
+              type: 'int(10) unsigned',
+              nullable: false,
+              default: null,
+              primary_key: true,
+              foreign_key: false,
+              unique: false,
+              extra: 'auto_increment'
+            },
+            {
+              name: 'name',
+              type: 'varchar(255)',
+              nullable: false,
+              default: null,
+              primary_key: false,
+              foreign_key: false,
+              unique: false,
+              extra: ''
+            },
+            {
+              name: 'description',
+              type: 'text',
+              nullable: true,
+              default: null,
+              primary_key: false,
+              foreign_key: false,
+              unique: false,
+              extra: ''
+            },
+            {
+              name: 'price',
+              type: 'decimal(8,2)',
+              nullable: false,
+              default: '0.00',
+              primary_key: false,
+              foreign_key: false,
+              unique: false,
+              extra: ''
+            },
+            {
+              name: 'stock',
+              type: 'int(11)',
+              nullable: false,
+              default: '0',
+              primary_key: false,
+              foreign_key: false,
+              unique: false,
+              extra: ''
+            },
+            {
+              name: 'category',
+              type: 'varchar(255)',
+              nullable: false,
+              default: null,
+              primary_key: false,
+              foreign_key: false,
+              unique: false,
+              extra: ''
+            },
+            {
+              name: 'created_at',
+              type: 'timestamp',
+              nullable: true,
+              default: null,
+              primary_key: false,
+              foreign_key: false,
+              unique: false,
+              extra: ''
+            },
+            {
+              name: 'updated_at',
+              type: 'timestamp',
+              nullable: true,
+              default: null,
+              primary_key: false,
+              foreign_key: false,
+              unique: false,
+              extra: ''
+            }
+          ];
+        } else {
+          // Default structure for other tables
+          structure = [
+            {
+              name: 'id',
+              type: 'int(10) unsigned',
+              nullable: false,
+              default: null,
+              primary_key: true,
+              foreign_key: false,
+              unique: false,
+              extra: 'auto_increment'
+            },
+            {
+              name: 'name',
+              type: 'varchar(255)',
+              nullable: false,
+              default: null,
+              primary_key: false,
+              foreign_key: false,
+              unique: false,
+              extra: ''
+            },
+            {
+              name: 'created_at',
+              type: 'timestamp',
+              nullable: true,
+              default: null,
+              primary_key: false,
+              foreign_key: false,
+              unique: false,
+              extra: ''
+            },
+            {
+              name: 'updated_at',
+              type: 'timestamp',
+              nullable: true,
+              default: null,
+              primary_key: false,
+              foreign_key: false,
+              unique: false,
+              extra: ''
+            }
+          ];
+        }
+        
+        tableStructures.value[cacheKey] = structure;
+        return structure;
+      }
+      
+      // Para MySQL, obter a estrutura real da tabela
+      const result = await window.api.getTableStructure({
+        host: connection.host,
+        port: connection.port,
+        username: connection.username,
+        password: connection.password,
+        database: connection.database,
+        tableName: tableName
+      });
+      
+      if (result.success) {
+        tableStructures.value[cacheKey] = result.columns;
+        return result.columns;
+      } else {
+        console.error("Failed to get table structure:", result.message);
+        return [];
+      }
+      
+    } catch (error) {
+      console.error(`Error getting structure for ${tableName}:`, error);
+      return [];
+    }
+  }
+
+  async function getTableIndexes(connectionId, tableName) {
+    const cacheKey = `${connectionId}:${tableName}:indexes`;
+    if (tableIndexes.value[cacheKey]) {
+      return tableIndexes.value[cacheKey];
+    }
+
+    try {
+      await new Promise(resolve => setTimeout(resolve, 500)); // Simulate loading
+      
+      // For a real application, this would make an API call to get the indexes
+      // For now we'll use mock data
+      let indexes = [];
+      
+      if (tableName === 'users') {
+        indexes = [
+          {
+            name: 'PRIMARY',
+            type: 'PRIMARY',
+            columns: ['id'],
+            algorithm: 'BTREE',
+            cardinality: 1000,
+            comment: ''
+          },
+          {
+            name: 'users_email_unique',
+            type: 'UNIQUE',
+            columns: ['email'],
+            algorithm: 'BTREE',
+            cardinality: 1000,
+            comment: ''
+          },
+          {
+            name: 'users_user_type_id_foreign',
+            type: 'INDEX',
+            columns: ['user_type_id'],
+            algorithm: 'BTREE',
+            cardinality: 10,
+            comment: 'Foreign key for user types'
+          }
+        ];
+      } else if (tableName === 'products') {
+        indexes = [
+          {
+            name: 'PRIMARY',
+            type: 'PRIMARY',
+            columns: ['id'],
+            algorithm: 'BTREE',
+            cardinality: 500,
+            comment: ''
+          },
+          {
+            name: 'products_category_index',
+            type: 'INDEX',
+            columns: ['category'],
+            algorithm: 'BTREE',
+            cardinality: 20,
+            comment: ''
+          }
+        ];
+      } else {
+        // Default indexes for other tables
+        indexes = [
+          {
+            name: 'PRIMARY',
+            type: 'PRIMARY',
+            columns: ['id'],
+            algorithm: 'BTREE',
+            cardinality: 0,
+            comment: ''
+          }
+        ];
+      }
+      
+      tableIndexes.value[cacheKey] = indexes;
+      return indexes;
+    } catch (error) {
+      console.error(`Error getting indexes for ${tableName}:`, error);
+      return [];
+    }
+  }
+
+  async function getTableForeignKeys(connectionId, tableName) {
+    const cacheKey = `${connectionId}:${tableName}:foreignKeys`;
+    if (tableForeignKeys.value[cacheKey]) {
+      return tableForeignKeys.value[cacheKey];
+    }
+
+    try {
+      await new Promise(resolve => setTimeout(resolve, 500)); // Simulate loading
+      
+      // For a real application, this would make an API call to get the foreign keys
+      // For now we'll use mock data
+      let foreignKeys = [];
+      
+      if (tableName === 'users') {
+        foreignKeys = [
+          {
+            name: 'users_user_type_id_foreign',
+            type: 'outgoing',
+            column: 'user_type_id',
+            referenced_table: 'user_types',
+            referenced_column: 'id',
+            on_update: 'CASCADE',
+            on_delete: 'SET NULL'
+          },
+          {
+            name: 'orders_user_id_foreign',
+            type: 'incoming',
+            table: 'orders',
+            column: 'user_id',
+            referenced_column: 'id',
+            on_update: 'CASCADE',
+            on_delete: 'RESTRICT'
+          },
+          {
+            name: 'posts_author_id_foreign',
+            type: 'incoming',
+            table: 'posts',
+            column: 'author_id',
+            referenced_column: 'id',
+            on_update: 'CASCADE',
+            on_delete: 'CASCADE'
+          }
+        ];
+      } else if (tableName === 'orders') {
+        foreignKeys = [
+          {
+            name: 'orders_user_id_foreign',
+            type: 'outgoing',
+            column: 'user_id',
+            referenced_table: 'users',
+            referenced_column: 'id',
+            on_update: 'CASCADE',
+            on_delete: 'RESTRICT'
+          },
+          {
+            name: 'order_items_order_id_foreign',
+            type: 'incoming',
+            table: 'order_items',
+            column: 'order_id',
+            referenced_column: 'id',
+            on_update: 'CASCADE',
+            on_delete: 'CASCADE'
+          }
+        ];
+      } else if (tableName === 'order_items') {
+        foreignKeys = [
+          {
+            name: 'order_items_order_id_foreign',
+            type: 'outgoing',
+            column: 'order_id',
+            referenced_table: 'orders',
+            referenced_column: 'id',
+            on_update: 'CASCADE',
+            on_delete: 'CASCADE'
+          },
+          {
+            name: 'order_items_product_id_foreign',
+            type: 'outgoing',
+            column: 'product_id',
+            referenced_table: 'products',
+            referenced_column: 'id',
+            on_update: 'CASCADE',
+            on_delete: 'RESTRICT'
+          }
+        ];
+      } else {
+        // Default empty foreign keys for other tables
+        foreignKeys = [];
+      }
+      
+      tableForeignKeys.value[cacheKey] = foreignKeys;
+      return foreignKeys;
+    } catch (error) {
+      console.error(`Error getting foreign keys for ${tableName}:`, error);
+      return [];
+    }
+  }
+
+  async function getTableMigrations(connectionId, tableName) {
+    const cacheKey = `${connectionId}:${tableName}:migrations`;
+    if (tableMigrations.value[cacheKey]) {
+      return tableMigrations.value[cacheKey];
+    }
+
+    try {
+      const connection = usedConnectionsStore().getConnection(connectionId);
+      
+      if (!connection) {
+        console.error("Connection not found");
+        return [];
+      }
+      
+      // Verificar se esta conexão tem um caminho de projeto associado
+      if (!connection.projectPath) {
+        // Se não tiver caminho de projeto, retornamos um array vazio
+        console.log("No project path associated with this connection");
+        tableMigrations.value[cacheKey] = [];
+        return [];
+      }
+      
+      // Usar a nova API para buscar migrações
+      const result = await window.api.findTableMigrations({
+        projectPath: connection.projectPath,
+        tableName: tableName
+      });
+      
+      if (result.success) {
+        tableMigrations.value[cacheKey] = result.migrations;
+        return result.migrations;
+      } else {
+        console.error("Failed to get migrations:", result.message);
+        return [];
+      }
+    } catch (error) {
+      console.error(`Error getting migrations for ${tableName}:`, error);
+      return [];
+    }
+  }
+
   const tablesList = computed(() => {
     return tables.value.tables || [];
   });
@@ -280,6 +767,10 @@ export const useDatabaseStore = defineStore('database', () => {
     loadTables,
     loadTableData,
     getTableRecordCount,
+    getTableStructure,
+    getTableIndexes,
+    getTableForeignKeys,
+    getTableMigrations,
     tablesList
   };
 }); 

@@ -67,7 +67,7 @@
             </svg>
             <span class="truncate">{{ table.name }}</span>
             <span class="badge badge-sm" :class="{ 'badge-primary': table.recordCount > 0 }">
-              {{ table.recordCount || 0 }}
+              {{ formatRecordCount(table.recordCount) }}
             </span>
           </a>
         </li>
@@ -178,6 +178,18 @@ async function loadTableRecordCounts() {
   } finally {
     isLoadingCounts.value = false;
   }
+}
+
+function formatRecordCount(count) {
+  if (count === null || count === undefined) return '0';
+  
+  if (count >= 1000000) {
+    return (count / 1000000).toFixed(1).replace(/\.0$/, '') + 'M';
+  }
+  if (count >= 1000) {
+    return (count / 1000).toFixed(1).replace(/\.0$/, '') + 'K';
+  }
+  return count.toString();
 }
 
 onMounted(() => {

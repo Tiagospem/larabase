@@ -30,44 +30,42 @@
         </div>
       </div>
       
-      <div v-else class="p-4">
-        <div v-if="indexes.length === 0" class="flex items-center justify-center h-full text-gray-500">
-          <div class="text-center">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" 
-              stroke="currentColor" class="w-12 h-12 mx-auto mb-4 text-gray-400">
-              <path stroke-linecap="round" stroke-linejoin="round" 
-                d="M3.75 9.776c.112-.017.227-.026.344-.026h15.812c.117 0 .232.009.344.026m-16.5 0a2.25 2.25 0 00-1.883 2.542l.857 6a2.25 2.25 0 002.227 1.932H19.05a2.25 2.25 0 002.227-1.932l.857-6a2.25 2.25 0 00-1.883-2.542m-16.5 0V6A2.25 2.25 0 016 3.75h3.879a1.5 1.5 0 011.06.44l2.122 2.12a1.5 1.5 0 001.06.44H18A2.25 2.25 0 0120.25 9v.776" />
-            </svg>
-            <p>No indexes found in this table</p>
-            <button class="btn btn-sm btn-ghost mt-4" @click="loadIndexes">Reload</button>
-          </div>
+      <div v-else-if="indexes.length === 0" class="flex items-center justify-center h-full text-gray-500">
+        <div class="text-center">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" 
+            stroke="currentColor" class="w-12 h-12 mx-auto mb-4 text-gray-400">
+            <path stroke-linecap="round" stroke-linejoin="round" 
+              d="M3.75 9.776c.112-.017.227-.026.344-.026h15.812c.117 0 .232.009.344.026m-16.5 0a2.25 2.25 0 00-1.883 2.542l.857 6a2.25 2.25 0 002.227 1.932H19.05a2.25 2.25 0 002.227-1.932l.857-6a2.25 2.25 0 00-1.883-2.542m-16.5 0V6A2.25 2.25 0 016 3.75h3.879a1.5 1.5 0 011.06.44l2.122 2.12a1.5 1.5 0 001.06.44H18A2.25 2.25 0 0120.25 9v.776" />
+          </svg>
+          <p>No indexes found in this table</p>
+          <button class="btn btn-sm btn-ghost mt-4" @click="loadIndexes">Reload</button>
         </div>
-        
-        <div v-else>
-          <table class="table table-sm w-full">
-            <thead class="bg-base-300 sticky top-0">
-              <tr class="text-xs">
-                <th class="px-4 py-2 text-left">Name</th>
-                <th class="px-4 py-2 text-left">Type</th>
-                <th class="px-4 py-2 text-left">Columns</th>
-                <th class="px-4 py-2 text-left">Algorithm</th>
-                <th class="px-4 py-2 text-left">Cardinality</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="index in indexes" :key="index.name" 
-                  class="border-b border-gray-700 hover:bg-base-200">
-                <td class="px-4 py-3 font-medium">{{ index.name }}</td>
-                <td class="px-4 py-3">
-                  <span class="badge badge-ghost badge-sm">{{ index.type }}</span>
-                </td>
-                <td class="px-4 py-3">{{ index.columns.join(', ') }}</td>
-                <td class="px-4 py-3 text-gray-400">{{ index.algorithm }}</td>
-                <td class="px-4 py-3 text-gray-400">{{ index.cardinality }}</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
+      </div>
+      
+      <div v-else>
+        <table class="table table-sm w-full">
+          <thead class="bg-base-300 sticky top-0">
+            <tr class="text-xs">
+              <th class="px-4 py-2 text-left">Name</th>
+              <th class="px-4 py-2 text-left">Type</th>
+              <th class="px-4 py-2 text-left">Columns</th>
+              <th class="px-4 py-2 text-left">Algorithm</th>
+              <th class="px-4 py-2 text-left">Cardinality</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="index in indexes" :key="index.name" 
+                class="border-b border-gray-700 hover:bg-base-200">
+              <td class="px-4 py-3 font-medium">{{ index.name }}</td>
+              <td class="px-4 py-3">
+                <span class="badge badge-ghost badge-sm">{{ index.type }}</span>
+              </td>
+              <td class="px-4 py-3">{{ index.columns.join(', ') }}</td>
+              <td class="px-4 py-3 text-gray-400">{{ index.algorithm }}</td>
+              <td class="px-4 py-3 text-gray-400">{{ index.cardinality }}</td>
+            </tr>
+          </tbody>
+        </table>
       </div>
     </div>
 
@@ -81,8 +79,8 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, inject } from 'vue';
-import { useDatabaseStore } from '@/store/database';
+import {computed, inject, onMounted, ref} from 'vue';
+import {useDatabaseStore} from '@/store/database';
 
 const showAlert = inject('showAlert');
 
@@ -119,44 +117,8 @@ async function loadIndexes() {
   loadError.value = null;
   
   try {
-    // In a real application, implement this method in the database store
-    // For now, we'll use mock data since we don't have the actual implementation
-    
-    // Mock data - replace with actual API call
-    await new Promise(resolve => setTimeout(resolve, 500)); // Simulate loading
-    
-    // This would be the actual API call in a real application:
-    // const indexes = await databaseStore.getTableIndexes(props.connectionId, props.tableName);
-    
-    // Mock indexes data
-    const mockIndexes = [
-      {
-        name: 'PRIMARY',
-        type: 'PRIMARY',
-        columns: ['id'],
-        algorithm: 'BTREE',
-        cardinality: 1000,
-        comment: ''
-      },
-      {
-        name: 'users_email_unique',
-        type: 'UNIQUE',
-        columns: ['email'],
-        algorithm: 'BTREE',
-        cardinality: 1000,
-        comment: ''
-      },
-      {
-        name: 'users_user_type_id_foreign',
-        type: 'INDEX',
-        columns: ['user_type_id'],
-        algorithm: 'BTREE',
-        cardinality: 10,
-        comment: 'Foreign key for user types'
-      }
-    ];
-    
-    indexes.value = mockIndexes;
+    // Use the store's getTableIndexes method
+    indexes.value = await databaseStore.getTableIndexes(props.connectionId, props.tableName);
     
     // Notify parent component
     props.onLoad({

@@ -23,7 +23,10 @@ try {
       testMySQLConnection: (config) => safeIpcRenderer.invoke('test-mysql-connection', config),
       listTables: (config) => safeIpcRenderer.invoke('list-tables', config),
       getTableRecordCount: (config) => safeIpcRenderer.invoke('getTableRecordCount', config),
-      getTableData: (config) => safeIpcRenderer.invoke('getTableData', config)
+      getTableData: (config) => safeIpcRenderer.invoke('getTableData', config),
+      getTableStructure: (config) => safeIpcRenderer.invoke('getTableStructure', config),
+      findTableMigrations: (config) => safeIpcRenderer.invoke('findTableMigrations', config),
+      openFile: (filePath) => safeIpcRenderer.invoke('openFile', filePath)
     }
   );
 } catch (error) {
