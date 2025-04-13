@@ -39,18 +39,20 @@
       </div>
     </header>
 
-    <div v-if="openTabs.length > 0" class="bg-base-300 px-2 pt-1 border-b border-gray-800 flex items-center overflow-x-auto">
-      <div v-for="tab in openTabs" :key="tab.id" 
-        :class="['tab', 'tab-bordered', 'px-4', 'py-2', 'rounded-t-md', 'mr-1', 'flex', 'items-center', 'gap-2', 
+    <div v-if="openTabs.length > 0" class="bg-base-300 px-2 pt-1 border-b border-gray-800 flex items-center overflow-x-auto no-scrollbar">
+      <div class="flex">
+        <div v-for="tab in openTabs" :key="tab.id" 
+          :class="['tab', 'tab-bordered', 'px-4', 'py-2', 'rounded-t-md', 'mr-1', 'flex', 'items-center', 'justify-center', 'min-h-[2.5rem]', 'gap-2',
                  { 'tab-active bg-base-100': tab.id === activeTabId }]"
-        @click="activateTab(tab.id)">
-        <span class="truncate max-w-xs">{{ tab.title }}</span>
-        <button class="btn btn-ghost btn-xs btn-circle" @click.stop="closeTab(tab.id)">
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" 
-            stroke="currentColor" class="w-4 h-4">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
-          </svg>
-        </button>
+          @click="activateTab(tab.id)">
+          <span class="truncate max-w-xs">{{ tab.title }}</span>
+          <button class="btn btn-ghost btn-xs btn-circle" @click.stop="closeTab(tab.id)">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" 
+              stroke="currentColor" class="w-4 h-4">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
       </div>
     </div>
 
@@ -104,11 +106,15 @@
           </div>
         </div>
         
-        <table-content v-else 
-          :key="activeTab.id"
-          :connection-id="activeTab.connectionId"
-          :table-name="activeTab.tableName"
-          @update-tab-data="handleUpdateTabData" />
+        <keep-alive>
+          <component 
+            v-if="activeTab"
+            :is="TableContentComponent"
+            :key="activeTab.id"
+            :connection-id="activeTab.connectionId"
+            :table-name="activeTab.tableName"
+            @update-tab-data="handleUpdateTabData" />
+        </keep-alive>
       </div>
     </div>
 
@@ -122,12 +128,14 @@
 </template>
 
 <script setup>
-import {computed, inject, onMounted, ref} from 'vue';
+import {computed, inject, onMounted, ref, markRaw} from 'vue';
 import {useRoute, useRouter} from 'vue-router';
 import {useConnectionsStore} from '@/store/connections';
 import {useDatabaseStore} from '@/store/database';
 import {useTabsStore} from '@/store/tabs';
 import TableContent from '../components/TableContent.vue';
+
+const TableContentComponent = markRaw(TableContent);
 
 const route = useRoute();
 const router = useRouter();
@@ -185,8 +193,11 @@ function closeTab(tabId) {
   tabsStore.removeTab(tabId);
 }
 
-function handleUpdateTabData(tabId, data) {
-  tabsStore.updateTabData(tabId, data);
+function handleUpdateTabData(tabName, data) {
+  const tab = openTabs.value.find(t => t.tableName === tabName);
+  if (tab) {
+    tabsStore.updateTabData(tab.id, data);
+  }
 }
 
 function goBack() {
@@ -216,15 +227,12 @@ onMounted(async () => {
     await tabsStore.loadSavedTabs();
 
     if (!connection.value) {
-      console.error(connectionId.value);
       showAlert('Connection not found', 'error');
-
       await router.push('/');
       return;
     }
     
-    showAlert(`Connection to a ${connection.value.name}`, 'success');
-
+    showAlert(`Connected to ${connection.value.name}`, 'success');
     await databaseStore.loadTables(connectionId.value);
     
   } catch (error) {
@@ -259,5 +267,14 @@ function getConnectionColor(type) {
 
 .resize-handle:hover {
   background-color: #4e4e50;
+}
+
+.no-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
 }
 </style> 

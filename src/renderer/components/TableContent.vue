@@ -47,7 +47,7 @@
               d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
           </svg>
           <p>{{ loadError }}</p>
-          <button class="btn btn-sm btn-primary mt-4" @click="loadTableData">Tentar novamente</button>
+          <button class="btn btn-sm btn-primary mt-4" @click="loadTableData">Try again</button>
         </div>
       </div>
       
@@ -78,8 +78,8 @@
             <path stroke-linecap="round" stroke-linejoin="round" 
               d="M20.25 6.375c0 2.278-3.694 4.125-8.25 4.125S3.75 8.653 3.75 6.375m16.5 0c0-2.278-3.694-4.125-8.25-4.125S3.75 4.097 3.75 6.375m16.5 0v11.25c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125V6.375m16.5 0v3.75m-16.5-3.75v3.75m16.5 0v3.75C20.25 16.153 16.556 18 12 18s-8.25-1.847-8.25-4.125v-3.75m16.5 0c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125" />
           </svg>
-          <p>Nenhum registro encontrado na tabela.</p>
-          <button class="btn btn-sm btn-primary mt-4" @click="loadTableData">Recarregar</button>
+          <p>No records found in this table.</p>
+          <button class="btn btn-sm btn-primary mt-4" @click="loadTableData">Reload</button>
         </div>
       </div>
     </div>
@@ -102,7 +102,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch, inject } from 'vue';
+import { ref, computed, onMounted, inject } from 'vue';
 import { useDatabaseStore } from '@/store/database';
 
 const showAlert = inject('showAlert');
@@ -156,20 +156,18 @@ async function loadTableData() {
     const data = await databaseStore.loadTableData(props.connectionId, props.tableName);
     
     if (!data || data.length === 0) {
-      console.warn('Tabela vazia ou dados não encontrados');
-      showAlert('Tabela vazia ou dados não encontrados', 'warning');
+      showAlert('No data found in table', 'warning');
     }
     
     tableData.value = data;
 
-    emit('update-tab-data', Date.now(), {
+    emit('update-tab-data', props.tableName, {
       columns: columns.value,
       rowCount: data.length
     });
   } catch (error) {
-    console.error(error);
     loadError.value = error.message;
-    showAlert(`Erro ao carregar dados: ${error.message}`, 'error');
+    showAlert(`Error loading data: ${error.message}`, 'error');
     tableData.value = [];
   } finally {
     isLoading.value = false;
@@ -179,11 +177,4 @@ async function loadTableData() {
 onMounted(() => {
   loadTableData();
 });
-
-watch(
-  () => [props.connectionId, props.tableName],
-  () => {
-    loadTableData();
-  }
-);
 </script> 
