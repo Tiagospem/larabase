@@ -348,6 +348,10 @@ async function loadTableData() {
   expandedCells.value = [];
   
   try {
+    // Clear the table cache before loading to ensure fresh data 
+    const cacheKey = `${props.connectionId}:${props.tableName}`;
+    databaseStore.clearTableCache(cacheKey);
+    
     const data = await databaseStore.loadTableData(props.connectionId, props.tableName);
     
     if (!data || data.length === 0) {
@@ -356,10 +360,12 @@ async function loadTableData() {
     
     tableData.value = data;
 
-    await nextTick(() => {
+    // Analyze columns after data is loaded
+    nextTick(() => {
       analyzeColumns();
     });
 
+    // Notify parent about the loaded data
     props.onLoad({
       columns: columns.value,
       rowCount: data.length
@@ -600,7 +606,7 @@ onUnmounted(() => {
 });
 </script>
 
-<style>
+<style scoped>
 .table tbody tr {
   user-select: none;
 }

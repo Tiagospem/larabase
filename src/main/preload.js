@@ -25,6 +25,7 @@ try {
       getTableRecordCount: (config) => safeIpcRenderer.invoke('getTableRecordCount', config),
       getTableData: (config) => safeIpcRenderer.invoke('getTableData', config),
       getTableStructure: (config) => safeIpcRenderer.invoke('getTableStructure', config),
+      getTableForeignKeys: (config) => safeIpcRenderer.invoke('getTableForeignKeys', config),
       findTableMigrations: (config) => safeIpcRenderer.invoke('findTableMigrations', config),
       openFile: (filePath) => safeIpcRenderer.invoke('openFile', filePath)
     }

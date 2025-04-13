@@ -171,8 +171,8 @@ async function loadStructure() {
   loadError.value = null;
   
   try {
-    columns.value = await databaseStore.getTableStructure(props.connectionId, props.tableName);
-
+    columns.value = await databaseStore.getTableStructure(props.connectionId, props.tableName, true);
+    
     props.onLoad({
       columnCount: columns.value.length,
       primaryKeys: primaryKeys.value
@@ -191,7 +191,7 @@ onMounted(() => {
 });
 </script>
 
-<style>
+<style scoped>
 .table {
   width: max-content;
   min-width: 100%;

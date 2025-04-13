@@ -272,13 +272,12 @@ async function loadMigrations() {
   loadError.value = null;
   
   try {
-    // Use the store's getTableMigrations method to get migrations that mention this table
-    migrations.value = await databaseStore.getTableMigrations(props.connectionId, props.tableName);
+    // Use the store's getTableMigrations method
+    migrations.value = await databaseStore.getTableMigrations(props.connectionId, props.tableName, true);
     
     // Notify parent component
     props.onLoad({
-      migrationCount: migrations.value.length,
-      pendingMigrations: migrations.value.filter(m => m.status === 'PENDING').length
+      migrationCount: migrations.value.length
     });
     
   } catch (error) {

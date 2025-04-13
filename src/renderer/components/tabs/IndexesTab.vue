@@ -35,52 +35,57 @@
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" 
             stroke="currentColor" class="w-12 h-12 mx-auto mb-4 text-gray-400">
             <path stroke-linecap="round" stroke-linejoin="round" 
-              d="M3.75 9.776c.112-.017.227-.026.344-.026h15.812c.117 0 .232.009.344.026m-16.5 0a2.25 2.25 0 00-1.883 2.542l.857 6a2.25 2.25 0 002.227 1.932H19.05a2.25 2.25 0 002.227-1.932l.857-6a2.25 2.25 0 00-1.883-2.542m-16.5 0V6A2.25 2.25 0 016 3.75h3.879a1.5 1.5 0 011.06.44l2.122 2.12a1.5 1.5 0 001.06.44H18A2.25 2.25 0 0120.25 9v.776" />
+              d="M8.25 6.75h7.5a.75.75 0 01.75.75v3.75a.75.75 0 01-.75.75h-7.5a.75.75 0 01-.75-.75V7.5a.75.75 0 01.75-.75z" />
+            <path stroke-linecap="round" stroke-linejoin="round" d="M15 7.5v-3.75A2.25 2.25 0 0012.75 1.5h-1.5A2.25 2.25 0 009 3.75V7.5m6 0v3.75m3 3.75H6A2.25 2.25 0 003.75 15v4.5A2.25 2.25 0 006 21.75h12A2.25 2.25 0 0020.25 19.5V15a2.25 2.25 0 00-2.25-2.25z" />
           </svg>
           <p>No indexes found in this table</p>
           <button class="btn btn-sm btn-ghost mt-4" @click="loadIndexes">Reload</button>
         </div>
       </div>
       
-      <div v-else>
-        <table class="table table-sm w-full">
-          <thead class="bg-base-300 sticky top-0">
-            <tr class="text-xs">
-              <th class="px-4 py-2 text-left">Name</th>
-              <th class="px-4 py-2 text-left">Type</th>
-              <th class="px-4 py-2 text-left">Columns</th>
-              <th class="px-4 py-2 text-left">Algorithm</th>
-              <th class="px-4 py-2 text-left">Cardinality</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="index in indexes" :key="index.name" 
-                class="border-b border-neutral hover:bg-base-200">
-              <td class="px-4 py-3 font-medium">{{ index.name }}</td>
-              <td class="px-4 py-3">
-                <span class="badge badge-ghost badge-sm">{{ index.type }}</span>
-              </td>
-              <td class="px-4 py-3">{{ index.columns.join(', ') }}</td>
-              <td class="px-4 py-3 text-gray-400">{{ index.algorithm }}</td>
-              <td class="px-4 py-3 text-gray-400">{{ index.cardinality }}</td>
-            </tr>
-          </tbody>
-        </table>
+      <div v-else class="h-full overflow-auto">
+        <div class="overflow-x-auto">
+          <table class="table table-sm w-full min-w-full">
+            <thead class="bg-base-300 sticky top-0 z-10">
+              <tr class="text-xs">
+                <th class="px-4 py-2 text-left">Name</th>
+                <th class="px-4 py-2 text-left">Type</th>
+                <th class="px-4 py-2 text-left">Columns</th>
+                <th class="px-4 py-2 text-left">Algorithm</th>
+                <th class="px-4 py-2 text-left">Cardinality</th>
+                <th class="px-4 py-2 text-left">Comment</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="index in indexes" :key="index.name" 
+                  class="border-b border-neutral hover:bg-base-200">
+                <td class="px-4 py-3 font-medium">{{ index.name }}</td>
+                <td class="px-4 py-3">
+                  <span :class="['badge', getBadgeClass(index.type)]">{{ index.type }}</span>
+                </td>
+                <td class="px-4 py-3">{{ index.columns.join(', ') }}</td>
+                <td class="px-4 py-3">{{ index.algorithm }}</td>
+                <td class="px-4 py-3">{{ index.cardinality }}</td>
+                <td class="px-4 py-3">{{ index.comment }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
 
-    <div v-if="indexes.length > 0" class="bg-base-200 px-4 py-2 border-t border-gray-800 flex justify-between items-center text-xs text-gray-400">
+    <div v-if="indexes.length > 0" class="bg-base-200 px-4 py-2 border-t border-neutral flex justify-between items-center text-xs text-gray-400 sticky bottom-0 left-0 right-0 min-h-[40px] z-20">
       <div>{{ tableName }} | {{ indexes.length }} indexes</div>
       <div>
-        <span v-if="primaryIndex">Primary key: {{ primaryIndex.columns.join(', ') }}</span>
+        <span v-if="hasPrimaryKey">Primary Key: {{ primaryKeyColumns.join(', ') }}</span>
       </div>
     </div>
   </div>
 </template>
 
 <script setup>
-import {computed, inject, onMounted, ref} from 'vue';
-import {useDatabaseStore} from '@/store/database';
+import { ref, computed, onMounted, inject } from 'vue';
+import { useDatabaseStore } from '@/store/database';
 
 const showAlert = inject('showAlert');
 
@@ -106,28 +111,52 @@ const loadError = ref(null);
 
 const databaseStore = useDatabaseStore();
 
-// Computed
-const primaryIndex = computed(() => {
-  return indexes.value.find(index => index.type === 'PRIMARY') || null;
+// Computed properties
+const hasPrimaryKey = computed(() => {
+  return indexes.value.some(index => index.type === 'PRIMARY');
+});
+
+const primaryKeyColumns = computed(() => {
+  const primaryKey = indexes.value.find(index => index.type === 'PRIMARY');
+  return primaryKey ? primaryKey.columns : [];
 });
 
 // Methods
+function getBadgeClass(type) {
+  switch (type) {
+    case 'PRIMARY':
+      return 'badge-primary';
+    case 'UNIQUE':
+      return 'badge-secondary';
+    case 'FULLTEXT':
+      return 'badge-accent';
+    case 'SPATIAL':
+      return 'badge-neutral';
+    default:
+      return 'badge-ghost';
+  }
+}
+
 async function loadIndexes() {
   isLoading.value = true;
   loadError.value = null;
   
   try {
     // Use the store's getTableIndexes method
-    indexes.value = await databaseStore.getTableIndexes(props.connectionId, props.tableName);
+    const tableIndexes = await databaseStore.getTableIndexes(props.connectionId, props.tableName, true);
+    console.log('Loaded indexes:', tableIndexes);
+    
+    indexes.value = tableIndexes;
     
     // Notify parent component
     props.onLoad({
       indexCount: indexes.value.length,
-      hasPrimaryKey: primaryIndex.value !== null
+      hasPrimaryKey: hasPrimaryKey.value
     });
     
   } catch (error) {
-    loadError.value = 'Failed to load table indexes: ' + (error.message || 'Unknown error');
+    console.error("Error loading indexes:", error);
+    loadError.value = 'Failed to load indexes: ' + (error.message || 'Unknown error');
     showAlert(`Error loading indexes: ${error.message}`, 'error');
   } finally {
     isLoading.value = false;
@@ -138,4 +167,50 @@ async function loadIndexes() {
 onMounted(() => {
   loadIndexes();
 });
-</script> 
+</script>
+
+<style scoped>
+.table {
+  width: max-content;
+  min-width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background-color: hsl(var(--b3) / var(--tw-bg-opacity));
+  box-shadow: 0 1px 0 0 rgba(0, 0, 0, 0.1);
+}
+
+.h-full.flex.flex-col {
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.flex-1.overflow-auto {
+  min-height: 0;
+}
+
+.overflow-x-auto {
+  overflow-x: auto;
+  width: 100%;
+}
+
+.pb-16 {
+  padding-bottom: 4rem;
+}
+
+@media (max-width: 640px) {
+  .table thead th {
+    padding: 0.5rem 0.25rem;
+  }
+  
+  .table tbody td {
+    padding: 0.5rem 0.25rem;
+  }
+}
+</style> 

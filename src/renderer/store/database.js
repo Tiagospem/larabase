@@ -275,9 +275,9 @@ export const useDatabaseStore = defineStore('database', () => {
   }
 
   // New functions for tab functionality
-  async function getTableStructure(connectionId, tableName) {
+  async function getTableStructure(connectionId, tableName, force = false) {
     const cacheKey = `${connectionId}:${tableName}:structure`;
-    if (tableStructures.value[cacheKey]) {
+    if (!force && tableStructures.value[cacheKey]) {
       return tableStructures.value[cacheKey];
     }
 
@@ -537,9 +537,9 @@ export const useDatabaseStore = defineStore('database', () => {
     }
   }
 
-  async function getTableIndexes(connectionId, tableName) {
+  async function getTableIndexes(connectionId, tableName, force = false) {
     const cacheKey = `${connectionId}:${tableName}:indexes`;
-    if (tableIndexes.value[cacheKey]) {
+    if (!force && tableIndexes.value[cacheKey]) {
       return tableIndexes.value[cacheKey];
     }
 
@@ -618,107 +618,134 @@ export const useDatabaseStore = defineStore('database', () => {
     }
   }
 
-  async function getTableForeignKeys(connectionId, tableName) {
+  async function getTableForeignKeys(connectionId, tableName, force = false) {
     const cacheKey = `${connectionId}:${tableName}:foreignKeys`;
-    if (tableForeignKeys.value[cacheKey]) {
+    if (!force && tableForeignKeys.value[cacheKey]) {
       return tableForeignKeys.value[cacheKey];
     }
 
     try {
-      await new Promise(resolve => setTimeout(resolve, 500)); // Simulate loading
+      const connection = usedConnectionsStore().getConnection(connectionId);
       
-      // For a real application, this would make an API call to get the foreign keys
-      // For now we'll use mock data
-      let foreignKeys = [];
-      
-      if (tableName === 'users') {
-        foreignKeys = [
-          {
-            name: 'users_user_type_id_foreign',
-            type: 'outgoing',
-            column: 'user_type_id',
-            referenced_table: 'user_types',
-            referenced_column: 'id',
-            on_update: 'CASCADE',
-            on_delete: 'SET NULL'
-          },
-          {
-            name: 'orders_user_id_foreign',
-            type: 'incoming',
-            table: 'orders',
-            column: 'user_id',
-            referenced_column: 'id',
-            on_update: 'CASCADE',
-            on_delete: 'RESTRICT'
-          },
-          {
-            name: 'posts_author_id_foreign',
-            type: 'incoming',
-            table: 'posts',
-            column: 'author_id',
-            referenced_column: 'id',
-            on_update: 'CASCADE',
-            on_delete: 'CASCADE'
-          }
-        ];
-      } else if (tableName === 'orders') {
-        foreignKeys = [
-          {
-            name: 'orders_user_id_foreign',
-            type: 'outgoing',
-            column: 'user_id',
-            referenced_table: 'users',
-            referenced_column: 'id',
-            on_update: 'CASCADE',
-            on_delete: 'RESTRICT'
-          },
-          {
-            name: 'order_items_order_id_foreign',
-            type: 'incoming',
-            table: 'order_items',
-            column: 'order_id',
-            referenced_column: 'id',
-            on_update: 'CASCADE',
-            on_delete: 'CASCADE'
-          }
-        ];
-      } else if (tableName === 'order_items') {
-        foreignKeys = [
-          {
-            name: 'order_items_order_id_foreign',
-            type: 'outgoing',
-            column: 'order_id',
-            referenced_table: 'orders',
-            referenced_column: 'id',
-            on_update: 'CASCADE',
-            on_delete: 'CASCADE'
-          },
-          {
-            name: 'order_items_product_id_foreign',
-            type: 'outgoing',
-            column: 'product_id',
-            referenced_table: 'products',
-            referenced_column: 'id',
-            on_update: 'CASCADE',
-            on_delete: 'RESTRICT'
-          }
-        ];
-      } else {
-        // Default empty foreign keys for other tables
-        foreignKeys = [];
+      if (!connection) {
+        console.error("Connection not found");
+        return [];
+      }
+
+      if (connection.type !== 'mysql') {
+        await new Promise(resolve => setTimeout(resolve, 500)); // Simulate loading
+        
+        // For a real application, this would make an API call to get the foreign keys
+        // For now we'll use mock data
+        let foreignKeys = [];
+        
+        if (tableName === 'users') {
+          foreignKeys = [
+            {
+              name: 'users_user_type_id_foreign',
+              type: 'outgoing',
+              column: 'user_type_id',
+              referenced_table: 'user_types',
+              referenced_column: 'id',
+              on_update: 'CASCADE',
+              on_delete: 'SET NULL'
+            },
+            {
+              name: 'orders_user_id_foreign',
+              type: 'incoming',
+              table: 'orders',
+              column: 'user_id',
+              referenced_column: 'id',
+              on_update: 'CASCADE',
+              on_delete: 'RESTRICT'
+            },
+            {
+              name: 'posts_author_id_foreign',
+              type: 'incoming',
+              table: 'posts',
+              column: 'author_id',
+              referenced_column: 'id',
+              on_update: 'CASCADE',
+              on_delete: 'CASCADE'
+            }
+          ];
+        } else if (tableName === 'orders') {
+          foreignKeys = [
+            {
+              name: 'orders_user_id_foreign',
+              type: 'outgoing',
+              column: 'user_id',
+              referenced_table: 'users',
+              referenced_column: 'id',
+              on_update: 'CASCADE',
+              on_delete: 'RESTRICT'
+            },
+            {
+              name: 'order_items_order_id_foreign',
+              type: 'incoming',
+              table: 'order_items',
+              column: 'order_id',
+              referenced_column: 'id',
+              on_update: 'CASCADE',
+              on_delete: 'CASCADE'
+            }
+          ];
+        } else if (tableName === 'order_items') {
+          foreignKeys = [
+            {
+              name: 'order_items_order_id_foreign',
+              type: 'outgoing',
+              column: 'order_id',
+              referenced_table: 'orders',
+              referenced_column: 'id',
+              on_update: 'CASCADE',
+              on_delete: 'CASCADE'
+            },
+            {
+              name: 'order_items_product_id_foreign',
+              type: 'outgoing',
+              column: 'product_id',
+              referenced_table: 'products',
+              referenced_column: 'id',
+              on_update: 'CASCADE',
+              on_delete: 'RESTRICT'
+            }
+          ];
+        } else {
+          // Default empty foreign keys for other tables
+          foreignKeys = [];
+        }
+        
+        tableForeignKeys.value[cacheKey] = foreignKeys;
+        return foreignKeys;
       }
       
-      tableForeignKeys.value[cacheKey] = foreignKeys;
-      return foreignKeys;
+      // Para MySQL, obter as foreign keys reais
+      const result = await window.api.getTableForeignKeys({
+        host: connection.host,
+        port: connection.port,
+        username: connection.username,
+        password: connection.password,
+        database: connection.database,
+        tableName: tableName
+      });
+      
+      if (result.success) {
+        tableForeignKeys.value[cacheKey] = result.foreignKeys;
+        return result.foreignKeys;
+      } else {
+        console.error("Failed to get foreign keys:", result.message);
+        return [];
+      }
     } catch (error) {
       console.error(`Error getting foreign keys for ${tableName}:`, error);
       return [];
     }
   }
 
-  async function getTableMigrations(connectionId, tableName) {
+  async function getTableMigrations(connectionId, tableName, force = false) {
     const cacheKey = `${connectionId}:${tableName}:migrations`;
-    if (tableMigrations.value[cacheKey]) {
+    if (!force && tableMigrations.value[cacheKey]) {
       return tableMigrations.value[cacheKey];
     }
 
@@ -757,6 +784,34 @@ export const useDatabaseStore = defineStore('database', () => {
     }
   }
 
+  // Limpar o cache de uma tabela específica
+  function clearTableCache(cacheKey) {
+    // Limpar dados da tabela
+    if (tableRecords.value[cacheKey]) {
+      delete tableRecords.value[cacheKey];
+    }
+    
+    // Limpar estrutura
+    if (tableStructures.value[`${cacheKey}:structure`]) {
+      delete tableStructures.value[`${cacheKey}:structure`];
+    }
+    
+    // Limpar índices
+    if (tableIndexes.value[`${cacheKey}:indexes`]) {
+      delete tableIndexes.value[`${cacheKey}:indexes`];
+    }
+    
+    // Limpar chaves estrangeiras
+    if (tableForeignKeys.value[`${cacheKey}:foreignKeys`]) {
+      delete tableForeignKeys.value[`${cacheKey}:foreignKeys`];
+    }
+    
+    // Limpar migrações
+    if (tableMigrations.value[`${cacheKey}:migrations`]) {
+      delete tableMigrations.value[`${cacheKey}:migrations`];
+    }
+  }
+
   const tablesList = computed(() => {
     return tables.value.tables || [];
   });
@@ -771,6 +826,7 @@ export const useDatabaseStore = defineStore('database', () => {
     getTableIndexes,
     getTableForeignKeys,
     getTableMigrations,
+    clearTableCache,
     tablesList
   };
 }); 

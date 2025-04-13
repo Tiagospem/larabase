@@ -668,4 +668,105 @@ ipcMain.handle('getTableStructure', async (event, config) => {
       }
     }
   }
+});
+
+ipcMain.handle('getTableForeignKeys', async (event, config) => {
+  let connection;
+
+  try {
+    if (!config.host || !config.port || !config.username || !config.database || !config.tableName) {
+      return { 
+        success: false, 
+        message: 'Missing parameters',
+        foreignKeys: []
+      };
+    }
+
+    connection = await mysql.createConnection({
+      host: config.host,
+      port: config.port,
+      user: config.username,
+      password: config.password || '',
+      database: config.database,
+      connectTimeout: 10000
+    });
+
+    // Get outgoing foreign keys (where this table references others)
+    const [outgoingFKs] = await connection.query(`
+      SELECT 
+        k.CONSTRAINT_NAME as name,
+        k.COLUMN_NAME as \`column\`,
+        k.REFERENCED_TABLE_NAME as referenced_table,
+        k.REFERENCED_COLUMN_NAME as referenced_column,
+        rc.UPDATE_RULE as on_update,
+        rc.DELETE_RULE as on_delete
+      FROM 
+        information_schema.KEY_COLUMN_USAGE k
+      JOIN 
+        information_schema.REFERENTIAL_CONSTRAINTS rc
+        ON k.CONSTRAINT_NAME = rc.CONSTRAINT_NAME
+        AND k.CONSTRAINT_SCHEMA = rc.CONSTRAINT_SCHEMA
+      WHERE 
+        k.TABLE_SCHEMA = ? 
+        AND k.TABLE_NAME = ?
+        AND k.REFERENCED_TABLE_NAME IS NOT NULL
+    `, [config.database, config.tableName]);
+    
+    // Get incoming foreign keys (where other tables reference this table)
+    const [incomingFKs] = await connection.query(`
+      SELECT 
+        k.CONSTRAINT_NAME as name,
+        k.TABLE_NAME as \`table\`,
+        k.COLUMN_NAME as \`column\`,
+        k.REFERENCED_COLUMN_NAME as referenced_column,
+        rc.UPDATE_RULE as on_update,
+        rc.DELETE_RULE as on_delete
+      FROM 
+        information_schema.KEY_COLUMN_USAGE k
+      JOIN 
+        information_schema.REFERENTIAL_CONSTRAINTS rc
+        ON k.CONSTRAINT_NAME = rc.CONSTRAINT_NAME
+        AND k.CONSTRAINT_SCHEMA = rc.CONSTRAINT_SCHEMA
+      WHERE 
+        k.TABLE_SCHEMA = ? 
+        AND k.REFERENCED_TABLE_NAME = ?
+    `, [config.database, config.tableName]);
+    
+    // Format outgoing FKs
+    const outgoing = outgoingFKs.map(fk => ({
+      ...fk,
+      type: 'outgoing'
+    }));
+    
+    // Format incoming FKs
+    const incoming = incomingFKs.map(fk => ({
+      ...fk,
+      type: 'incoming'
+    }));
+    
+    // Combine both types
+    const allForeignKeys = [...outgoing, ...incoming];
+    
+    console.log(`Found ${outgoing.length} outgoing and ${incoming.length} incoming foreign keys for ${config.tableName}`);
+    
+    return { 
+      success: true, 
+      foreignKeys: allForeignKeys
+    };
+  } catch (error) {
+    console.error('Error fetching foreign keys:', error);
+    return { 
+      success: false, 
+      message: error.message || 'Failed to fetch foreign keys',
+      foreignKeys: []
+    };
+  } finally {
+    if (connection) {
+      try {
+        await connection.end();
+      } catch (err) {
+        console.error('Error closing MySQL connection:', err);
+      }
+    }
+  }
 }); 

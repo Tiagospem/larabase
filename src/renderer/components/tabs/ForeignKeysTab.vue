@@ -42,74 +42,78 @@
         </div>
       </div>
       
-      <div v-else class="p-4">
+      <div v-else class="p-4 pb-16 h-full overflow-auto">
         <!-- Outgoing Foreign Keys -->
         <div v-if="outgoingRelations.length > 0" class="mb-6">
           <h3 class="text-lg font-bold mb-3">References to Other Tables</h3>
-          <table class="table table-sm w-full">
-            <thead class="bg-base-300 sticky top-0">
-              <tr class="text-xs">
-                <th class="px-4 py-2 text-left">Name</th>
-                <th class="px-4 py-2 text-left">Local Column</th>
-                <th class="px-4 py-2 text-left">Referenced Table</th>
-                <th class="px-4 py-2 text-left">Referenced Column</th>
-                <th class="px-4 py-2 text-left">On Update</th>
-                <th class="px-4 py-2 text-left">On Delete</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="fk in outgoingRelations" :key="fk.name" 
-                  class="border-b border-gray-700 hover:bg-base-200">
-                <td class="px-4 py-3 font-medium">{{ fk.name }}</td>
-                <td class="px-4 py-3">{{ fk.column }}</td>
-                <td class="px-4 py-3">{{ fk.referenced_table }}</td>
-                <td class="px-4 py-3">{{ fk.referenced_column }}</td>
-                <td class="px-4 py-3">
-                  <span class="badge badge-ghost badge-sm">{{ fk.on_update }}</span>
-                </td>
-                <td class="px-4 py-3">
-                  <span class="badge badge-ghost badge-sm">{{ fk.on_delete }}</span>
-                </td>
-              </tr>
-            </tbody>
-          </table>
+          <div class="overflow-x-auto">
+            <table class="table table-sm w-full min-w-full">
+              <thead class="bg-base-300 sticky top-0 z-10">
+                <tr class="text-xs">
+                  <th class="px-4 py-2 text-left">Name</th>
+                  <th class="px-4 py-2 text-left">Local Column</th>
+                  <th class="px-4 py-2 text-left">Referenced Table</th>
+                  <th class="px-4 py-2 text-left">Referenced Column</th>
+                  <th class="px-4 py-2 text-left">On Update</th>
+                  <th class="px-4 py-2 text-left">On Delete</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="fk in outgoingRelations" :key="fk.name" 
+                    class="border-b border-neutral hover:bg-base-200">
+                  <td class="px-4 py-3 font-medium">{{ fk.name }}</td>
+                  <td class="px-4 py-3">{{ fk.column }}</td>
+                  <td class="px-4 py-3">{{ fk.referenced_table }}</td>
+                  <td class="px-4 py-3">{{ fk.referenced_column }}</td>
+                  <td class="px-4 py-3">
+                    <span class="badge badge-ghost badge-sm">{{ fk.on_update }}</span>
+                  </td>
+                  <td class="px-4 py-3">
+                    <span class="badge badge-ghost badge-sm">{{ fk.on_delete }}</span>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
         </div>
         
         <!-- Incoming Foreign Keys -->
         <div v-if="incomingRelations.length > 0">
           <h3 class="text-lg font-bold mb-3">References from Other Tables</h3>
-          <table class="table table-sm w-full">
-            <thead class="bg-base-300 sticky top-0">
-              <tr class="text-xs">
-                <th class="px-4 py-2 text-left">Name</th>
-                <th class="px-4 py-2 text-left">Table</th>
-                <th class="px-4 py-2 text-left">Column</th>
-                <th class="px-4 py-2 text-left">Referenced Column</th>
-                <th class="px-4 py-2 text-left">On Update</th>
-                <th class="px-4 py-2 text-left">On Delete</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="fk in incomingRelations" :key="fk.name" 
-                  class="border-b border-gray-700 hover:bg-base-200">
-                <td class="px-4 py-3 font-medium">{{ fk.name }}</td>
-                <td class="px-4 py-3">{{ fk.table }}</td>
-                <td class="px-4 py-3">{{ fk.column }}</td>
-                <td class="px-4 py-3">{{ fk.referenced_column }}</td>
-                <td class="px-4 py-3">
-                  <span class="badge badge-ghost badge-sm">{{ fk.on_update }}</span>
-                </td>
-                <td class="px-4 py-3">
-                  <span class="badge badge-ghost badge-sm">{{ fk.on_delete }}</span>
-                </td>
-              </tr>
-            </tbody>
-          </table>
+          <div class="overflow-x-auto">
+            <table class="table table-sm w-full min-w-full">
+              <thead class="bg-base-300 sticky top-0 z-10">
+                <tr class="text-xs">
+                  <th class="px-4 py-2 text-left">Name</th>
+                  <th class="px-4 py-2 text-left">Table</th>
+                  <th class="px-4 py-2 text-left">Column</th>
+                  <th class="px-4 py-2 text-left">Referenced Column</th>
+                  <th class="px-4 py-2 text-left">On Update</th>
+                  <th class="px-4 py-2 text-left">On Delete</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="fk in incomingRelations" :key="fk.name" 
+                    class="border-b border-neutral hover:bg-base-200">
+                  <td class="px-4 py-3 font-medium">{{ fk.name }}</td>
+                  <td class="px-4 py-3">{{ fk.table }}</td>
+                  <td class="px-4 py-3">{{ fk.column }}</td>
+                  <td class="px-4 py-3">{{ fk.referenced_column }}</td>
+                  <td class="px-4 py-3">
+                    <span class="badge badge-ghost badge-sm">{{ fk.on_update }}</span>
+                  </td>
+                  <td class="px-4 py-3">
+                    <span class="badge badge-ghost badge-sm">{{ fk.on_delete }}</span>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
     </div>
 
-    <div v-if="foreignKeys.length > 0" class="bg-base-200 px-4 py-2 border-t border-gray-800 flex justify-between items-center text-xs text-gray-400">
+    <div v-if="foreignKeys.length > 0" class="bg-base-200 px-4 py-2 border-t border-neutral flex justify-between items-center text-xs text-gray-400 sticky bottom-0 left-0 right-0 min-h-[40px] z-20">
       <div>{{ tableName }} | {{ outgoingRelations.length }} outgoing | {{ incomingRelations.length }} incoming</div>
     </div>
   </div>
@@ -174,7 +178,8 @@ async function loadForeignKeys() {
   
   try {
     // Use the store's getTableForeignKeys method
-    const tableForeignKeys = await databaseStore.getTableForeignKeys(props.connectionId, props.tableName);
+    const tableForeignKeys = await databaseStore.getTableForeignKeys(props.connectionId, props.tableName, true);
+    console.log('Loaded foreign keys:', tableForeignKeys);
     
     foreignKeys.value = tableForeignKeys;
     
@@ -185,6 +190,7 @@ async function loadForeignKeys() {
     });
     
   } catch (error) {
+    console.error("Error loading foreign keys:", error);
     loadError.value = 'Failed to load foreign keys: ' + (error.message || 'Unknown error');
     showAlert(`Error loading foreign keys: ${error.message}`, 'error');
   } finally {
@@ -196,4 +202,50 @@ async function loadForeignKeys() {
 onMounted(() => {
   loadForeignKeys();
 });
-</script> 
+</script>
+
+<style scoped>
+.table {
+  width: max-content;
+  min-width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background-color: hsl(var(--b3) / var(--tw-bg-opacity));
+  box-shadow: 0 1px 0 0 rgba(0, 0, 0, 0.1);
+}
+
+.h-full.flex.flex-col {
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.flex-1.overflow-auto {
+  min-height: 0;
+}
+
+.overflow-x-auto {
+  overflow-x: auto;
+  width: 100%;
+}
+
+.pb-16 {
+  padding-bottom: 4rem;
+}
+
+@media (max-width: 640px) {
+  .table thead th {
+    padding: 0.5rem 0.25rem;
+  }
+  
+  .table tbody td {
+    padding: 0.5rem 0.25rem;
+  }
+}
+</style> 
