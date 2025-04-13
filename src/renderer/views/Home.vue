@@ -1,6 +1,5 @@
 <template>
   <div class="flex h-full">
-    <!-- Coluna da esquerda - Logo e Create Connection -->
     <div class="w-1/3 bg-neutral flex flex-col items-center justify-between p-6 border-r border-gray-800">
       <div class="flex flex-col items-center">
         <img src="../assets/larabase-logo.png" alt="Larabase" class="h-32 w-32 mb-2" />
@@ -21,7 +20,6 @@
       </button>
     </div>
 
-    <!-- Coluna da direita - Lista de conexões -->
     <div class="w-2/3 flex flex-col">
       <div class="flex-1 overflow-auto p-6">
         <h2 class="text-xl font-bold mb-4 text-white">Your Connections</h2>
@@ -41,7 +39,6 @@
         </div>
         
         <div v-else class="grid grid-cols-1 gap-3">
-          <!-- Conexões disponíveis -->
           <div v-for="connection in connectionsStore.connections" :key="connection.id" 
             class="card bg-base-200 shadow-xl transition-colors border border-gray-700 hover:border-gray-500">
             <div class="card-body py-4 px-5">
@@ -58,8 +55,17 @@
                 </div>
                 <div class="flex gap-2">
                   <button 
+                    class="btn btn-sm btn-ghost text-blue-400" 
+                    @click.stop="editConnection(connection)"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" 
+                      stroke="currentColor" class="w-4 h-4">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L6.832 19.82a4.5 4.5 0 01-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 011.13-1.897L16.863 4.487zm0 0L19.5 7.125" />
+                    </svg>
+                  </button>
+                  <button 
                     class="btn btn-sm btn-ghost" 
-                    @click="openConnection(connection.id)"
+                    @click.stop="openConnection(connection.id)"
                   >
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" 
                       stroke="currentColor" class="w-4 h-4">
@@ -68,7 +74,7 @@
                   </button>
                   <button 
                     class="btn btn-sm btn-ghost text-error" 
-                    @click="removeConnection(connection.id)"
+                    @click.stop="removeConnection(connection.id)"
                   >
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" 
                       stroke="currentColor" class="w-4 h-4">
@@ -82,11 +88,10 @@
         </div>
       </div>
     </div>
-    
-    <!-- Modal para criar conexão -->
+
     <div class="modal" :class="{ 'modal-open': isCreateModalOpen }">
       <div class="modal-box w-11/12 max-w-4xl">
-        <h3 class="font-bold text-lg mb-4">Create New Connection</h3>
+        <h3 class="font-bold text-lg mb-4">{{ isEditMode ? 'Edit Connection' : 'Create New Connection' }}</h3>
         
         <div class="form-control w-full mb-4">
           <label class="label">
@@ -94,7 +99,7 @@
           </label>
           <div class="flex gap-2">
             <input type="text" v-model="newConnection.path" placeholder="Select Laravel project directory" 
-              class="input input-bordered w-full" readonly />
+              class="input input-bordered w-full" :readonly="!isEditMode" />
             <button class="btn btn-primary" @click="selectDirectory">
               Browse
             </button>
@@ -208,7 +213,7 @@
           <button class="btn" @click="isCreateModalOpen = false">Cancel</button>
           <button class="btn btn-primary" @click="saveNewConnection" :disabled="isLoading || !newConnection.path">
             <span v-if="isSaving" class="loading loading-spinner loading-xs mr-2"></span>
-            Save Connection
+            {{ isEditMode ? 'Update Connection' : 'Save Connection' }}
           </button>
         </div>
       </div>
@@ -220,24 +225,22 @@
 <script setup>
 import { onMounted, computed, inject, ref } from 'vue';
 import { useRouter } from 'vue-router';
-import { useConnectionsStore } from '../store/connections';
+import { useConnectionsStore } from '@/store/connections';
 import { v4 as uuidv4 } from 'uuid';
 
 const router = useRouter();
 const connectionsStore = useConnectionsStore();
 
-// Funções de alerta
 const showAlert = inject('showAlert');
 
-// Status de carregamento
 const isLoading = computed(() => connectionsStore.isLoading);
 const isSaving = ref(false);
 
-// Estado do modal
 const isCreateModalOpen = ref(false);
+const isEditMode = ref(false);
+const editConnectionId = ref(null);
 const pathError = ref('');
 
-// Dados da nova conexão
 const newConnection = ref({
   path: '',
   name: '',
@@ -253,26 +256,18 @@ const newConnection = ref({
   redisPassword: ''
 });
 
-// Carregar conexões ao montar o componente
 onMounted(async () => {
   try {
-    // Forçar recarregamento das conexões
     await connectionsStore.loadConnections();
-    
-    console.log('Conexões carregadas:', connectionsStore.connections);
-    
-    if (connectionsStore.connections.length > 0) {
-      showAlert(`${connectionsStore.connections.length} conexões carregadas`, 'success');
-    }
   } catch (error) {
-    console.error('Erro ao carregar conexões:', error);
-    showAlert('Erro ao carregar conexões', 'error');
+    console.error(error);
+    showAlert(error, 'error');
   }
 });
 
-// Abrir modal para criar conexão
 function openCreateConnectionModal() {
-  // Resetar form
+  isEditMode.value = false;
+  editConnectionId.value = null;
   newConnection.value = {
     path: '',
     name: '',
@@ -291,10 +286,31 @@ function openCreateConnectionModal() {
   isCreateModalOpen.value = true;
 }
 
-// Selecionar diretório do projeto Laravel
+function editConnection(connection) {
+  isEditMode.value = true;
+  editConnectionId.value = connection.id;
+
+  newConnection.value = {
+    path: connection.path || '',
+    name: connection.name || '',
+    type: connection.type || 'mysql',
+    host: connection.host || '',
+    port: connection.port ? connection.port.toString() : '3306',
+    database: connection.database || '',
+    username: connection.username || '',
+    password: connection.password || '',
+    usingSail: connection.usingSail || false,
+    redisHost: connection.redis?.host || '',
+    redisPort: connection.redis?.port ? connection.redis.port.toString() : '6379',
+    redisPassword: connection.redis?.password || ''
+  };
+  
+  pathError.value = '';
+  isCreateModalOpen.value = true;
+}
+
 async function selectDirectory() {
   try {
-    // Chamar método IPC para abrir o diálogo de seleção de diretório
     const result = await window.api.selectDirectory();
     
     if (result.canceled) {
@@ -304,44 +320,36 @@ async function selectDirectory() {
     const selectedPath = result.filePaths[0];
     newConnection.value.path = selectedPath;
     pathError.value = '';
-    
-    // Verificar se é um projeto Laravel válido
+
     const isLaravelProject = await window.api.validateLaravelProject(selectedPath);
     
     if (!isLaravelProject) {
       pathError.value = 'Selected directory does not appear to be a valid Laravel project';
       return;
     }
-    
-    // Ler arquivo .env para extrair configurações
+
     const envConfig = await window.api.readEnvFile(selectedPath);
     
     if (envConfig) {
-      // Preencher dados da conexão com base no .env
       newConnection.value.name = envConfig.APP_NAME || selectedPath.split('/').pop();
       newConnection.value.host = envConfig.DB_HOST || 'localhost';
       newConnection.value.port = envConfig.DB_PORT || '3306';
       newConnection.value.database = envConfig.DB_DATABASE || '';
       newConnection.value.username = envConfig.DB_USERNAME || 'root';
       newConnection.value.password = envConfig.DB_PASSWORD || '';
-      
-      // Configurações do Redis
+
       newConnection.value.redisHost = envConfig.REDIS_HOST || '127.0.0.1';
       newConnection.value.redisPort = envConfig.REDIS_PORT || '6379';
       newConnection.value.redisPassword = envConfig.REDIS_PASSWORD || '';
-      
-      showAlert('Projeto Laravel detectado. Configurações importadas com sucesso.', 'success');
     }
   } catch (error) {
-    console.error('Erro ao selecionar diretório:', error);
-    showAlert('Erro ao selecionar diretório', 'error');
+    console.error(error);
+    showAlert('Error to select dir', 'error');
   }
 }
 
-// Salvar nova conexão
 async function saveNewConnection() {
   try {
-    // Validar dados
     if (!newConnection.value.path) {
       pathError.value = 'Project path is required';
       return;
@@ -351,22 +359,20 @@ async function saveNewConnection() {
       showAlert('Please fill all required fields', 'error');
       return;
     }
-    
-    // Verificar se já existe uma conexão com o mesmo nome ou caminho
+
     const exists = connectionsStore.connections.some(conn => 
-      conn.path === newConnection.value.path || conn.name === newConnection.value.name
+      (conn.path === newConnection.value.path || conn.name === newConnection.value.name) && 
+      conn.id !== editConnectionId.value
     );
     
     if (exists) {
       showAlert('A connection with this name or path already exists', 'error');
       return;
     }
-    
-    // Mostrar que estamos testando a conexão
+
     isSaving.value = true;
     showAlert('Testing database connection...', 'info');
-    
-    // Testar a conexão antes de salvar
+
     const testResult = await window.api.testMySQLConnection({
       host: newConnection.value.host,
       port: parseInt(newConnection.value.port),
@@ -382,13 +388,9 @@ async function saveNewConnection() {
     }
     
     showAlert('Connection successful! Saving connection...', 'success');
-    
-    // Gerar UUID para a conexão
-    const connectionId = uuidv4();
-    
-    // Criar objeto de conexão (sem métodos ou propriedades não serializáveis)
+
     const connectionData = {
-      id: connectionId,
+      id: isEditMode.value ? editConnectionId.value : uuidv4(),
       name: newConnection.value.name,
       type: newConnection.value.type,
       icon: newConnection.value.type.charAt(0).toUpperCase(),
@@ -400,7 +402,6 @@ async function saveNewConnection() {
       path: newConnection.value.path,
       usingSail: newConnection.value.usingSail,
       status: 'ready',
-      // Dados de Redis são opcionais
       redis: {
         host: newConnection.value.redisHost || '',
         port: parseInt(newConnection.value.redisPort || '6379'),
@@ -408,20 +409,23 @@ async function saveNewConnection() {
       }
     };
     
-    // Salvar conexão
-    await connectionsStore.addConnection(connectionData);
+    if (isEditMode.value) {
+      await connectionsStore.updateConnection(editConnectionId.value, connectionData);
+      showAlert('Connection updated successfully', 'success');
+    } else {
+      await connectionsStore.addConnection(connectionData);
+      showAlert('Connection saved successfully', 'success');
+    }
     
-    showAlert('Connection saved successfully', 'success');
     isCreateModalOpen.value = false;
   } catch (error) {
-    console.error('Error creating connection:', error);
+    console.error('Error saving connection:', error);
     showAlert(`Error saving connection: ${error.message}`, 'error');
   } finally {
     isSaving.value = false;
   }
 }
 
-// Remover conexão
 async function removeConnection(connectionId) {
   if (confirm('Are you sure you want to delete this connection? All related data will be lost.')) {
     try {
@@ -434,12 +438,10 @@ async function removeConnection(connectionId) {
   }
 }
 
-// Abrir uma conexão
 function openConnection(connectionId) {
   router.push(`/database/${connectionId}`);
 }
 
-// Definir cores para os tipos de conexão
 function getConnectionColor(type) {
   switch (type) {
     case 'mysql':

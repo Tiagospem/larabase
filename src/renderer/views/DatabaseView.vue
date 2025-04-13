@@ -139,7 +139,7 @@ const TableContentComponent = markRaw(TableContent);
 
 const route = useRoute();
 const router = useRouter();
-const connectionId = computed(() => parseInt(route.params.id, 10));
+const connectionId = computed(() => route.params.id);
 
 const showAlert = inject('showAlert');
 
