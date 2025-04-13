@@ -244,7 +244,7 @@ function startResize(e) {
 
 function onResize(e) {
   if (isResizing.value) {
-    sidebarWidth.value = Math.max(160, Math.min(500, e.clientX));
+    sidebarWidth.value = Math.max(200, Math.min(500, e.clientX));
   }
 }
 

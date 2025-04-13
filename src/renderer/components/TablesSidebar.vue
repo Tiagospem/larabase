@@ -49,10 +49,16 @@
     </div>
 
     <div class="overflow-y-auto flex-1">
-      <div v-if="isLoading" class="p-4 text-center">
-        <span class="loading loading-spinner loading-md"></span>
+      <!-- Skeleton loading state -->
+      <div v-if="isLoading || isLoadingCounts" class="p-2">
+        <div v-for="i in 10" :key="i" class="flex items-center gap-2 p-1 mb-1 rounded bg-base-100 animate-pulse">
+          <div class="w-4 h-4 mr-3 bg-gray-600 rounded"></div>
+          <div class="h-3 bg-gray-600 rounded w-4/5"></div>
+          <div class="ml-auto w-8 h-4 bg-gray-600 rounded"></div>
+        </div>
       </div>
       
+      <!-- Actual data -->
       <ul v-else class="menu menu-sm">
         <li v-for="table in sortedTables" :key="table.name" class="hover:bg-base-300">
           <a @click="openTable(table)" :class="{ 'bg-base-300': isTableActive(table.name) }">
@@ -97,6 +103,7 @@ const databaseStore = useDatabaseStore();
 const searchTerm = ref('');
 const sortBy = ref(localStorage.getItem('tableSort') || 'name');
 const sortOrder = ref(localStorage.getItem('tableSortOrder') || 'asc');
+const isLoadingCounts = ref(false);
 
 const isLoading = computed(() => databaseStore.isLoading);
 const tables = computed(() => databaseStore.tablesList);
@@ -152,15 +159,24 @@ function toggleSortOrder() {
 }
 
 async function loadTableRecordCounts() {
-  for (const table of tables.value) {
-    if (table.recordCount === undefined) {
-      try {
-        table.recordCount = await databaseStore.getTableRecordCount(props.connectionId, table.name);
-      } catch (error) {
-        console.error(`Failed to get record count for ${table.name}:`, error);
-        table.recordCount = 0;
+  isLoadingCounts.value = true;
+  try {
+    const promises = tables.value.map(async (table) => {
+      if (table.recordCount === undefined) {
+        try {
+          table.recordCount = await databaseStore.getTableRecordCount(props.connectionId, table.name);
+        } catch (error) {
+          console.error(`Failed to get record count for ${table.name}:`, error);
+          table.recordCount = 0;
+        }
       }
-    }
+    });
+    
+    await Promise.all(promises);
+  } catch (error) {
+    console.error("Error loading record counts:", error);
+  } finally {
+    isLoadingCounts.value = false;
   }
 }
 
@@ -183,5 +199,26 @@ watch(() => tables.value.length, () => {
 
 .resize-handle:hover {
   background-color: #4e4e50;
+}
+
+/* Override tooltip styles to ensure they're visible */
+.tooltip:before {
+  max-width: 200px;
+  white-space: normal;
+  z-index: 100;
+}
+
+/* Animation for skeleton loading */
+@keyframes pulse {
+  0%, 100% {
+    opacity: 0.5;
+  }
+  50% {
+    opacity: 0.3;
+  }
+}
+
+.animate-pulse {
+  animation: pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
 </style> 

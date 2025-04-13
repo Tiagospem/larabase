@@ -1,6 +1,6 @@
 <template>
   <div class="h-full flex flex-col">
-    <div class="bg-base-200 p-2 border-b border-gray-800 flex items-center justify-between">
+    <div class="bg-base-200 p-2 border-b border-neutral flex items-center justify-between">
       <div class="flex items-center space-x-2">
         <button class="btn btn-sm btn-ghost" @click="loadTableData">
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" 
@@ -61,18 +61,22 @@
            tabindex="0"
            @keydown.prevent="handleTableKeyDown"
            class="h-full overflow-auto">
-        <table class="table table-sm w-full">
-          <thead class="bg-base-300 sticky top-0">
+        <table class="table table-sm w-full table-fixed">
+          <thead class="bg-base-300 sticky top-0 z-10">
             <tr class="text-xs select-none">
               <th v-for="(column, index) in columns" 
                   :key="column" 
-                  class="px-4 py-2 border-r border-gray-700 last:border-r-0 relative"
-                  :style="{ width: columnWidths[column] || 'auto' }">
-                {{ column }}
-                <!-- Resize handle -->
+                  class="px-4 py-2 border-r border-neutral last:border-r-0 relative"
+                  :style="{ width: columnWidths[column] || defaultColumnWidth(column) }">
+                <div class="flex items-center justify-between">
+                  <span class="truncate">{{ column }}</span>
+                </div>
+                <!-- Enhanced resize handle with visual indicator -->
                 <div v-if="index < columns.length - 1"
-                     class="absolute right-0 top-0 h-full w-1 cursor-col-resize"
-                     @mousedown.stop="startColumnResize($event, column)"></div>
+                     class="absolute right-0 top-0 h-full w-2 cursor-col-resize group"
+                     @mousedown.stop="startColumnResize($event, column)">
+                  <div class="absolute right-0 top-0 w-[1px] h-full bg-transparent group-hover:bg-primary group-hover:w-[2px] transition-all"></div>
+                </div>
               </th>
             </tr>
           </thead>
@@ -84,13 +88,13 @@
                 @click.stop="handleRowClick($event, rowIndex)"
                 @mousedown.stop="handleMouseDown($event, rowIndex)"
                 @mouseenter.stop="handleMouseEnter(rowIndex)"
-                class="border-b border-gray-700 hover:bg-base-200 cursor-pointer">
+                class="border-b border-neutral hover:bg-base-200 cursor-pointer">
               <td v-for="column in columns" 
                   :key="`${rowIndex}-${column}`" 
-                  class="px-4 py-2 border-r border-gray-700 last:border-r-0 truncate"
+                  class="px-4 py-2 border-r border-neutral last:border-r-0 truncate"
                   :class="{ 'expanded': expandedCells.includes(`${rowIndex}-${column}`) }"
                   @dblclick="toggleExpandCell(rowIndex, column)">
-                {{ row[column] }}
+                {{ formatCellValue(row[column]) }}
               </td>
             </tr>
           </tbody>
@@ -128,7 +132,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted, inject } from 'vue';
+import { ref, computed, onMounted, onUnmounted, inject, nextTick } from 'vue';
 import { useDatabaseStore } from '@/store/database';
 
 const showAlert = inject('showAlert');
@@ -162,6 +166,9 @@ const columnWidths = ref({});
 const resizingColumn = ref(null);
 const startX = ref(0);
 const startWidth = ref(0);
+
+// Column types for better width calculation
+const columnTypes = ref({});
 
 // Row selection state
 const selectedRows = ref([]);
@@ -207,6 +214,58 @@ const paginatedData = computed(() => {
   return filteredData.value.slice(start, start + rowsPerPage.value);
 });
 
+// Format cell values for display
+function formatCellValue(value) {
+  if (value === null || value === undefined) return '';
+  
+  if (typeof value === 'object' && value instanceof Date) {
+    return value.toLocaleString();
+  }
+  
+  return String(value);
+}
+
+// Determine default column width based on column name and content
+function defaultColumnWidth(column) {
+  // Set specific widths for common column types
+  if (/^id$/i.test(column)) return '80px';
+  if (/^(created_at|updated_at|deleted_at)$/i.test(column)) return '150px';
+  if (/(email|mail)$/i.test(column)) return '180px';
+  if (/(name|title)$/i.test(column)) return '200px';
+  if (/(description|content|text)$/i.test(column)) return '300px';
+  if (/(status|type|role|category|tag)$/i.test(column)) return '120px';
+  if (/(date|time)$/i.test(column)) return '150px';
+  if (/(amount|price|cost|total|sum)$/i.test(column)) return '120px';
+  if (/(count|number|qty|quantity)$/i.test(column)) return '100px';
+  if (/(active|enabled|visible|published|featured)$/i.test(column)) return '100px';
+  if (/(image|photo|thumbnail|avatar|icon)$/i.test(column)) return '150px';
+  
+  // Default width for other columns
+  return '150px';
+}
+
+// Function to analyze column data and determine appropriate widths
+function analyzeColumns() {
+  if (tableData.value.length === 0 || columns.value.length === 0) return;
+  
+  columns.value.forEach(column => {
+    // Skip if width is already set by user
+    if (columnWidths.value[column]) return;
+    
+    // Set type based on first non-null value
+    const sampleValue = tableData.value.find(row => row[column] !== null)?.[column];
+    if (sampleValue !== undefined) {
+      const type = typeof sampleValue;
+      columnTypes.value[column] = type;
+      
+      // Set initial width based on type if not already set by defaultColumnWidth
+      if (!columnWidths.value[column]) {
+        columnWidths.value[column] = defaultColumnWidth(column);
+      }
+    }
+  });
+}
+
 // Table data loading functions
 async function loadTableData() {
   isLoading.value = true;
@@ -222,6 +281,11 @@ async function loadTableData() {
     }
     
     tableData.value = data;
+
+    // Analyze columns after data is loaded
+    nextTick(() => {
+      analyzeColumns();
+    });
 
     // Notify parent about the loaded data
     props.onLoad({
@@ -240,20 +304,25 @@ async function loadTableData() {
 // Column resize functions
 function startColumnResize(event, column) {
   event.preventDefault();
+  event.stopPropagation();
   resizingColumn.value = column;
   startX.value = event.clientX;
   
-  // Set initial width if not set yet
-  if (!columnWidths.value[column]) {
+  // Get the current width from the DOM if not in our state
+  if (!columnWidths.value[column] || !columnWidths.value[column].endsWith('px')) {
     const headerCells = document.querySelectorAll('th');
     const columnIndex = columns.value.indexOf(column);
     if (columnIndex >= 0 && headerCells[columnIndex]) {
       columnWidths.value[column] = `${headerCells[columnIndex].offsetWidth}px`;
+    } else {
+      columnWidths.value[column] = defaultColumnWidth(column);
     }
   }
   
+  // Extract numeric width
   startWidth.value = parseInt(columnWidths.value[column]) || 100;
   
+  // Add event listeners to the document
   document.addEventListener('mousemove', handleColumnResize);
   document.addEventListener('mouseup', stopColumnResize);
 }
@@ -262,14 +331,14 @@ function handleColumnResize(event) {
   if (!resizingColumn.value) return;
   
   const column = resizingColumn.value;
-  const width = Math.max(50, startWidth.value + (event.clientX - startX.value));
+  const width = Math.max(60, startWidth.value + (event.clientX - startX.value));
   columnWidths.value[column] = `${width}px`;
 }
 
-function stopColumnResize() {
-  resizingColumn.value = null;
+function stopColumnResize(event) {
   document.removeEventListener('mousemove', handleColumnResize);
   document.removeEventListener('mouseup', stopColumnResize);
+  resizingColumn.value = null;
 }
 
 // Row selection functions
@@ -437,26 +506,41 @@ onUnmounted(() => {
 
 /* Style for selected rows */
 .selected-row {
-  background-color: #3b82f6 !important; 
+  background-color: #ea4331 !important;
   color: white !important;
 }
 
 /* Override any other styles that might interfere */
 .table tr.selected-row:nth-child(odd),
 .table tr.selected-row:nth-child(even) {
-  background-color: #3b82f6 !important;
+  background-color: #ea4331 !important;
   color: white !important;
 }
 
 /* Hover effect for selected rows */
 .selected-row:hover {
-  background-color: #2563eb !important;
+  background-color: #ea4331 !important;
 }
 
 /* Style for expanded cells */
 .expanded {
   white-space: normal !important;
   max-width: none !important;
+  min-width: 300px !important;
   overflow: visible !important;
+  position: relative;
+  z-index: 5;
+  background-color: theme('colors.base-100');
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+/* Added styles for resizing */
+.table-fixed {
+  table-layout: fixed;
+}
+
+/* Better handle styles for resize */
+.group:hover .bg-gray-500 {
+  background-color: theme('colors.primary');
 }
 </style> 
