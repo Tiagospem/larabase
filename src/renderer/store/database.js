@@ -4,16 +4,12 @@ import { ref, computed } from 'vue';
 export const useDatabaseStore = defineStore('database', () => {
   const tables = ref({});
   const isLoading = ref(false);
-  
-  // Dados mockados das tabelas para cada conexão
-  // Estes dados simulam a estrutura de um banco de dados
+
   const mockDatabases = {
-    // Conexão ID 1 (Redis) - sem tabelas tradicionais, apenas chaves
     1: {
       keys: ['key1', 'key2', 'user:1', 'user:2', 'session:123'],
       keyCount: 5
     },
-    // Conexão ID 2 (MySQL - SIM)
     2: {
       tables: [
         { name: 'users', columnCount: 8 },
@@ -25,7 +21,6 @@ export const useDatabaseStore = defineStore('database', () => {
         { name: 'shipping', columnCount: 11 }
       ]
     },
-    // Conexão ID 3 (MySQL - bootcamp)
     3: {
       tables: [
         { name: 'students', columnCount: 10 },
@@ -36,7 +31,6 @@ export const useDatabaseStore = defineStore('database', () => {
         { name: 'assignments', columnCount: 7 }
       ]
     },
-    // Conexão ID 4 (SQLite - Demo)
     4: {
       tables: [
         { name: 'users', columnCount: 6 },
@@ -45,7 +39,6 @@ export const useDatabaseStore = defineStore('database', () => {
         { name: 'categories', columnCount: 3 }
       ]
     },
-    // Conexão ID 5 (SQLite - simple tables)
     5: {
       tables: [
         { name: 'simple_table_1', columnCount: 4 },
@@ -53,7 +46,6 @@ export const useDatabaseStore = defineStore('database', () => {
         { name: 'simple_table_3', columnCount: 5 }
       ]
     },
-    // Conexão ID 6 (SQLite - simon)
     6: {
       tables: [
         { name: 'action_trackers', columnCount: 5 },
@@ -95,9 +87,7 @@ export const useDatabaseStore = defineStore('database', () => {
     }
   };
 
-  // Mock data para o conteúdo de cada tabela
   const tableContents = {
-    // Alguns dados de amostra para 'case_situations'
     'case_situations': [
       { id: 1, case_study_id: 1, requires_answer: 1, title: 'Case Situation 01', content: 'Doloremque vitae repellendus et dolores totam quia ullam. Et vero facere minima culpa velit eius.' },
       { id: 2, case_study_id: 1, requires_answer: 1, title: 'Case Situation 02', content: 'Cumque earum officia natus omnis facere delectus molestias. Nemo autem dolores dolorem est.' },
@@ -113,7 +103,6 @@ export const useDatabaseStore = defineStore('database', () => {
       { id: 12, case_study_id: 7, requires_answer: 1, title: 'Case Situation 01', content: 'Voluptatibus eligendi qui et omnis non. Repudiandae est reiciendis veritatis.' },
       { id: 13, case_study_id: 8, requires_answer: 1, title: 'Case Situation 01', content: 'Ut est enim sit architecto. Illo nisi repudiandae qui et.' }
     ],
-    // Dados de amostra para 'users'
     'users': [
       { id: 1, name: 'John Doe', email: 'john@example.com', created_at: '2023-01-15', role: 'admin' },
       { id: 2, name: 'Jane Smith', email: 'jane@example.com', created_at: '2023-02-20', role: 'user' },
@@ -121,7 +110,6 @@ export const useDatabaseStore = defineStore('database', () => {
       { id: 4, name: 'Bob Wilson', email: 'bob@example.com', created_at: '2023-04-05', role: 'editor' },
       { id: 5, name: 'Carol Martinez', email: 'carol@example.com', created_at: '2023-05-15', role: 'user' }
     ],
-    // Dados de amostra para 'products'
     'products': [
       { id: 1, name: 'Smartphone X', price: 999.99, stock: 50, category: 'Electronics' },
       { id: 2, name: 'Laptop Pro', price: 1499.99, stock: 30, category: 'Electronics' },
@@ -131,12 +119,9 @@ export const useDatabaseStore = defineStore('database', () => {
     ]
   };
 
-  // Carregar tabelas para uma conexão específica
   async function loadTables(connectionId) {
     isLoading.value = true;
     try {
-      // Em ambiente real, isso seria via chamada à API ou Electron IPC
-      // Simulando uma chamada assíncrona
       await new Promise(resolve => setTimeout(resolve, 300));
       
       if (mockDatabases[connectionId]) {
@@ -145,24 +130,20 @@ export const useDatabaseStore = defineStore('database', () => {
         tables.value = { tables: [] };
       }
     } catch (error) {
-      console.error('Erro ao carregar tabelas:', error);
+      console.error(error);
       tables.value = { tables: [] };
     } finally {
       isLoading.value = false;
     }
   }
 
-  // Carregar dados para uma tabela específica
   async function loadTableData(connectionId, tableName) {
     try {
-      // Em ambiente real, isso seria via chamada à API ou Electron IPC
-      // Simulando uma chamada assíncrona
       await new Promise(resolve => setTimeout(resolve, 500));
       
       if (tableContents[tableName]) {
         return tableContents[tableName];
       } else {
-        // Gera dados fictícios caso não tenhamos dados específicos
         return Array.from({ length: 10 }, (_, i) => ({
           id: i + 1,
           column1: `Value ${i + 1}`,
@@ -171,12 +152,11 @@ export const useDatabaseStore = defineStore('database', () => {
         }));
       }
     } catch (error) {
-      console.error(`Erro ao carregar dados da tabela ${tableName}:`, error);
+      console.error(`${tableName}:`, error);
       return [];
     }
   }
 
-  // Getter para obter a lista de tabelas
   const tablesList = computed(() => {
     return tables.value.tables || [];
   });

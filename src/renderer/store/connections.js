@@ -4,8 +4,7 @@ import { ref, computed, onMounted } from 'vue';
 export const useConnectionsStore = defineStore('connections', () => {
   const connections = ref([]);
   const isLoading = ref(true);
-  
-  // Mock data
+
   const mockConnections = [
     {
       id: 1,
@@ -60,40 +59,30 @@ export const useConnectionsStore = defineStore('connections', () => {
     }
   ];
 
-  // Inicializa com dados mockados por padrão
   connections.value = [...mockConnections];
 
-  // Carrega as conexões salvas
   async function loadConnections() {
     isLoading.value = true;
     
     try {
-      console.log('Carregando conexões...');
-      
-      // Em ambiente real, esses dados viriam do Electron IPC
       if (window.api) {
         try {
           const savedConnections = await window.api.getConnections();
           if (savedConnections && savedConnections.length) {
             connections.value = savedConnections;
-            console.log('Conexões carregadas do Electron Store:', connections.value);
           } else {
             connections.value = [...mockConnections];
-            console.log('Usando conexões mockadas:', connections.value);
           }
         } catch (err) {
-          console.error('Erro ao acessar API do Electron:', err);
           connections.value = [...mockConnections];
         }
       } else {
-        // Fallback para dados mockados
         connections.value = [...mockConnections];
-        console.log('API não disponível. Usando conexões mockadas:', connections.value);
       }
       
       return connections.value;
     } catch (error) {
-      console.error('Erro ao carregar conexões:', error);
+      console.error(error);
       connections.value = [...mockConnections];
       return connections.value;
     } finally {
@@ -101,21 +90,17 @@ export const useConnectionsStore = defineStore('connections', () => {
     }
   }
 
-  // Salva as conexões
   async function saveConnections() {
     try {
-      // Em ambiente real, esses dados seriam salvos via Electron IPC
       if (window.api) {
         await window.api.saveConnections(connections.value);
       }
-      console.log('Conexões salvas');
     } catch (error) {
-      console.error('Erro ao salvar conexões:', error);
+      console.error(error);
     }
   }
 
-  // Adiciona uma nova conexão
-  function addConnection(connection) {
+  async function addConnection(connection) {
     const newId = connections.value.length 
       ? Math.max(...connections.value.map(c => c.id)) + 1 
       : 1;
@@ -125,41 +110,37 @@ export const useConnectionsStore = defineStore('connections', () => {
       ...connection
     });
     
-    saveConnections();
+    await saveConnections();
   }
 
-  // Remove uma conexão
-  function removeConnection(id) {
+  async function removeConnection(id) {
     connections.value = connections.value.filter(c => c.id !== id);
-    saveConnections();
+    await saveConnections();
   }
 
-  // Atualiza uma conexão
-  function updateConnection(id, data) {
+  async function updateConnection(id, data) {
     const index = connections.value.findIndex(c => c.id === id);
     if (index !== -1) {
       connections.value[index] = { ...connections.value[index], ...data };
-      saveConnections();
+      await saveConnections();
     }
   }
 
-  // Getter para obter uma conexão pelo ID
   const getConnection = computed(() => {
     return (id) => connections.value.find(c => c.id === parseInt(id));
   });
 
-  // Carrega as conexões assim que a store for criada
-  onMounted(() => {
-    loadConnections();
+  onMounted(async () => {
+    await loadConnections();
   });
 
   return {
     connections,
     isLoading,
     loadConnections,
-    addConnection,
-    removeConnection,
-    updateConnection,
+    // addConnection,
+    // removeConnection,
+    // updateConnection,
     getConnection
   };
 }); 

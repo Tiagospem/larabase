@@ -1,6 +1,5 @@
 <template>
   <div class="h-full flex flex-col">
-    <!-- Barra de ações da tabela -->
     <div class="bg-base-200 p-2 border-b border-gray-800 flex items-center justify-between">
       <div class="flex items-center space-x-2">
         <button class="btn btn-sm btn-ghost" @click="loadTableData">
@@ -34,8 +33,7 @@
         </select>
       </div>
     </div>
-    
-    <!-- Tabela de dados -->
+
     <div class="flex-1 overflow-auto">
       <div v-if="isLoading" class="flex items-center justify-center h-full">
         <span class="loading loading-spinner loading-lg"></span>
@@ -54,7 +52,6 @@
       </div>
       
       <table v-else-if="tableData.length > 0" class="table table-sm w-full">
-        <!-- Cabeçalho da tabela -->
         <thead class="bg-base-300 sticky top-0">
           <tr class="text-xs">
             <th v-for="column in columns" :key="column" class="px-4 py-2 border-r border-gray-700 last:border-r-0">
@@ -62,8 +59,7 @@
             </th>
           </tr>
         </thead>
-        
-        <!-- Corpo da tabela -->
+
         <tbody>
           <tr v-for="(row, index) in filteredData" :key="index" 
             class="border-b border-gray-700 hover:bg-base-200">
@@ -87,8 +83,7 @@
         </div>
       </div>
     </div>
-    
-    <!-- Rodapé com informações da tabela -->
+
     <div class="bg-base-200 px-4 py-2 border-t border-gray-800 flex justify-between items-center text-xs text-gray-400">
       <div>{{ tableName }} | {{ tableData.length }} records</div>
       <div class="flex space-x-4">
@@ -108,12 +103,10 @@
 
 <script setup>
 import { ref, computed, onMounted, watch, inject } from 'vue';
-import { useDatabaseStore } from '../store/database';
+import { useDatabaseStore } from '@/store/database';
 
-// Funções de alerta
 const showAlert = inject('showAlert');
 
-// Props
 const props = defineProps({
   connectionId: {
     type: Number,
@@ -125,19 +118,15 @@ const props = defineProps({
   }
 });
 
-// Emits
 const emit = defineEmits(['update-tab-data']);
 
-// Estado
 const isLoading = ref(true);
 const tableData = ref([]);
 const filterTerm = ref('');
 const loadError = ref(null);
 
-// Store
 const databaseStore = useDatabaseStore();
 
-// Colunas da tabela
 const columns = computed(() => {
   if (tableData.value.length === 0) {
     return [];
@@ -145,7 +134,6 @@ const columns = computed(() => {
   return Object.keys(tableData.value[0]);
 });
 
-// Dados filtrados
 const filteredData = computed(() => {
   if (!filterTerm.value) {
     return tableData.value;
@@ -160,13 +148,11 @@ const filteredData = computed(() => {
   });
 });
 
-// Carregar dados da tabela
 async function loadTableData() {
   isLoading.value = true;
   loadError.value = null;
   
   try {
-    console.log(`Carregando dados da tabela ${props.tableName} para a conexão ${props.connectionId}...`);
     const data = await databaseStore.loadTableData(props.connectionId, props.tableName);
     
     if (!data || data.length === 0) {
@@ -175,15 +161,13 @@ async function loadTableData() {
     }
     
     tableData.value = data;
-    console.log(`Dados carregados: ${data.length} registros`);
-    
-    // Emitir evento para atualizar os dados na store de abas
+
     emit('update-tab-data', Date.now(), {
       columns: columns.value,
       rowCount: data.length
     });
   } catch (error) {
-    console.error('Erro ao carregar dados da tabela:', error);
+    console.error(error);
     loadError.value = error.message;
     showAlert(`Erro ao carregar dados: ${error.message}`, 'error');
     tableData.value = [];
@@ -192,20 +176,13 @@ async function loadTableData() {
   }
 }
 
-// Inicialização
 onMounted(() => {
-  console.log('TableContent montado:', props);
   loadTableData();
 });
 
-// Recarregar quando a tabela ou conexão mudar
 watch(
   () => [props.connectionId, props.tableName],
-  (newValues, oldValues) => {
-    console.log('Props alteradas:', {
-      old: oldValues,
-      new: newValues
-    });
+  () => {
     loadTableData();
   }
 );

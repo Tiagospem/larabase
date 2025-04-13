@@ -8,12 +8,12 @@
 </template>
 
 <script setup>
-import { ref, watch, computed, onUnmounted } from 'vue';
+import { watch, computed, onUnmounted } from 'vue';
 
 const props = defineProps({
   type: {
     type: String,
-    default: 'info', // 'info', 'success', 'warning', 'error'
+    default: 'info',
   },
   message: {
     type: String,
