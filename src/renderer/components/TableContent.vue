@@ -1,109 +1,61 @@
 <template>
   <div class="h-full flex flex-col">
-    <div class="bg-base-200 p-2 border-b border-gray-800 flex items-center justify-between">
-      <div class="flex items-center space-x-2">
-        <button class="btn btn-sm btn-ghost" @click="loadTableData">
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" 
-            stroke="currentColor" class="w-5 h-5">
-            <path stroke-linecap="round" stroke-linejoin="round" 
-              d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
-          </svg>
-          <span>Refresh</span>
-        </button>
-        <button class="btn btn-sm btn-ghost">
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" 
-            stroke="currentColor" class="w-5 h-5">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-          </svg>
-          <span>Insert</span>
-        </button>
-      </div>
-      
-      <div class="flex items-center space-x-2">
-        <div class="relative">
-          <input type="text" placeholder="Filter..." 
-            class="input input-sm input-bordered bg-base-300 w-40" 
-            v-model="filterTerm" />
-        </div>
-        <select class="select select-sm select-bordered bg-base-300 w-32">
-          <option>10 rows</option>
-          <option>25 rows</option>
-          <option>50 rows</option>
-          <option>100 rows</option>
-        </select>
+    <!-- Tabs de conteúdo -->
+    <div class="bg-base-300 px-2 pt-1 border-b border-gray-800 flex items-center">
+      <div class="tabs tabs-boxed bg-transparent gap-1">
+        <a 
+          v-for="tab in contentTabs" 
+          :key="tab.id"
+          class="tab transition-all duration-200 px-4 rounded-t-md" 
+          :class="{ 'tab-active bg-base-100 border-t-2 border-primary': activeContentTab === tab.id }"
+          @click="switchContentTab(tab.id)"
+        >
+          <span class="flex items-center gap-1">
+            <component :is="tab.icon" class="w-4 h-4" />
+            {{ tab.label }}
+          </span>
+        </a>
       </div>
     </div>
-
-    <div class="flex-1 overflow-auto">
-      <div v-if="isLoading" class="flex items-center justify-center h-full">
-        <span class="loading loading-spinner loading-lg"></span>
-      </div>
-      
-      <div v-else-if="loadError" class="flex items-center justify-center h-full text-error">
-        <div class="text-center">
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" 
-            stroke="currentColor" class="w-12 h-12 mx-auto mb-4">
-            <path stroke-linecap="round" stroke-linejoin="round" 
-              d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
-          </svg>
-          <p>{{ loadError }}</p>
-          <button class="btn btn-sm btn-primary mt-4" @click="loadTableData">Try again</button>
-        </div>
-      </div>
-      
-      <table v-else-if="tableData.length > 0" class="table table-sm w-full">
-        <thead class="bg-base-300 sticky top-0">
-          <tr class="text-xs">
-            <th v-for="column in columns" :key="column" class="px-4 py-2 border-r border-gray-700 last:border-r-0">
-              {{ column }}
-            </th>
-          </tr>
-        </thead>
-
-        <tbody>
-          <tr v-for="(row, index) in filteredData" :key="index" 
-            class="border-b border-gray-700 hover:bg-base-200">
-            <td v-for="column in columns" :key="`${index}-${column}`" 
-              class="px-4 py-2 border-r border-gray-700 last:border-r-0 truncate max-w-xs">
-              {{ row[column] }}
-            </td>
-          </tr>
-        </tbody>
-      </table>
-      
-      <div v-else class="flex items-center justify-center h-full text-gray-500">
-        <div class="text-center">
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" 
-            stroke="currentColor" class="w-12 h-12 mx-auto mb-4 text-gray-400">
-            <path stroke-linecap="round" stroke-linejoin="round" 
-              d="M20.25 6.375c0 2.278-3.694 4.125-8.25 4.125S3.75 8.653 3.75 6.375m16.5 0c0-2.278-3.694-4.125-8.25-4.125S3.75 4.097 3.75 6.375m16.5 0v11.25c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125V6.375m16.5 0v3.75m-16.5-3.75v3.75m16.5 0v3.75C20.25 16.153 16.556 18 12 18s-8.25-1.847-8.25-4.125v-3.75m16.5 0c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125" />
-          </svg>
-          <p>No records found in this table.</p>
-          <button class="btn btn-sm btn-primary mt-4" @click="loadTableData">Reload</button>
-        </div>
-      </div>
-    </div>
-
-    <div class="bg-base-200 px-4 py-2 border-t border-gray-800 flex justify-between items-center text-xs text-gray-400">
-      <div>{{ tableName }} | {{ tableData.length }} records</div>
-      <div class="flex space-x-4">
-        <button class="btn btn-ghost btn-xs">
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" 
-            stroke="currentColor" class="w-4 h-4">
-            <path stroke-linecap="round" stroke-linejoin="round" 
-              d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
-          </svg>
-          Export
-        </button>
-        <span>{{ columns.length }} columns</span>
-      </div>
-    </div>
+    
+    <!-- Conteúdo de dados da tabela -->
+    <keep-alive>
+      <component :is="currentTabComponent" v-bind="currentTabProps"></component>
+    </keep-alive>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted, inject } from 'vue';
+import { ref, computed, onMounted, onUnmounted, inject, markRaw, defineAsyncComponent } from 'vue';
 import { useDatabaseStore } from '@/store/database';
+
+// Componentes das tabs - carregamento assíncrono para melhor performance
+const DataTab = markRaw(defineAsyncComponent(() => import('./tabs/DataTab.vue')));
+const StructureTab = markRaw(defineAsyncComponent(() => import('./tabs/StructureTab.vue')));
+const IndexesTab = markRaw(defineAsyncComponent(() => import('./tabs/IndexesTab.vue')));
+const ForeignKeysTab = markRaw(defineAsyncComponent(() => import('./tabs/ForeignKeysTab.vue')));
+const MigrationsTab = markRaw(defineAsyncComponent(() => import('./tabs/MigrationsTab.vue')));
+
+// Ícones para as tabs
+const TableIcon = markRaw({
+  template: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="3" y1="15" x2="21" y2="15"></line><line x1="9" y1="3" x2="9" y2="21"></line><line x1="15" y1="3" x2="15" y2="21"></line></svg>`
+});
+
+const StructureIcon = markRaw({
+  template: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path></svg>`
+});
+
+const IndexIcon = markRaw({
+  template: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4"><line x1="4" y1="21" x2="4" y2="14"></line><line x1="4" y1="10" x2="4" y2="3"></line><line x1="12" y1="21" x2="12" y2="12"></line><line x1="12" y1="8" x2="12" y2="3"></line><line x1="20" y1="21" x2="20" y2="16"></line><line x1="20" y1="12" x2="20" y2="3"></line><line x1="1" y1="14" x2="7" y2="14"></line><line x1="9" y1="8" x2="15" y2="8"></line><line x1="17" y1="16" x2="23" y2="16"></line></svg>`
+});
+
+const KeyIcon = markRaw({
+  template: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"></path></svg>`
+});
+
+const MigrationIcon = markRaw({
+  template: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4"><polyline points="17 1 21 5 17 9"></polyline><path d="M3 11V9a4 4 0 0 1 4-4h14"></path><polyline points="7 23 3 19 7 15"></polyline><path d="M21 13v2a4 4 0 0 1-4 4H3"></path></svg>`
+});
 
 const showAlert = inject('showAlert');
 
@@ -120,61 +72,76 @@ const props = defineProps({
 
 const emit = defineEmits(['update-tab-data']);
 
-const isLoading = ref(true);
-const tableData = ref([]);
-const filterTerm = ref('');
-const loadError = ref(null);
-
-const databaseStore = useDatabaseStore();
-
-const columns = computed(() => {
-  if (tableData.value.length === 0) {
-    return [];
-  }
-  return Object.keys(tableData.value[0]);
+// Estado para as tabs de conteúdo
+const activeContentTab = ref('data');
+const tabsLoaded = ref({
+  data: false,
+  structure: false,
+  indexes: false,
+  foreignKeys: false,
+  migrations: false
 });
 
-const filteredData = computed(() => {
-  if (!filterTerm.value) {
-    return tableData.value;
+// Definição das tabs disponíveis
+const contentTabs = [
+  { id: 'data', label: 'Data', icon: TableIcon },
+  { id: 'structure', label: 'Structure', icon: StructureIcon },
+  { id: 'indexes', label: 'Indexes', icon: IndexIcon },
+  { id: 'foreignKeys', label: 'Foreign Keys', icon: KeyIcon },
+  { id: 'migrations', label: 'Migrations', icon: MigrationIcon }
+];
+
+// Componente atual baseado na tab ativa
+const currentTabComponent = computed(() => {
+  switch (activeContentTab.value) {
+    case 'data': return DataTab;
+    case 'structure': return StructureTab;
+    case 'indexes': return IndexesTab;
+    case 'foreignKeys': return ForeignKeysTab;
+    case 'migrations': return MigrationsTab;
+    default: return DataTab;
   }
+});
+
+// Props para passar ao componente da tab ativa
+const currentTabProps = computed(() => {
+  return {
+    connectionId: props.connectionId,
+    tableName: props.tableName,
+    onLoad: (data) => handleTabData(activeContentTab.value, data)
+  };
+});
+
+// Trocar entre as tabs de conteúdo
+function switchContentTab(tabId) {
+  activeContentTab.value = tabId;
   
-  const term = filterTerm.value.toLowerCase();
-  return tableData.value.filter(row => {
-    return Object.values(row).some(value => {
-      if (value === null) return false;
-      return String(value).toLowerCase().includes(term);
-    });
+  // Emitir evento para atualizar o estado na tab pai
+  emit('update-tab-data', props.tableName, {
+    activeContentTab: tabId
   });
-});
+}
 
-async function loadTableData() {
-  isLoading.value = true;
-  loadError.value = null;
+// Gerenciar dados carregados em cada tab
+function handleTabData(tabId, data) {
+  tabsLoaded.value[tabId] = true;
   
-  try {
-    const data = await databaseStore.loadTableData(props.connectionId, props.tableName);
-    
-    if (!data || data.length === 0) {
-      showAlert('No data found in table', 'warning');
-    }
-    
-    tableData.value = data;
-
+  // Emitir dados para atualizar a tab pai
+  if (tabId === 'data') {
     emit('update-tab-data', props.tableName, {
-      columns: columns.value,
-      rowCount: data.length
+      columns: data.columns,
+      rowCount: data.rowCount,
+      activeContentTab: activeContentTab.value
     });
-  } catch (error) {
-    loadError.value = error.message;
-    showAlert(`Error loading data: ${error.message}`, 'error');
-    tableData.value = [];
-  } finally {
-    isLoading.value = false;
   }
 }
 
+// Inicialização
 onMounted(() => {
-  loadTableData();
+  // A DataTab será carregada diretamente pelo componente filho
 });
-</script> 
+</script>
+
+<style>
+/* Estilos gerais já estavam definidos anteriormente */
+</style> 
