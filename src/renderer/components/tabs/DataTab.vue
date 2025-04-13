@@ -135,7 +135,7 @@ const showAlert = inject('showAlert');
 
 const props = defineProps({
   connectionId: {
-    type: Number,
+    type: String,
     required: true
   },
   tableName: {

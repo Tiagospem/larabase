@@ -18,8 +18,10 @@
   "dependencies": {
     "daisyui": "^3.9.3",
     "electron-store": "^8.1.0",
+    "mysql2": "^3.14.0",
     "pinia": "^2.1.6",
     "tailwindcss": "^3.3.3",
+    "uuid": "^11.1.0",
     "vue": "^3.3.4",
     "vue-router": "^4.2.4"
   },

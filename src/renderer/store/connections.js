@@ -5,62 +5,6 @@ export const useConnectionsStore = defineStore('connections', () => {
   const connections = ref([]);
   const isLoading = ref(true);
 
-  const mockConnections = [
-    {
-      id: 1,
-      name: 'Redis',
-      type: 'redis',
-      status: 'local',
-      host: '127.0.0.1',
-      port: 6379,
-      icon: 'Re'
-    },
-    {
-      id: 2,
-      name: 'SIM',
-      type: 'mysql',
-      status: 'local',
-      host: '127.0.0.1',
-      port: 3306,
-      icon: 'Ms'
-    },
-    {
-      id: 3,
-      name: 'bootcamp',
-      type: 'mysql',
-      status: 'local',
-      host: '127.0.0.1',
-      port: 3306,
-      icon: 'Ms'
-    },
-    {
-      id: 4,
-      name: 'Demo',
-      type: 'sqlite',
-      status: 'local',
-      path: '/Users/tiago.padilha/Documents/devsquad/video-query-2/database/database.sqlite',
-      icon: 'SI'
-    },
-    {
-      id: 5,
-      name: 'simple tables',
-      type: 'sqlite',
-      status: 'local',
-      path: '/Users/tiago.padilha/Documents/project/SimpleTablesProject/database.sqlite',
-      icon: 'SI'
-    },
-    {
-      id: 6,
-      name: 'simon',
-      type: 'sqlite',
-      status: 'local',
-      path: '/Users/tiago.padilha/Documents/SIM/simon-poc/database/database.sqlite',
-      icon: 'SI'
-    }
-  ];
-
-  connections.value = [...mockConnections];
-
   async function loadConnections() {
     isLoading.value = true;
     
@@ -68,13 +12,14 @@ export const useConnectionsStore = defineStore('connections', () => {
       if (window.api) {
         try {
           const savedConnections = await window.api.getConnections();
-          if (savedConnections && savedConnections.length) {
+          
+          if (savedConnections && Array.isArray(savedConnections) && savedConnections.length > 0) {
             connections.value = savedConnections;
           } else {
             connections.value = [];
           }
         } catch (err) {
-          console.error('Error loading connections:', err);
+          console.error('Error loading connections from API:', err);
           connections.value = [];
         }
       } else {
@@ -95,7 +40,12 @@ export const useConnectionsStore = defineStore('connections', () => {
   async function saveConnections() {
     try {
       if (window.api) {
-        await window.api.saveConnections(connections.value);
+        const serializableConnections = connections.value.map(conn => {
+
+          return JSON.parse(JSON.stringify(conn));
+        });
+        
+        await window.api.saveConnections(serializableConnections);
       }
     } catch (error) {
       console.error('Error saving connections:', error);
@@ -103,16 +53,9 @@ export const useConnectionsStore = defineStore('connections', () => {
   }
 
   async function addConnection(connection) {
-    const newId = connections.value.length 
-      ? Math.max(...connections.value.map(c => c.id)) + 1 
-      : 1;
-    
-    connections.value.push({
-      id: newId,
-      ...connection
-    });
-    
+    connections.value.push(connection);
     await saveConnections();
+    return connection;
   }
 
   async function removeConnection(id) {
@@ -129,7 +72,7 @@ export const useConnectionsStore = defineStore('connections', () => {
   }
 
   const getConnection = computed(() => {
-    return (id) => connections.value.find(c => c.id === parseInt(id));
+    return (id) => connections.value.find(c => c.id === id);
   });
 
   onMounted(async () => {

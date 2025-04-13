@@ -26,18 +26,18 @@
       <div class="flex-1 overflow-auto p-6">
         <h2 class="text-xl font-bold mb-4 text-white">Your Connections</h2>
         
-        <div v-if="isLoading" class="flex justify-center items-center h-64">
+        <div v-if="isLoading" class="flex justify-center items-center h-[calc(100vh-150px)]">
           <span class="loading loading-spinner loading-lg"></span>
         </div>
         
-        <div v-else-if="connectionsStore.connections.length === 0" class="text-center p-8 text-gray-500 h-64 flex flex-col items-center justify-center">
+        <div v-else-if="connectionsStore.connections.length === 0" class="flex flex-col items-center justify-center h-[calc(100vh-150px)]">
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" 
-            stroke="currentColor" class="w-12 h-12 mb-4 text-gray-500">
+            stroke="currentColor" class="w-16 h-16 mb-6 text-gray-500">
             <path stroke-linecap="round" stroke-linejoin="round" 
               d="M20.25 6.375c0 2.278-3.694 4.125-8.25 4.125S3.75 8.653 3.75 6.375m16.5 0c0-2.278-3.694-4.125-8.25-4.125S3.75 4.097 3.75 6.375m16.5 0v11.25c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125V6.375m16.5 0v3.75m-16.5-3.75v3.75m16.5 0v3.75C20.25 16.153 16.556 18 12 18s-8.25-1.847-8.25-4.125v-3.75m16.5 0c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125" />
           </svg>
-          <p>No connections found</p>
-          <p class="text-sm mt-2">Create a new connection to get started</p>
+          <p class="text-xl font-medium text-gray-400">No connections found</p>
+          <p class="text-gray-500 mt-3">Create a new connection to get started</p>
         </div>
         
         <div v-else class="grid grid-cols-1 gap-3">
@@ -221,6 +221,7 @@
 import { onMounted, computed, inject, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { useConnectionsStore } from '../store/connections';
+import { v4 as uuidv4 } from 'uuid';
 
 const router = useRouter();
 const connectionsStore = useConnectionsStore();
@@ -339,36 +340,58 @@ async function selectDirectory() {
 
 // Salvar nova conexão
 async function saveNewConnection() {
-  // Validar dados
-  if (!newConnection.value.path) {
-    pathError.value = 'Project path is required';
-    return;
-  }
-  
-  if (!newConnection.value.name || !newConnection.value.host || !newConnection.value.database) {
-    showAlert('Please fill all required fields', 'error');
-    return;
-  }
-  
-  // Verificar se já existe uma conexão com o mesmo nome ou caminho
-  const exists = connectionsStore.connections.some(conn => 
-    conn.path === newConnection.value.path || conn.name === newConnection.value.name
-  );
-  
-  if (exists) {
-    showAlert('A connection with this name or path already exists', 'error');
-    return;
-  }
-  
   try {
-    isSaving.value = true;
+    // Validar dados
+    if (!newConnection.value.path) {
+      pathError.value = 'Project path is required';
+      return;
+    }
     
-    // Criar nova conexão
-    await connectionsStore.addConnection({
-      id: Date.now(), // ID único baseado em timestamp
+    if (!newConnection.value.name || !newConnection.value.host || !newConnection.value.database || !newConnection.value.username) {
+      showAlert('Please fill all required fields', 'error');
+      return;
+    }
+    
+    // Verificar se já existe uma conexão com o mesmo nome ou caminho
+    const exists = connectionsStore.connections.some(conn => 
+      conn.path === newConnection.value.path || conn.name === newConnection.value.name
+    );
+    
+    if (exists) {
+      showAlert('A connection with this name or path already exists', 'error');
+      return;
+    }
+    
+    // Mostrar que estamos testando a conexão
+    isSaving.value = true;
+    showAlert('Testing database connection...', 'info');
+    
+    // Testar a conexão antes de salvar
+    const testResult = await window.api.testMySQLConnection({
+      host: newConnection.value.host,
+      port: parseInt(newConnection.value.port),
+      username: newConnection.value.username,
+      password: newConnection.value.password,
+      database: newConnection.value.database
+    });
+    
+    if (!testResult.success) {
+      showAlert(`Connection failed: ${testResult.message}`, 'error');
+      isSaving.value = false;
+      return;
+    }
+    
+    showAlert('Connection successful! Saving connection...', 'success');
+    
+    // Gerar UUID para a conexão
+    const connectionId = uuidv4();
+    
+    // Criar objeto de conexão (sem métodos ou propriedades não serializáveis)
+    const connectionData = {
+      id: connectionId,
       name: newConnection.value.name,
       type: newConnection.value.type,
-      icon: newConnection.value.type.charAt(0).toUpperCase(), // Primeira letra como ícone
+      icon: newConnection.value.type.charAt(0).toUpperCase(),
       host: newConnection.value.host,
       port: parseInt(newConnection.value.port),
       database: newConnection.value.database,
@@ -377,18 +400,22 @@ async function saveNewConnection() {
       path: newConnection.value.path,
       usingSail: newConnection.value.usingSail,
       status: 'ready',
+      // Dados de Redis são opcionais
       redis: {
-        host: newConnection.value.redisHost,
-        port: parseInt(newConnection.value.redisPort),
-        password: newConnection.value.redisPassword
+        host: newConnection.value.redisHost || '',
+        port: parseInt(newConnection.value.redisPort || '6379'),
+        password: newConnection.value.redisPassword || ''
       }
-    });
+    };
     
-    showAlert('Connection created successfully', 'success');
+    // Salvar conexão
+    await connectionsStore.addConnection(connectionData);
+    
+    showAlert('Connection saved successfully', 'success');
     isCreateModalOpen.value = false;
   } catch (error) {
     console.error('Error creating connection:', error);
-    showAlert('Error creating connection', 'error');
+    showAlert(`Error saving connection: ${error.message}`, 'error');
   } finally {
     isSaving.value = false;
   }

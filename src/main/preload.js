@@ -19,7 +19,8 @@ try {
       saveOpenTabs: (tabs) => safeIpcRenderer.invoke('save-open-tabs', tabs),
       selectDirectory: () => safeIpcRenderer.invoke('select-directory'),
       validateLaravelProject: (projectPath) => safeIpcRenderer.invoke('validate-laravel-project', projectPath),
-      readEnvFile: (projectPath) => safeIpcRenderer.invoke('read-env-file', projectPath)
+      readEnvFile: (projectPath) => safeIpcRenderer.invoke('read-env-file', projectPath),
+      testMySQLConnection: (config) => safeIpcRenderer.invoke('test-mysql-connection', config)
     }
   );
 } catch (error) {

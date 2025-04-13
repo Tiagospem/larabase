@@ -2,6 +2,7 @@ const { app, BrowserWindow, ipcMain, globalShortcut, dialog } = require('electro
 const path = require('path');
 const Store = require('electron-store');
 const fs = require('fs');
+const mysql = require('mysql2/promise');
 
 const store = new Store();
 
@@ -18,7 +19,7 @@ if (process.env.NODE_ENV === 'development') {
   }
 }
 
-function createWindow() {
+async function createWindow() {
   mainWindow = new BrowserWindow({
     width: 1200,
     height: 800,
@@ -32,10 +33,9 @@ function createWindow() {
   });
 
   const isDev = process.env.NODE_ENV === 'development';
-  
+
   if (isDev) {
-    console.log('Loading from dev server...');
-    mainWindow.loadURL('http://localhost:5173');
+    await mainWindow.loadURL('http://localhost:5173');
     mainWindow.webContents.openDevTools();
 
     mainWindow.webContents.on('did-fail-load', (event, errorCode, errorDescription) => {
@@ -45,8 +45,7 @@ function createWindow() {
       }, 1000);
     });
   } else {
-    console.log('Loading from file...');
-    mainWindow.loadFile(path.join(__dirname, '../../dist/renderer/index.html'));
+    await mainWindow.loadFile(path.join(__dirname, '../../dist/renderer/index.html'));
   }
 
   mainWindow.on('closed', () => {
@@ -54,8 +53,8 @@ function createWindow() {
   });
 }
 
-app.whenReady().then(() => {
-  createWindow();
+app.whenReady().then(async () => {
+  await createWindow();
 
   globalShortcut.register('F12', () => {
     if (mainWindow) {
@@ -101,12 +100,22 @@ app.on('window-all-closed', () => {
 });
 
 ipcMain.handle('get-connections', () => {
-  return store.get('connections') || [];
+  try {
+    return store.get('connections') || [];
+  } catch (error) {
+    console.error('Error retrieving connections:', error);
+    return [];
+  }
 });
 
 ipcMain.handle('save-connections', (event, connections) => {
-  store.set('connections', connections);
-  return true;
+  try {
+    store.set('connections', connections);
+    return true;
+  } catch (error) {
+    console.error('Error saving connections:', error);
+    throw error;
+  }
 });
 
 ipcMain.handle('get-open-tabs', () => {
@@ -118,28 +127,23 @@ ipcMain.handle('save-open-tabs', (event, tabData) => {
   return true;
 });
 
-// Selecionar diretório
 ipcMain.handle('select-directory', async () => {
   try {
-    const result = await dialog.showOpenDialog(mainWindow, {
+    return await dialog.showOpenDialog(mainWindow, {
       properties: ['openDirectory']
     });
-    return result;
   } catch (error) {
     console.error('Error selecting directory:', error);
     throw error;
   }
 });
 
-// Validar se é um projeto Laravel
 ipcMain.handle('validate-laravel-project', async (event, projectPath) => {
   try {
-    // Verificar se existe o .env, artisan e composer.json
     const hasEnv = fs.existsSync(path.join(projectPath, '.env'));
     const hasArtisan = fs.existsSync(path.join(projectPath, 'artisan'));
     const hasComposerJson = fs.existsSync(path.join(projectPath, 'composer.json'));
-    
-    // Se tiver os três arquivos, é provável que seja um projeto Laravel
+
     return hasEnv && hasArtisan && hasComposerJson;
   } catch (error) {
     console.error('Error validating Laravel project:', error);
@@ -147,7 +151,6 @@ ipcMain.handle('validate-laravel-project', async (event, projectPath) => {
   }
 });
 
-// Ler arquivo .env e extrair configurações
 ipcMain.handle('read-env-file', async (event, projectPath) => {
   try {
     const envPath = path.join(projectPath, '.env');
@@ -159,21 +162,17 @@ ipcMain.handle('read-env-file', async (event, projectPath) => {
     
     const envContent = fs.readFileSync(envPath, 'utf8');
     const envConfig = {};
-    
-    // Processar cada linha do arquivo .env
+
     envContent.split('\n').forEach(line => {
-      // Ignorar comentários e linhas vazias
       if (line.startsWith('#') || line.trim() === '') {
         return;
       }
-      
-      // Extrair chave e valor (format: KEY=VALUE)
+
       const match = line.match(/^\s*([\w.-]+)\s*=\s*(.*)?\s*$/);
       if (match) {
         const key = match[1];
         let value = match[2] || '';
-        
-        // Remover aspas se presentes
+
         if (value.startsWith('"') && value.endsWith('"')) {
           value = value.slice(1, -1);
         }
@@ -181,11 +180,66 @@ ipcMain.handle('read-env-file', async (event, projectPath) => {
         envConfig[key] = value;
       }
     });
-    
-    console.log('Extracted env config:', JSON.stringify(envConfig, null, 2));
+
     return envConfig;
   } catch (error) {
     console.error('Error reading .env file:', error);
     return null;
+  }
+});
+
+ipcMain.handle('test-mysql-connection', async (event, config) => {
+  let connection;
+  
+  try {
+    if (!config.host || !config.port || !config.username || !config.database) {
+      return { 
+        success: false, 
+        message: 'Missing connection parameters'
+      };
+    }
+
+    connection = await mysql.createConnection({
+      host: config.host,
+      port: config.port,
+      user: config.username,
+      password: config.password || '',
+      database: config.database,
+      connectTimeout: 10000
+    });
+
+    const [rows] = await connection.query('SELECT 1 as connection_test');
+    
+    if (rows && rows.length > 0) {
+      return { success: true, message: 'Connection successful' };
+    } else {
+      return { 
+        success: false, 
+        message: 'Connection established but query failed'
+      };
+    }
+  } catch (error) {
+    console.error('Error testing MySQL connection:', error);
+    let errorMessage = 'Failed to connect to MySQL database';
+    
+    if (error.code === 'ER_ACCESS_DENIED_ERROR') {
+      errorMessage = 'Access denied with the provided credentials';
+    } else if (error.code === 'ECONNREFUSED') {
+      errorMessage = 'Connection refused - check host and port';
+    } else if (error.code === 'ER_BAD_DB_ERROR') {
+      errorMessage = `Database '${config.database}' does not exist`;
+    } else if (error.message) {
+      errorMessage = error.message;
+    }
+    
+    return { success: false, message: errorMessage };
+  } finally {
+    if (connection) {
+      try {
+        await connection.end();
+      } catch (err) {
+        console.error('Error closing MySQL connection:', err);
+      }
+    }
   }
 }); 
