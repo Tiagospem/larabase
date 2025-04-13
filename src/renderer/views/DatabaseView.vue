@@ -1,6 +1,6 @@
 <template>
   <div class="flex flex-col h-full">
-    <header class="bg-neutral px-4 py-2 border-b border-gray-800 flex items-center justify-between">
+    <header class="bg-neutral px-4 py-2 border-b border-neutral flex items-center justify-between">
       <div class="flex items-center">
         <button class="btn btn-ghost btn-sm mr-2" @click="goBack">
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" 
@@ -16,7 +16,15 @@
         
         <div>
           <h1 class="text-lg font-semibold">{{ connection?.name }}</h1>
-          <p class="text-xs text-gray-400">{{ connection?.host || connection?.path }}</p>
+          <div class="text-xs text-gray-400 flex items-center">
+            <span>{{ connection?.database || connection?.path }}</span>
+            <button @click="showConnectionInfo = true" class="ml-1 text-gray-400 hover:text-gray-300">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" 
+                stroke="currentColor" class="w-4 h-4">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z" />
+              </svg>
+            </button>
+          </div>
         </div>
       </div>
       
@@ -39,14 +47,27 @@
       </div>
     </header>
 
-    <div v-if="openTabs.length > 0" class="bg-base-300 px-2 pt-1 border-b border-gray-800 flex items-center overflow-x-auto no-scrollbar">
-      <div class="flex">
+    <div v-if="openTabs.length > 0" class="tabs-container border-b border-neutral bg-base-300">
+      <button 
+        v-if="hasScrollLeft" 
+        @click="scrollLeft" 
+        class="tab-scroll-button tab-scroll-left">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" 
+          stroke="currentColor" class="w-4 h-4">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
+        </svg>
+      </button>
+      
+      <div class="tabs-scroll" ref="tabsScrollRef" @scroll="checkScrollPosition">
         <div v-for="tab in openTabs" :key="tab.id" 
-          :class="['tab', 'tab-bordered', 'px-4', 'py-2', 'rounded-t-md', 'mr-1', 'flex', 'items-center', 'justify-center', 'min-h-[2.5rem]', 'gap-2',
-                  { 'tab-active bg-base-100': tab.id === activeTabId }]"
-          @click="activateTab(tab.id)">
-          <span class="truncate max-w-xs">{{ tab.title }}</span>
-          <button class="btn btn-ghost btn-xs btn-circle" @click.stop="closeTab(tab.id)">
+          :class="['tab', { 'active': tab.id === activeTabId }]"
+          @click="activateTab(tab.id)"
+          draggable="true"
+          @dragstart="handleDragStart($event, tab.id)"
+          @dragover.prevent
+          @drop="handleDrop($event, tab.id)">
+          <span class="tab-title">{{ tab.title }}</span>
+          <button class="close-icon" @click.stop="closeTab(tab.id)">
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" 
               stroke="currentColor" class="w-4 h-4">
               <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
@@ -54,6 +75,16 @@
           </button>
         </div>
       </div>
+      
+      <button 
+        v-if="hasScrollRight" 
+        @click="scrollRight" 
+        class="tab-scroll-button tab-scroll-right">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" 
+          stroke="currentColor" class="w-4 h-4">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+        </svg>
+      </button>
     </div>
 
     <div class="flex flex-1 overflow-hidden">
@@ -93,7 +124,7 @@
     <footer class="bg-neutral px-4 py-1 text-xs text-gray-400 border-t border-gray-800">
       <div class="flex justify-between">
         <div>{{ connection?.type.toUpperCase() }} | {{ connection?.host || connection?.path }}</div>
-        <div>Total tables: {{ totalTables }}</div>
+        <div>Total tables: {{ databaseStore.tablesList.length }}</div>
       </div>
     </footer>
   </div>
@@ -107,10 +138,30 @@
       </div>
     </div>
   </div>
+
+  <div class="modal" :class="{ 'modal-open': showConnectionInfo }">
+    <div class="modal-box bg-base-300">
+      <h3 class="font-bold text-lg">Connection Details</h3>
+      <div class="py-4">
+        <div v-if="connection" class="space-y-2">
+          <p><span class="font-semibold">Name:</span> {{ connection.name }}</p>
+          <p><span class="font-semibold">Type:</span> {{ connection.type }}</p>
+          <p v-if="connection.host"><span class="font-semibold">Host:</span> {{ connection.host }}</p>
+          <p v-if="connection.port"><span class="font-semibold">Port:</span> {{ connection.port }}</p>
+          <p v-if="connection.database"><span class="font-semibold">Database:</span> {{ connection.database }}</p>
+          <p v-if="connection.username"><span class="font-semibold">Username:</span> {{ connection.username }}</p>
+          <p v-if="connection.path"><span class="font-semibold">Path:</span> {{ connection.path }}</p>
+        </div>
+      </div>
+      <div class="modal-action">
+        <button class="btn btn-primary" @click="showConnectionInfo = false">Close</button>
+      </div>
+    </div>
+  </div>
 </template>
 
 <script setup>
-import {computed, inject, onMounted, ref, markRaw} from 'vue';
+import {computed, inject, onMounted, ref, markRaw, nextTick, watch} from 'vue';
 import {useRoute, useRouter} from 'vue-router';
 import {useConnectionsStore} from '@/store/connections';
 import {useDatabaseStore} from '@/store/database';
@@ -134,12 +185,15 @@ const sidebarWidth = ref(240);
 const isResizing = ref(false);
 const connectionError = ref(false);
 const connectionErrorMessage = ref('');
+const showConnectionInfo = ref(false);
+const draggingTabId = ref(null);
+const tabsScrollRef = ref(null);
+const hasScrollLeft = ref(false);
+const hasScrollRight = ref(false);
 
 const connection = computed(() => {
   return connectionsStore.getConnection(connectionId.value);
 });
-
-const totalTables = computed(() => databaseStore.tablesList.length);
 
 const openTabs = computed(() => tabsStore.openTabs);
 const activeTabId = computed(() => tabsStore.activeTabId);
@@ -152,6 +206,9 @@ function openTable(table) {
       tableName: table.name,
       columnCount: table.columnCount
     });
+    nextTick(() => {
+      scrollToActiveTab();
+    });
   } catch (error) {
     console.error(error);
   }
@@ -159,6 +216,9 @@ function openTable(table) {
 
 function activateTab(tabId) {
   tabsStore.activateTab(tabId);
+  nextTick(() => {
+    scrollToActiveTab();
+  });
 }
 
 function closeTab(tabId) {
@@ -193,6 +253,99 @@ function stopResize() {
   document.removeEventListener('mousemove', onResize);
   document.removeEventListener('mouseup', stopResize);
 }
+
+function handleDragStart(event, tabId) {
+  draggingTabId.value = tabId;
+  event.dataTransfer.effectAllowed = 'move';
+}
+
+function handleDrop(event, targetTabId) {
+  if (draggingTabId.value === null) return;
+  
+  const draggedTabIndex = openTabs.value.findIndex(tab => tab.id === draggingTabId.value);
+  const targetTabIndex = openTabs.value.findIndex(tab => tab.id === targetTabId);
+  
+  if (draggedTabIndex === -1 || targetTabIndex === -1) return;
+
+  // Reorder tabs
+  const tabs = [...openTabs.value];
+  const [removed] = tabs.splice(draggedTabIndex, 1);
+  tabs.splice(targetTabIndex, 0, removed);
+  
+  // Update tabs order in store
+  tabsStore.reorderTabs(tabs);
+  draggingTabId.value = null;
+}
+
+function scrollToActiveTab() {
+  if (!tabsScrollRef.value) return;
+  
+  const activeTabElement = tabsScrollRef.value.querySelector('.tab.active');
+  if (!activeTabElement) return;
+  
+  const scrollContainer = tabsScrollRef.value;
+  const containerWidth = scrollContainer.offsetWidth;
+  const tabLeft = activeTabElement.offsetLeft;
+  const tabWidth = activeTabElement.offsetWidth;
+
+  if (tabLeft + tabWidth > scrollContainer.scrollLeft + containerWidth) {
+    scrollContainer.scrollTo({
+      left: tabLeft + tabWidth - containerWidth + 20,
+      behavior: 'smooth'
+    });
+  }
+
+  else if (tabLeft < scrollContainer.scrollLeft) {
+    scrollContainer.scrollTo({
+      left: tabLeft - 20,
+      behavior: 'smooth'
+    });
+  }
+
+  checkScrollPosition();
+}
+
+function checkScrollPosition() {
+  if (!tabsScrollRef.value) return;
+  
+  const container = tabsScrollRef.value;
+  hasScrollLeft.value = container.scrollLeft > 0;
+  hasScrollRight.value = container.scrollLeft < (container.scrollWidth - container.clientWidth);
+}
+
+function scrollLeft() {
+  if (!tabsScrollRef.value) return;
+  
+  const container = tabsScrollRef.value;
+  const scrollAmount = Math.min(container.clientWidth * 0.75, 300);
+  container.scrollBy({
+    left: -scrollAmount,
+    behavior: 'smooth'
+  });
+}
+
+function scrollRight() {
+  if (!tabsScrollRef.value) return;
+  
+  const container = tabsScrollRef.value;
+  const scrollAmount = Math.min(container.clientWidth * 0.75, 300);
+  container.scrollBy({
+    left: scrollAmount,
+    behavior: 'smooth'
+  });
+}
+
+watch(() => tabsStore.activeTabId, () => {
+  nextTick(() => {
+    scrollToActiveTab();
+  });
+});
+
+watch(() => openTabs.value.length, () => {
+  nextTick(() => {
+    checkScrollPosition();
+  });
+});
 
 async function testConnection() {
   if (!connection.value) {
@@ -242,6 +395,13 @@ onMounted(async () => {
     showAlert(`Connected to ${connection.value.name}`, 'success');
     await databaseStore.loadTables(connectionId.value);
     
+    window.addEventListener('resize', checkScrollPosition);
+    
+    await nextTick(() => {
+      scrollToActiveTab();
+      checkScrollPosition();
+    });
+    
   } catch (error) {
     console.error(error);
     connectionError.value = true;
@@ -266,12 +426,102 @@ function getConnectionColor(type) {
 </script>
 
 <style scoped>
-.no-scrollbar {
-  scrollbar-width: none;
-  -ms-overflow-style: none;
+.tabs-container {
+  position: relative;
+  width: 100%;
+  height: 40px;
+  overflow: hidden;
+  display: flex;
 }
 
-.no-scrollbar::-webkit-scrollbar {
+.tabs-scroll {
+  display: flex;
+  overflow-x: auto;
+  height: 100%;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  flex: 1;
+}
+
+.tabs-scroll::-webkit-scrollbar {
   display: none;
+}
+
+.tab {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 100%;
+  min-width: 150px;
+  max-width: 150px;
+  padding: 0 10px;
+  border-right: 1px solid rgb(24, 24, 27);
+  background-color: rgb(24, 24, 27);
+  cursor: pointer;
+  user-select: none;
+  transition: background-color 0.2s;
+}
+
+.tab.active {
+  background-color: rgba(255, 255, 255, 0.1);
+  color: white;
+}
+
+.tab-title {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 1;
+}
+
+.close-icon {
+  opacity: 0.7;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  margin-left: 6px;
+  flex-shrink: 0;
+}
+
+.tab:hover {
+  background-color:  rgba(255, 255, 255, 0.1);
+}
+
+.tab:hover .close-icon {
+  opacity: 1;
+}
+
+.close-icon:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.tab-scroll-button {
+  width: 28px;
+  height: 100%;
+  background-color: rgba(255, 255, 255, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: #bbb;
+  flex-shrink: 0;
+  transition: background-color 0.2s;
+  z-index: 1;
+}
+
+.tab-scroll-button:hover {
+  background-color: rgb(24, 24, 27);
+  color: white;
+}
+
+.tab-scroll-left {
+  border-right: 1px solid rgb(24, 24, 27);
+}
+
+.tab-scroll-right {
+  border-left: 1px solid rgb(24, 24, 27);
 }
 </style> 

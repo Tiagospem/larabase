@@ -65,17 +65,19 @@ export const useTabsStore = defineStore('tabs', () => {
     }
   }
 
+  async function reorderTabs(newTabsOrder) {
+    openTabs.value = newTabsOrder;
+    await saveOpenTabs();
+  }
+
   async function saveOpenTabs() {
     try {
       if (window.api) {
-        // Create a simplified version of tabs without circular references or complex objects
         const simplifiedTabs = openTabs.value.map(tab => ({
           id: tab.id,
           connectionId: tab.connectionId,
           tableName: tab.tableName,
           title: tab.title,
-          columnCount: tab.columnCount || 0,
-          // Don't save the actual data, just metadata
           rowCount: tab.data?.rowCount || 0,
           columnCount: tab.data?.columns?.length || 0,
         }));
@@ -86,7 +88,6 @@ export const useTabsStore = defineStore('tabs', () => {
         });
       }
 
-      // For localStorage, also use the simplified version
       const simplifiedTabs = openTabs.value.map(tab => ({
         id: tab.id,
         connectionId: tab.connectionId,
@@ -139,6 +140,7 @@ export const useTabsStore = defineStore('tabs', () => {
     removeTab,
     updateTabData,
     activateTab,
+    reorderTabs,
     loadSavedTabs
   };
 }); 
