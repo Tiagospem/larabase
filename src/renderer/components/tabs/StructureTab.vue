@@ -1,6 +1,6 @@
 <template>
   <div class="h-full flex flex-col">
-    <div class="bg-base-200 p-2 border-b border-gray-800 flex items-center justify-between">
+    <div class="bg-base-200 p-2 border-b border-neutral flex items-center justify-between">
       <div class="flex items-center space-x-2">
         <button class="btn btn-sm btn-ghost" @click="loadStructure">
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" 
@@ -38,61 +38,65 @@
         </div>
       </div>
       
-      <table v-else-if="columns.length > 0" class="table table-sm w-full">
-        <thead class="bg-base-300 sticky top-0">
-          <tr class="text-xs">
-            <th class="px-4 py-2 text-left">Column Name</th>
-            <th class="px-4 py-2 text-left">Type</th>
-            <th class="px-4 py-2 text-center">Nullable</th>
-            <th class="px-4 py-2 text-center">Key</th>
-            <th class="px-4 py-2 text-left">Default</th>
-            <th class="px-4 py-2 text-left">Extra</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="column in filteredColumns" :key="column.name" 
-              class="border-b border-gray-700 hover:bg-base-200">
-            <td class="px-4 py-2 font-medium">
-              <div class="flex items-center">
-                <span v-if="column.primary_key" class="mr-2 text-yellow-500">
-                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4">
-                    <path fill-rule="evenodd" d="M8 7a5 5 0 113.61 4.804l-1.903 1.903A1 1 0
-                    01 9 14H8v1a1 1 0 01-1 1H6v1a1 1 0 01-1 1H3a1 1 0 01-1-1v-2a1 1 0
-                    01.293-.707L8.196 8.39A5.002 5.002 0 018 7zm5-3a.75.75 0 000 1.5A1.5
-                    1.5 0 0114.5 7 .75.75 0 0016 7a3 3 0 00-3-3z" clip-rule="evenodd" />
+      <div v-else-if="columns.length > 0" class="h-full overflow-auto pb-3">
+        <div class="overflow-x-auto">
+          <table class="table table-sm w-full min-w-full">
+            <thead class="bg-base-300 sticky top-0 z-10">
+              <tr class="text-xs">
+                <th class="px-4 py-2 text-left">Column Name</th>
+                <th class="px-4 py-2 text-left">Type</th>
+                <th class="px-4 py-2 text-center">Nullable</th>
+                <th class="px-4 py-2 text-center">Key</th>
+                <th class="px-4 py-2 text-left">Default</th>
+                <th class="px-4 py-2 text-left">Extra</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="column in filteredColumns" :key="column.name" 
+                  class="border-b border-gray-800 hover:bg-base-200">
+                <td class="px-4 py-2 font-medium">
+                  <div class="flex items-center">
+                    <span v-if="column.primary_key" class="mr-2 text-yellow-500">
+                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4">
+                        <path fill-rule="evenodd" d="M8 7a5 5 0 113.61 4.804l-1.903 1.903A1 1 0
+                        01 9 14H8v1a1 1 0 01-1 1H6v1a1 1 0 01-1 1H3a1 1 0 01-1-1v-2a1 1 0
+                        01.293-.707L8.196 8.39A5.002 5.002 0 018 7zm5-3a.75.75 0 000 1.5A1.5
+                        1.5 0 0114.5 7 .75.75 0 0016 7a3 3 0 00-3-3z" clip-rule="evenodd" />
+                      </svg>
+                    </span>
+                    {{ column.name }}
+                  </div>
+                </td>
+                <td class="px-4 py-2">
+                  <span class="text-gray-400">{{ column.type }}</span>
+                </td>
+                <td class="px-4 py-2 text-center">
+                  <svg v-if="column.nullable" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" 
+                       stroke-width="1.5" stroke="currentColor" class="w-5 h-5 mx-auto text-gray-400">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" />
                   </svg>
-                </span>
-                {{ column.name }}
-              </div>
-            </td>
-            <td class="px-4 py-2">
-              <span class="text-gray-400">{{ column.type }}</span>
-            </td>
-            <td class="px-4 py-2 text-center">
-              <svg v-if="column.nullable" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" 
-                   stroke-width="1.5" stroke="currentColor" class="w-5 h-5 mx-auto text-gray-400">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" />
-              </svg>
-              <svg v-else xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" 
-                   stroke-width="1.5" stroke="currentColor" class="w-5 h-5 mx-auto text-gray-400">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </td>
-            <td class="px-4 py-2 text-center">
-              <span v-if="column.primary_key" class="badge badge-ghost badge-sm">PRI</span>
-              <span v-else-if="column.foreign_key" class="badge badge-ghost badge-sm">FOR</span>
-              <span v-else-if="column.unique" class="badge badge-ghost badge-sm">UNI</span>
-            </td>
-            <td class="px-4 py-2">
-              <span v-if="column.default !== null">{{ column.default }}</span>
-              <span v-else class="text-gray-500">NULL</span>
-            </td>
-            <td class="px-4 py-2 text-gray-400">
-              {{ column.extra }}
-            </td>
-          </tr>
-        </tbody>
-      </table>
+                  <svg v-else xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" 
+                       stroke-width="1.5" stroke="currentColor" class="w-5 h-5 mx-auto text-gray-400">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </td>
+                <td class="px-4 py-2 text-center">
+                  <span v-if="column.primary_key" class="badge badge-ghost badge-sm">PRI</span>
+                  <span v-else-if="column.foreign_key" class="badge badge-ghost badge-sm">FOR</span>
+                  <span v-else-if="column.unique" class="badge badge-ghost badge-sm">UNI</span>
+                </td>
+                <td class="px-4 py-2">
+                  <span v-if="column.default !== null">{{ column.default }}</span>
+                  <span v-else class="text-gray-500">NULL</span>
+                </td>
+                <td class="px-4 py-2 text-gray-400">
+                  {{ column.extra }}
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
       
       <div v-else class="flex items-center justify-center h-full text-gray-500">
         <div class="text-center">
@@ -107,7 +111,7 @@
       </div>
     </div>
 
-    <div v-if="columns.length > 0" class="bg-base-200 px-4 py-2 border-t border-gray-800 flex justify-between items-center text-xs text-gray-400">
+    <div v-if="columns.length > 0" class="bg-base-200 px-4 py-2 border-t border-neutral flex justify-between items-center text-xs text-gray-400 sticky bottom-0 left-0 right-0 min-h-[40px] z-20">
       <div>{{ tableName }} | {{ columns.length }} columns</div>
       <div>
         <span>{{ primaryKeys.length > 0 ? `Primary key: ${primaryKeys.join(', ')}` : 'No primary key' }}</span>
@@ -137,7 +141,6 @@ const props = defineProps({
   }
 });
 
-// State
 const isLoading = ref(true);
 const columns = ref([]);
 const filterTerm = ref('');
@@ -145,7 +148,6 @@ const loadError = ref(null);
 
 const databaseStore = useDatabaseStore();
 
-// Computed
 const filteredColumns = computed(() => {
   if (!filterTerm.value) {
     return columns.value;
@@ -164,16 +166,13 @@ const primaryKeys = computed(() => {
     .map(column => column.name);
 });
 
-// Methods
 async function loadStructure() {
   isLoading.value = true;
   loadError.value = null;
   
   try {
-    // Use the store's getTableStructure method
     columns.value = await databaseStore.getTableStructure(props.connectionId, props.tableName);
-    
-    // Notify parent component
+
     props.onLoad({
       columnCount: columns.value.length,
       primaryKeys: primaryKeys.value
@@ -187,8 +186,53 @@ async function loadStructure() {
   }
 }
 
-// Lifecycle
 onMounted(() => {
   loadStructure();
 });
-</script> 
+</script>
+
+<style>
+.table {
+  width: max-content;
+  min-width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background-color: hsl(var(--b3) / var(--tw-bg-opacity));
+  box-shadow: 0 1px 0 0 rgba(0, 0, 0, 0.1);
+}
+
+.h-full.flex.flex-col {
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.flex-1.overflow-auto {
+  min-height: 0;
+}
+
+.overflow-x-auto {
+  overflow-x: auto;
+  width: 100%;
+}
+
+.pb-3 {
+  padding-bottom: 3rem;
+}
+
+@media (max-width: 640px) {
+  .table thead th {
+    padding: 0.5rem 0.25rem;
+  }
+  
+  .table tbody td {
+    padding: 0.5rem 0.25rem;
+  }
+}
+</style> 

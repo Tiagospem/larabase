@@ -1,6 +1,6 @@
 <template>
   <div class="h-full flex flex-col">
-    <div class="bg-base-200 p-2 border-b border-gray-800 flex items-center justify-between">
+    <div class="bg-base-200 p-2 border-b border-neutral flex items-center justify-between">
       <div class="flex items-center space-x-2">
         <button class="btn btn-sm btn-ghost" @click="loadIndexes">
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" 
@@ -55,7 +55,7 @@
           </thead>
           <tbody>
             <tr v-for="index in indexes" :key="index.name" 
-                class="border-b border-gray-700 hover:bg-base-200">
+                class="border-b border-neutral hover:bg-base-200">
               <td class="px-4 py-3 font-medium">{{ index.name }}</td>
               <td class="px-4 py-3">
                 <span class="badge badge-ghost badge-sm">{{ index.type }}</span>

@@ -33,7 +33,6 @@
           <option value="25">25 rows</option>
           <option value="50">50 rows</option>
           <option value="100">100 rows</option>
-          <option value="0">All rows</option>
         </select>
       </div>
     </div>
@@ -60,45 +59,47 @@
            @click="handleOutsideClick"
            tabindex="0"
            @keydown.prevent="handleTableKeyDown"
-           class="h-full overflow-auto">
-        <table class="table table-sm w-full table-fixed">
-          <thead class="bg-base-300 sticky top-0 z-10">
-            <tr class="text-xs select-none">
-              <th v-for="(column, index) in columns" 
-                  :key="column" 
-                  class="px-4 py-2 border-r border-neutral last:border-r-0 relative"
-                  :style="{ width: columnWidths[column] || defaultColumnWidth(column) }">
-                <div class="flex items-center justify-between">
-                  <span class="truncate">{{ column }}</span>
-                </div>
-                <!-- Enhanced resize handle with visual indicator -->
-                <div v-if="index < columns.length - 1"
-                     class="absolute right-0 top-0 h-full w-2 cursor-col-resize group"
-                     @mousedown.stop="startColumnResize($event, column)">
-                  <div class="absolute right-0 top-0 w-[1px] h-full bg-transparent group-hover:bg-primary group-hover:w-[2px] transition-all"></div>
-                </div>
-              </th>
-            </tr>
-          </thead>
+           class="h-full overflow-auto relative pb-3">
+        <div class="overflow-x-auto">
+          <table class="table table-sm w-full table-fixed min-w-full">
+            <thead class="bg-base-300 sticky top-0 z-10">
+              <tr class="text-xs select-none">
+                <th v-for="(column, index) in columns" 
+                    :key="column" 
+                    class="px-4 py-2 border-r border-neutral last:border-r-0 relative"
+                    :style="{ width: columnWidths[column] || defaultColumnWidth(column) }">
+                  <div class="flex items-center justify-between">
+                    <span class="truncate">{{ column }}</span>
+                  </div>
+                  <!-- Enhanced resize handle with visual indicator -->
+                  <div v-if="index < columns.length - 1"
+                       class="absolute right-0 top-0 h-full w-2 cursor-col-resize group"
+                       @mousedown.stop="startColumnResize($event, column)">
+                    <div class="absolute right-0 top-0 w-[1px] h-full bg-transparent group-hover:bg-primary group-hover:w-[2px] transition-all"></div>
+                  </div>
+                </th>
+              </tr>
+            </thead>
 
-          <tbody>
-            <tr v-for="(row, rowIndex) in paginatedData" 
-                :key="rowIndex"
-                :class="getRowClasses(rowIndex)"
-                @click.stop="handleRowClick($event, rowIndex)"
-                @mousedown.stop="handleMouseDown($event, rowIndex)"
-                @mouseenter.stop="handleMouseEnter(rowIndex)"
-                class="border-b border-neutral hover:bg-base-200 cursor-pointer">
-              <td v-for="column in columns" 
-                  :key="`${rowIndex}-${column}`" 
-                  class="px-4 py-2 border-r border-neutral last:border-r-0 truncate"
-                  :class="{ 'expanded': expandedCells.includes(`${rowIndex}-${column}`) }"
-                  @dblclick="toggleExpandCell(rowIndex, column)">
-                {{ formatCellValue(row[column]) }}
-              </td>
-            </tr>
-          </tbody>
-        </table>
+            <tbody>
+              <tr v-for="(row, rowIndex) in paginatedData" 
+                  :key="rowIndex"
+                  :class="getRowClasses(rowIndex)"
+                  @click.stop="handleRowClick($event, rowIndex)"
+                  @mousedown.stop="handleMouseDown($event, rowIndex)"
+                  @mouseenter.stop="handleMouseEnter(rowIndex)"
+                  class="border-b border-neutral hover:bg-base-200 cursor-pointer">
+                <td v-for="column in columns" 
+                    :key="`${rowIndex}-${column}`" 
+                    class="px-4 py-2 border-r border-neutral last:border-r-0 truncate"
+                    :class="{ 'expanded': expandedCells.includes(`${rowIndex}-${column}`) }"
+                    @dblclick="toggleExpandCell(rowIndex, column)">
+                  {{ formatCellValue(row[column]) }}
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
       </div>
       
       <div v-else class="flex items-center justify-center h-full text-gray-500">
@@ -114,25 +115,106 @@
       </div>
     </div>
 
-    <div v-if="tableData.length > 0" class="bg-base-200 px-4 py-2 border-t border-gray-800 flex justify-between items-center text-xs text-gray-400">
-      <div>{{ tableName }} | {{ tableData.length }} records{{ selectedRows.length > 0 ? ` | ${selectedRows.length} selected` : '' }}</div>
-      <div class="flex space-x-4">
-        <button class="btn btn-ghost btn-xs">
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" 
-            stroke="currentColor" class="w-4 h-4">
-            <path stroke-linecap="round" stroke-linejoin="round" 
-              d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
-          </svg>
-          Export
-        </button>
-        <span>{{ columns.length }} columns</span>
+    <div v-if="tableData.length > 0" class="bg-base-200 px-4 py-3 border-t border-neutral flex flex-col sm:flex-row justify-between items-center text-xs sticky bottom-0 left-0 right-0 min-h-[56px] z-20">
+      <div class="flex items-center mb-2 sm:mb-0">
+        <span class="text-gray-400">
+          {{ tableName }} | {{ totalRecords }} records{{ selectedRows.length > 0 ? ` | ${selectedRows.length} selected` : '' }}
+          | <span>{{ columns.length }} columns</span>
+        </span>
+        <div class="ml-4 flex space-x-2">
+          <button class="btn btn-ghost btn-xs">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" 
+              stroke="currentColor" class="w-4 h-4">
+              <path stroke-linecap="round" stroke-linejoin="round" 
+                d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
+            </svg>
+            Export
+          </button>
+        </div>
+      </div>
+      
+      <div class="flex items-center space-x-4">
+        <div class="join">
+          <button 
+            class="join-item btn btn-xs" 
+            :class="{ 'btn-disabled': currentPage === 1 }"
+            @click="goToFirstPage"
+            :disabled="currentPage === 1">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" 
+              stroke="currentColor" class="w-4 h-4">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M18.75 19.5l-7.5-7.5 7.5-7.5m-6 15L5.25 12l7.5-7.5" />
+            </svg>
+          </button>
+          <button 
+            class="join-item btn btn-xs" 
+            :class="{ 'btn-disabled': currentPage === 1 }"
+            @click="prevPage"
+            :disabled="currentPage === 1">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" 
+              stroke="currentColor" class="w-4 h-4">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
+            </svg>
+          </button>
+          
+          <div class="join-item btn btn-xs btn-disabled">
+            <span class="text-xs">
+              {{ currentPage }} / {{ totalPages }}
+            </span>
+          </div>
+          
+          <button 
+            class="join-item btn btn-xs" 
+            :class="{ 'btn-disabled': currentPage === totalPages }"
+            @click="nextPage"
+            :disabled="currentPage === totalPages">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" 
+              stroke="currentColor" class="w-4 h-4">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+            </svg>
+          </button>
+          <button 
+            class="join-item btn btn-xs" 
+            :class="{ 'btn-disabled': currentPage === totalPages }"
+            @click="goToLastPage"
+            :disabled="currentPage === totalPages">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" 
+              stroke="currentColor" class="w-4 h-4">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M11.25 4.5l7.5 7.5-7.5 7.5m-6-15l7.5 7.5-7.5 7.5" />
+            </svg>
+          </button>
+        </div>
+        
+        <div class="flex items-center space-x-2">
+          <span class="text-gray-400 hidden sm:inline-block">Rows per page:</span>
+          <select 
+            class="select select-xs select-bordered bg-base-300 w-16" 
+            v-model="rowsPerPage"
+            @change="currentPage = 1">
+            <option value="10">10</option>
+            <option value="25">25</option>
+            <option value="50">50</option>
+            <option value="100">100</option>
+          </select>
+        </div>
+        
+        <div class="hidden md:flex items-center space-x-2">
+          <span class="text-gray-400">Go to page:</span>
+          <input 
+            type="number" 
+            min="1" 
+            :max="totalPages" 
+            v-model="pageInput" 
+            @keyup.enter="goToPage"
+            class="input input-xs input-bordered bg-base-300 w-14" />
+          <button class="btn btn-xs btn-ghost" @click="goToPage">Go</button>
+        </div>
       </div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted, inject, nextTick } from 'vue';
+import { ref, computed, onMounted, onUnmounted, inject, nextTick, watch } from 'vue';
 import { useDatabaseStore } from '@/store/database';
 
 const showAlert = inject('showAlert');
@@ -152,7 +234,6 @@ const props = defineProps({
   }
 });
 
-// Table data state
 const isLoading = ref(true);
 const tableData = ref([]);
 const filterTerm = ref('');
@@ -161,16 +242,13 @@ const rowsPerPage = ref(25);
 const currentPage = ref(1);
 const tableContainer = ref(null);
 
-// Column resize state
 const columnWidths = ref({});
 const resizingColumn = ref(null);
 const startX = ref(0);
 const startWidth = ref(0);
 
-// Column types for better width calculation
 const columnTypes = ref({});
 
-// Row selection state
 const selectedRows = ref([]);
 const isDragging = ref(false);
 const lastSelectedId = ref(null);
@@ -178,12 +256,17 @@ const shiftKeyPressed = ref(false);
 const ctrlKeyPressed = ref(false);
 const selectionStartId = ref(null);
 
-// Cell expansion state
 const expandedCells = ref([]);
+
+const pageInput = ref(1);
+const totalRecords = computed(() => filteredData.value.length);
+const totalPages = computed(() => {
+  if (rowsPerPage.value === 0) return 1;
+  return Math.ceil(totalRecords.value / rowsPerPage.value);
+});
 
 const databaseStore = useDatabaseStore();
 
-// Computed properties
 const columns = computed(() => {
   if (tableData.value.length === 0) {
     return [];
@@ -210,11 +293,10 @@ const paginatedData = computed(() => {
     return filteredData.value;
   }
   
-  const start = (currentPage.value - 1) * rowsPerPage.value;
-  return filteredData.value.slice(start, start + rowsPerPage.value);
+  const start = (currentPage.value - 1) * parseInt(rowsPerPage.value);
+  return filteredData.value.slice(start, start + parseInt(rowsPerPage.value));
 });
 
-// Format cell values for display
 function formatCellValue(value) {
   if (value === null || value === undefined) return '';
   
@@ -225,9 +307,7 @@ function formatCellValue(value) {
   return String(value);
 }
 
-// Determine default column width based on column name and content
 function defaultColumnWidth(column) {
-  // Set specific widths for common column types
   if (/^id$/i.test(column)) return '80px';
   if (/^(created_at|updated_at|deleted_at)$/i.test(column)) return '150px';
   if (/(email|mail)$/i.test(column)) return '180px';
@@ -239,26 +319,21 @@ function defaultColumnWidth(column) {
   if (/(count|number|qty|quantity)$/i.test(column)) return '100px';
   if (/(active|enabled|visible|published|featured)$/i.test(column)) return '100px';
   if (/(image|photo|thumbnail|avatar|icon)$/i.test(column)) return '150px';
-  
-  // Default width for other columns
+
   return '150px';
 }
 
-// Function to analyze column data and determine appropriate widths
 function analyzeColumns() {
   if (tableData.value.length === 0 || columns.value.length === 0) return;
   
   columns.value.forEach(column => {
-    // Skip if width is already set by user
     if (columnWidths.value[column]) return;
-    
-    // Set type based on first non-null value
+
     const sampleValue = tableData.value.find(row => row[column] !== null)?.[column];
     if (sampleValue !== undefined) {
       const type = typeof sampleValue;
       columnTypes.value[column] = type;
-      
-      // Set initial width based on type if not already set by defaultColumnWidth
+
       if (!columnWidths.value[column]) {
         columnWidths.value[column] = defaultColumnWidth(column);
       }
@@ -266,7 +341,6 @@ function analyzeColumns() {
   });
 }
 
-// Table data loading functions
 async function loadTableData() {
   isLoading.value = true;
   loadError.value = null;
@@ -282,12 +356,10 @@ async function loadTableData() {
     
     tableData.value = data;
 
-    // Analyze columns after data is loaded
-    nextTick(() => {
+    await nextTick(() => {
       analyzeColumns();
     });
 
-    // Notify parent about the loaded data
     props.onLoad({
       columns: columns.value,
       rowCount: data.length
@@ -301,14 +373,12 @@ async function loadTableData() {
   }
 }
 
-// Column resize functions
 function startColumnResize(event, column) {
   event.preventDefault();
   event.stopPropagation();
   resizingColumn.value = column;
   startX.value = event.clientX;
-  
-  // Get the current width from the DOM if not in our state
+
   if (!columnWidths.value[column] || !columnWidths.value[column].endsWith('px')) {
     const headerCells = document.querySelectorAll('th');
     const columnIndex = columns.value.indexOf(column);
@@ -318,11 +388,9 @@ function startColumnResize(event, column) {
       columnWidths.value[column] = defaultColumnWidth(column);
     }
   }
-  
-  // Extract numeric width
+
   startWidth.value = parseInt(columnWidths.value[column]) || 100;
-  
-  // Add event listeners to the document
+
   document.addEventListener('mousemove', handleColumnResize);
   document.addEventListener('mouseup', stopColumnResize);
 }
@@ -341,7 +409,6 @@ function stopColumnResize(event) {
   resizingColumn.value = null;
 }
 
-// Row selection functions
 function getRowClasses(rowIndex) {
   const isSelected = selectedRows.value.includes(rowIndex);
   return {
@@ -436,7 +503,6 @@ function handleOutsideClick(event) {
   }
 }
 
-// Cell expansion function
 function toggleExpandCell(rowIndex, column) {
   const cellId = `${rowIndex}-${column}`;
   const index = expandedCells.value.indexOf(cellId);
@@ -448,7 +514,6 @@ function toggleExpandCell(rowIndex, column) {
   }
 }
 
-// Delete selected rows
 function deleteSelected() {
   if (selectedRows.value.length === 0) return;
   
@@ -460,7 +525,6 @@ function deleteSelected() {
   // databaseStore.deleteRows(props.connectionId, props.tableName, idsToDelete);
 }
 
-// Keyboard event handlers
 const handleKeyDown = (e) => {
   shiftKeyPressed.value = e.shiftKey;
   ctrlKeyPressed.value = e.ctrlKey || e.metaKey;
@@ -476,7 +540,50 @@ const handleKeyUp = (e) => {
   ctrlKeyPressed.value = e.ctrlKey || e.metaKey;
 };
 
-// Lifecycle hooks
+function prevPage() {
+  if (currentPage.value > 1) {
+    currentPage.value--;
+    scrollToTop();
+  }
+}
+
+function nextPage() {
+  if (currentPage.value < totalPages.value) {
+    currentPage.value++;
+    scrollToTop();
+  }
+}
+
+function goToFirstPage() {
+  currentPage.value = 1;
+  scrollToTop();
+}
+
+function goToLastPage() {
+  currentPage.value = totalPages.value;
+  scrollToTop();
+}
+
+function goToPage() {
+  const page = parseInt(pageInput.value);
+  if (!isNaN(page) && page >= 1 && page <= totalPages.value) {
+    currentPage.value = page;
+    scrollToTop();
+  } else {
+    pageInput.value = currentPage.value;
+  }
+}
+
+function scrollToTop() {
+  if (tableContainer.value) {
+    tableContainer.value.scrollTop = 0;
+  }
+}
+
+watch(() => currentPage.value, (newPage) => {
+  pageInput.value = newPage;
+});
+
 onMounted(() => {
   loadTableData();
   
@@ -494,35 +601,29 @@ onUnmounted(() => {
 </script>
 
 <style>
-/* Disable text selection to avoid issues when clicking/dragging in the table */
 .table tbody tr {
   user-select: none;
 }
 
-/* Remove default outline when table is focused */
 [tabindex="0"]:focus {
   outline: none;
 }
 
-/* Style for selected rows */
 .selected-row {
   background-color: #ea4331 !important;
   color: white !important;
 }
 
-/* Override any other styles that might interfere */
 .table tr.selected-row:nth-child(odd),
 .table tr.selected-row:nth-child(even) {
   background-color: #ea4331 !important;
   color: white !important;
 }
 
-/* Hover effect for selected rows */
 .selected-row:hover {
   background-color: #ea4331 !important;
 }
 
-/* Style for expanded cells */
 .expanded {
   white-space: normal !important;
   max-width: none !important;
@@ -534,13 +635,35 @@ onUnmounted(() => {
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
 }
 
-/* Added styles for resizing */
 .table-fixed {
   table-layout: fixed;
 }
 
-/* Better handle styles for resize */
 .group:hover .bg-gray-500 {
   background-color: theme('colors.primary');
+}
+
+.h-full.flex.flex-col {
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.flex-1.overflow-auto {
+  min-height: 0;
+}
+
+.table {
+  width: max-content;
+  min-width: 100%;
+}
+
+.overflow-x-auto {
+  overflow-x: auto;
+  width: 100%;
+}
+
+.pb-3 {
+  padding-bottom: 3rem;
 }
 </style> 

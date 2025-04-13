@@ -1,6 +1,6 @@
 <template>
   <div class="h-full flex flex-col">
-    <div class="bg-base-200 p-2 border-b border-gray-800 flex items-center justify-between">
+    <div class="bg-base-200 p-2 border-b border-neutral flex items-center justify-between">
       <div class="flex items-center space-x-2">
         <button class="btn btn-sm btn-ghost" @click="loadForeignKeys">
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" 

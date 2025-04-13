@@ -121,7 +121,7 @@
       </div>
     </div>
 
-    <footer class="bg-neutral px-4 py-1 text-xs text-gray-400 border-t border-gray-800">
+    <footer class="bg-neutral px-4 py-1 text-xs text-gray-400 border-t border-black/20">
       <div class="flex justify-between">
         <div>{{ connection?.type.toUpperCase() }} | {{ connection?.host || connection?.path }}</div>
         <div>Total tables: {{ databaseStore.tablesList.length }}</div>
