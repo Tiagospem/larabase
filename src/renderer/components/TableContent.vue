@@ -1,19 +1,20 @@
 <template>
   <div class="h-full flex flex-col">
     <!-- Tabs de conteúdo -->
-    <div class="bg-base-300 px-2 pt-1 border-b border-gray-800 flex items-center">
-      <div class="tabs tabs-boxed bg-transparent gap-1">
+    <div class="bg-base-300 px-2 py-2 border-b border-gray-800 flex items-center">
+      <div class="flex gap-4">
         <a 
           v-for="tab in contentTabs" 
           :key="tab.id"
-          class="tab transition-all duration-200 px-4 rounded-t-md" 
-          :class="{ 'tab-active bg-base-100 border-t-2 border-primary': activeContentTab === tab.id }"
+          class="flex items-center gap-2 px-3 py-1 cursor-pointer transition-colors" 
+          :class="{ 
+            'text-white font-medium': activeContentTab === tab.id,
+            'text-gray-500 hover:text-gray-300': activeContentTab !== tab.id 
+          }"
           @click="switchContentTab(tab.id)"
         >
-          <span class="flex items-center gap-1">
-            <component :is="tab.icon" class="w-4 h-4" />
-            {{ tab.label }}
-          </span>
+          <component :is="tab.icon" class="w-4 h-4" />
+          {{ tab.label }}
         </a>
       </div>
     </div>
@@ -142,6 +143,6 @@ onMounted(() => {
 });
 </script>
 
-<style>
-/* Estilos gerais já estavam definidos anteriormente */
+<style scoped>
+/* Removido o estilo de tabs não necessário */
 </style> 

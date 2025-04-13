@@ -43,7 +43,7 @@
       <div class="flex">
         <div v-for="tab in openTabs" :key="tab.id" 
           :class="['tab', 'tab-bordered', 'px-4', 'py-2', 'rounded-t-md', 'mr-1', 'flex', 'items-center', 'justify-center', 'min-h-[2.5rem]', 'gap-2',
-                 { 'tab-active bg-base-100': tab.id === activeTabId }]"
+                  { 'tab-active bg-base-100': tab.id === activeTabId }]"
           @click="activateTab(tab.id)">
           <span class="truncate max-w-xs">{{ tab.title }}</span>
           <button class="btn btn-ghost btn-xs btn-circle" @click.stop="closeTab(tab.id)">
