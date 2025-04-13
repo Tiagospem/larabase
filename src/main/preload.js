@@ -21,7 +21,9 @@ try {
       validateLaravelProject: (projectPath) => safeIpcRenderer.invoke('validate-laravel-project', projectPath),
       readEnvFile: (projectPath) => safeIpcRenderer.invoke('read-env-file', projectPath),
       testMySQLConnection: (config) => safeIpcRenderer.invoke('test-mysql-connection', config),
-      listTables: (config) => safeIpcRenderer.invoke('list-tables', config)
+      listTables: (config) => safeIpcRenderer.invoke('list-tables', config),
+      getTableRecordCount: (config) => safeIpcRenderer.invoke('getTableRecordCount', config),
+      getTableData: (config) => safeIpcRenderer.invoke('getTableData', config)
     }
   );
 } catch (error) {

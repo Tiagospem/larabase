@@ -299,4 +299,109 @@ ipcMain.handle('list-tables', async (event, config) => {
       }
     }
   }
+});
+
+ipcMain.handle('getTableRecordCount', async (event, config) => {
+  let connection;
+
+  try {
+    if (!config.host || !config.port || !config.username || !config.database || !config.tableName) {
+      return { 
+        success: false, 
+        message: 'Missing parameters',
+        count: 0
+      };
+    }
+
+    connection = await mysql.createConnection({
+      host: config.host,
+      port: config.port,
+      user: config.username,
+      password: config.password || '',
+      database: config.database,
+      connectTimeout: 10000
+    });
+
+    // Escape table name to prevent SQL injection
+    const tableName = connection.escapeId(config.tableName);
+    
+    const [rows] = await connection.query(`SELECT COUNT(*) as count FROM ${tableName}`);
+    
+    if (rows && rows.length > 0) {
+      return { 
+        success: true, 
+        count: rows[0].count || 0
+      };
+    } else {
+      return { 
+        success: false, 
+        message: 'Failed to count records',
+        count: 0
+      };
+    }
+  } catch (error) {
+    console.error('Error counting table records:', error);
+    return { 
+      success: false, 
+      message: error.message || 'Failed to count records',
+      count: 0
+    };
+  } finally {
+    if (connection) {
+      try {
+        await connection.end();
+      } catch (err) {
+        console.error('Error closing MySQL connection:', err);
+      }
+    }
+  }
+});
+
+ipcMain.handle('getTableData', async (event, config) => {
+  let connection;
+
+  try {
+    if (!config.host || !config.port || !config.username || !config.database || !config.tableName) {
+      return { 
+        success: false, 
+        message: 'Missing parameters',
+        data: []
+      };
+    }
+
+    connection = await mysql.createConnection({
+      host: config.host,
+      port: config.port,
+      user: config.username,
+      password: config.password || '',
+      database: config.database,
+      connectTimeout: 10000
+    });
+
+    // Escape table name to prevent SQL injection
+    const tableName = connection.escapeId(config.tableName);
+    const limit = config.limit || 100;
+    
+    const [rows] = await connection.query(`SELECT * FROM ${tableName} LIMIT ?`, [limit]);
+    
+    return { 
+      success: true, 
+      data: rows || []
+    };
+  } catch (error) {
+    console.error('Error fetching table data:', error);
+    return { 
+      success: false, 
+      message: error.message || 'Failed to fetch table data',
+      data: []
+    };
+  } finally {
+    if (connection) {
+      try {
+        await connection.end();
+      } catch (err) {
+        console.error('Error closing MySQL connection:', err);
+      }
+    }
+  }
 }); 

@@ -6,6 +6,7 @@ export const useDatabaseStore = defineStore('database', () => {
   const tables = ref({});
   const isLoading = ref(false);
   const usedConnectionsStore = useConnectionsStore;
+  const tableRecords = ref({});
 
   const mockDatabases = {
     1: {
@@ -163,22 +164,108 @@ export const useDatabaseStore = defineStore('database', () => {
     }
   }
 
-  async function loadTableData(connectionId, tableName) {
+  async function getTableRecordCount(connectionId, tableName) {
     try {
-      await new Promise(resolve => setTimeout(resolve, 500));
+      // Check if we already have the count cached
+      const cacheKey = `${connectionId}:${tableName}`;
+      if (tableRecords.value[cacheKey]?.count !== undefined) {
+        return tableRecords.value[cacheKey].count;
+      }
+
+      const connection = usedConnectionsStore().getConnection(connectionId);
       
-      if (tableContents[tableName]) {
-        return tableContents[tableName];
+      if (!connection) {
+        console.error("Connection not found");
+        return 0;
+      }
+
+      if (connection.type !== 'mysql') {
+        // Use mock data for non-MySQL databases
+        if (tableContents[tableName]) {
+          return tableContents[tableName].length;
+        }
+        return Math.floor(Math.random() * 100);
+      }
+
+      // For MySQL, get real record count
+      const result = await window.api.getTableRecordCount({
+        host: connection.host,
+        port: connection.port,
+        username: connection.username,
+        password: connection.password,
+        database: connection.database,
+        tableName: tableName
+      });
+      
+      if (result.success) {
+        // Cache the result
+        if (!tableRecords.value[cacheKey]) {
+          tableRecords.value[cacheKey] = {};
+        }
+        tableRecords.value[cacheKey].count = result.count;
+        return result.count;
       } else {
-        return Array.from({ length: 10 }, (_, i) => ({
-          id: i + 1,
-          column1: `Value ${i + 1}`,
-          column2: Math.floor(Math.random() * 1000),
-          column3: new Date().toISOString().split('T')[0]
-        }));
+        console.error("Failed to get record count:", result.message);
+        return 0;
       }
     } catch (error) {
-      console.error(`${tableName}:`, error);
+      console.error(`Error getting record count for ${tableName}:`, error);
+      return 0;
+    }
+  }
+
+  async function loadTableData(connectionId, tableName) {
+    try {
+      const connection = usedConnectionsStore().getConnection(connectionId);
+      
+      if (!connection) {
+        console.error("Connection not found");
+        return [];
+      }
+
+      if (connection.type !== 'mysql') {
+        // Use mock data for non-MySQL connections
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
+        if (tableContents[tableName]) {
+          return tableContents[tableName];
+        } else {
+          return Array.from({ length: 10 }, (_, i) => ({
+            id: i + 1,
+            column1: `Value ${i + 1}`,
+            column2: Math.floor(Math.random() * 1000),
+            column3: new Date().toISOString().split('T')[0]
+          }));
+        }
+      }
+
+      // For MySQL, get real data
+      const result = await window.api.getTableData({
+        host: connection.host,
+        port: connection.port,
+        username: connection.username,
+        password: connection.password,
+        database: connection.database,
+        tableName: tableName,
+        limit: 100
+      });
+      
+      if (result.success) {
+        // Cache the result
+        const cacheKey = `${connectionId}:${tableName}`;
+        if (!tableRecords.value[cacheKey]) {
+          tableRecords.value[cacheKey] = {};
+        }
+        tableRecords.value[cacheKey].data = result.data;
+        tableRecords.value[cacheKey].count = result.data.length;
+        
+        return result.data;
+      } else {
+        console.error("Failed to load table data:", result.message);
+        return [];
+      }
+    } catch (error) {
+      console.error(`Error loading data for ${tableName}:`, error);
       return [];
     }
   }
@@ -192,6 +279,7 @@ export const useDatabaseStore = defineStore('database', () => {
     isLoading,
     loadTables,
     loadTableData,
+    getTableRecordCount,
     tablesList
   };
 }); 
