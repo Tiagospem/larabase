@@ -143,7 +143,10 @@ try {
         
         // Parar monitoramento no processo principal
         return ipcRenderer.invoke('stop-trigger-monitoring', connectionId);
-      }
+      },
+
+      // SQL Editor functionality
+      executeSQLQuery: (config) => safeIpcRenderer.invoke('execute-sql-query', config)
     }
   );
 } catch (error) {

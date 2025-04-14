@@ -2985,3 +2985,78 @@ function extractEnvValue(content, key) {
   }
   return null;
 }
+
+// SQL Editor query execution handler
+ipcMain.handle('execute-sql-query', async (event, config) => {
+  let connection;
+  let monitoredConnection = null;
+
+  try {
+    if (!config.connectionId || !config.query) {
+      return { 
+        success: false, 
+        error: 'Missing connectionId or query',
+        results: []
+      };
+    }
+
+    // Get connection details
+    const connections = store.get('connections') || [];
+    const connectionDetails = connections.find(conn => conn.id === config.connectionId);
+    
+    if (!connectionDetails) {
+      return { 
+        success: false, 
+        error: 'Connection not found',
+        results: []
+      };
+    }
+
+    // Try to use an existing monitored connection
+    monitoredConnection = dbMonitoringConnections.get(config.connectionId);
+    
+    if (monitoredConnection) {
+      console.log(`Using existing monitored connection for SQL query: ${config.connectionId}`);
+      connection = monitoredConnection;
+    } else {
+      // Create a new connection
+      connection = await mysql.createConnection({
+        host: connectionDetails.host,
+        port: connectionDetails.port,
+        user: connectionDetails.username,
+        password: connectionDetails.password || '',
+        database: connectionDetails.database,
+        connectTimeout: 10000,
+        multipleStatements: true // Allow multiple statements, but use with caution
+      });
+    }
+
+    console.log(`Executing SQL query on ${connectionDetails.database}`);
+    
+    // Execute the SQL query
+    const [results] = await connection.query(config.query);
+    
+    console.log(`SQL query executed successfully`);
+    
+    return { 
+      success: true, 
+      results: Array.isArray(results) ? results : [results]
+    };
+  } catch (error) {
+    console.error('Error executing SQL query:', error);
+    return { 
+      success: false, 
+      error: error.message || 'Failed to execute SQL query',
+      results: []
+    };
+  } finally {
+    // Only close the connection if it's not a monitored connection
+    if (connection && !monitoredConnection) {
+      try {
+        await connection.end();
+      } catch (err) {
+        console.error('Error closing MySQL connection:', err);
+      }
+    }
+  }
+});

@@ -6,10 +6,12 @@ import './style.css';
 
 import Home from './views/Home.vue';
 import DatabaseView from './views/DatabaseView.vue';
+import SQLEditorView from './views/SQLEditorView.vue';
 
 const routes = [
   { path: '/', component: Home },
   { path: '/database/:id', component: DatabaseView },
+  { path: '/sql-editor/:id', component: SQLEditorView },
 ];
 
 const router = createRouter({
