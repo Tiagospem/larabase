@@ -338,43 +338,18 @@ function applySQLFromAI(sql) {
 }
 
 // Get database structure with optimized format to reduce token usage
-function loadDatabaseStructure() {
+async function loadDatabaseStructure() {
   try {
-    const fullStructure = databaseStore.getAllTablesModelsJson(connectionId.value);
+    // Show loading state for AI functionality until data is loaded
+    databaseStructure.value = JSON.stringify({ loading: true });
     
-    // Parse the structure
-    const parsedStructure = JSON.parse(fullStructure);
+    // Get the complete database structure from store
+    const fullStructure = await databaseStore.getAllTablesModelsJson(connectionId.value);
     
-    // Create a stripped-down version
-    const compact = {
-      connectionName: parsedStructure.connectionName,
-      database: parsedStructure.database,
-      tables: []
-    };
-    
-    // Add only essential table data
-    if (parsedStructure.tables && Array.isArray(parsedStructure.tables)) {
-      parsedStructure.tables.forEach(table => {
-        // Only include essential information
-        const tableInfo = {
-          tableName: table.tableName
-        };
-        
-        if (table.model) {
-          tableInfo.model = {
-            name: table.model?.name,
-            namespace: table.model?.namespace
-          };
-        }
-        
-        compact.tables.push(tableInfo);
-      });
-    }
-    
-    // Store the compact version
-    databaseStructure.value = JSON.stringify(compact, null, 2);
+    // The structure already includes columns, so we can use it directly
+    databaseStructure.value = fullStructure;
   } catch (error) {
-    console.error('Error optimizing database structure:', error);
+    console.error('Error loading database structure:', error);
     // Fallback to simplified version
     databaseStructure.value = '{"tables": []}';
   }

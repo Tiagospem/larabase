@@ -130,6 +130,11 @@ const optimizedDatabaseStructure = computed(() => {
           tableName: table.tableName,
         };
         
+        // Include column information if available
+        if (table.columns && Array.isArray(table.columns)) {
+          tableInfo.columns = table.columns;
+        }
+        
         // Only include model info if it exists
         if (table.model) {
           tableInfo.model = {
@@ -193,6 +198,17 @@ For the Eloquent block:
 4. PREFER using Eloquent relationships over manual joins when appropriate
 5. Include full namespaces for all models (e.g., use App\\Models\\User)
 
+The database structure provided includes:
+- Table names
+- Column information (name, type, primary/foreign keys)
+- Associated model names and namespaces
+
+Use the column information to:
+- Ensure correct column names and types in your queries
+- Identify primary keys for proper model usage
+- Detect foreign key relationships for choosing appropriate Eloquent relationships
+- Determine the correct field types for any type casting or conditions
+
 Guidelines for choosing between relationships and joins:
 - If the SQL uses a simple JOIN that matches a belongsTo/hasMany relationship, use the relationship method
 - If the SQL uses complex JOIN conditions or multiple JOINs, use the join() method
@@ -222,7 +238,7 @@ PodcastEpisode::select('podcast_episodes.*', 'podcast_series.title')
     ->get();
 </eloquent>
 
-Use the database structure info provided to ensure correct table names, model names, and relationships.
+Use the database structure info provided to ensure correct table names, column names, relationships, and data types.
 All responses must be in ${language === 'en' ? 'English' : language === 'pt' ? 'Portuguese' : 'Spanish'}.
 Be precise and generate production-ready code.`;
 
@@ -237,9 +253,11 @@ Do NOT create controller methods or full classes - I only need the direct query 
 
 Important notes:
 - Include ONLY the necessary namespace imports (no Laravel base classes)
-- If a simple JOIN matches a relationship pattern (foreign key), use the relationship instead
+- Use the column information to identify relationships and ensure correct field names
+- Pay special attention to primary and foreign keys to detect relationships
+- Use the proper column types for any type casting or conditions
 - The model name is typically the singular form of the table name in PascalCase
-- If you're unsure about relationships, prefer using a direct join with the Query Builder
+- If the tables have a foreign key relationship, prefer using Eloquent relationships
 
 Request: ${userQuery.value}` }
     ];

@@ -225,7 +225,7 @@ export const useDatabaseStore = defineStore('database', () => {
   }
 
   // Function to get JSON data for all tables with their models
-  function getAllTablesModelsJson(connectionId) {
+  async function getAllTablesModelsJson(connectionId) {
     const connection = usedConnectionsStore().getConnection(connectionId);
     const result = {
       connectionName: connection?.name || 'Unknown',
@@ -237,18 +237,52 @@ export const useDatabaseStore = defineStore('database', () => {
       return JSON.stringify(result, null, 2);
     }
 
+    // Process tables to include structure information
     for (const table of tables.value.tables) {
-      const model = getModelForTable(connectionId, table.name);
-      result.tables.push({
-        tableName: table.name,
-        recordCount: table.recordCount,
-        model: model ? {
-          name: model.name,
-          namespace: model.namespace,
-          fullName: model.fullName,
-          path: model.relativePath
-        } : null
-      });
+      try {
+        // Get column information
+        const columns = await getTableStructure(connectionId, table.name);
+        
+        // Get model information
+        const model = getModelForTable(connectionId, table.name);
+        
+        // Create enhanced table info with columns
+        const tableInfo = {
+          tableName: table.name,
+          recordCount: table.recordCount,
+          columns: columns.map(col => ({
+            name: col.name,
+            type: col.type,
+            nullable: col.nullable,
+            primary_key: col.primary_key,
+            foreign_key: col.foreign_key,
+            default: col.default,
+            extra: col.extra
+          })),
+          model: model ? {
+            name: model.name,
+            namespace: model.namespace,
+            fullName: model.fullName,
+            path: model.relativePath
+          } : null
+        };
+        
+        result.tables.push(tableInfo);
+      } catch (error) {
+        // If getting structure fails, add basic info
+        const model = getModelForTable(connectionId, table.name);
+        result.tables.push({
+          tableName: table.name,
+          recordCount: table.recordCount,
+          columns: [],
+          model: model ? {
+            name: model.name,
+            namespace: model.namespace,
+            fullName: model.fullName,
+            path: model.relativePath
+          } : null
+        });
+      }
     }
 
     return JSON.stringify(result, null, 2);

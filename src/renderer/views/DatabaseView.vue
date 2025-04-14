@@ -367,9 +367,9 @@ window.getTableModelJson = (tableName) => {
 }
 
 // Global function to get all tables models data
-window.getAllTablesModelsJson = () => {
+window.getAllTablesModelsJson = async () => {
   if (!connectionId.value) return null;
-  return databaseStore.getAllTablesModelsJson(connectionId.value);
+  return await databaseStore.getAllTablesModelsJson(connectionId.value);
 }
 
 function goBack() {
@@ -611,9 +611,18 @@ async function copyAllTablesJsonToClipboard() {
   }
 }
 
-watch(showTablesModelsModal, (isOpen) => {
+watch(showTablesModelsModal, async (isOpen) => {
   if (isOpen) {
-    allTablesModelsJson.value = databaseStore.getAllTablesModelsJson(connectionId.value);
+    try {
+      // Show loading state
+      allTablesModelsJson.value = 'Loading table data...';
+      
+      // Get complete table data with columns
+      allTablesModelsJson.value = await databaseStore.getAllTablesModelsJson(connectionId.value);
+    } catch (error) {
+      console.error('Error loading tables data:', error);
+      allTablesModelsJson.value = JSON.stringify({ error: 'Failed to load table data' }, null, 2);
+    }
   }
 });
 
