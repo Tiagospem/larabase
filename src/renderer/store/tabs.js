@@ -6,25 +6,54 @@ export const useTabsStore = defineStore('tabs', () => {
   const activeTabId = ref(null);
 
   async function addTab(tableData) {
-    const existingTab = openTabs.value.find(tab =>
+    // Verificar se deve buscar pela combinação tabela+filtro
+    const isFiltered = tableData.filter && tableData.filter.trim() !== '';
+    
+    let existingTab;
+    
+    if (isFiltered) {
+      // Se tem filtro, precisamos verificar se existe uma aba exatamente igual (tabela e filtro)
+      existingTab = openTabs.value.find(tab =>
         tab.connectionId === tableData.connectionId &&
-        tab.tableName === tableData.tableName
-    );
+        tab.tableName === tableData.tableName &&
+        tab.filter === tableData.filter
+      );
+    } else {
+      // Sem filtro, verificamos apenas a tabela
+      existingTab = openTabs.value.find(tab =>
+        tab.connectionId === tableData.connectionId &&
+        tab.tableName === tableData.tableName &&
+        (!tab.filter || tab.filter.trim() === '')
+      );
+    }
 
     if (existingTab) {
       activeTabId.value = existingTab.id;
       return existingTab;
     }
 
+    // Construir o título da aba
+    let tabTitle = tableData.tableName;
+    if (isFiltered) {
+      // Adicionar uma versão resumida do filtro ao título
+      const shortFilter = tableData.filter.length > 20 
+        ? tableData.filter.substring(0, 20) + '...' 
+        : tableData.filter;
+      tabTitle = `${tableData.tableName} (${shortFilter})`;
+    }
+
     const newTab = {
-      id: Date.now(),
+      id: tableData.id || Date.now(),
       connectionId: tableData.connectionId,
       tableName: tableData.tableName,
-      title: tableData.tableName,
+      title: tableData.title || tabTitle,
+      filter: tableData.filter || '',
       data: null,
       isLoading: true,
       columnCount: tableData.columnCount || 0,
     };
+
+    console.log("Criando nova aba com filtro:", newTab.filter);
 
     openTabs.value.push(newTab);
     activeTabId.value = newTab.id;
@@ -78,6 +107,7 @@ export const useTabsStore = defineStore('tabs', () => {
           connectionId: tab.connectionId,
           tableName: tab.tableName,
           title: tab.title,
+          filter: tab.filter || '',
           rowCount: tab.data?.rowCount || 0,
           columnCount: tab.data?.columns?.length || 0,
         }));
@@ -93,6 +123,7 @@ export const useTabsStore = defineStore('tabs', () => {
         connectionId: tab.connectionId,
         tableName: tab.tableName,
         title: tab.title,
+        filter: tab.filter || '',
         columnCount: tab.columnCount || 0,
         rowCount: tab.data?.rowCount || 0,
       }));

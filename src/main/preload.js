@@ -25,6 +25,7 @@ try {
       listDatabases: (config) => safeIpcRenderer.invoke('list-databases', config),
       getTableRecordCount: (config) => safeIpcRenderer.invoke('getTableRecordCount', config),
       getTableData: (config) => safeIpcRenderer.invoke('getTableData', config),
+      getFilteredTableData: (config) => safeIpcRenderer.invoke('getFilteredTableData', config),
       getTableStructure: (config) => safeIpcRenderer.invoke('getTableStructure', config),
       getTableForeignKeys: (config) => safeIpcRenderer.invoke('getTableForeignKeys', config),
       findTableMigrations: (config) => safeIpcRenderer.invoke('findTableMigrations', config),

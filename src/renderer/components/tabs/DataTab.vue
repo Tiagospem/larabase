@@ -1191,12 +1191,10 @@ function applyFilter() {
   // A propriedade computada filteredData já aplica o filtro automaticamente
 }
 
-function applyAdvancedFilter() {
+// Melhorar a função applyAdvancedFilter para aplicar filtros no servidor
+async function applyAdvancedFilter() {
   // Atualizar o filtro ativo
   activeFilter.value = advancedFilterTerm.value;
-  
-  // Voltar para a primeira página ao aplicar um novo filtro
-  currentPage.value = 1;
   
   // Se a persistência estiver ativada, salvar o filtro
   if (persistFilter.value && activeFilter.value) {
@@ -1207,6 +1205,25 @@ function applyAdvancedFilter() {
   }
   
   showFilterModal.value = false;
+  
+  // Voltar para a primeira página ao aplicar um novo filtro
+  currentPage.value = 1;
+  
+  // Para filtros de ID e filtros SQL que precisam ser processados no servidor
+  const useServerFilter = shouldUseServerFilter(activeFilter.value);
+  
+  if (useServerFilter) {
+    console.log("Aplicando filtro diretamente no servidor");
+    try {
+      await loadFilteredData();
+    } catch (error) {
+      console.error("Erro ao carregar dados filtrados:", error);
+      showAlert(`Erro ao aplicar filtro: ${error.message}`, 'error');
+    }
+  } else {
+    console.log("Aplicando filtro localmente");
+    // O filtro será aplicado automaticamente pelo computed filteredData
+  }
 }
 
 function cancelAdvancedFilter() {
@@ -1215,6 +1232,8 @@ function cancelAdvancedFilter() {
 }
 
 function clearFilters() {
+  const hadActiveFilter = activeFilter.value || filterTerm.value;
+  
   filterTerm.value = '';
   advancedFilterTerm.value = '';
   activeFilter.value = '';
@@ -1227,11 +1246,11 @@ function clearFilters() {
   url.searchParams.delete('filter');
   window.history.replaceState({}, '', url.toString());
   
-  // Voltar para a primeira página
-  currentPage.value = 1;
-  
-  // Recarregar dados sem filtros
-  loadTableData();
+  // Se tínhamos um filtro ativo, recarregar dados sem filtro
+  if (hadActiveFilter) {
+    currentPage.value = 1; // Voltar para a primeira página
+    loadTableData();
+  }
 }
 
 function insertColumnName(column) {
@@ -1295,6 +1314,7 @@ function applySqlFilter(data, filter) {
   }
 }
 
+// Corrigir a função convertFilterToJs para lidar corretamente com filtros de ID
 function convertFilterToJs(filter) {
   if (!filter) return 'true';
   
@@ -1305,8 +1325,10 @@ function convertFilterToJs(filter) {
     
     if (idMatch) {
       const idValue = parseInt(idMatch[1], 10);
-      // Usar operador de igualdade não-estrita para comparar número com string
-      return `String(row['id']) == '${idValue}' || row['id'] == ${idValue}`;
+      if (!isNaN(idValue)) {
+        // Usar operador de igualdade não-estrita para comparar número com string
+        return `row['id'] == ${idValue} || String(row['id']) == '${idValue}'`;
+      }
     }
     
     // Filtro LIKE
@@ -1335,7 +1357,7 @@ function convertFilterToJs(filter) {
       } else if (!isNaN(Number(value))) {
         // É um número - criar uma condição que funcione com números e strings numéricas
         const numValue = Number(value);
-        return `String(row['${column}']) == '${numValue}' || row['${column}'] == ${numValue}`;
+        return `row['${column}'] == ${numValue} || String(row['${column}']) == '${numValue}'`;
       } else {
         // É um identificador
         return `row['${column}'] === row['${value}']`;
@@ -1430,6 +1452,119 @@ function convertFilterToJs(filter) {
   } catch (e) {
     console.error('Erro ao converter filtro SQL para JS:', e, 'Filtro original:', filter);
     return 'true'; // Fallback para não filtrar nada
+  }
+}
+
+// Melhorar a função para determinar quando usar filtro no servidor
+function shouldUseServerFilter(filter) {
+  if (!filter) return false;
+  
+  // Limpar o filtro
+  const cleanFilter = filter.trim();
+  if (!cleanFilter) return false;
+
+  console.log("Verificando se deve usar filtro do servidor para:", cleanFilter);
+  
+  // 1. Filtro de ID - SEMPRE usar o servidor para buscas diretas por ID
+  const idMatch = cleanFilter.match(/^\s*id\s*=\s*(\d+)\s*$/i);
+  if (idMatch) {
+    const idValue = parseInt(idMatch[1], 10);
+    if (!isNaN(idValue)) {
+      console.log(`Detectado filtro de ID: ${idValue} - Usando o servidor`);
+      return true;
+    }
+  }
+  
+  // 2. Filtro com operador LIKE (pode envolver muitos registros)
+  if (/\bLIKE\b/i.test(cleanFilter)) {
+    console.log("Detectado filtro LIKE - Usando o servidor");
+    return true;
+  }
+  
+  // 3. Filtros complexos com múltiplas condições
+  if (/\bAND\b|\bOR\b|\bIN\b|\bIS NULL\b|\bIS NOT NULL\b/i.test(cleanFilter)) {
+    console.log("Detectado filtro complexo com operadores lógicos - Usando o servidor");
+    return true;
+  }
+  
+  // 4. Filtros de igualdade simples para qualquer coluna chave primária ou estrangeira
+  if (/^\s*\w+_id\s*=\s*\d+\s*$/i.test(cleanFilter)) {
+    console.log("Detectado filtro de chave estrangeira - Usando o servidor");
+    return true;
+  }
+  
+  console.log("Usando filtro local para:", cleanFilter);
+  return false;
+}
+
+// Função para carregar dados filtrados diretamente do servidor
+async function loadFilteredData() {
+  if (!activeFilter.value) {
+    // Se não há filtro ativo, carregamos normalmente
+    return loadTableData();
+  }
+  
+  isLoading.value = true;
+  loadError.value = null;
+  selectedRows.value = [];
+  
+  try {
+    console.log(`Aplicando filtro no servidor: "${activeFilter.value}"`);
+    
+    // Verificar se o filtro inclui "id = X" para facilitar a depuração
+    const idMatch = activeFilter.value.match(/^\s*id\s*=\s*(\d+)\s*$/i);
+    if (idMatch) {
+      const idValue = parseInt(idMatch[1], 10);
+      console.log(`Buscando registro com ID: ${idValue}`);
+    }
+    
+    // Carregar dados com filtro SQL diretamente do servidor
+    const result = await databaseStore.loadFilteredTableData(
+      props.connectionId,
+      props.tableName,
+      activeFilter.value,
+      rowsPerPage.value,
+      currentPage.value
+    );
+    
+    console.log(`Resultado da busca filtrada: ${result.data?.length || 0} registros de ${result.totalRecords || 0} total`);
+    
+    if (!result.data || result.data.length === 0) {
+      if (result.totalRecords > 0) {
+        // Se temos registros no total, mas não nesta página
+        showAlert(`Nenhum registro encontrado na página ${currentPage.value}. Total: ${result.totalRecords}`, 'info');
+      } else {
+        // Se não há registros em nenhuma página
+        showAlert('Nenhum registro corresponde ao filtro aplicado', 'info');
+      }
+    } else {
+      showAlert(`Encontrado ${result.totalRecords} registro(s) correspondente(s) ao filtro`, 'success');
+      
+      if (idMatch && result.data.length === 1) {
+        // Se estamos buscando por ID e encontramos exatamente um resultado, destacar na UI
+        console.log(`Encontrado registro com ID: ${idMatch[1]}`, result.data[0]);
+      }
+    }
+    
+    // Atualizar os dados da tabela com o resultado filtrado
+    tableData.value = result.data || [];
+    
+    // Atualizar a contagem total baseada nos resultados filtrados
+    totalRecordsCount.value = result.totalRecords || 0;
+    
+    // Notificar o pai sobre os dados carregados
+    props.onLoad({
+      columns: columns.value,
+      rowCount: result.totalRecords || 0
+    });
+  } catch (error) {
+    console.error('Erro ao aplicar filtro:', error);
+    loadError.value = error.message;
+    showAlert(`Erro ao aplicar filtro: ${error.message}`, 'error');
+    tableData.value = [];
+    totalRecordsCount.value = 0;
+  } finally {
+    isLoading.value = false;
   }
 }
 
@@ -1532,6 +1667,8 @@ function isForeignKeyColumn(column) {
 // Adicionar a função para definir exemplos de filtro
 function setExampleFilter(example) {
   advancedFilterTerm.value = example;
+  // Aplicar o filtro imediatamente se for clicado em um exemplo
+  applyAdvancedFilter();
 }
 
 // Modificar a função watch para paginatedData para depurar quando os dados são filtrados
