@@ -104,16 +104,14 @@
           <span class="badge badge-neutral">ID: {{ selectedUpdate.recordId || 'N/A' }}</span>
           <span>{{ formatTimestamp(selectedUpdate.timestamp, true) }}</span>
         </div>
-        
-        <!-- SQL Query - mostrado quando disponível -->
+
         <div v-if="selectedUpdate.sql" class="mt-4">
           <h4 class="font-semibold text-sm mb-1">SQL Query:</h4>
           <div class="bg-base-200 p-3 rounded-lg overflow-auto max-h-60 whitespace-pre-wrap font-mono text-sm">
             {{ formatSql(selectedUpdate.sql) }}
           </div>
         </div>
-        
-        <!-- Changed Data Details -->
+
         <div v-if="selectedUpdate.details" class="mt-4">
           <h4 class="font-semibold text-sm mb-1">Details:</h4>
           <div class="bg-base-200 p-3 rounded-lg overflow-auto max-h-60 font-mono text-sm whitespace-pre-wrap">
