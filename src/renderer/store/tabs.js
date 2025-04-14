@@ -128,6 +128,12 @@ export const useTabsStore = defineStore('tabs', () => {
     }
   }
 
+  async function closeAllTabs() {
+    openTabs.value = [];
+    activeTabId.value = null;
+    await saveOpenTabs();
+  }
+
   const activeTab = computed(() => {
     return openTabs.value.find(tab => tab.id === activeTabId.value) || null;
   });
@@ -141,6 +147,7 @@ export const useTabsStore = defineStore('tabs', () => {
     updateTabData,
     activateTab,
     reorderTabs,
-    loadSavedTabs
+    loadSavedTabs,
+    closeAllTabs
   };
 }); 

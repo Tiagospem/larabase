@@ -162,21 +162,19 @@ function toggleSortOrder() {
   localStorage.setItem('tableSortOrder', sortOrder.value);
 }
 
-async function loadTableRecordCounts() {
+function loadTableRecordCounts() {
   isLoadingCounts.value = true;
   try {
     const promises = tables.value.map(async (table) => {
-      if (table.recordCount === undefined) {
-        try {
-          table.recordCount = await databaseStore.getTableRecordCount(props.connectionId, table.name);
-        } catch (error) {
-          console.error(`Failed to get record count for ${table.name}:`, error);
-          table.recordCount = 0;
-        }
+      try {
+        table.recordCount = await databaseStore.getTableRecordCount(props.connectionId, table.name);
+      } catch (error) {
+        console.error(`Failed to get record count for ${table.name}:`, error);
+        table.recordCount = 0;
       }
     });
     
-    await Promise.all(promises);
+    return Promise.all(promises);
   } catch (error) {
     console.error("Error loading record counts:", error);
   } finally {
@@ -200,11 +198,21 @@ function getTableModel(tableName) {
   return databaseStore.getModelForTable(props.connectionId, tableName);
 }
 
-onMounted(() => {
-  loadTableRecordCounts();
+// Watch for changes in connectionId to reload counts
+watch(() => props.connectionId, () => {
+  if (props.connectionId) {
+    loadTableRecordCounts();
+  }
+}, { immediate: true });
+
+// Watch for table list changes to load counts for new tables
+watch(() => tables.value.length, () => {
+  if (tables.value.length > 0) {
+    loadTableRecordCounts();
+  }
 });
 
-watch(() => tables.value.length, () => {
+onMounted(() => {
   loadTableRecordCounts();
 });
 </script>

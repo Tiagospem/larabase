@@ -22,6 +22,7 @@ try {
       readEnvFile: (projectPath) => safeIpcRenderer.invoke('read-env-file', projectPath),
       testMySQLConnection: (config) => safeIpcRenderer.invoke('test-mysql-connection', config),
       listTables: (config) => safeIpcRenderer.invoke('list-tables', config),
+      listDatabases: (config) => safeIpcRenderer.invoke('list-databases', config),
       getTableRecordCount: (config) => safeIpcRenderer.invoke('getTableRecordCount', config),
       getTableData: (config) => safeIpcRenderer.invoke('getTableData', config),
       getTableStructure: (config) => safeIpcRenderer.invoke('getTableStructure', config),

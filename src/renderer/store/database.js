@@ -906,30 +906,19 @@ export const useDatabaseStore = defineStore('database', () => {
 
   // Limpar o cache de uma tabela específica
   function clearTableCache(cacheKey) {
-    // Limpar dados da tabela
-    if (tableRecords.value[cacheKey]) {
+    if (cacheKey) {
+      // Clear specific cache entry
       delete tableRecords.value[cacheKey];
+      delete tableStructures.value[cacheKey];
+      delete tableIndexes.value[cacheKey];
+      delete tableForeignKeys.value[cacheKey];
+      delete tableMigrations.value[cacheKey];
     }
-    
-    // Limpar estrutura
-    if (tableStructures.value[`${cacheKey}:structure`]) {
-      delete tableStructures.value[`${cacheKey}:structure`];
-    }
-    
-    // Limpar índices
-    if (tableIndexes.value[`${cacheKey}:indexes`]) {
-      delete tableIndexes.value[`${cacheKey}:indexes`];
-    }
-    
-    // Limpar chaves estrangeiras
-    if (tableForeignKeys.value[`${cacheKey}:foreignKeys`]) {
-      delete tableForeignKeys.value[`${cacheKey}:foreignKeys`];
-    }
-    
-    // Limpar migrações
-    if (tableMigrations.value[`${cacheKey}:migrations`]) {
-      delete tableMigrations.value[`${cacheKey}:migrations`];
-    }
+  }
+  
+  // New function to clear all record counts when switching databases
+  function clearTableRecordCounts() {
+    tableRecords.value = {};
   }
 
   const tablesList = computed(() => {
@@ -951,6 +940,7 @@ export const useDatabaseStore = defineStore('database', () => {
     getModelForTable,
     loadModelsForTables,
     getTableModelJson,
-    getAllTablesModelsJson
+    getAllTablesModelsJson,
+    clearTableRecordCounts
   };
 }); 

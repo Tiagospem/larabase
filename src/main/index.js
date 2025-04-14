@@ -3060,3 +3060,75 @@ ipcMain.handle('execute-sql-query', async (event, config) => {
     }
   }
 });
+
+// Add this function after other database-related IPC handlers
+
+// List all databases available on a MySQL server
+ipcMain.handle('list-databases', async (event, config) => {
+  let connection;
+  
+  try {
+    if (!config.host || !config.port || !config.username) {
+      return { 
+        success: false, 
+        message: 'Missing connection parameters',
+        databases: []
+      };
+    }
+
+    // Create a connection without specifying a database
+    connection = await mysql.createConnection({
+      host: config.host,
+      port: config.port,
+      user: config.username,
+      password: config.password || '',
+      connectTimeout: 10000
+    });
+
+    // Query to get all databases
+    const [rows] = await connection.query('SHOW DATABASES');
+    
+    if (rows && rows.length > 0) {
+      // Extract database names
+      const databases = rows.map(row => row.Database || row.DATABASE)
+        // Filter out system databases
+        .filter(db => !['information_schema', 'performance_schema', 'mysql', 'sys'].includes(db));
+      
+      return { 
+        success: true, 
+        databases
+      };
+    } else {
+      return { 
+        success: false, 
+        message: 'No databases found',
+        databases: []
+      };
+    }
+  } catch (error) {
+    console.error('Error listing databases:', error);
+    let errorMessage = 'Failed to list databases';
+    
+    if (error.code === 'ER_ACCESS_DENIED_ERROR') {
+      errorMessage = 'Access denied with the provided credentials';
+    } else if (error.code === 'ECONNREFUSED') {
+      errorMessage = 'Connection refused - check host and port';
+    } else if (error.message) {
+      errorMessage = error.message;
+    }
+    
+    return { 
+      success: false, 
+      message: errorMessage,
+      databases: []
+    };
+  } finally {
+    if (connection) {
+      try {
+        await connection.end();
+      } catch (err) {
+        console.error('Error closing MySQL connection:', err);
+      }
+    }
+  }
+});

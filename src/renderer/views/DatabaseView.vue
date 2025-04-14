@@ -1,5 +1,5 @@
 <template>
-  <div class="flex flex-col h-full">
+  <div class="flex flex-col h-full" @keydown.ctrl.k.prevent="openDatabaseSwitcher" @keydown.meta.k.prevent="openDatabaseSwitcher" tabindex="0">
     <header class="bg-neutral px-4 py-2 border-b border-neutral flex items-center justify-between">
       <div class="flex items-center">
         <button class="btn btn-ghost btn-sm mr-2" @click="goBack">
@@ -273,6 +273,36 @@
   
   <!-- Command Output Panel -->
   <CommandOutput />
+
+  <!-- Database Switcher Modal -->
+  <div class="modal" :class="{ 'modal-open': showDatabaseSwitcher }">
+    <div class="modal-box bg-base-300 w-96">
+      <h3 class="font-bold text-lg mb-4">Switch Database</h3>
+      <div v-if="loadingDatabases" class="flex justify-center py-4">
+        <div class="loading loading-spinner"></div>
+      </div>
+      <div v-else-if="availableDatabases.length === 0" class="text-center py-4">
+        No databases found
+      </div>
+      <div v-else class="max-h-60 overflow-y-auto">
+        <ul class="menu bg-base-200 rounded-box">
+          <li v-for="db in availableDatabases" :key="db" 
+              :class="{ 'bg-primary bg-opacity-20': db === connection?.database }">
+            <a @click="switchDatabase(db)" class="flex items-center justify-between">
+              {{ db }}
+              <svg v-if="db === connection?.database" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" 
+                stroke="currentColor" class="w-4 h-4">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+              </svg>
+            </a>
+          </li>
+        </ul>
+      </div>
+      <div class="modal-action">
+        <button class="btn" @click="showDatabaseSwitcher = false">Close</button>
+      </div>
+    </div>
+  </div>
 </template>
 
 <script setup>
@@ -318,6 +348,9 @@ const showTablesModelsModal = ref(false);
 const allTablesModelsJson = ref('');
 const showSettings = ref(false);
 const showArtisanCommands = ref(false);
+const showDatabaseSwitcher = ref(false);
+const availableDatabases = ref([]);
+const loadingDatabases = ref(false);
 
 const connection = computed(() => {
   return connectionsStore.getConnection(connectionId.value);
@@ -535,6 +568,9 @@ onMounted(async () => {
     showAlert(`Connected to ${connection.value.name}`, 'success');
     await databaseStore.loadTables(connectionId.value);
     
+    // Force reload record counts for tables
+    databaseStore.clearTableRecordCounts();
+    
     window.addEventListener('resize', checkScrollPosition);
     
     await nextTick(() => {
@@ -542,6 +578,8 @@ onMounted(async () => {
       checkScrollPosition();
     });
     
+    // Make the div focusable for keyboard shortcuts
+    document.querySelector('.flex.flex-col.h-full')?.focus();
   } catch (error) {
     console.error(error);
     connectionError.value = true;
@@ -628,6 +666,75 @@ watch(showTablesModelsModal, async (isOpen) => {
 
 function openSqlEditor() {
   router.push(`/sql-editor/${connectionId.value}`);
+}
+
+function openDatabaseSwitcher() {
+  showDatabaseSwitcher.value = true;
+  loadAvailableDatabases();
+}
+
+async function loadAvailableDatabases() {
+  if (!connection.value || connection.value.type !== 'mysql') {
+    availableDatabases.value = [];
+    return;
+  }
+
+  loadingDatabases.value = true;
+  try {
+    const result = await window.api.listDatabases({
+      host: connection.value.host,
+      port: connection.value.port,
+      username: connection.value.username,
+      password: connection.value.password
+    });
+    
+    if (result.success) {
+      availableDatabases.value = result.databases;
+    } else {
+      showAlert(`Failed to load databases: ${result.message}`, 'error');
+      availableDatabases.value = [];
+    }
+  } catch (error) {
+    console.error('Error loading databases:', error);
+    showAlert(`Error loading databases: ${error.message}`, 'error');
+    availableDatabases.value = [];
+  } finally {
+    loadingDatabases.value = false;
+  }
+}
+
+async function switchDatabase(databaseName) {
+  if (!connection.value || databaseName === connection.value.database) {
+    showDatabaseSwitcher.value = false;
+    return;
+  }
+
+  try {
+    // Update connection in store
+    await connectionsStore.updateConnection(connectionId.value, {
+      database: databaseName
+    });
+    
+    // Close database switcher
+    showDatabaseSwitcher.value = false;
+    
+    // Close all tabs
+    tabsStore.closeAllTabs();
+    
+    // Reload tables for new database
+    await databaseStore.loadTables(connectionId.value);
+    
+    // Force reload record counts
+    databaseStore.clearTableRecordCounts();
+    
+    showAlert(`Switched to database: ${databaseName}`, 'success');
+    
+    // Reload page to ensure a full refresh
+    window.location.reload();
+  } catch (error) {
+    console.error('Error switching database:', error);
+    showAlert(`Failed to switch database: ${error.message}`, 'error');
+  }
 }
 </script>
 
