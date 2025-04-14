@@ -24,6 +24,18 @@
       </div>
       
       <div class="flex">
+        <button 
+          v-if="hasOpenAIConfig" 
+          class="btn btn-accent btn-sm mr-2" 
+          @click="showAIModal = true"
+          title="AI SQL Generator"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" 
+            stroke="currentColor" class="w-4 h-4 mr-1">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09Z" />
+          </svg>
+          AI Assistant
+        </button>
         <button class="btn btn-primary btn-sm mr-2" @click="runQuery">
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" 
             stroke="currentColor" class="w-4 h-4 mr-1">
@@ -134,6 +146,14 @@
         </div>
       </div>
     </div>
+    
+    <!-- AI SQL Modal -->
+    <SQLAIModal 
+      v-if="showAIModal" 
+      :database-structure="databaseStructure"
+      @close="showAIModal = false"
+      @apply-sql="applySQLFromAI"
+    />
   </div>
 </template>
 
@@ -141,11 +161,16 @@
 import { ref, computed, onMounted, inject, nextTick } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useConnectionsStore } from '@/store/connections';
+import { useDatabaseStore } from '@/store/database';
+import { useSettingsStore } from '@/store/settings';
+import SQLAIModal from '../components/SQLAIModal.vue';
 
 const route = useRoute();
 const router = useRouter();
 const connectionId = computed(() => route.params.id);
 const connectionsStore = useConnectionsStore();
+const databaseStore = useDatabaseStore();
+const settingsStore = useSettingsStore();
 const showAlert = inject('showAlert');
 
 const sqlQuery = ref('');
@@ -158,12 +183,19 @@ const errorMessage = ref('');
 const editorHeight = ref(window.innerHeight * 0.4); // 40% of window height by default
 const isResizing = ref(false);
 const isEditorFullscreen = ref(false);
+const showAIModal = ref(false);
+const databaseStructure = ref('');
 
 const connection = computed(() => {
   return connectionsStore.getConnection(connectionId.value);
 });
 
-onMounted(() => {
+// Check if OpenAI API key is configured
+const hasOpenAIConfig = computed(() => {
+  return !!settingsStore.settings.openai.apiKey;
+});
+
+onMounted(async () => {
   if (!connection.value) {
     router.push('/');
     return;
@@ -174,6 +206,12 @@ onMounted(() => {
   
   // Listen for window resize events to adjust editor height
   window.addEventListener('resize', handleWindowResize);
+  
+  // Load settings for OpenAI config check
+  await settingsStore.loadSettings();
+  
+  // Get database structure for AI assistant
+  loadDatabaseStructure();
 });
 
 function goBack() {
@@ -292,6 +330,54 @@ function stopResize() {
   isResizing.value = false;
   document.removeEventListener('mousemove', onResize);
   document.removeEventListener('mouseup', stopResize);
+}
+
+function applySQLFromAI(sql) {
+  sqlQuery.value = sql;
+  showAIModal.value = false;
+}
+
+// Get database structure with optimized format to reduce token usage
+function loadDatabaseStructure() {
+  try {
+    const fullStructure = databaseStore.getAllTablesModelsJson(connectionId.value);
+    
+    // Parse the structure
+    const parsedStructure = JSON.parse(fullStructure);
+    
+    // Create a stripped-down version
+    const compact = {
+      connectionName: parsedStructure.connectionName,
+      database: parsedStructure.database,
+      tables: []
+    };
+    
+    // Add only essential table data
+    if (parsedStructure.tables && Array.isArray(parsedStructure.tables)) {
+      parsedStructure.tables.forEach(table => {
+        // Only include essential information
+        const tableInfo = {
+          tableName: table.tableName
+        };
+        
+        if (table.model) {
+          tableInfo.model = {
+            name: table.model?.name,
+            namespace: table.model?.namespace
+          };
+        }
+        
+        compact.tables.push(tableInfo);
+      });
+    }
+    
+    // Store the compact version
+    databaseStructure.value = JSON.stringify(compact, null, 2);
+  } catch (error) {
+    console.error('Error optimizing database structure:', error);
+    // Fallback to simplified version
+    databaseStructure.value = '{"tables": []}';
+  }
 }
 </script>
 
