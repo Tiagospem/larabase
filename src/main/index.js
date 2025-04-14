@@ -2266,4 +2266,186 @@ ipcMain.handle('execute-test-operations', async (event, connectionId) => {
     console.error('Error executing test operations:', error);
     return { success: false, message: error.message };
   }
+});
+
+// Add this function after the other database-related IPC handlers
+
+// Get database relationships for diagram visualization
+ipcMain.handle('get-database-relationships', async (event, config) => {
+  let connection;
+  try {
+    // Helper function to get connection details
+    function getConnectionDetails(connectionId) {
+      console.log(`Getting connection details for diagram, ID: ${connectionId}`);
+      const connections = store.get('connections') || [];
+      return connections.find(conn => conn.id === connectionId);
+    }
+
+    // Handle the case where only the connectionId is provided
+    if (config.connectionId && (!config.host || !config.port || !config.username || !config.database)) {
+      const connectionDetails = getConnectionDetails(config.connectionId);
+      if (!connectionDetails) {
+        console.error(`Connection details not found for ID: ${config.connectionId}`);
+        return {
+          success: false,
+          message: 'Connection details not found'
+        };
+      }
+      config.host = connectionDetails.host;
+      config.port = connectionDetails.port;
+      config.username = connectionDetails.username;
+      config.password = connectionDetails.password;
+      config.database = connectionDetails.database;
+    }
+
+    // Validate required parameters
+    if (!config.host || !config.port || !config.username || !config.database) {
+      console.error('Missing connection parameters for diagram:', config);
+      return {
+        success: false,
+        message: 'Missing required connection parameters'
+      };
+    }
+
+    console.log(`Getting relationships from ${config.database}`);
+    connection = await mysql.createConnection({
+      host: config.host,
+      port: config.port,
+      user: config.username,
+      password: config.password,
+      database: config.database,
+      multipleStatements: true
+    });
+
+    console.log('Connected to database successfully');
+
+    // Query to get all foreign key constraints from information_schema
+    const [rows] = await connection.query(`
+      SELECT 
+        TABLE_NAME AS sourceTable,
+        COLUMN_NAME AS sourceColumn,
+        REFERENCED_TABLE_NAME AS targetTable,
+        REFERENCED_COLUMN_NAME AS targetColumn,
+        CONSTRAINT_NAME AS constraintName
+      FROM
+        INFORMATION_SCHEMA.KEY_COLUMN_USAGE
+      WHERE
+        REFERENCED_TABLE_SCHEMA = ? 
+        AND REFERENCED_TABLE_NAME IS NOT NULL
+        AND REFERENCED_COLUMN_NAME IS NOT NULL
+      ORDER BY
+        TABLE_NAME, COLUMN_NAME;
+    `, [config.database]);
+
+    console.log(`Found ${rows.length} table relationships in ${config.database}`);
+    
+    // If no relationships were found, try to infer some basic relationships
+    if (rows.length === 0) {
+      console.log('No explicit relationships found. Attempting to infer relationships from naming patterns...');
+      
+      // Get all tables
+      const [tables] = await connection.query(`
+        SELECT table_name 
+        FROM information_schema.tables 
+        WHERE table_schema = ? 
+          AND table_type = 'BASE TABLE'
+      `, [config.database]);
+      
+      // Get columns for all tables
+      const inferredRelationships = [];
+      
+      for (const table of tables) {
+        const tableName = table.table_name || table.TABLE_NAME;
+        
+        // Get columns for this table
+        const [columns] = await connection.query(`
+          SELECT 
+            COLUMN_NAME as name,
+            COLUMN_TYPE as type,
+            COLUMN_KEY as \`key\`
+          FROM 
+            information_schema.COLUMNS 
+          WHERE 
+            TABLE_SCHEMA = ? 
+            AND TABLE_NAME = ?
+          ORDER BY 
+            ORDINAL_POSITION
+        `, [config.database, tableName]);
+        
+        // Look for columns that might be foreign keys based on naming patterns
+        for (const column of columns) {
+          const columnName = column.name;
+          
+          // Common patterns for foreign keys: id_*, *_id, *_fk
+          if (columnName.endsWith('_id') || columnName.endsWith('_fk') || 
+              (columnName.startsWith('id_') && columnName !== 'id')) {
+              
+            // Extract potential table name from column name
+            let targetTable = null;
+            
+            if (columnName.endsWith('_id')) {
+              // users_id -> users
+              targetTable = columnName.substring(0, columnName.length - 3);
+            } else if (columnName.endsWith('_fk')) {
+              // users_fk -> users
+              targetTable = columnName.substring(0, columnName.length - 3);
+            } else if (columnName.startsWith('id_')) {
+              // id_users -> users
+              targetTable = columnName.substring(3);
+            }
+            
+            // Check if this is a valid table in the database
+            const targetExists = tables.some(t => 
+              (t.table_name || t.TABLE_NAME).toLowerCase() === targetTable.toLowerCase()
+            );
+            
+            if (targetExists) {
+              // Add this as an inferred relationship
+              inferredRelationships.push({
+                sourceTable: tableName,
+                sourceColumn: columnName,
+                targetTable: targetTable,
+                targetColumn: 'id', // assume the primary key is 'id'
+                constraintName: `inferred_${tableName}_${columnName}`,
+                inferred: true
+              });
+              
+              console.log(`Inferred relationship: ${tableName}.${columnName} -> ${targetTable}.id`);
+            }
+          }
+        }
+      }
+      
+      // If we found inferred relationships, return those
+      if (inferredRelationships.length > 0) {
+        console.log(`Generated ${inferredRelationships.length} inferred relationships`);
+        await connection.end();
+        return inferredRelationships;
+      }
+    }
+
+    // Close the connection
+    if (connection) {
+      await connection.end();
+    }
+
+    return rows;
+  } catch (error) {
+    console.error('Error getting database relationships:', error);
+    
+    // Close the connection if it exists
+    if (connection) {
+      try {
+        await connection.end();
+      } catch (err) {
+        console.error('Error closing MySQL connection:', err);
+      }
+    }
+    
+    return {
+      success: false,
+      message: error.message || 'Failed to get database relationships',
+      error: error.toString()
+    };
+  }
 }); 

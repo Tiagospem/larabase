@@ -28,6 +28,7 @@ try {
       getTableForeignKeys: (config) => safeIpcRenderer.invoke('getTableForeignKeys', config),
       findTableMigrations: (config) => safeIpcRenderer.invoke('findTableMigrations', config),
       openFile: (filePath) => safeIpcRenderer.invoke('openFile', filePath),
+      getDatabaseRelationships: (connectionId) => safeIpcRenderer.invoke('get-database-relationships', { connectionId }),
       
       // Project logs related functions
       getProjectLogs: (config) => safeIpcRenderer.invoke('get-project-logs', config),
