@@ -67,35 +67,44 @@
                 <th v-for="(column, index) in columns" 
                     :key="column" 
                     class="px-4 py-2 border-r border-neutral last:border-r-0 relative whitespace-nowrap"
-                    :style="{ width: columnWidths[column] || defaultColumnWidth(column), maxWidth: columnWidths[column] || defaultColumnWidth(column) }">
+                    :class="{ 'bg-base-300': !expandedColumns.includes(column), 'bg-base-200': expandedColumns.includes(column) }"
+                    :style="{ width: columnWidths[column] || defaultColumnWidth(column), maxWidth: expandedColumns.includes(column) ? 'none' : (columnWidths[column] || defaultColumnWidth(column)) }">
                   <div class="flex items-center justify-between">
                     <span class="truncate">{{ column }}</span>
+                    <span v-if="expandedColumns.includes(column)" class="text-primary text-xs ml-1">
+                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4 inline-block">
+                        <path fill-rule="evenodd" d="M3 4a1 1 0 011-1h4a1 1 0 010 2H6.414l2.293 2.293a1 1 0 01-1.414 1.414L5 6.414V8a1 1 0 01-2 0V4zm9 1a1 1 0 010-2h4a1 1 0 011 1v4a1 1 0 01-2 0V6.414l-2.293 2.293a1 1 0 11-1.414-1.414L13.586 5H12zm-9 7a1 1 0 012 0v1.586l2.293-2.293a1 1 0 011.414 1.414L6.414 15H8a1 1 0 010 2H4a1 1 0 01-1-1v-4zm13-1a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 010-2h1.586l-2.293-2.293a1 1 0 011.414-1.414L15 13.586V12a1 1 0 011-1z" clip-rule="evenodd" />
+                      </svg>
+                    </span>
                   </div>
                   <!-- Enhanced resize handle with visual indicator -->
                   <div v-if="index < columns.length - 1"
                        class="absolute right-0 top-0 h-full w-2 cursor-col-resize group"
-                       @mousedown.stop="startColumnResize($event, column)">
-                    <div class="absolute right-0 top-0 w-[1px] h-full bg-transparent group-hover:bg-primary group-hover:w-[2px] transition-all"></div>
+                       @mousedown.stop="startColumnResize($event, column)"
+                       @dblclick.stop="toggleColumnExpansion(column)" 
+                       title="Double-click to expand/collapse column">
+                    <div class="absolute right-0 top-0 w-[1px] h-full"
+                         :class="expandedColumns.includes(column) ? 'expanded-resize-handle' : 'bg-transparent group-hover:bg-primary group-hover:w-[2px] transition-all'"></div>
                   </div>
                 </th>
               </tr>
             </thead>
 
-            <tbody>
+            <tbody @dblclick.stop.prevent>
               <tr v-for="(row, rowIndex) in paginatedData" 
                   :key="rowIndex"
                   :class="getRowClasses(rowIndex)"
                   @click.stop="handleRowClick($event, rowIndex)"
-                  @dblclick.stop="openEditModal(row)"
+                  @dblclick.stop="handleRowDoubleClick(row)"
                   @mousedown.stop="handleMouseDown($event, rowIndex)"
                   @mouseenter.stop="handleMouseEnter(rowIndex)"
                   class="border-b border-neutral hover:bg-base-200 cursor-pointer">
                 <td v-for="column in columns" 
                     :key="`${rowIndex}-${column}`" 
                     class="px-4 py-2 border-r border-neutral last:border-r-0 truncate whitespace-nowrap overflow-hidden"
-                    :class="{ 'expanded': expandedCells.includes(`${rowIndex}-${column}`) }"
-                    :style="{ width: columnWidths[column] || defaultColumnWidth(column), maxWidth: columnWidths[column] || defaultColumnWidth(column) }"
-                    @dblclick.stop="toggleExpandCell(rowIndex, column)">
+                    :class="{ 'expanded': expandedColumns.includes(column) }"
+                    :style="{ width: columnWidths[column] || defaultColumnWidth(column), maxWidth: expandedColumns.includes(column) ? 'none' : (columnWidths[column] || defaultColumnWidth(column)) }"
+                    @dblclick.stop="openEditModal(row)">
                   {{ formatCellValue(row[column]) }}
                 </td>
               </tr>
@@ -215,12 +224,22 @@
 
     <div class="modal" :class="{ 'modal-open': showEditModal }">
       <div class="modal-box max-w-4xl">
-        <h3 class="font-bold text-lg mb-4">Edit Record</h3>
+        <h3 class="font-bold text-lg mb-4 flex justify-between items-center">
+          Edit Record
+          <button class="btn btn-sm btn-circle" @click="closeEditModal">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </h3>
         
         <div v-if="editingRecord" class="overflow-y-auto max-h-[60vh]">
           <div v-for="column in getEditableColumns()" :key="column" class="form-control mb-4">
             <label class="label">
               <span class="label-text font-medium">{{ column }}</span>
+              <span class="label-text-alt text-xs bg-base-300 px-2 py-1 rounded-md">
+                {{ getFieldTypeLabel(column) }}
+              </span>
             </label>
             
             <!-- Different input types based on column type -->
@@ -240,7 +259,8 @@
               v-else-if="isNumberField(column)" 
               type="number" 
               v-model.number="editingRecord[column]" 
-              class="input input-bordered w-full" />
+              class="input input-bordered w-full" 
+              step="any" />
               
             <select 
               v-else-if="isBooleanField(column)" 
@@ -312,7 +332,7 @@ const shiftKeyPressed = ref(false);
 const ctrlKeyPressed = ref(false);
 const selectionStartId = ref(null);
 
-const expandedCells = ref([]);
+const expandedColumns = ref([]);
 
 const pageInput = ref(1);
 const totalRecords = computed(() => filteredData.value.length);
@@ -401,7 +421,7 @@ async function loadTableData() {
   isLoading.value = true;
   loadError.value = null;
   selectedRows.value = [];
-  expandedCells.value = [];
+  expandedColumns.value = [];
   
   try {
     // Clear the table cache before loading to ensure fresh data 
@@ -480,68 +500,63 @@ function getRowClasses(rowIndex) {
 }
 
 function handleRowClick(event, rowIndex) {
-  event.stopPropagation();
-  
-  if (ctrlKeyPressed.value) {
-    toggleRowSelection(rowIndex);
-  } else if (shiftKeyPressed.value && lastSelectedId.value !== null) {
-    selectRange(lastSelectedId.value, rowIndex);
-  } else {
-    selectedRows.value = [rowIndex];
-    lastSelectedId.value = rowIndex;
+  // Sempre pare a propagação do evento para evitar bugs
+  if (event) {
+    event.preventDefault();
+    event.stopPropagation();
   }
-}
 
-function toggleRowSelection(rowIndex) {
-  const index = selectedRows.value.indexOf(rowIndex);
-  if (index !== -1) {
-    selectedRows.value.splice(index, 1);
-  } else {
-    selectedRows.value.push(rowIndex);
-    lastSelectedId.value = rowIndex;
-  }
-}
-
-function selectRange(startId, endId) {
-  const start = Math.min(startId, endId);
-  const end = Math.max(startId, endId);
-  
-  const rangeIds = [];
-  for (let i = start; i <= end; i++) {
-    rangeIds.push(i);
+  // Não processar o clique se estiver arrastando (isso é tratado pelo mouseup)
+  if (isDragging.value) {
+    return;
   }
   
+  // Se foi um duplo clique, não alteramos a seleção
+  if (event && event.detail === 2) {
+    return;
+  }
+  
+  // Comportamento com Ctrl pressionado: alternar seleção
   if (ctrlKeyPressed.value) {
-    selectedRows.value = [...new Set([...selectedRows.value, ...rangeIds])];
-  } else {
+    const index = selectedRows.value.indexOf(rowIndex);
+    if (index !== -1) {
+      // Se já está selecionada, remove
+      selectedRows.value.splice(index, 1);
+    } else {
+      // Se não está selecionada, adiciona
+      selectedRows.value.push(rowIndex);
+    }
+    
+    // Atualiza o lastSelectedId
+    lastSelectedId.value = rowIndex;
+    return;
+  }
+  
+  // Comportamento com Shift pressionado: selecionar intervalo
+  if (shiftKeyPressed.value && lastSelectedId.value !== null) {
+    const start = Math.min(lastSelectedId.value, rowIndex);
+    const end = Math.max(lastSelectedId.value, rowIndex);
+    
+    const rangeIds = [];
+    for (let i = start; i <= end; i++) {
+      rangeIds.push(i);
+    }
+    
     selectedRows.value = rangeIds;
+    return;
   }
   
-  lastSelectedId.value = endId;
-}
-
-function handleMouseDown(event, rowIndex) {
-  event.stopPropagation();
-  
-  isDragging.value = true;
-  selectionStartId.value = rowIndex;
-  
-  if (!ctrlKeyPressed.value && !shiftKeyPressed.value) {
+  // Comportamento padrão: clicar em linha já selecionada a desseleciona,
+  // caso contrário seleciona apenas esta linha
+  if (selectedRows.value.length === 1 && selectedRows.value[0] === rowIndex) {
+    // Se está clicando na única linha selecionada, desseleciona
+    selectedRows.value = [];
+    lastSelectedId.value = null;
+  } else {
+    // Senão, seleciona apenas esta linha
     selectedRows.value = [rowIndex];
     lastSelectedId.value = rowIndex;
   }
-  
-  window.addEventListener('mouseup', handleMouseUp, { once: true });
-}
-
-function handleMouseEnter(rowIndex) {
-  if (isDragging.value && selectionStartId.value !== null) {
-    selectRange(selectionStartId.value, rowIndex);
-  }
-}
-
-function handleMouseUp() {
-  isDragging.value = false;
 }
 
 function selectAll() {
@@ -565,14 +580,15 @@ function handleOutsideClick(event) {
   }
 }
 
-function toggleExpandCell(rowIndex, column) {
-  const cellId = `${rowIndex}-${column}`;
-  const index = expandedCells.value.indexOf(cellId);
+function toggleColumnExpansion(column) {
+  const index = expandedColumns.value.indexOf(column);
   
   if (index !== -1) {
-    expandedCells.value.splice(index, 1);
+    expandedColumns.value.splice(index, 1);
+    showAlert(`Column "${column}" collapsed`, 'info');
   } else {
-    expandedCells.value.push(cellId);
+    expandedColumns.value.push(column);
+    showAlert(`Column "${column}" expanded - double-click resize handle to collapse`, 'info');
   }
 }
 
@@ -667,18 +683,24 @@ async function saveRecord() {
   if (!editingRecord.value) return;
   
   try {
-    // For now, update locally without actual database update
-    const index = tableData.value.findIndex(row => 
-      row.id === originalRecord.value.id || 
-      JSON.stringify(row) === JSON.stringify(originalRecord.value)
-    );
+    // Para melhor comparação, compara baseado na chave primária (id)
+    // ou como fallback, na estrutura completa do registro
+    const index = tableData.value.findIndex(row => {
+      if (row.id && originalRecord.value.id) {
+        return row.id === originalRecord.value.id;
+      }
+      return JSON.stringify(row) === JSON.stringify(originalRecord.value);
+    });
     
     if (index !== -1) {
+      // Atualiza o registro nos dados locais
       tableData.value[index] = { ...editingRecord.value };
       showAlert('Record updated successfully', 'success');
       
-      // In a real implementation, you would call an API to update the database
+      // Em uma implementação real, você chamaria uma API para atualizar o banco de dados
       // await databaseStore.updateRecord(props.connectionId, props.tableName, editingRecord.value);
+    } else {
+      showAlert('Could not find record to update', 'error');
     }
     
     closeEditModal();
@@ -719,6 +741,93 @@ function isBooleanField(column) {
   const value = editingRecord.value[column];
   return typeof value === 'boolean' || 
          /(active|enabled|visible|published|featured|is_|has_)/i.test(column);
+}
+
+function getFieldTypeLabel(column) {
+  if (!editingRecord.value) return 'Unknown';
+  
+  const value = editingRecord.value[column];
+  
+  if (isLongTextField(column)) return 'Text';
+  if (isDateField(column)) return 'Date';
+  if (isNumberField(column)) return 'Number';
+  if (isBooleanField(column)) return 'Boolean';
+  
+  if (value === null) return 'NULL';
+  
+  return typeof value === 'object' ? 'Object' : 
+         typeof value === 'string' ? 'String' : 
+         typeof value === 'number' ? 'Number' : 
+         typeof value === 'boolean' ? 'Boolean' : 
+         typeof value;
+}
+
+function handleRowDoubleClick(row) {
+  // Prevent any selection on double click
+  // Find the row index
+  const rowIndex = paginatedData.value.findIndex(r => r === row);
+  
+  // If the row is in the selected rows, leave it
+  // If not, clear selection
+  if (!selectedRows.value.includes(rowIndex)) {
+    selectedRows.value = [];
+  }
+  
+  // Open the edit modal
+  openEditModal(row);
+}
+
+function handleMouseDown(event, rowIndex) {
+  // Para clicar com Ctrl/Shift, deixar o onClick cuidar disso
+  if (ctrlKeyPressed.value || shiftKeyPressed.value) {
+    return;
+  }
+  
+  // Para clicar normal, iniciar o arrastar
+  isDragging.value = true;
+  selectionStartId.value = rowIndex;
+  
+  // Selecionar a linha atual (agora será feito pelo handleRowClick)
+  // selectedRows.value = [rowIndex];
+  // lastSelectedId.value = rowIndex;
+  
+  window.addEventListener('mouseup', handleMouseUp, { once: true });
+}
+
+function handleMouseEnter(rowIndex) {
+  // Se não estamos arrastando ou não temos ponto de início, não fazer nada
+  if (!isDragging.value || selectionStartId.value === null) {
+    return;
+  }
+  
+  // Selecionar intervalo entre o ponto inicial e atual
+  const start = Math.min(selectionStartId.value, rowIndex);
+  const end = Math.max(selectionStartId.value, rowIndex);
+  
+  const rangeIds = [];
+  for (let i = start; i <= end; i++) {
+    rangeIds.push(i);
+  }
+  
+  selectedRows.value = rangeIds;
+}
+
+function handleMouseUp(event) {
+  // Se não estava arrastando, é um clique simples - deixe o handleRowClick tratar
+  if (!isDragging.value || !selectionStartId.value) {
+    isDragging.value = false;
+    selectionStartId.value = null;
+    return;
+  }
+  
+  // Se foi um arrasto real (não apenas um clique), mantenha a seleção
+  // mas marque o último item selecionado
+  if (selectedRows.value.length > 0) {
+    lastSelectedId.value = selectedRows.value[selectedRows.value.length - 1];
+  }
+  
+  isDragging.value = false;
+  selectionStartId.value = null;
 }
 
 onMounted(() => {
@@ -764,12 +873,20 @@ onUnmounted(() => {
 .expanded {
   white-space: normal !important;
   overflow: visible !important;
-  position: relative;
-  z-index: 10;
-  background-color: theme('colors.base-200');
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
   min-width: 200px !important;
-  max-width: 400px !important;
+  max-width: none !important;
+}
+
+/* Add some styles to indicate which columns are expanded */
+th:has(+ tr td.expanded) {
+  min-width: 200px !important;
+  max-width: none !important;
+}
+
+/* Style for resize handle when column is expanded */
+.expanded-resize-handle {
+  background-color: theme('colors.primary') !important;
+  width: 2px !important;
 }
 
 .table-fixed {
