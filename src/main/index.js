@@ -3,6 +3,7 @@ const path = require('path');
 const Store = require('electron-store');
 const fs = require('fs');
 const mysql = require('mysql2/promise');
+const { spawn } = require('child_process');
 
 const store = new Store();
 
@@ -2613,6 +2614,100 @@ ipcMain.handle('read-model-file', async (event, filePath) => {
       success: false, 
       message: error.message,
       content: null
+    };
+  }
+});
+
+// Add the handler for running artisan commands at an appropriate location
+ipcMain.handle('run-artisan-command', async (event, config) => {
+  try {
+    if (!config.projectPath) {
+      return { 
+        success: false, 
+        message: 'Project path is required',
+        output: ''
+      };
+    }
+
+    if (!config.command) {
+      return {
+        success: false,
+        message: 'Command is required',
+        output: ''
+      };
+    }
+
+    const artisanPath = path.join(config.projectPath, 'artisan');
+    if (!fs.existsSync(artisanPath)) {
+      return {
+        success: false,
+        message: 'Artisan file not found in project path',
+        output: ''
+      };
+    }
+
+    // Determine if we're using PHP directly or Sail
+    let commandArgs = [];
+    const hasSail = fs.existsSync(path.join(config.projectPath, 'vendor/bin/sail'));
+    
+    if (config.useSail && hasSail) {
+      // Using Laravel Sail
+      commandArgs = ['vendor/bin/sail', 'artisan', ...config.command.split(' ')];
+    } else {
+      // Using PHP directly
+      commandArgs = ['php', 'artisan', ...config.command.split(' ')];
+    }
+
+    return new Promise((resolve) => {
+      let stdoutData = '';
+      let stderrData = '';
+      
+      const process = spawn(commandArgs[0], commandArgs.slice(1), {
+        cwd: config.projectPath,
+        shell: true
+      });
+
+      process.stdout.on('data', (data) => {
+        stdoutData += data.toString();
+      });
+
+      process.stderr.on('data', (data) => {
+        stderrData += data.toString();
+      });
+
+      process.on('close', (code) => {
+        if (code === 0) {
+          resolve({
+            success: true,
+            output: stdoutData,
+            command: commandArgs.join(' ')
+          });
+        } else {
+          resolve({
+            success: false,
+            message: `Process exited with code ${code}`,
+            output: stderrData || stdoutData,
+            command: commandArgs.join(' ')
+          });
+        }
+      });
+
+      process.on('error', (err) => {
+        resolve({
+          success: false,
+          message: err.message,
+          output: '',
+          command: commandArgs.join(' ')
+        });
+      });
+    });
+  } catch (error) {
+    console.error('Error running artisan command:', error);
+    return {
+      success: false,
+      message: error.message,
+      output: '',
+      command: config.command
     };
   }
 });
