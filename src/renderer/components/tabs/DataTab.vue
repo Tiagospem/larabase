@@ -86,6 +86,7 @@
                   :key="rowIndex"
                   :class="getRowClasses(rowIndex)"
                   @click.stop="handleRowClick($event, rowIndex)"
+                  @dblclick.stop="openEditModal(row)"
                   @mousedown.stop="handleMouseDown($event, rowIndex)"
                   @mouseenter.stop="handleMouseEnter(rowIndex)"
                   class="border-b border-neutral hover:bg-base-200 cursor-pointer">
@@ -94,7 +95,7 @@
                     class="px-4 py-2 border-r border-neutral last:border-r-0 truncate whitespace-nowrap overflow-hidden"
                     :class="{ 'expanded': expandedCells.includes(`${rowIndex}-${column}`) }"
                     :style="{ width: columnWidths[column] || defaultColumnWidth(column), maxWidth: columnWidths[column] || defaultColumnWidth(column) }"
-                    @dblclick="toggleExpandCell(rowIndex, column)">
+                    @dblclick.stop="toggleExpandCell(rowIndex, column)">
                   {{ formatCellValue(row[column]) }}
                 </td>
               </tr>
@@ -210,6 +211,60 @@
           <button class="btn btn-xs btn-ghost" @click="goToPage">Go</button>
         </div>
       </div>
+    </div>
+
+    <div class="modal" :class="{ 'modal-open': showEditModal }">
+      <div class="modal-box max-w-4xl">
+        <h3 class="font-bold text-lg mb-4">Edit Record</h3>
+        
+        <div v-if="editingRecord" class="overflow-y-auto max-h-[60vh]">
+          <div v-for="column in getEditableColumns()" :key="column" class="form-control mb-4">
+            <label class="label">
+              <span class="label-text font-medium">{{ column }}</span>
+            </label>
+            
+            <!-- Different input types based on column type -->
+            <textarea 
+              v-if="isLongTextField(column)" 
+              v-model="editingRecord[column]" 
+              class="textarea textarea-bordered h-24"
+              :placeholder="column"></textarea>
+              
+            <input 
+              v-else-if="isDateField(column)" 
+              type="datetime-local" 
+              v-model="editingRecord[column]" 
+              class="input input-bordered w-full" />
+              
+            <input 
+              v-else-if="isNumberField(column)" 
+              type="number" 
+              v-model.number="editingRecord[column]" 
+              class="input input-bordered w-full" />
+              
+            <select 
+              v-else-if="isBooleanField(column)" 
+              v-model="editingRecord[column]" 
+              class="select select-bordered w-full">
+              <option :value="true">True</option>
+              <option :value="false">False</option>
+              <option v-if="editingRecord[column] === null" :value="null">NULL</option>
+            </select>
+              
+            <input 
+              v-else 
+              type="text" 
+              v-model="editingRecord[column]" 
+              class="input input-bordered w-full" />
+          </div>
+        </div>
+        
+        <div class="modal-action">
+          <button class="btn btn-error" @click="closeEditModal">Cancel</button>
+          <button class="btn btn-primary" @click="saveRecord">Save Changes</button>
+        </div>
+      </div>
+      <div class="modal-backdrop" @click="closeEditModal"></div>
     </div>
   </div>
 </template>
@@ -590,6 +645,81 @@ function scrollToTop() {
 watch(() => currentPage.value, (newPage) => {
   pageInput.value = newPage;
 });
+
+const showEditModal = ref(false);
+const editingRecord = ref(null);
+const originalRecord = ref(null);
+
+function openEditModal(row) {
+  // Create a deep copy of the row to edit
+  originalRecord.value = { ...row };
+  editingRecord.value = JSON.parse(JSON.stringify(row));
+  showEditModal.value = true;
+}
+
+function closeEditModal() {
+  showEditModal.value = false;
+  editingRecord.value = null;
+  originalRecord.value = null;
+}
+
+async function saveRecord() {
+  if (!editingRecord.value) return;
+  
+  try {
+    // For now, update locally without actual database update
+    const index = tableData.value.findIndex(row => 
+      row.id === originalRecord.value.id || 
+      JSON.stringify(row) === JSON.stringify(originalRecord.value)
+    );
+    
+    if (index !== -1) {
+      tableData.value[index] = { ...editingRecord.value };
+      showAlert('Record updated successfully', 'success');
+      
+      // In a real implementation, you would call an API to update the database
+      // await databaseStore.updateRecord(props.connectionId, props.tableName, editingRecord.value);
+    }
+    
+    closeEditModal();
+  } catch (error) {
+    showAlert(`Error updating record: ${error.message}`, 'error');
+  }
+}
+
+function getEditableColumns() {
+  if (!editingRecord.value) return [];
+  return Object.keys(editingRecord.value).filter(column => {
+    // Skip columns that shouldn't be edited directly
+    return !['id', 'created_at', 'updated_at'].includes(column);
+  });
+}
+
+function isLongTextField(column) {
+  return /(description|content|text|body|comment|note|message|summary|details|html|json|xml)$/i.test(column) ||
+         (editingRecord.value && 
+          typeof editingRecord.value[column] === 'string' && 
+          editingRecord.value[column]?.length > 100);
+}
+
+function isDateField(column) {
+  return /(date|time|at$)/i.test(column);
+}
+
+function isNumberField(column) {
+  if (!editingRecord.value) return false;
+  const value = editingRecord.value[column];
+  return typeof value === 'number' || 
+         (column.includes('id') && column !== 'uuid') || 
+         /(amount|price|cost|total|sum|count|number|qty|quantity|height|width|depth|size|order|position)/i.test(column);
+}
+
+function isBooleanField(column) {
+  if (!editingRecord.value) return false;
+  const value = editingRecord.value[column];
+  return typeof value === 'boolean' || 
+         /(active|enabled|visible|published|featured|is_|has_)/i.test(column);
+}
 
 onMounted(() => {
   loadTableData();
