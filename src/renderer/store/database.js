@@ -338,13 +338,13 @@ export const useDatabaseStore = defineStore('database', () => {
     }
   }
 
-  async function loadTableData(connectionId, tableName) {
+  async function loadTableData(connectionId, tableName, limit = 100, page = 1) {
     try {
       const connection = usedConnectionsStore().getConnection(connectionId);
       
       if (!connection) {
         console.error("Connection not found");
-        return [];
+        return { data: [], totalRecords: 0 };
       }
 
       if (connection.type !== 'mysql') {
@@ -352,18 +352,32 @@ export const useDatabaseStore = defineStore('database', () => {
         await new Promise(resolve => setTimeout(resolve, 500));
         
         if (tableContents[tableName]) {
-          return tableContents[tableName];
+          const allData = tableContents[tableName];
+          const offset = (page - 1) * limit;
+          const data = limit > 0 ? allData.slice(offset, offset + limit) : allData;
+          return { 
+            data, 
+            totalRecords: allData.length,
+            page,
+            limit
+          };
         } else {
-          return Array.from({ length: 10 }, (_, i) => ({
+          const mockData = Array.from({ length: 10 }, (_, i) => ({
             id: i + 1,
             column1: `Value ${i + 1}`,
             column2: Math.floor(Math.random() * 1000),
             column3: new Date().toISOString().split('T')[0]
           }));
+          return { 
+            data: mockData, 
+            totalRecords: mockData.length,
+            page,
+            limit
+          };
         }
       }
 
-      // For MySQL, get real data
+      // For MySQL, get real data with pagination
       const result = await window.api.getTableData({
         host: connection.host,
         port: connection.port,
@@ -371,7 +385,8 @@ export const useDatabaseStore = defineStore('database', () => {
         password: connection.password,
         database: connection.database,
         tableName: tableName,
-        limit: 100
+        limit: limit,
+        page: page
       });
       
       if (result.success) {
@@ -381,16 +396,33 @@ export const useDatabaseStore = defineStore('database', () => {
           tableRecords.value[cacheKey] = {};
         }
         tableRecords.value[cacheKey].data = result.data;
-        tableRecords.value[cacheKey].count = result.data.length;
+        tableRecords.value[cacheKey].totalRecords = result.totalRecords;
+        tableRecords.value[cacheKey].page = page;
+        tableRecords.value[cacheKey].limit = limit;
         
-        return result.data;
+        return {
+          data: result.data || [],
+          totalRecords: result.totalRecords || 0,
+          page,
+          limit
+        };
       } else {
         console.error("Failed to load table data:", result.message);
-        return [];
+        return { 
+          data: [], 
+          totalRecords: 0,
+          page,
+          limit
+        };
       }
     } catch (error) {
       console.error(`Error loading data for ${tableName}:`, error);
-      return [];
+      return { 
+        data: [], 
+        totalRecords: 0,
+        page,
+        limit
+      };
     }
   }
 

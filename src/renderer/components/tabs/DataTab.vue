@@ -31,13 +31,16 @@
               class="input input-sm input-bordered bg-base-300 w-64" 
               v-model="filterTerm"
               @keyup.enter="applyFilter" />
-            <button class="btn btn-sm bg-base-300 border-base-300" @click="toggleAdvancedFilter">
+            <button 
+              class="btn btn-sm" 
+              :class="{ 'bg-base-300 border-base-300': !activeFilter && !filterTerm, 'bg-error border-error text-white': activeFilter || filterTerm }"
+              @click="toggleAdvancedFilter">
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 6h9.75M10.5 6a1.5 1.5 0 1 1-3 0m3 0a1.5 1.5 0 1 0-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m-9.75 0h9.75" />
               </svg>
             </button>
           </div>
-          <button v-if="filterTerm || activeFilter" class="btn btn-sm btn-ghost" @click="clearFilters">
+          <button v-if="filterTerm || activeFilter" class="btn btn-sm btn-error" @click="clearFilters">
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4">
               <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
             </svg>
@@ -66,6 +69,21 @@
           </svg>
           <p>{{ loadError }}</p>
           <button class="btn btn-sm btn-primary mt-4" @click="loadTableData">Try again</button>
+        </div>
+      </div>
+      
+      <div v-else-if="(filterTerm || activeFilter) && filteredData.length === 0" class="flex items-center justify-center h-full text-gray-500">
+        <div class="text-center">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" 
+            stroke="currentColor" class="w-12 h-12 mx-auto mb-4 text-gray-400">
+            <path stroke-linecap="round" stroke-linejoin="round" 
+              d="M10.5 6h9.75M10.5 6a1.5 1.5 0 1 1-3 0m3 0a1.5 1.5 0 1 0-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m-9.75 0h9.75" />
+          </svg>
+          <p>No records match your filter</p>
+          <div class="flex justify-center space-x-2 mt-4">
+            <button class="btn btn-sm btn-error" @click="clearFilters">Clear Filters</button>
+            <button class="btn btn-sm btn-primary" @click="loadTableData">Reload Data</button>
+          </div>
         </div>
       </div>
       
@@ -117,17 +135,36 @@
                 <td v-for="column in columns" 
                     :key="`${rowIndex}-${column}`" 
                     class="px-4 py-2 border-r border-neutral last:border-r-0 truncate whitespace-nowrap overflow-hidden"
-                    :class="{ 
-                      'expanded': expandedColumns.includes(column),
-                      'cursor-pointer': isForeignKeyColumn(column)
-                    }"
-                    :title="isForeignKeyColumn(column) ? 'Click to navigate to related record' : ''"
+                    :class="{ 'expanded': expandedColumns.includes(column) }"
                     :style="{ width: columnWidths[column] || defaultColumnWidth(column), maxWidth: expandedColumns.includes(column) ? 'none' : (columnWidths[column] || defaultColumnWidth(column)) }"
-                    @click="isForeignKeyColumn(column) ? navigateToForeignKey(column, row[column]) : null"
                     @dblclick.stop="openEditModal(row)">
-                  <span :class="{'text-primary font-medium': isForeignKeyColumn(column)}">
-                    {{ formatCellValue(row[column]) }}
-                  </span>
+                  <div class="flex items-center justify-between w-full">
+                    <!-- Conteúdo da célula -->
+                    <span :class="{'text-gray-500 italic': row[column] === null && isForeignKeyColumn(column)}">
+                      {{ row[column] === null && isForeignKeyColumn(column) ? 'Não relacionado' : formatCellValue(row[column]) }}
+                    </span>
+                    
+                    <!-- Ícone de chave estrangeira, quando aplicável (agora no final da célula) -->
+                    <button 
+                      v-if="isForeignKeyColumn(column) && row[column] !== null" 
+                      class="ml-1 text-white hover:text-primary-focus transition-colors cursor-pointer flex-shrink-0"
+                      @click.stop="navigateToForeignKey(column, row[column])"
+                      title="Navegar para registro relacionado">
+                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M13.19 8.688a4.5 4.5 0 011.242 7.244l-4.5 4.5a4.5 4.5 0 01-6.364-6.364l1.757-1.757m13.35-.622l1.757-1.757a4.5 4.5 0 00-6.364-6.364l-4.5 4.5a4.5 4.5 0 001.242 7.244" />
+                      </svg>
+                    </button>
+                    
+                    <!-- Ícone para chaves estrangeiras nulas (agora no final da célula) -->
+                    <span 
+                      v-else-if="isForeignKeyColumn(column) && row[column] === null" 
+                      class="ml-1 text-gray-500 flex-shrink-0"
+                      title="Relação nula">
+                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+                      </svg>
+                    </span>
+                  </div>
                 </td>
               </tr>
             </tbody>
@@ -142,7 +179,7 @@
             <path stroke-linecap="round" stroke-linejoin="round" 
               d="M20.25 6.375c0 2.278-3.694 4.125-8.25 4.125S3.75 8.653 3.75 6.375m16.5 0c0-2.278-3.694-4.125-8.25-4.125S3.75 4.097 3.75 6.375m16.5 0v11.25c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125V6.375m16.5 0v3.75m-16.5-3.75v3.75m16.5 0v3.75C20.25 16.153 16.556 18 12 18s-8.25-1.847-8.25-4.125v-3.75m16.5 0c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125" />
           </svg>
-          <p>No records found in this table.</p>
+          <p>Records not found</p>
           <button class="btn btn-sm btn-primary mt-4" @click="loadTableData">Reload</button>
         </div>
       </div>
@@ -438,7 +475,7 @@ const selectionStartId = ref(null);
 const expandedColumns = ref([]);
 
 const pageInput = ref(1);
-const totalRecords = computed(() => filteredData.value.length);
+const totalRecordsCount = ref(0);
 const totalPages = computed(() => {
   if (rowsPerPage.value === 0) return 1;
   return Math.ceil(totalRecords.value / rowsPerPage.value);
@@ -480,12 +517,31 @@ const filteredData = computed(() => {
 });
 
 const paginatedData = computed(() => {
-  if (rowsPerPage.value === 0) {
-    return filteredData.value;
+  // Se houver filtro, precisamos paginar os dados filtrados localmente
+  if (filterTerm.value || activeFilter.value) {
+    // Aplicar paginação local nos dados filtrados
+    if (rowsPerPage.value === 0) {
+      return filteredData.value;
+    }
+    
+    const start = (currentPage.value - 1) * parseInt(rowsPerPage.value);
+    const end = start + parseInt(rowsPerPage.value);
+    
+    console.log(`Paginação local: página ${currentPage.value}, início ${start}, fim ${end}, total ${filteredData.value.length}`);
+    
+    return filteredData.value.slice(start, end);
+  } else {
+    // Sem filtro, já temos os dados paginados do servidor
+    console.log(`Usando dados paginados do servidor: ${tableData.value.length} registros na página ${currentPage.value}`);
+    return tableData.value;
   }
-  
-  const start = (currentPage.value - 1) * parseInt(rowsPerPage.value);
-  return filteredData.value.slice(start, start + parseInt(rowsPerPage.value));
+});
+
+const totalRecords = computed(() => {
+  if (filterTerm.value || activeFilter.value) {
+    return filteredData.value.length;
+  }
+  return totalRecordsCount.value;
 });
 
 function formatCellValue(value) {
@@ -567,13 +623,23 @@ async function loadTableData() {
     const cacheKey = `${props.connectionId}:${props.tableName}`;
     databaseStore.clearTableCache(cacheKey);
     
-    const data = await databaseStore.loadTableData(props.connectionId, props.tableName);
+    // Carregar apenas a página atual de dados com paginação
+    const result = await databaseStore.loadTableData(
+      props.connectionId, 
+      props.tableName, 
+      rowsPerPage.value, 
+      currentPage.value
+    );
     
-    if (!data || data.length === 0) {
-      showAlert('No data found in table', 'warning');
+    if (!result.data || result.data.length === 0) {
+      showAlert('No data found for this page', 'warning');
     }
     
-    tableData.value = data;
+    // Atualizar os dados da tabela
+    tableData.value = result.data || [];
+    
+    // Atualizar a contagem total de registros para paginação
+    totalRecordsCount.value = result.totalRecords || 0;
 
     // Analyze columns after data is loaded
     nextTick(() => {
@@ -586,21 +652,13 @@ async function loadTableData() {
     // Notify parent about the loaded data
     props.onLoad({
       columns: columns.value,
-      rowCount: data.length
+      rowCount: result.totalRecords || 0
     });
-    
-    // Check if we have initialFilter from props and apply it
-    if (props.initialFilter) {
-      console.log("Recebido filtro inicial:", props.initialFilter);
-      advancedFilterTerm.value = props.initialFilter;
-      activeFilter.value = props.initialFilter;
-      
-      // Não precisamos atualizar a URL aqui, pois este é um filtro programático
-    }
   } catch (error) {
     loadError.value = error.message;
     showAlert(`Error loading data: ${error.message}`, 'error');
     tableData.value = [];
+    totalRecordsCount.value = 0;
   } finally {
     isLoading.value = false;
   }
@@ -784,18 +842,22 @@ function nextPage() {
 }
 
 function goToFirstPage() {
-  currentPage.value = 1;
-  scrollToTop();
+  if (currentPage.value !== 1) {
+    currentPage.value = 1;
+    scrollToTop();
+  }
 }
 
 function goToLastPage() {
-  currentPage.value = totalPages.value;
-  scrollToTop();
+  if (currentPage.value !== totalPages.value) {
+    currentPage.value = totalPages.value;
+    scrollToTop();
+  }
 }
 
 function goToPage() {
   const page = parseInt(pageInput.value);
-  if (!isNaN(page) && page >= 1 && page <= totalPages.value) {
+  if (!isNaN(page) && page >= 1 && page <= totalPages.value && page !== currentPage.value) {
     currentPage.value = page;
     scrollToTop();
   } else {
@@ -809,8 +871,16 @@ function scrollToTop() {
   }
 }
 
-watch(() => currentPage.value, (newPage) => {
-  pageInput.value = newPage;
+watch(() => currentPage.value, (newPage, oldPage) => {
+  if (newPage !== oldPage) {
+    // Atualizar o pageInput
+    pageInput.value = newPage;
+    
+    // Recarregar dados do servidor apenas se não houver filtro ativo
+    if (!filterTerm.value && !activeFilter.value) {
+      loadTableData();
+    }
+  }
 });
 
 const showEditModal = ref(false);
@@ -1053,27 +1123,30 @@ function handleMouseUp(event) {
 }
 
 onMounted(() => {
+  // Verificar se temos filtro inicial e definir antes de carregar os dados
+  if (props.initialFilter) {
+    console.log("Configurando filtro inicial:", props.initialFilter);
+    advancedFilterTerm.value = props.initialFilter;
+    activeFilter.value = props.initialFilter;
+  }
+  
+  // Carregar os dados da tabela
   loadTableData();
   
-  // Check URL for filters
+  // Verificar filtros na URL
   const urlParams = new URLSearchParams(window.location.search);
-  const filter = urlParams.get('filter');
+  const urlFilter = urlParams.get('filter');
   
-  if (filter) {
+  if (urlFilter) {
     try {
-      // Decode and apply the filter
-      const decodedFilter = decodeURIComponent(filter);
+      const decodedFilter = decodeURIComponent(urlFilter);
       advancedFilterTerm.value = decodedFilter;
       activeFilter.value = decodedFilter;
     } catch (e) {
-      console.error('Failed to parse filter from URL:', e);
+      console.error('Erro ao processar filtro da URL:', e);
     }
-  } else if (props.initialFilter) {
-    // Use filter from props if available
-    advancedFilterTerm.value = props.initialFilter;
-    activeFilter.value = props.initialFilter;
-  } else {
-    // Check for saved filter
+  } else if (!props.initialFilter) {
+    // Se não tem filtro inicial ou da URL, verificar armazenamento local
     const savedFilter = localStorage.getItem(`filter:${props.connectionId}:${props.tableName}`);
     if (savedFilter) {
       try {
@@ -1083,11 +1156,12 @@ onMounted(() => {
           activeFilter.value = parsedFilter.value;
         }
       } catch (e) {
-        console.error('Failed to parse saved filter:', e);
+        console.error('Erro ao processar filtro salvo:', e);
       }
     }
   }
   
+  // Adicionar event listeners
   window.addEventListener('keydown', handleKeyDown);
   window.addEventListener('keyup', handleKeyUp);
 });
@@ -1112,14 +1186,19 @@ function toggleAdvancedFilter() {
 }
 
 function applyFilter() {
-  // Apply the basic filter
-  // The computed property will handle this automatically
+  // Reiniciar para a página 1 ao aplicar um filtro
+  currentPage.value = 1;
+  // A propriedade computada filteredData já aplica o filtro automaticamente
 }
 
 function applyAdvancedFilter() {
+  // Atualizar o filtro ativo
   activeFilter.value = advancedFilterTerm.value;
   
-  // If persistence is enabled, save the filter
+  // Voltar para a primeira página ao aplicar um novo filtro
+  currentPage.value = 1;
+  
+  // Se a persistência estiver ativada, salvar o filtro
   if (persistFilter.value && activeFilter.value) {
     localStorage.setItem(`filter:${props.connectionId}:${props.tableName}`, JSON.stringify({
       active: true,
@@ -1140,13 +1219,19 @@ function clearFilters() {
   advancedFilterTerm.value = '';
   activeFilter.value = '';
   
-  // Clear saved filter
+  // Limpar filtro salvo
   localStorage.removeItem(`filter:${props.connectionId}:${props.tableName}`);
   
-  // Remove filter from URL
+  // Remover filtro da URL
   const url = new URL(window.location.href);
   url.searchParams.delete('filter');
   window.history.replaceState({}, '', url.toString());
+  
+  // Voltar para a primeira página
+  currentPage.value = 1;
+  
+  // Recarregar dados sem filtros
+  loadTableData();
 }
 
 function insertColumnName(column) {
@@ -1166,10 +1251,6 @@ function applySqlFilter(data, filter) {
   
   console.log(`Aplicando filtro: "${cleanFilter}" em ${data.length} linhas`);
   
-  if (data.length > 0) {
-    console.log("Exemplo de linha antes do filtro:", JSON.stringify(data[0]));
-  }
-  
   try {
     // Convert the filter to a JavaScript function
     const filterCode = convertFilterToJs(cleanFilter);
@@ -1186,7 +1267,7 @@ function applySqlFilter(data, filter) {
           return ${filterCode};
         } catch (e) {
           console.error('Erro de execução do filtro:', e);
-          return true;
+          return false;
         }
       `);
     } catch (e) {
@@ -1202,16 +1283,11 @@ function applySqlFilter(data, filter) {
         return result;
       } catch (e) {
         console.error('Erro aplicando filtro à linha:', e, row);
-        return true;
+        return false;
       }
     });
     
     console.log(`Filtro resultou em ${filteredResults.length} de ${data.length} linhas`);
-    
-    if (filteredResults.length > 0) {
-      console.log("Exemplo de linha após o filtro:", JSON.stringify(filteredResults[0]));
-    }
-    
     return filteredResults;
   } catch (error) {
     console.error('Erro analisando filtro SQL:', error, filter);
@@ -1223,7 +1299,17 @@ function convertFilterToJs(filter) {
   if (!filter) return 'true';
   
   try {
-    // Primeiro, verificar se temos um filtro comum de LIKE
+    // Caso especial para ID (já que é uma operação muito comum)
+    const idEqualityRegex = /^\s*id\s*=\s*(\d+)\s*$/i;
+    const idMatch = filter.match(idEqualityRegex);
+    
+    if (idMatch) {
+      const idValue = parseInt(idMatch[1], 10);
+      // Usar operador de igualdade não-estrita para comparar número com string
+      return `String(row['id']) == '${idValue}' || row['id'] == ${idValue}`;
+    }
+    
+    // Filtro LIKE
     const likeMatcher = /^\s*(\w+)\s+LIKE\s+['"](.*)['"]$/i;
     const likeMatch = filter.match(likeMatcher);
     
@@ -1234,28 +1320,29 @@ function convertFilterToJs(filter) {
       return `row['${column}'] != null && String(row['${column}'] || '').toLowerCase().includes('${cleanPattern.toLowerCase()}')`;
     }
     
-    // Primeiro, verificar se temos um filtro simples de igualdade
+    // Filtro de igualdade simples
     const simpleEqualityRegex = /^\s*(\w+)\s*=\s*(\d+|\w+|'[^']*'|"[^"]*")\s*$/i;
     const simpleMatch = filter.match(simpleEqualityRegex);
     
     if (simpleMatch) {
       const [_, column, value] = simpleMatch;
+      
       // Verificar se o valor é uma string ou número
       if (value.startsWith("'") || value.startsWith('"')) {
         // É uma string literal
         const strValue = value.substring(1, value.length - 1);
         return `row['${column}'] === '${strValue}'`;
       } else if (!isNaN(Number(value))) {
-        // É um número
-        return `row['${column}'] === ${Number(value)}`;
+        // É um número - criar uma condição que funcione com números e strings numéricas
+        const numValue = Number(value);
+        return `String(row['${column}']) == '${numValue}' || row['${column}'] == ${numValue}`;
       } else {
         // É um identificador
         return `row['${column}'] === row['${value}']`;
       }
     }
     
-    // Para filtros mais complexos, continue com a abordagem atual
-    // Primeiro, vamos tratar alguns casos especiais comuns
+    // Para filtros mais complexos
     if (filter.toLowerCase().match(/^where\s+/)) {
       // Remove a palavra WHERE do início, se existir
       filter = filter.replace(/^where\s+/i, '');
@@ -1263,8 +1350,7 @@ function convertFilterToJs(filter) {
     
     console.log("Processando filtro complexo:", filter);
     
-    // Proteger as strings antes do processamento para não interferir
-    // Precisamos de um regex que capture corretamente strings com %
+    // Proteger as strings antes do processamento
     const stringLiterals = [];
     let stringReplacedFilter = filter.replace(/'([^']*)'/g, (match, content) => {
       const placeholder = `__STRING_${stringLiterals.length}__`;
@@ -1272,12 +1358,10 @@ function convertFilterToJs(filter) {
       return placeholder;
     });
     
-    // Tratar o LIKE diretamente com um regex mais robusto
+    // Tratar o LIKE
     stringReplacedFilter = stringReplacedFilter.replace(/(\w+)\s+LIKE\s+(__STRING_\d+__)/gi, (match, column, placeholder) => {
       const placeholderIndex = parseInt(placeholder.match(/__STRING_(\d+)__/)[1]);
-      // Obter a string original mas sem as aspas
       const originalStr = stringLiterals[placeholderIndex].substring(1, stringLiterals[placeholderIndex].length - 1);
-      // Remover % para inclusão
       const cleanPattern = originalStr.replace(/%/g, '');
       
       return `(row['${column}'] != null && String(row['${column}'] || '').toLowerCase().includes('${cleanPattern.toLowerCase()}'))`;
@@ -1290,7 +1374,7 @@ function convertFilterToJs(filter) {
     
     // Tratar o operador IN
     const inRegex = /(\w+|\[\w+\])\s+IN\s*\(\s*([^)]+)\s*\)/gi;
-    stringReplacedFilter = stringReplacedFilter.replace(inRegex, function(match, col, values) {
+    stringReplacedFilter = stringReplacedFilter.replace(inRegex, (match, col, values) => {
       return `[${values}].includes(row['${col}'])`;
     });
     
@@ -1301,19 +1385,16 @@ function convertFilterToJs(filter) {
       .replace(/\bNOT\b/gi, '!')
       .replace(/\bIS NULL\b/gi, '=== null')
       .replace(/\bIS NOT NULL\b/gi, '!== null')
-      .replace(/\s+=\s+/g, ' === ') // Importante: substituir = por ===
-      .replace(/\s+!=\s+/g, ' !== ');
+      .replace(/\s+=\s+/g, ' == '); // Usar == em vez de === para permitir comparação de tipos similares
     
     // Substituir nomes de colunas por acesso ao objeto row
-    // Cuidado para não substituir os placeholders de string
+    const keywords = [
+      'AND', 'OR', 'NOT', 'NULL', 'IN', 'LIKE', 'BETWEEN', 'IS', 'AS', 
+      'TRUE', 'FALSE', 'true', 'false', 'null', 'undefined',
+      'return', 'if', 'else', 'for', 'while', 'function'
+    ];
+    
     stringReplacedFilter = stringReplacedFilter.replace(/\b([a-zA-Z_]\w*)\b(?!\s*\()/g, (match, column) => {
-      // Não substituir palavras-chave SQL e JS
-      const keywords = [
-        'AND', 'OR', 'NOT', 'NULL', 'IN', 'LIKE', 'BETWEEN', 'IS', 'AS', 
-        'TRUE', 'FALSE', 'true', 'false', 'null', 'undefined',
-        'return', 'if', 'else', 'for', 'while', 'function'
-      ];
-      
       // Não substituir os placeholders de string
       if (match.startsWith('__STRING_')) {
         return match;
@@ -1334,7 +1415,6 @@ function convertFilterToJs(filter) {
     // Restaurar strings literais
     stringLiterals.forEach((str, index) => {
       const placeholder = `__STRING_${index}__`;
-      // Remover as aspas simples para uso no JavaScript
       const cleanStr = str.substring(1, str.length - 1)
                          .replace(/'/g, "\\'"); // Escape aspas simples para JS
       
@@ -1353,35 +1433,43 @@ function convertFilterToJs(filter) {
   }
 }
 
-// Adicionar função para navegar para um registro em outra tabela
+// Melhorar a função de navegação para chave estrangeira
 async function navigateToForeignKey(column, value) {
   if (value === null || value === undefined) {
-    showAlert("Value is null or undefined. Cannot navigate to related record.", "error");
+    showAlert("Valor nulo ou indefinido. Impossível navegar para o registro relacionado.", "error");
     return;
   }
   
   try {
-    // First, determine if this is a foreign key column
+    // Primeiro, determine se esta é uma chave estrangeira
     const structure = await databaseStore.getTableStructure(props.connectionId, props.tableName);
     const columnInfo = structure.find(col => col.name === column);
     
     // Se não for chave estrangeira, retornar
     if (!columnInfo || !columnInfo.foreign_key) {
-      showAlert(`Column "${column}" is not a foreign key.`, "info");
+      console.log(`A coluna "${column}" não é uma chave estrangeira`);
       return;
     }
     
-    // Get the related table
+    // Obter as relações de chave estrangeira
     const foreignKeys = await databaseStore.getTableForeignKeys(props.connectionId, props.tableName);
     const foreignKey = foreignKeys.find(fk => fk.column === column);
     
     if (!foreignKey) {
-      showAlert(`Foreign key information not found for column "${column}".`, "error");
+      console.error(`Informação de chave estrangeira não encontrada para a coluna "${column}"`);
       return;
     }
     
-    // Prepare the tab name and filter
+    console.log("Navegando para chave estrangeira:", foreignKey);
+    
+    // Tabela alvo e coluna referenciada
     const targetTable = foreignKey.referenced_table;
+    const targetColumn = foreignKey.referenced_column;
+    
+    if (!targetTable || !targetColumn) {
+      console.error("Tabela ou coluna de referência não encontrada na chave estrangeira");
+      return;
+    }
     
     // Formatar valor corretamente dependendo do tipo
     let filterValue = value;
@@ -1390,10 +1478,15 @@ async function navigateToForeignKey(column, value) {
       filterValue = `'${value.replace(/'/g, "''")}'`;
     }
     
-    const filter = `${foreignKey.referenced_column} = ${filterValue}`;
-    const tabTitle = `${targetTable} (${filter})`;
+    // Criar o filtro SQL
+    const filter = `${targetColumn} = ${filterValue}`;
     
-    // Open a new tab with the data filtered
+    // Criar título para a nova aba
+    const tabTitle = `${targetTable} (Filtrado)`;
+    
+    console.log(`Navegando para ${targetTable} onde ${filter}`);
+    
+    // Dados para a nova aba
     const newTab = {
       id: `data-${props.connectionId}-${targetTable}-${Date.now()}`,
       title: tabTitle,
@@ -1406,13 +1499,13 @@ async function navigateToForeignKey(column, value) {
       icon: 'table'
     };
     
-    console.log("Opening new tab with filter:", filter);
+    console.log("Abrindo nova aba com filtro:", filter);
     
-    // Use the onOpenTab prop to open a new tab
+    // Chamar a função passada via props para abrir a nova aba
     props.onOpenTab(newTab);
   } catch (error) {
-    console.error('Error navigating to foreign key:', error);
-    showAlert('Failed to navigate to foreign key: ' + error.message, 'error');
+    console.error('Erro ao navegar para chave estrangeira:', error);
+    showAlert('Falha ao navegar para registro relacionado: ' + error.message, 'error');
   }
 }
 
@@ -1444,6 +1537,26 @@ function setExampleFilter(example) {
 // Modificar a função watch para paginatedData para depurar quando os dados são filtrados
 watch(() => paginatedData.value.length, (newLength, oldLength) => {
   console.log(`Dados paginados mudaram: ${oldLength} -> ${newLength} linhas`);
+});
+
+// Modificar o watch para reagir a mudanças no filtro ativo
+watch(() => activeFilter.value, (newFilter, oldFilter) => {
+  if (newFilter !== oldFilter) {
+    console.log(`Filtro ativo mudou: "${oldFilter}" -> "${newFilter}"`);
+  }
+});
+
+// Adicionar um evento para quando rowsPerPage mudar
+watch(rowsPerPage, (newValue, oldValue) => {
+  if (newValue !== oldValue) {
+    currentPage.value = 1; // Voltar para a primeira página
+    loadTableData(); // Sempre recarregar os dados ao mudar o número de linhas por página
+  }
+});
+
+// Adicionar log quando o total de registros mudar
+watch(() => totalRecordsCount.value, (newCount) => {
+  console.log(`Total de registros atualizado: ${newCount}`);
 });
 </script>
 

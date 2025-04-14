@@ -501,7 +501,8 @@ ipcMain.handle('getTableData', async (event, config) => {
         return { 
           success: false, 
           message: 'Connection not found',
-          data: []
+          data: [],
+          totalRecords: 0
         };
       }
       
@@ -517,7 +518,8 @@ ipcMain.handle('getTableData', async (event, config) => {
       return { 
         success: false, 
         message: 'Missing parameters',
-        data: []
+        data: [],
+        totalRecords: 0
       };
     }
 
@@ -547,23 +549,39 @@ ipcMain.handle('getTableData', async (event, config) => {
 
     // Escapar nome da tabela para prevenir SQL injection
     const tableName = connection.escapeId(config.tableName);
+    
+    // Configurações de paginação
+    const page = config.page || 1;
     const limit = config.limit || 100;
+    const offset = (page - 1) * limit;
     
-    console.log(`Fetching data from ${config.database}.${config.tableName} (limit: ${limit})`);
-    const [rows] = await connection.query(`SELECT * FROM ${tableName} LIMIT ?`, [limit]);
+    console.log(`Fetching data from ${config.database}.${config.tableName} (page: ${page}, limit: ${limit}, offset: ${offset})`);
     
-    console.log(`Fetched ${rows?.length || 0} rows from ${config.tableName}`);
+    // Primeiro, obter a contagem total de registros
+    const [countResult] = await connection.query(`SELECT COUNT(*) as total FROM ${tableName}`);
+    const totalRecords = countResult[0].total;
+    
+    console.log(`Total records in ${config.tableName}: ${totalRecords}`);
+    
+    // Obter os dados da página atual
+    const [rows] = await connection.query(`SELECT * FROM ${tableName} LIMIT ? OFFSET ?`, [limit, offset]);
+    
+    console.log(`Fetched ${rows?.length || 0} rows from ${config.tableName} for page ${page}`);
     
     return { 
       success: true, 
-      data: rows || []
+      data: rows || [],
+      totalRecords: totalRecords,
+      page: page,
+      limit: limit
     };
   } catch (error) {
     console.error('Error fetching table data:', error);
     return { 
       success: false, 
       message: error.message || 'Failed to fetch table data',
-      data: []
+      data: [],
+      totalRecords: 0
     };
   } finally {
     // Apenas fechamos a conexão se NÃO for uma conexão monitorada

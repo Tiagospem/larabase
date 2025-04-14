@@ -740,7 +740,7 @@ async function switchDatabase(databaseName) {
   }
 }
 
-// Adicionar uma função para lidar com abas abertas pelo DataTab
+// Função para abrir uma nova aba a partir de um clique em chave estrangeira
 function handleOpenTab(tabData) {
   try {
     console.log("Abrindo nova aba com dados:", tabData);
@@ -761,6 +761,11 @@ function handleOpenTab(tabData) {
       return;
     }
     
+    // Preparar o filtro se existir
+    const filter = tabData.data.filter || '';
+    
+    console.log("Filtro a ser aplicado na nova aba:", filter);
+    
     // Criar objeto de aba completo
     const newTab = {
       id: tabData.id || `data-${tabData.data.connectionId}-${tabData.data.tableName}-${Date.now()}`,
@@ -768,7 +773,7 @@ function handleOpenTab(tabData) {
       type: 'data',
       connectionId: tabData.data.connectionId,
       tableName: tabData.data.tableName,
-      filter: tabData.data.filter || '',
+      filter: filter,
       columnCount: targetTable.columnCount || 0
     };
     
