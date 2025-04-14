@@ -28,7 +28,27 @@
         </div>
       </div>
       
-      <div>
+      <div class="flex">
+        <!-- Database Tools Section -->
+        <div class="border-r border-neutral-700 pr-2 mr-2">
+          <button class="btn btn-ghost btn-sm" @click="showLiveUpdates = true" title="Live Updates">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" 
+              stroke="currentColor" class="w-5 h-5">
+              <path stroke-linecap="round" stroke-linejoin="round" 
+                d="M9.348 14.651a3.75 3.75 0 010-5.303m5.304 0a3.75 3.75 0 010 5.303m-7.425 2.122a6.75 6.75 0 010-9.546m9.546 0a6.75 6.75 0 010 9.546M5.106 18.894c-3.808-3.808-3.808-9.98 0-13.789m13.788 0c3.808 3.808 3.808 9.981 0 13.79M12 12h.008v.007H12V12zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" />
+            </svg>
+          </button>
+          
+          <button class="btn btn-ghost btn-sm" @click="showProjectLogs = true" title="Project Logs">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" 
+              stroke="currentColor" class="w-5 h-5">
+              <path stroke-linecap="round" stroke-linejoin="round" 
+                d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
+            </svg>
+          </button>
+        </div>
+        
+        <!-- System Actions Section -->
         <button class="btn btn-ghost btn-sm">
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" 
             stroke="currentColor" class="w-5 h-5">
@@ -158,6 +178,23 @@
       </div>
     </div>
   </div>
+  
+  <!-- Project Logs Modal -->
+  <ProjectLogs
+    :is-open="showProjectLogs"
+    :connection-id="connectionId"
+    :project-path="connection?.projectPath"
+    @close="showProjectLogs = false"
+    @select-project="handleSelectProject"
+  />
+  
+  <!-- Live Database Updates Modal -->
+  <LiveUpdates
+    :is-open="showLiveUpdates"
+    :connection-id="connectionId"
+    @close="showLiveUpdates = false"
+    @goto-table="handleGotoTable"
+  />
 </template>
 
 <script setup>
@@ -168,6 +205,8 @@ import {useDatabaseStore} from '@/store/database';
 import {useTabsStore} from '@/store/tabs';
 import TableContent from '../components/TableContent.vue';
 import TablesSidebar from '../components/TablesSidebar.vue';
+import ProjectLogs from '../components/ProjectLogs.vue';
+import LiveUpdates from '../components/LiveUpdates.vue';
 
 const TableContentComponent = markRaw(TableContent);
 
@@ -186,6 +225,8 @@ const isResizing = ref(false);
 const connectionError = ref(false);
 const connectionErrorMessage = ref('');
 const showConnectionInfo = ref(false);
+const showProjectLogs = ref(false);
+const showLiveUpdates = ref(false);
 const draggingTabId = ref(null);
 const tabsScrollRef = ref(null);
 const hasScrollLeft = ref(false);
@@ -421,6 +462,43 @@ function getConnectionColor(type) {
       return 'bg-blue-600';
     default:
       return 'bg-gray-600';
+  }
+}
+
+function handleGotoTable(tableName) {
+  const tableData = databaseStore.tablesList.find(t => t.name === tableName);
+  if (tableData) {
+    openTable(tableData);
+  } else {
+    showAlert(`Table "${tableName}" not found`, 'error');
+  }
+}
+
+function handleSelectProject() {
+  selectProjectPath();
+}
+
+async function selectProjectPath() {
+  try {
+    const result = await window.api.selectDirectory();
+    if (result.canceled) return;
+    
+    const selectedPath = result.filePaths[0];
+    const isLaravelProject = await window.api.validateLaravelProject(selectedPath);
+    
+    if (!isLaravelProject) {
+      showAlert('Selected directory is not a valid Laravel project', 'error');
+      return;
+    }
+    
+    await connectionsStore.updateConnection(connectionId.value, {
+      projectPath: selectedPath
+    });
+    
+    showAlert('Laravel project path set successfully', 'success');
+  } catch (error) {
+    console.error('Error selecting project path:', error);
+    showAlert('Failed to select project path: ' + error.message, 'error');
   }
 }
 </script>

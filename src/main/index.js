@@ -8,6 +8,37 @@ const store = new Store();
 
 let mainWindow;
 
+const originalCreateConnection = mysql.createConnection;
+
+function setupGlobalMonitoring() {
+  mysql.createConnection = async function (...args) {
+    // Chama a função original para criar a conexão
+    const connection = await originalCreateConnection.apply(this, args);
+    
+    // Verifica se estamos conectando a um banco que já está sendo monitorado
+    const config = args[0];
+    console.log("New database connection created:", config.host, config.database);
+    
+    // Procura em todas as conexões monitoradas
+    for (const [connectionId, monitoredConn] of dbMonitoringConnections.entries()) {
+      // Se já temos uma conexão monitorando esse mesmo banco
+      if (monitoredConn._config && 
+          monitoredConn._config.host === config.host && 
+          monitoredConn._config.database === config.database) {
+        
+        console.log(`Auto-monitoring new connection to ${config.database} (from monitored connection ${connectionId})`);
+        // Setup do monitoramento nesta nova conexão
+        setupMonitoring(connection, config.database);
+        break;
+      }
+    }
+    
+    return connection;
+  };
+  
+  console.log("Global MySQL monitoring configured");
+}
+
 if (process.env.NODE_ENV === 'development') {
   try {
     require('electron-reload')(path.join(__dirname, '../renderer'), {
@@ -55,6 +86,9 @@ async function createWindow() {
 
 app.whenReady().then(async () => {
   await createWindow();
+
+  // Configure global MySQL monitoring
+  setupGlobalMonitoring();
 
   globalShortcut.register('F12', () => {
     if (mainWindow) {
@@ -246,8 +280,31 @@ ipcMain.handle('test-mysql-connection', async (event, config) => {
 
 ipcMain.handle('list-tables', async (event, config) => {
   let connection;
+  let monitoredConnection = null;
 
   try {
+    // Se recebermos apenas o connectionId, precisamos buscar os detalhes da conexão
+    if (config.connectionId && (!config.host || !config.port || !config.username || !config.database)) {
+      console.log(`Getting connection details for list tables, ID: ${config.connectionId}`);
+      const connections = store.get('connections') || [];
+      const connectionDetails = connections.find(conn => conn.id === config.connectionId);
+      
+      if (!connectionDetails) {
+        return { 
+          success: false, 
+          message: 'Connection not found',
+          tables: []
+        };
+      }
+      
+      // Preencher os dados da conexão
+      config.host = connectionDetails.host;
+      config.port = connectionDetails.port;
+      config.username = connectionDetails.username;
+      config.password = connectionDetails.password;
+      config.database = connectionDetails.database;
+    }
+    
     if (!config.host || !config.port || !config.username || !config.database) {
       return { 
         success: false, 
@@ -256,15 +313,32 @@ ipcMain.handle('list-tables', async (event, config) => {
       };
     }
 
-    connection = await mysql.createConnection({
-      host: config.host,
-      port: config.port,
-      user: config.username,
-      password: config.password || '',
-      database: config.database,
-      connectTimeout: 10000
-    });
+    // Tentar usar uma conexão monitorada já existente
+    let useMonitoredConnection = false;
+    
+    if (config.connectionId) {
+      monitoredConnection = dbMonitoringConnections.get(config.connectionId);
+      if (monitoredConnection) {
+        console.log(`Using existing monitored connection for list tables: ${config.connectionId}`);
+        connection = monitoredConnection;
+        useMonitoredConnection = true;
+      }
+    }
+    
+    // Se não temos uma conexão monitorada, criamos uma nova
+    if (!useMonitoredConnection) {
+      connection = await mysql.createConnection({
+        host: config.host,
+        port: config.port,
+        user: config.username,
+        password: config.password || '',
+        database: config.database,
+        connectTimeout: 10000
+      });
+    }
 
+    console.log(`Listing tables from ${config.database}`);
+    
     const [rows] = await connection.query(`
       SELECT 
         table_name as name, 
@@ -279,6 +353,8 @@ ipcMain.handle('list-tables', async (event, config) => {
         table_name ASC
     `, [config.database]);
     
+    console.log(`Found ${rows.length} tables in ${config.database}`);
+    
     return { 
       success: true, 
       tables: rows
@@ -291,7 +367,8 @@ ipcMain.handle('list-tables', async (event, config) => {
       tables: []
     };
   } finally {
-    if (connection) {
+    // Apenas fechamos a conexão se NÃO for uma conexão monitorada
+    if (connection && !monitoredConnection) {
       try {
         await connection.end();
       } catch (err) {
@@ -305,6 +382,28 @@ ipcMain.handle('getTableRecordCount', async (event, config) => {
   let connection;
 
   try {
+    // Se recebermos apenas o connectionId, precisamos buscar os detalhes da conexão
+    if (config.connectionId && (!config.host || !config.port || !config.username || !config.database)) {
+      console.log(`Getting connection details for ID: ${config.connectionId}`);
+      const connections = store.get('connections') || [];
+      const connectionDetails = connections.find(conn => conn.id === config.connectionId);
+      
+      if (!connectionDetails) {
+        return { 
+          success: false, 
+          message: 'Connection not found',
+          count: 0
+        };
+      }
+      
+      // Preencher os dados da conexão
+      config.host = connectionDetails.host;
+      config.port = connectionDetails.port;
+      config.username = connectionDetails.username;
+      config.password = connectionDetails.password;
+      config.database = connectionDetails.database;
+    }
+    
     if (!config.host || !config.port || !config.username || !config.database || !config.tableName) {
       return { 
         success: false, 
@@ -313,6 +412,7 @@ ipcMain.handle('getTableRecordCount', async (event, config) => {
       };
     }
 
+    console.log(`Counting records in ${config.database}.${config.tableName}`);
     connection = await mysql.createConnection({
       host: config.host,
       port: config.port,
@@ -359,8 +459,31 @@ ipcMain.handle('getTableRecordCount', async (event, config) => {
 
 ipcMain.handle('getTableData', async (event, config) => {
   let connection;
+  let monitoredConnection = null;
 
   try {
+    // Se recebermos apenas o connectionId, precisamos buscar os detalhes da conexão
+    if (config.connectionId && (!config.host || !config.port || !config.username || !config.database)) {
+      console.log(`Getting connection details for table data, ID: ${config.connectionId}`);
+      const connections = store.get('connections') || [];
+      const connectionDetails = connections.find(conn => conn.id === config.connectionId);
+      
+      if (!connectionDetails) {
+        return { 
+          success: false, 
+          message: 'Connection not found',
+          data: []
+        };
+      }
+      
+      // Preencher os dados da conexão
+      config.host = connectionDetails.host;
+      config.port = connectionDetails.port;
+      config.username = connectionDetails.username;
+      config.password = connectionDetails.password;
+      config.database = connectionDetails.database;
+    }
+    
     if (!config.host || !config.port || !config.username || !config.database || !config.tableName) {
       return { 
         success: false, 
@@ -369,20 +492,38 @@ ipcMain.handle('getTableData', async (event, config) => {
       };
     }
 
-    connection = await mysql.createConnection({
-      host: config.host,
-      port: config.port,
-      user: config.username,
-      password: config.password || '',
-      database: config.database,
-      connectTimeout: 10000
-    });
+    // Tentar usar uma conexão monitorada já existente
+    let useMonitoredConnection = false;
+    
+    if (config.connectionId) {
+      monitoredConnection = dbMonitoringConnections.get(config.connectionId);
+      if (monitoredConnection) {
+        console.log(`Using existing monitored connection for ${config.connectionId}`);
+        connection = monitoredConnection;
+        useMonitoredConnection = true;
+      }
+    }
+    
+    // Se não temos uma conexão monitorada, criamos uma nova
+    if (!useMonitoredConnection) {
+      connection = await mysql.createConnection({
+        host: config.host,
+        port: config.port,
+        user: config.username,
+        password: config.password || '',
+        database: config.database,
+        connectTimeout: 10000
+      });
+    }
 
-    // Escape table name to prevent SQL injection
+    // Escapar nome da tabela para prevenir SQL injection
     const tableName = connection.escapeId(config.tableName);
     const limit = config.limit || 100;
     
+    console.log(`Fetching data from ${config.database}.${config.tableName} (limit: ${limit})`);
     const [rows] = await connection.query(`SELECT * FROM ${tableName} LIMIT ?`, [limit]);
+    
+    console.log(`Fetched ${rows?.length || 0} rows from ${config.tableName}`);
     
     return { 
       success: true, 
@@ -396,7 +537,8 @@ ipcMain.handle('getTableData', async (event, config) => {
       data: []
     };
   } finally {
-    if (connection) {
+    // Apenas fechamos a conexão se NÃO for uma conexão monitorada
+    if (connection && !monitoredConnection) {
       try {
         await connection.end();
       } catch (err) {
@@ -587,8 +729,31 @@ ipcMain.handle('openFile', async (event, filePath) => {
 
 ipcMain.handle('getTableStructure', async (event, config) => {
   let connection;
+  let monitoredConnection = null;
 
   try {
+    // Se recebermos apenas o connectionId, precisamos buscar os detalhes da conexão
+    if (config.connectionId && (!config.host || !config.port || !config.username || !config.database)) {
+      console.log(`Getting connection details for table structure, ID: ${config.connectionId}`);
+      const connections = store.get('connections') || [];
+      const connectionDetails = connections.find(conn => conn.id === config.connectionId);
+      
+      if (!connectionDetails) {
+        return { 
+          success: false, 
+          message: 'Connection not found',
+          columns: []
+        };
+      }
+      
+      // Preencher os dados da conexão
+      config.host = connectionDetails.host;
+      config.port = connectionDetails.port;
+      config.username = connectionDetails.username;
+      config.password = connectionDetails.password;
+      config.database = connectionDetails.database;
+    }
+    
     if (!config.host || !config.port || !config.username || !config.database || !config.tableName) {
       return { 
         success: false, 
@@ -597,18 +762,35 @@ ipcMain.handle('getTableStructure', async (event, config) => {
       };
     }
 
-    connection = await mysql.createConnection({
-      host: config.host,
-      port: config.port,
-      user: config.username,
-      password: config.password || '',
-      database: config.database,
-      connectTimeout: 10000
-    });
+    // Tentar usar uma conexão monitorada já existente
+    let useMonitoredConnection = false;
+    
+    if (config.connectionId) {
+      monitoredConnection = dbMonitoringConnections.get(config.connectionId);
+      if (monitoredConnection) {
+        console.log(`Using existing monitored connection for table structure: ${config.connectionId}`);
+        connection = monitoredConnection;
+        useMonitoredConnection = true;
+      }
+    }
+    
+    // Se não temos uma conexão monitorada, criamos uma nova
+    if (!useMonitoredConnection) {
+      connection = await mysql.createConnection({
+        host: config.host,
+        port: config.port,
+        user: config.username,
+        password: config.password || '',
+        database: config.database,
+        connectTimeout: 10000
+      });
+    }
 
     // Escape table name to prevent SQL injection
     const tableName = connection.escapeId(config.tableName);
     const database = connection.escapeId(config.database);
+    
+    console.log(`Getting structure for ${config.database}.${config.tableName}`);
     
     // Get real table structure from information_schema
     const [columns] = await connection.query(`
@@ -648,6 +830,8 @@ ipcMain.handle('getTableStructure', async (event, config) => {
       foreign_key: foreignKeyColumns.has(column.name)
     }));
     
+    console.log(`Found ${enhancedColumns.length} columns for ${config.tableName}`);
+    
     return { 
       success: true, 
       columns: enhancedColumns || []
@@ -660,7 +844,8 @@ ipcMain.handle('getTableStructure', async (event, config) => {
       columns: []
     };
   } finally {
-    if (connection) {
+    // Apenas fechamos a conexão se NÃO for uma conexão monitorada
+    if (connection && !monitoredConnection) {
       try {
         await connection.end();
       } catch (err) {
@@ -768,5 +953,1317 @@ ipcMain.handle('getTableForeignKeys', async (event, config) => {
         console.error('Error closing MySQL connection:', err);
       }
     }
+  }
+});
+
+// Project logs handlers
+ipcMain.handle('get-project-logs', async (event, config) => {
+  try {
+    console.log('Getting project logs with config:', config);
+    
+    if (!config || !config.projectPath) {
+      console.log('No project path provided');
+      return [];
+    }
+
+    const logsPath = path.join(config.projectPath, 'storage', 'logs');
+    console.log('Looking for logs in:', logsPath);
+    
+    if (!fs.existsSync(logsPath)) {
+      console.error('Logs directory not found at:', logsPath);
+      return [];
+    }
+
+    // Get all files
+    const allFiles = fs.readdirSync(logsPath);
+    console.log('All files in logs directory:', allFiles);
+    
+    const logFiles = allFiles.filter(file => file.endsWith('.log'));
+    console.log('Log files found:', logFiles);
+    
+    if (logFiles.length === 0) {
+      console.log('No log files found');
+      return [];
+    }
+
+    // Determine which log file to read
+    let logFilePath;
+    let logFileName;
+    
+    if (logFiles.includes('laravel.log')) {
+      logFileName = 'laravel.log';
+      logFilePath = path.join(logsPath, logFileName);
+      console.log('Using laravel.log file');
+    } else {
+      // Check for daily log files (Laravel can be configured to use daily logs)
+      const dailyLogPattern = /laravel-\d{4}-\d{2}-\d{2}\.log/;
+      const dailyLogFiles = logFiles.filter(file => dailyLogPattern.test(file));
+      
+      if (dailyLogFiles.length > 0) {
+        // Sort by date descending to get the most recent
+        dailyLogFiles.sort().reverse();
+        logFileName = dailyLogFiles[0];
+        logFilePath = path.join(logsPath, logFileName);
+        console.log('Using daily log file:', logFileName);
+      } else {
+        // Fallback to any log file
+        logFileName = logFiles[0];
+        logFilePath = path.join(logsPath, logFileName);
+        console.log('Using first available log file:', logFileName);
+      }
+    }
+    
+    console.log('Reading log file from:', logFilePath);
+    const logContent = fs.readFileSync(logFilePath, 'utf8');
+    
+    if (!logContent || logContent.trim() === '') {
+      console.log('Log file is empty');
+      return [];
+    }
+    
+    console.log('Log content length:', logContent.length);
+    
+    // Very simple parsing approach - just split by lines and parse each line
+    const lines = logContent.split('\n');
+    console.log(`Found ${lines.length} lines in log file`);
+    
+    // Display first few lines to help with debugging
+    console.log('First 5 lines of log:');
+    for (let i = 0; i < Math.min(5, lines.length); i++) {
+      console.log(`Line ${i+1}: "${lines[i]}"`);
+    }
+    
+    // Simple parser that works with various Laravel log formats
+    const logEntries = [];
+    let currentEntry = null;
+    
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i].trim();
+      if (!line) continue;
+      
+      // Check if this is a new log entry by looking for the timestamp pattern
+      // Laravel logs usually start with a timestamp in brackets
+      const timestampMatch = line.match(/^\[(\d{4}-\d{2}-\d{2}[T\s]\d{2}:\d{2}:\d{2}\.?\d*(?:[\+-]\d{4})?)\]/);
+      
+      if (timestampMatch) {
+        // If we have a current entry, add it to the results before starting new one
+        if (currentEntry) {
+          logEntries.push(currentEntry);
+        }
+        
+        // Try to determine log type from the line
+        let type = 'info';
+        if (line.toLowerCase().includes('error') || line.toLowerCase().includes('exception')) {
+          type = 'error';
+        } else if (line.toLowerCase().includes('warning')) {
+          type = 'warning';
+        } else if (line.toLowerCase().includes('debug')) {
+          type = 'debug';
+        } else if (line.toLowerCase().includes('info')) {
+          type = 'info';
+        }
+        
+        // Start a new entry
+        currentEntry = {
+          id: `log_${Date.now()}_${i}`,
+          timestamp: new Date(timestampMatch[1]).getTime(),
+          type: type.toLowerCase(),
+          message: line, // Store the whole line as message initially
+          stack: null,
+          file: logFileName
+        };
+      } else if (currentEntry) {
+        // This is a continuation of the previous entry
+        if (line.includes('Stack trace:')) {
+          currentEntry.stack = '';
+        } else if (currentEntry.stack !== null) {
+          currentEntry.stack += line + '\n';
+        } else {
+          // Append to the message
+          currentEntry.message += '\n' + line;
+        }
+      }
+    }
+    
+    // Don't forget the last entry
+    if (currentEntry) {
+      logEntries.push(currentEntry);
+    }
+    
+    console.log(`Parsed ${logEntries.length} log entries`);
+    
+    // If no entries were found, provide a single entry with raw file content sample
+    if (logEntries.length === 0) {
+      console.log('No parsable log entries found, providing raw sample');
+      
+      const sampleContent = logContent.substring(0, Math.min(500, logContent.length));
+      return [{
+        id: `log_raw_${Date.now()}`,
+        timestamp: Date.now(),
+        type: 'info',
+        message: 'Raw log content sample:\n\n' + sampleContent,
+        stack: null,
+        file: logFileName
+      }];
+    }
+    
+    return logEntries;
+  } catch (error) {
+    console.error('Error reading project logs:', error);
+    return [{
+      id: `log_error_${Date.now()}`,
+      timestamp: Date.now(),
+      type: 'error',
+      message: `Error reading logs: ${error.message}`,
+      stack: error.stack,
+      file: 'error'
+    }];
+  }
+});
+
+ipcMain.handle('delete-project-log', async (event, logId) => {
+  // In a real implementation, this would delete the specific log entry
+  // This is a stub as we can't easily delete a specific log from a log file
+  // without rewriting the entire file
+  console.log('Delete log requested for:', logId);
+  return { success: true };
+});
+
+ipcMain.handle('clear-all-project-logs', async (event, config) => {
+  try {
+    if (!config || !config.projectPath) {
+      return { success: false, message: 'No project path provided' };
+    }
+
+    const logsPath = path.join(config.projectPath, 'storage', 'logs');
+    
+    if (!fs.existsSync(logsPath)) {
+      return { success: false, message: 'Logs directory not found' };
+    }
+
+    // Get all log files
+    const logFiles = fs.readdirSync(logsPath)
+      .filter(file => file.endsWith('.log'));
+    
+    if (logFiles.length === 0) {
+      return { success: true, message: 'No log files found' };
+    }
+
+    console.log(`Clearing ${logFiles.length} log files in ${logsPath}`);
+    
+    // Clear each log file (write an empty string to it)
+    let clearedCount = 0;
+    for (const logFile of logFiles) {
+      try {
+        const logFilePath = path.join(logsPath, logFile);
+        console.log(`Clearing log file: ${logFilePath}`);
+        fs.writeFileSync(logFilePath, '', 'utf8');
+        clearedCount++;
+      } catch (fileError) {
+        console.error(`Error clearing log file ${logFile}:`, fileError);
+      }
+    }
+    
+    return { 
+      success: true, 
+      message: `Cleared ${clearedCount} log files`, 
+      clearedFiles: clearedCount 
+    };
+  } catch (error) {
+    console.error('Error clearing project logs:', error);
+    return { success: false, message: error.message };
+  }
+});
+
+// Database monitoring
+const dbMonitoringConnections = new Map();
+const dbActivityConnections = new Map();  // Nova estrutura para conexões de monitoramento via triggers
+
+function setupMonitoring(connection, monitoredTables) {
+  if (!connection) return false;
+
+  // Verificar se a conexão já foi modificada para evitar sobreposição
+  if (connection._isMonitored) {
+    console.log('[MONITOR] This connection is already being monitored');
+    return true;
+  }
+
+  // Iniciar monitoramento real-time com polling
+  startProcessListPolling(connection);
+  
+  // Marcar conexão como monitorada
+  connection._isMonitored = true;
+  
+  return true;
+}
+
+// Nova função para monitorar o banco por meio de polling do process list
+async function startProcessListPolling(connection) {
+  if (!connection || !connection._config) {
+    console.error('[MONITOR] Invalid connection for process list polling');
+    return false;
+  }
+  
+  const connectionId = connection._config.connectionId;
+  
+  console.log(`[MONITOR] Starting process list polling for connection ${connectionId}`);
+  
+  // Cache de queries já processadas (para evitar duplicatas)
+  connection._processedQueries = new Set();
+  
+  // Função que executa o polling
+  const pollProcessList = async () => {
+    if (!dbMonitoringConnections.has(connectionId)) {
+      if (connection._pollingInterval) {
+        clearInterval(connection._pollingInterval);
+        connection._pollingInterval = null;
+      }
+      console.log(`[MONITOR] Polling stopped for connection ${connectionId}`);
+      return;
+    }
+    
+    try {
+      // Consultar a lista de processos em execução
+      const [processList] = await connection.query(`
+        SELECT 
+          id,
+          user,
+          host,
+          db,
+          command,
+          time,
+          state,
+          info
+        FROM information_schema.processlist
+        WHERE info IS NOT NULL 
+          AND info NOT LIKE '%information_schema.processlist%'
+          AND command != 'Sleep'
+      `);
+      
+      // Processar cada processo
+      for (const process of processList) {
+        // Ignorar processos sem informação
+        if (!process.info) continue;
+        
+        // Identificar SQL
+        const sql = process.info;
+        
+        // Criar um hash para identificar a query (para evitar duplicatas)
+        const queryHash = require('crypto')
+          .createHash('md5')
+          .update(`${process.id}-${sql}`)
+          .digest('hex');
+        
+        // Se já processamos esta query recentemente, pular
+        if (connection._processedQueries.has(queryHash)) {
+          continue;
+        }
+        
+        // Adicionar à lista de queries processadas
+        connection._processedQueries.add(queryHash);
+        
+        // Limitar o tamanho do cache
+        if (connection._processedQueries.size > 100) {
+          // Limpar primeiro terço do cache para evitar crescimento descontrolado
+          const itemsToDelete = Array.from(connection._processedQueries).slice(0, 30);
+          for (const item of itemsToDelete) {
+            connection._processedQueries.delete(item);
+          }
+        }
+        
+        // Extrair informações da query
+        let operation = 'QUERY';
+        let tableName = 'unknown';
+        
+        // Identificar a operação e tabela
+        const firstWord = sql.trim().split(' ')[0].toUpperCase();
+        
+        if (['SELECT', 'INSERT', 'UPDATE', 'DELETE', 'CREATE', 'ALTER', 'DROP', 'TRUNCATE'].includes(firstWord)) {
+          operation = firstWord;
+          
+          // Expressões regulares para extrair tabelas de diferentes operações
+          if (operation === 'SELECT') {
+            // SELECT ... FROM table
+            const match = sql.match(/FROM\s+`?([a-zA-Z0-9_]+)`?/i);
+            if (match && match[1]) {
+              tableName = match[1].replace(/`/g, '');
+            }
+          } else if (operation === 'INSERT') {
+            // INSERT INTO table
+            const match = sql.match(/INSERT\s+INTO\s+`?([a-zA-Z0-9_]+)`?/i);
+            if (match && match[1]) {
+              tableName = match[1].replace(/`/g, '');
+            }
+          } else if (operation === 'UPDATE') {
+            // UPDATE table
+            const match = sql.match(/UPDATE\s+`?([a-zA-Z0-9_]+)`?/i);
+            if (match && match[1]) {
+              tableName = match[1].replace(/`/g, '');
+            }
+          } else if (operation === 'DELETE') {
+            // DELETE FROM table
+            const match = sql.match(/DELETE\s+FROM\s+`?([a-zA-Z0-9_]+)`?/i);
+            if (match && match[1]) {
+              tableName = match[1].replace(/`/g, '');
+            }
+          } else if (['CREATE', 'ALTER', 'DROP', 'TRUNCATE'].includes(operation)) {
+            // CREATE/ALTER/DROP/TRUNCATE TABLE table
+            const match = sql.match(/(CREATE|ALTER|DROP|TRUNCATE)\s+TABLE\s+`?([a-zA-Z0-9_]+)`?/i);
+            if (match && match[2]) {
+              tableName = match[2].replace(/`/g, '');
+            }
+          }
+        }
+        
+        // Verificar se devemos ignorar esta tabela (tabelas do sistema)
+        const systemTables = ['information_schema', 'performance_schema', 'mysql'];
+        if (systemTables.includes(tableName.toLowerCase())) {
+          continue;
+        }
+        
+        // Verificar se estamos na base de dados correta
+        if (process.db && process.db !== connection._config.database) {
+          continue;
+        }
+        
+        // Preparar o objeto da mensagem
+        const message = {
+          timestamp: Date.now(),
+          operation: operation,
+          table: tableName,
+          sql: sql,
+          process_id: process.id,
+          user: process.user,
+          affectedRows: null, // Não temos esta informação no process list
+          execution_time: process.time,
+          state: process.state
+        };
+        
+        // Enviar a mensagem para o front-end
+        if (mainWindow) {
+          console.log(`[MONITOR] Sending operation: ${operation} on ${tableName}`);
+          mainWindow.webContents.send(`db-operation-${connectionId}`, message);
+        }
+      }
+    } catch (error) {
+      console.error('[MONITOR] Error polling process list:', error);
+    }
+  };
+  
+  // Executar imediatamente para testar
+  try {
+    await pollProcessList();
+  } catch (error) {
+    console.error('[MONITOR] Error during initial process list polling:', error);
+  }
+  
+  // Configurar intervalo de polling (a cada 1 segundo)
+  const pollingInterval = setInterval(pollProcessList, 1000);
+  connection._pollingInterval = pollingInterval;
+  
+  return true;
+}
+
+ipcMain.handle('start-db-monitoring', async (event, connectionId) => {
+  let connection = null;
+  const activityLogTable = 'larabase_db_activity_log';
+  
+  try {
+    console.log(`Starting database monitoring for connection ${connectionId}`);
+    
+    // Validar connectionId
+    if (!connectionId) {
+      console.error('ConnectionId inválido ou não fornecido');
+      return { success: false, message: 'ID de conexão inválido' };
+    }
+    
+    // Limpar conexão anterior se existir
+    if (dbMonitoringConnections.has(connectionId)) {
+      try {
+        const existingConnection = dbMonitoringConnections.get(connectionId);
+        if (existingConnection) {
+          console.log(`Closing existing monitoring connection for ${connectionId}`);
+          await existingConnection.end();
+        }
+        dbMonitoringConnections.delete(connectionId);
+      } catch (err) {
+        console.error(`Error closing previous connection:`, err);
+      }
+    }
+    
+    // Obter detalhes da conexão
+    const connections = store.get('connections') || [];
+    const connection = connections.find(conn => conn.id === connectionId);
+    
+    if (!connection) {
+      console.error(`Connection ID ${connectionId} not found`);
+      return { success: false, message: 'Connection not found' };
+    }
+    
+    console.log(`Connection found: ${connection.name}`);
+    console.log(`Details: ${connection.host}:${connection.port}/${connection.database}`);
+    
+    // Verificar se temos todas as informações necessárias
+    if (!connection.host || !connection.port || !connection.username || !connection.database) {
+      return { success: false, message: 'Incomplete connection information' };
+    }
+    
+    // Criar conexão ao banco de dados
+    const dbConnection = await mysql.createConnection({
+      host: connection.host,
+      port: connection.port,
+      user: connection.username,
+      password: connection.password || '',
+      database: connection.database,
+      dateStrings: true,
+      multipleStatements: true // Habilitar múltiplas instruções para criar triggers mais complexos
+    });
+    
+    console.log(`Connection established to ${connection.database}`);
+    
+    // Testar a conexão
+    console.log('Testing connection...');
+    await dbConnection.query('SELECT 1');
+    console.log('Connection test successful');
+    
+    // Criar tabela de log se não existir - esquema melhorado
+    await dbConnection.query(`
+      CREATE TABLE IF NOT EXISTS ${activityLogTable} (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        action_type ENUM('INSERT', 'UPDATE', 'DELETE') NOT NULL,
+        table_name VARCHAR(255) NOT NULL,
+        record_id VARCHAR(255),
+        details TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        INDEX idx_action_type (action_type),
+        INDEX idx_table_name (table_name),
+        INDEX idx_created_at (created_at)
+      ) ENGINE=InnoDB;
+    `);
+    
+    console.log(`Activity log table created/verified: ${activityLogTable}`);
+    
+    // Obter lista de tabelas
+    const [tables] = await dbConnection.query(`
+      SELECT table_name 
+      FROM information_schema.tables 
+      WHERE table_schema = ? 
+        AND table_name != '${activityLogTable}'
+        AND table_type = 'BASE TABLE'
+    `, [connection.database]);
+    
+    console.log(`Found ${tables.length} tables to monitor in ${connection.database}`);
+    
+    // Criar triggers para cada tabela
+    let triggersCreated = 0;
+    for (const table of tables) {
+      const tableName = table.table_name || table.TABLE_NAME;
+      
+      try {
+        console.log(`Setting up triggers for table ${tableName}`);
+        
+        // Remover triggers existentes
+        await dbConnection.query(`DROP TRIGGER IF EXISTS ${tableName}_after_insert`);
+        await dbConnection.query(`DROP TRIGGER IF EXISTS ${tableName}_after_update`);
+        await dbConnection.query(`DROP TRIGGER IF EXISTS ${tableName}_after_delete`);
+        
+        // Obter colunas da tabela
+        const [columns] = await dbConnection.query(`
+          SELECT COLUMN_NAME, COLUMN_KEY
+          FROM INFORMATION_SCHEMA.COLUMNS 
+          WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ?
+          ORDER BY ORDINAL_POSITION
+        `, [connection.database, tableName]);
+        
+        // Extrair nomes das colunas
+        const columnNames = columns.map(col => col.COLUMN_NAME || col.column_name);
+        
+        // Encontrar chave primária ou coluna ID
+        const primaryKeyColumn = columns.find(col => 
+          (col.COLUMN_KEY === 'PRI') || 
+          ['id', 'uuid', 'key'].includes(col.COLUMN_NAME.toLowerCase())
+        );
+        
+        // Determinar como identificar registros
+        let idRef, oldIdRef;
+        
+        if (primaryKeyColumn) {
+          const idColumn = primaryKeyColumn.COLUMN_NAME;
+          idRef = `COALESCE(NEW.\`${idColumn}\`, 'unknown')`;
+          oldIdRef = `COALESCE(OLD.\`${idColumn}\`, 'unknown')`;
+          console.log(`Using primary key column: ${idColumn} for table ${tableName}`);
+        } else if (columnNames.length > 0) {
+          // Usar primeira coluna se não tiver ID
+          idRef = `CONCAT('Row with ${columnNames[0]}=', COALESCE(NEW.\`${columnNames[0]}\`, 'null'))`;
+          oldIdRef = `CONCAT('Row with ${columnNames[0]}=', COALESCE(OLD.\`${columnNames[0]}\`, 'null'))`;
+          console.log(`Using first column: ${columnNames[0]} for table ${tableName}`);
+        } else {
+          idRef = "'unknown'";
+          oldIdRef = "'unknown'";
+          console.log(`No suitable identifier column found for table ${tableName}`);
+        }
+        
+        // Selecionar as primeiras colunas para previsualização (no máximo 5)
+        const previewColumns = columnNames.slice(0, 5);
+        
+        // Preview strings para inserções
+        const insertPreview = previewColumns.map(col => 
+          `'${col}: ', COALESCE(NEW.\`${col}\`, 'null')`
+        ).join(", ' | ', ");
+        
+        // Preview strings para atualizações
+        const updatePreviewParts = previewColumns.map(col => 
+          `IF(
+            (OLD.\`${col}\` IS NULL AND NEW.\`${col}\` IS NOT NULL) OR 
+            (OLD.\`${col}\` IS NOT NULL AND NEW.\`${col}\` IS NULL) OR 
+            (OLD.\`${col}\` <> NEW.\`${col}\`), 
+            CONCAT('${col}: ', COALESCE(OLD.\`${col}\`, 'null'), ' → ', COALESCE(NEW.\`${col}\`, 'null')), 
+            NULL
+          )`
+        );
+        const updatePreview = `CONCAT_WS(', ', ${updatePreviewParts.join(', ')})`;
+        
+        // Preview strings para exclusões
+        const deletePreview = previewColumns.map(col => 
+          `'${col}: ', COALESCE(OLD.\`${col}\`, 'null')`
+        ).join(", ' | ', ");
+        
+        // Criar trigger para INSERT
+        await dbConnection.query(`
+          CREATE TRIGGER ${tableName}_after_insert
+          AFTER INSERT ON ${tableName}
+          FOR EACH ROW
+          BEGIN
+            SET @details = CONCAT('New record: ', ${insertPreview});
+            
+            INSERT INTO ${activityLogTable} (
+              action_type, 
+              table_name, 
+              record_id, 
+              details
+            )
+            VALUES (
+              'INSERT', 
+              '${tableName}', 
+              ${idRef}, 
+              @details
+            );
+          END;
+        `);
+        
+        // Criar trigger para UPDATE
+        await dbConnection.query(`
+          CREATE TRIGGER ${tableName}_after_update
+          AFTER UPDATE ON ${tableName}
+          FOR EACH ROW
+          BEGIN
+            SET @changes = ${updatePreview};
+            
+            IF @changes IS NOT NULL AND @changes != '' THEN
+              INSERT INTO ${activityLogTable} (
+                action_type, 
+                table_name, 
+                record_id, 
+                details
+              )
+              VALUES (
+                'UPDATE', 
+                '${tableName}', 
+                ${idRef}, 
+                CONCAT('Changed: ', @changes)
+              );
+            END IF;
+          END;
+        `);
+        
+        // Criar trigger para DELETE
+        await dbConnection.query(`
+          CREATE TRIGGER ${tableName}_after_delete
+          AFTER DELETE ON ${tableName}
+          FOR EACH ROW
+          BEGIN
+            SET @details = CONCAT('Deleted: ', ${deletePreview});
+            
+            INSERT INTO ${activityLogTable} (
+              action_type, 
+              table_name, 
+              record_id, 
+              details
+            )
+            VALUES (
+              'DELETE', 
+              '${tableName}', 
+              ${oldIdRef}, 
+              @details
+            );
+          END;
+        `);
+        
+        triggersCreated += 3;
+        console.log(`Successfully created triggers for table ${tableName}`);
+      } catch (triggerError) {
+        console.error(`Error creating triggers for table ${tableName}:`, triggerError);
+      }
+    }
+    
+    console.log(`Created ${triggersCreated} triggers across ${tables.length} tables`);
+    
+    // Obter atividades iniciais
+    const [initialActivities] = await dbConnection.query(`
+      SELECT 
+        id,
+        action_type as type,
+        table_name as \`table\`,
+        record_id as recordId,
+        details,
+        created_at as timestamp
+      FROM ${activityLogTable}
+      ORDER BY created_at DESC
+      LIMIT 50
+    `);
+    
+    console.log(`Found ${initialActivities.length} initial activities`);
+    
+    // Armazenar a conexão para uso posterior
+    dbMonitoringConnections.set(connectionId, dbConnection);
+    
+    // Enviar as atividades iniciais para o frontend
+    if (mainWindow) {
+      initialActivities.forEach(activity => {
+        mainWindow.webContents.send(`db-operation-${connectionId}`, activity);
+      });
+      
+      // Enviar mensagem informativa
+      mainWindow.webContents.send(`db-operation-${connectionId}`, {
+        timestamp: Date.now(),
+        type: 'INFO',
+        table: 'system',
+        message: 'Database monitoring started successfully'
+      });
+    }
+    
+    // Iniciar polling para novas atividades
+    const lastId = initialActivities.length > 0 ? initialActivities[0].id : 0;
+    startActivityPolling(connectionId, dbConnection, activityLogTable, lastId);
+    
+    return { success: true, message: 'Monitoring started successfully' };
+  } catch (error) {
+    console.error('Error setting up database monitoring:', error);
+    
+    if (connection) {
+      try {
+        await connection.end();
+      } catch (err) {
+        console.error('Error closing connection:', err);
+      }
+    }
+    
+    return { success: false, message: error.message || 'Unknown error setting up monitoring' };
+  }
+});
+
+// Função para iniciar polling de atividades
+function startActivityPolling(connectionId, connection, activityLogTable, lastId) {
+  console.log(`Starting activity polling for connection ${connectionId}, last ID: ${lastId}`);
+  
+  // Armazenar o último ID processado
+  connection._lastActivityId = lastId;
+  
+  // Função para buscar novas atividades
+  const pollActivities = async () => {
+    // Verificar se a conexão ainda está ativa
+    if (!dbMonitoringConnections.has(connectionId)) {
+      console.log(`Polling stopped for connection ${connectionId}`);
+      if (connection._pollingInterval) {
+        clearInterval(connection._pollingInterval);
+        connection._pollingInterval = null;
+      }
+      return;
+    }
+    
+    try {
+      // Buscar novas atividades
+      const [activities] = await connection.query(`
+        SELECT 
+          id,
+          action_type as type,
+          table_name as \`table\`,
+          record_id as recordId,
+          details,
+          created_at as timestamp
+        FROM ${activityLogTable}
+        WHERE id > ?
+        ORDER BY id ASC
+        LIMIT 50
+      `, [connection._lastActivityId]);
+      
+      if (activities.length > 0) {
+        console.log(`Found ${activities.length} new activities, types: ${activities.map(a => a.type).join(', ')}`);
+        
+        // Atualizar o último ID
+        connection._lastActivityId = activities[activities.length - 1].id;
+        
+        // Enviar atividades para o frontend
+        if (mainWindow) {
+          activities.forEach(activity => {
+            // Garantir que todas as propriedades existam
+            const formattedActivity = {
+              ...activity,
+              timestamp: activity.timestamp || new Date().toISOString(),
+              recordId: activity.recordId || 'unknown',
+              details: activity.details || 'No details available'
+            };
+            
+            mainWindow.webContents.send(`db-operation-${connectionId}`, formattedActivity);
+          });
+        }
+      }
+    } catch (error) {
+      console.error('Error polling activities:', error);
+    }
+  };
+  
+  // Executar imediatamente e então a cada 1 segundo (mais rápido para melhor responsividade)
+  pollActivities();
+  connection._pollingInterval = setInterval(pollActivities, 1000);
+}
+
+ipcMain.handle('stop-db-monitoring', async (event, connectionId) => {
+  try {
+    console.log(`Stopping database monitoring for ${connectionId}`);
+    
+    const connection = dbMonitoringConnections.get(connectionId);
+    
+    if (!connection) {
+      return { success: false, message: 'Not monitoring this connection' };
+    }
+    
+    // Limpar polling
+    if (connection._pollingInterval) {
+      clearInterval(connection._pollingInterval);
+      connection._pollingInterval = null;
+    }
+    
+    // Fechar conexão
+    await connection.end();
+    
+    // Remover do mapa
+    dbMonitoringConnections.delete(connectionId);
+    
+    return { success: true, message: 'Monitoring stopped' };
+  } catch (error) {
+    console.error('Error stopping database monitoring:', error);
+    return { success: false, message: error.message };
+  }
+});
+
+// Novo método para monitorar mudanças no banco de dados usando triggers
+ipcMain.handle('monitor-database-changes', async (event, connectionDetails) => {
+  let connection = null;
+  let triggerConnection = null;
+  const activityLogTable = 'larabase_db_activity_log';
+  const connectionId = connectionDetails.id || connectionDetails.connectionId;
+  
+  try {
+    console.log(`Setting up trigger-based monitoring for connection ${connectionId}`);
+    
+    // Validar parâmetros
+    if (!connectionDetails || !connectionDetails.database) {
+      console.error('Database name is required for monitoring');
+      return { success: false, message: 'Database name is required' };
+    }
+    
+    // Limpar conexão anterior se existir
+    if (dbActivityConnections.has(connectionId)) {
+      try {
+        const existingConnection = dbActivityConnections.get(connectionId);
+        if (existingConnection.connection) {
+          console.log(`Closing existing activity monitoring connection for ${connectionId}`);
+          await existingConnection.connection.end();
+        }
+        if (existingConnection.triggerConnection) {
+          await existingConnection.triggerConnection.end();
+        }
+        dbActivityConnections.delete(connectionId);
+      } catch (err) {
+        console.error(`Error closing previous activity monitoring connection:`, err);
+      }
+    }
+    
+    const database = String(connectionDetails.database);
+    
+    console.log(`Creating connection to ${connectionDetails.host}:${connectionDetails.port}/${database}`);
+    
+    // Obter detalhes da conexão
+    let host, port, user, password;
+    
+    if (connectionDetails.host) {
+      // Se os detalhes já estão fornecidos diretamente
+      host = String(connectionDetails.host || '');
+      port = Number(connectionDetails.port || 3306);
+      user = String(connectionDetails.username || connectionDetails.user || '');
+      password = String(connectionDetails.password || '');
+    } else {
+      // Se apenas o ID foi fornecido, buscar os detalhes do store
+      const connections = store.get('connections') || [];
+      const storedConnection = connections.find(conn => conn.id === connectionId);
+      
+      if (!storedConnection) {
+        console.error(`Connection ID ${connectionId} not found in stored connections`);
+        return { success: false, message: 'Connection not found' };
+      }
+      
+      host = String(storedConnection.host || '');
+      port = Number(storedConnection.port || 3306);
+      user = String(storedConnection.username || '');
+      password = String(storedConnection.password || '');
+    }
+    
+    const connOptions = {
+      host: host,
+      port: port,
+      user: user,
+      password: password,
+      database: database,
+      dateStrings: true
+    };
+    
+    console.log(`Connecting to MySQL for activity monitoring: ${host}:${port}/${database}`);
+    
+    // Criar conexão principal
+    connection = await mysql.createConnection(connOptions);
+    
+    console.log(`Creating activity log table ${activityLogTable}`);
+    
+    // Criar tabela de log de atividades se não existir
+    await connection.query(`
+      CREATE TABLE IF NOT EXISTS ${activityLogTable} (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        action_type ENUM('INSERT', 'UPDATE', 'DELETE') NOT NULL,
+        table_name VARCHAR(255) NOT NULL,
+        record_id VARCHAR(255),
+        details TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+    
+    console.log(`Getting list of tables in ${database}`);
+    
+    // Obter lista de tabelas para criar triggers
+    const [tables] = await connection.query(`
+      SELECT table_name 
+      FROM information_schema.tables 
+      WHERE table_schema = ? 
+        AND table_name != '${activityLogTable}'
+        AND table_type = 'BASE TABLE'
+    `, [database]);
+    
+    console.log(`Found ${tables.length} tables to monitor`);
+    
+    // Criar triggers para cada tabela
+    for (const table of tables) {
+      const tableName = table.table_name || table.TABLE_NAME;
+      
+      try {
+        console.log(`Setting up triggers for table ${tableName}`);
+        
+        // Remover triggers existentes
+        await connection.query(`DROP TRIGGER IF EXISTS ${tableName}_after_insert`).catch(() => {});
+        await connection.query(`DROP TRIGGER IF EXISTS ${tableName}_after_update`).catch(() => {});
+        await connection.query(`DROP TRIGGER IF EXISTS ${tableName}_after_delete`).catch(() => {});
+        
+        // Obter colunas da tabela
+        const [columns] = await connection.query(`
+          SELECT COLUMN_NAME 
+          FROM INFORMATION_SCHEMA.COLUMNS 
+          WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ?
+        `, [database, tableName]);
+        
+        // Extrair nomes das colunas
+        const columnNames = columns.map(col => col.COLUMN_NAME || col.column_name);
+        const hasId = columnNames.some(name => 
+          name.toLowerCase() === 'id' || 
+          name.toLowerCase() === 'uuid' || 
+          name.toLowerCase() === 'key'
+        );
+        
+        // Determinar como identificar registros
+        let idRef = '';
+        if (hasId) {
+          idRef = `CONCAT_WS('', 
+            ${columnNames.filter(c => ['id', 'uuid', 'key'].includes(c.toLowerCase()))
+              .map(c => `NEW.${c}`).join(', ')}
+          )`;
+        } else if (columnNames.length > 0) {
+          idRef = `CONCAT('Row with ${columnNames[0]}=', NEW.${columnNames[0]})`;
+        } else {
+          idRef = "'unknown'";
+        }
+        
+        // Referência para OLD em operações DELETE
+        let oldIdRef = '';
+        if (hasId) {
+          oldIdRef = `CONCAT_WS('', 
+            ${columnNames.filter(c => ['id', 'uuid', 'key'].includes(c.toLowerCase()))
+              .map(c => `OLD.${c}`).join(', ')}
+          )`;
+        } else if (columnNames.length > 0) {
+          oldIdRef = `CONCAT('Row with ${columnNames[0]}=', OLD.${columnNames[0]})`;
+        } else {
+          oldIdRef = "'unknown'";
+        }
+        
+        // Selecionar as primeiras colunas para previsualização
+        const previewColumns = columnNames.slice(0, 4);
+        
+        // Preview strings para inserções
+        const insertPreview = previewColumns.map(col => 
+          `'${col}: ', NEW.\`${col}\``
+        ).join(", ', | ', ");
+        
+        // Preview strings para atualizações
+        const updatePreviewParts = previewColumns.map(col => 
+          `IF(OLD.\`${col}\` <> NEW.\`${col}\`, CONCAT('${col}: ', OLD.\`${col}\`, ' → ', NEW.\`${col}\`), NULL)`
+        );
+        const updatePreview = `CONCAT_WS(', ', ${updatePreviewParts.join(', ')})`;
+        
+        // Preview strings para exclusões
+        const deletePreview = previewColumns.map(col => 
+          `'${col}: ', OLD.\`${col}\``
+        ).join(", ', | ', ");
+        
+        // Criar trigger para INSERT
+        await connection.query(`
+          CREATE TRIGGER ${tableName}_after_insert
+          AFTER INSERT ON ${tableName}
+          FOR EACH ROW
+          BEGIN
+            INSERT INTO ${activityLogTable} (action_type, table_name, record_id, details)
+            VALUES ('INSERT', '${tableName}', ${idRef}, CONCAT('New record: ', ${insertPreview}));
+          END;
+        `);
+        
+        // Criar trigger para UPDATE
+        await connection.query(`
+          CREATE TRIGGER ${tableName}_after_update
+          AFTER UPDATE ON ${tableName}
+          FOR EACH ROW
+          BEGIN
+            DECLARE changes TEXT;
+            SET changes = ${updatePreview};
+            
+            -- Only log if there are actual changes
+            IF changes IS NOT NULL AND changes != '' THEN
+              INSERT INTO ${activityLogTable} (action_type, table_name, record_id, details)
+              VALUES ('UPDATE', '${tableName}', ${idRef}, CONCAT('Changed: ', changes));
+            END IF;
+          END;
+        `);
+        
+        // Criar trigger para DELETE
+        await connection.query(`
+          CREATE TRIGGER ${tableName}_after_delete
+          AFTER DELETE ON ${tableName}
+          FOR EACH ROW
+          BEGIN
+            INSERT INTO ${activityLogTable} (action_type, table_name, record_id, details)
+            VALUES ('DELETE', '${tableName}', ${oldIdRef}, CONCAT('Deleted: ', ${deletePreview}));
+          END;
+        `);
+        
+        triggersCreated += 3;
+        console.log(`Successfully created triggers for table ${tableName}`);
+      } catch (triggerError) {
+        console.error(`Error creating triggers for table ${tableName}:`, triggerError);
+      }
+    }
+    
+    console.log('Creating secondary connection for polling');
+    
+    // Criar uma conexão secundária para consultar mudanças
+    triggerConnection = await mysql.createConnection(connOptions);
+    
+    // Obter atividades iniciais
+    console.log('Fetching initial activities');
+    const [initialActivities] = await connection.query(`
+      SELECT 
+        id,
+        action_type as type,
+        table_name as \`table\`,
+        record_id as recordId,
+        details,
+        created_at as timestamp
+      FROM ${activityLogTable}
+      ORDER BY created_at DESC
+      LIMIT 50
+    `);
+    
+    console.log(`Retrieved ${initialActivities.length} initial activities`);
+    
+    // Armazenar as conexões para uso posterior
+    dbActivityConnections.set(connectionId, {
+      connection: connection,
+      triggerConnection: triggerConnection,
+      activityLogTable: activityLogTable,
+      lastId: initialActivities.length > 0 ? initialActivities[0].id : 0
+    });
+    
+    // Enviar notificação de monitoramento iniciado
+    if (mainWindow) {
+      mainWindow.webContents.send(`db-activity-${connectionId}`, {
+        connectionId: connectionId,
+        success: true,
+        message: 'Trigger-based monitoring started',
+        activities: initialActivities || []
+      });
+    }
+    
+    return { 
+      success: true,
+      message: 'Monitoring setup successfully',
+      activityLogTable,
+      activities: initialActivities || []
+    };
+  } catch (error) {
+    console.error('Error setting up database monitoring:', error);
+    
+    // Fechar conexões em caso de erro
+    if (connection) {
+      try {
+        await connection.end();
+      } catch (err) {
+        console.error('Error closing monitoring setup connection:', err);
+      }
+    }
+    
+    if (triggerConnection) {
+      try {
+        await triggerConnection.end();
+      } catch (err) {
+        console.error('Error closing trigger connection:', err);
+      }
+    }
+    
+    return { 
+      success: false, 
+      message: error.message || 'Unknown error setting up monitoring'
+    };
+  }
+});
+
+// Método para obter mudanças desde a última verificação
+ipcMain.handle('get-database-changes', async (event, connectionId, lastId = 0) => {
+  try {
+    console.log(`Getting database changes for connection ${connectionId}, lastId: ${lastId}`);
+    
+    // Verificar se temos uma conexão ativa para este ID
+    const connectionData = dbActivityConnections.get(connectionId);
+    
+    if (!connectionData || !connectionData.triggerConnection) {
+      console.error(`No active monitoring connection found for ${connectionId}`);
+      return { success: false, message: 'No active monitoring for this connection' };
+    }
+    
+    const { triggerConnection, activityLogTable } = connectionData;
+    
+    // Se não for fornecido um lastId, usar o último ID registrado
+    if (!lastId) {
+      lastId = connectionData.lastId || 0;
+    }
+    
+    console.log(`Querying for activities with ID > ${lastId}`);
+    
+    // Consultar atividades novas
+    const [activities] = await triggerConnection.query(`
+      SELECT 
+        id,
+        action_type as type,
+        table_name as \`table\`,
+        record_id as recordId,
+        details,
+        created_at as timestamp
+      FROM ${activityLogTable}
+      WHERE id > ?
+      ORDER BY created_at DESC
+      LIMIT 50
+    `, [lastId]);
+    
+    console.log(`Found ${activities.length} new activities`);
+    
+    // Atualizar o último ID se houver novos registros
+    if (activities.length > 0) {
+      connectionData.lastId = Math.max(...activities.map(a => a.id));
+      console.log(`Updated lastId to ${connectionData.lastId}`);
+    }
+    
+    return { 
+      success: true, 
+      activities: activities || [] 
+    };
+  } catch (error) {
+    console.error('Error getting database changes:', error);
+    return { 
+      success: false, 
+      message: error.message || 'Unknown error getting changes'
+    };
+  }
+});
+
+// Método para parar o monitoramento baseado em triggers
+ipcMain.handle('stop-trigger-monitoring', async (event, connectionId) => {
+  try {
+    console.log(`Stopping trigger-based monitoring for connection ${connectionId}`);
+    
+    const connectionData = dbActivityConnections.get(connectionId);
+    
+    if (!connectionData) {
+      console.log(`No monitoring data found for connection ${connectionId}`);
+      return { success: false, message: 'Not monitoring this connection' };
+    }
+    
+    // Fechar conexões
+    if (connectionData.connection) {
+      await connectionData.connection.end();
+    }
+    
+    if (connectionData.triggerConnection) {
+      await connectionData.triggerConnection.end();
+    }
+    
+    // Remover do mapa
+    dbActivityConnections.delete(connectionId);
+    
+    console.log(`Trigger-based monitoring stopped for ${connectionId}`);
+    
+    return { success: true, message: 'Monitoring stopped' };
+  } catch (error) {
+    console.error(`Error stopping trigger-based monitoring for ${connectionId}:`, error);
+    return { success: false, message: error.message };
+  }
+});
+
+// Cleanup database monitoring connections when the app is closing
+app.on('before-quit', async () => {
+  // Close all monitoring connections
+  for (const [connectionId, connection] of dbMonitoringConnections.entries()) {
+    try {
+      await connection.end();
+      console.log(`Closed monitoring connection for ${connectionId}`);
+    } catch (error) {
+      console.error(`Error closing monitoring connection for ${connectionId}:`, error);
+    }
+  }
+  
+  // Clear the map
+  dbMonitoringConnections.clear();
+  
+  // Close all trigger-based monitoring connections
+  for (const [connectionId, connectionData] of dbActivityConnections.entries()) {
+    try {
+      if (connectionData.connection) {
+        await connectionData.connection.end();
+      }
+      if (connectionData.triggerConnection) {
+        await connectionData.triggerConnection.end();
+      }
+      console.log(`Closed trigger-based monitoring connections for ${connectionId}`);
+    } catch (error) {
+      console.error(`Error closing trigger-based monitoring connections for ${connectionId}:`, error);
+    }
+  }
+  
+  // Clear the trigger connections map
+  dbActivityConnections.clear();
+});
+
+// Novo manipulador para executar comandos SQL diretamente (para testes)
+ipcMain.handle('execute-test-operations', async (event, connectionId) => {
+  try {
+    console.log(`Executing test operations for connection ${connectionId}`);
+    
+    if (!connectionId) {
+      return { success: false, message: 'Connection ID is required' };
+    }
+    
+    // Verificar se temos uma conexão ativa
+    if (!dbMonitoringConnections.has(connectionId)) {
+      console.error(`No active monitoring connection for ${connectionId}`);
+      return { success: false, message: 'No active monitoring connection' };
+    }
+    
+    const connection = dbMonitoringConnections.get(connectionId);
+    
+    // Criar uma tabela temporária para testes
+    console.log('Creating temporary test table');
+    await connection.query(`
+      CREATE TABLE IF NOT EXISTS _larabase_test_table (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        title VARCHAR(255) NOT NULL,
+        description TEXT,
+        status ENUM('active', 'inactive') DEFAULT 'active',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+    
+    // 1. INSERT - Inserir um registro
+    console.log('Executing INSERT test');
+    const [insertResult] = await connection.query(`
+      INSERT INTO _larabase_test_table (title, description)
+      VALUES ('Test Title', 'This is a test description')
+    `);
+    
+    const insertId = insertResult.insertId;
+    console.log(`Inserted record with ID ${insertId}`);
+    
+    // Pequena pausa para garantir que o trigger seja executado
+    await new Promise(resolve => setTimeout(resolve, 500));
+    
+    // 2. UPDATE - Atualizar o registro
+    console.log('Executing UPDATE test');
+    await connection.query(`
+      UPDATE _larabase_test_table
+      SET title = 'Updated Title', 
+          description = 'Updated description',
+          status = 'inactive'
+      WHERE id = ?
+    `, [insertId]);
+    
+    console.log(`Updated record with ID ${insertId}`);
+    
+    // Pequena pausa para garantir que o trigger seja executado
+    await new Promise(resolve => setTimeout(resolve, 500));
+    
+    // 3. DELETE - Excluir o registro
+    console.log('Executing DELETE test');
+    await connection.query(`
+      DELETE FROM _larabase_test_table
+      WHERE id = ?
+    `, [insertId]);
+    
+    console.log(`Deleted record with ID ${insertId}`);
+    
+    // Verificar eventos capturados
+    const [activityLogs] = await connection.query(`
+      SELECT action_type, table_name, record_id, details 
+      FROM larabase_db_activity_log 
+      WHERE table_name = '_larabase_test_table'
+      ORDER BY id DESC
+      LIMIT 10
+    `);
+    
+    console.log('Activity logs:', activityLogs);
+    
+    return { 
+      success: true, 
+      message: 'Test operations executed successfully',
+      operations: {
+        insertId,
+        activities: activityLogs.length,
+        activityTypes: activityLogs.map(log => log.action_type)
+      }
+    };
+  } catch (error) {
+    console.error('Error executing test operations:', error);
+    return { success: false, message: error.message };
   }
 }); 
