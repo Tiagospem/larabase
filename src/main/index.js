@@ -2789,9 +2789,24 @@ ipcMain.handle('get-migration-status', async (event, config) => {
       statusOutput += data.toString();
     });
 
+    let errorOutput = '';
+    statusProcess.stderr.on('data', (data) => {
+      errorOutput += data.toString();
+    });
+
     await new Promise((resolve) => {
       statusProcess.on('close', resolve);
     });
+
+    if (errorOutput && !statusOutput) {
+      console.error('Migration status command error:', errorOutput);
+      return {
+        success: false,
+        message: 'Error running migration status command: ' + errorOutput.split('\n')[0],
+        pendingMigrations: [],
+        batches: []
+      };
+    }
 
     // Parse the migration status output
     const pendingMigrations = [];
@@ -2799,23 +2814,66 @@ ipcMain.handle('get-migration-status', async (event, config) => {
     
     // Split by lines and process
     const lines = statusOutput.split('\n');
+    
+    // Debug: Log the output for troubleshooting
+    console.log('Migration status output:', statusOutput);
+    
     for (const line of lines) {
-      // Check for pending migrations
-      const pendingMatch = line.match(/\|\s+No\s+\|\s+(.+?)\s+\|/);
-      if (pendingMatch) {
-        pendingMigrations.push(pendingMatch[1].trim());
+      // Check for new Laravel format (Laravel 10+):
+      // "2014_10_12_000000_create_users_table ............................... [1] Ran"
+      // "2025_04_14_120118_test_teste_ssss .................................. Pending"
+      
+      // Match pending migrations
+      if (line.includes('Pending')) {
+        const match = line.match(/^\s*([^\s].*?)\s+\.+\s+Pending\s*$/);
+        if (match && match[1]) {
+          const migrationName = match[1].trim();
+          pendingMigrations.push(migrationName);
+          console.log(`Found pending migration: ${migrationName}`);
+        }
       }
       
-      // Check for completed migrations with batch number
-      const completedMatch = line.match(/\|\s+Yes\s+\|\s+(.+?)\s+\|\s+(\d+)\s+\|/);
-      if (completedMatch) {
-        const migrationName = completedMatch[1].trim();
-        const batchNumber = parseInt(completedMatch[2].trim(), 10);
+      // Match ran migrations with batch number
+      const ranMatch = line.match(/^\s*([^\s].*?)\s+\.+\s+\[(\d+)\]\s+Ran\s*$/);
+      if (ranMatch && ranMatch[1] && ranMatch[2]) {
+        const migrationName = ranMatch[1].trim();
+        const batchNumber = parseInt(ranMatch[2], 10);
         
         if (!batches.has(batchNumber)) {
           batches.set(batchNumber, []);
         }
         batches.get(batchNumber).push(migrationName);
+        console.log(`Found ran migration: ${migrationName} in batch ${batchNumber}`);
+      }
+      
+      // Also try to match the older format for backward compatibility
+      if (line.includes('| No ')) {
+        const match = line.match(/\|\s*No\s*\|\s*(.*?)\s*\|/);
+        if (match && match[1]) {
+          const migrationName = match[1].trim();
+          if (migrationName && !migrationName.includes('Migration') && !pendingMigrations.includes(migrationName)) {
+            pendingMigrations.push(migrationName);
+            console.log(`Found pending migration (old format): ${migrationName}`);
+          }
+        }
+      }
+      
+      if (line.includes('| Yes ')) {
+        const match = line.match(/\|\s*Yes\s*\|\s*(.*?)\s*\|\s*(\d+)\s*\|/);
+        if (match && match[1] && match[2]) {
+          const migrationName = match[1].trim();
+          const batchNumber = parseInt(match[2].trim(), 10);
+          
+          if (migrationName && !isNaN(batchNumber)) {
+            if (!batches.has(batchNumber)) {
+              batches.set(batchNumber, []);
+            }
+            if (!batches.get(batchNumber).includes(migrationName)) {
+              batches.get(batchNumber).push(migrationName);
+              console.log(`Found ran migration (old format): ${migrationName} in batch ${batchNumber}`);
+            }
+          }
+        }
       }
     }
     
@@ -2827,6 +2885,8 @@ ipcMain.handle('get-migration-status', async (event, config) => {
     
     // Sort batches by batch number descending (newest first)
     batchesArray.sort((a, b) => b.batch - a.batch);
+
+    console.log(`Found ${pendingMigrations.length} pending migrations and ${batchesArray.length} batches`);
 
     return {
       success: true,

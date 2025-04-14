@@ -285,10 +285,20 @@ async function refreshMigrationStatus() {
     });
     
     if (result.success) {
+      console.log('Migration status result:', result);
       pendingMigrations.value = result.pendingMigrations || [];
       batches.value = result.batches || [];
       hasSail.value = result.hasSail || false;
+      
+      // Verificar se temos dados de migrações
+      if (pendingMigrations.value.length === 0 && batches.value.length === 0) {
+        console.log('No migrations found in the status output');
+        if (result.output) {
+          console.log('Raw output:', result.output);
+        }
+      }
     } else {
+      console.error('Failed to get migration status:', result.message);
       showAlert(result.message || 'Failed to get migration status', 'error');
     }
   } catch (error) {
@@ -315,6 +325,9 @@ async function runMigration(command) {
       connectionId: props.connectionId
     });
     
+    // Atualizar o status das migrações após executar o comando
+    await refreshMigrationStatus();
+    
     // Close the modal after a short delay to ensure the output panel is shown first
     setTimeout(() => {
       close();
@@ -327,9 +340,11 @@ async function runMigration(command) {
 }
 
 async function runSingleMigration(migration) {
-  // For single migrations, don't append .php as it's likely already included
-  // in the migration name from the status output
-  const migrationPath = `database/migrations/${migration}`;
+  // O arquivo migration já pode conter a extensão .php
+  // Vamos garantir que estamos usando apenas o nome do arquivo, sem o caminho
+  const migrationFileName = migration.includes('.php') 
+    ? migration 
+    : `${migration}.php`;
   
   if (!props.projectPath) {
     showAlert('No Laravel project path configured', 'error');
@@ -339,12 +354,17 @@ async function runSingleMigration(migration) {
   isLoading.value = true;
   
   try {
+    // Usar o migration diretamente no comando, sem especificar o path
+    // Laravel identificará a migration pelo seu nome
     await commandsStore.runArtisanCommand({
-      command: `migrate --path=${migrationPath}`,
+      command: `migrate --path=database/migrations/${migrationFileName}`,
       projectPath: props.projectPath,
       useSail: useSail.value,
       connectionId: props.connectionId
     });
+    
+    // Atualizar o status das migrações após executar o comando
+    await refreshMigrationStatus();
     
     // Close the modal after a short delay to ensure the output panel is shown first
     setTimeout(() => {
@@ -378,6 +398,9 @@ async function runRollback() {
       useSail: useSail.value,
       connectionId: props.connectionId
     });
+    
+    // Atualizar o status das migrações após executar o comando
+    await refreshMigrationStatus();
     
     // Close the modal after a short delay to ensure the output panel is shown first
     setTimeout(() => {
