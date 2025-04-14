@@ -170,7 +170,9 @@
             :key="activeTab.id"
             :connection-id="activeTab.connectionId"
             :table-name="activeTab.tableName"
-            @update-tab-data="handleUpdateTabData" />
+            :filter="activeTab.filter"
+            @update-tab-data="handleUpdateTabData"
+            @open-tab="handleOpenTab" />
         </keep-alive>
       </div>
     </div>
@@ -360,12 +362,13 @@ const openTabs = computed(() => tabsStore.openTabs);
 const activeTabId = computed(() => tabsStore.activeTabId);
 const activeTab = computed(() => tabsStore.activeTab);
 
-function openTable(table) {
+function openTable(table, filter) {
   try {
     tabsStore.addTab({
       connectionId: connectionId.value,
       tableName: table.name,
-      columnCount: table.columnCount
+      columnCount: table.columnCount,
+      filter: filter || ''
     });
     nextTick(() => {
       scrollToActiveTab();
@@ -734,6 +737,50 @@ async function switchDatabase(databaseName) {
   } catch (error) {
     console.error('Error switching database:', error);
     showAlert(`Failed to switch database: ${error.message}`, 'error');
+  }
+}
+
+// Adicionar uma função para lidar com abas abertas pelo DataTab
+function handleOpenTab(tabData) {
+  try {
+    console.log("Abrindo nova aba com dados:", tabData);
+    
+    // Verificar se os dados estão completos
+    if (!tabData.data || !tabData.data.connectionId || !tabData.data.tableName) {
+      console.error("Dados da aba incompletos:", tabData);
+      showAlert("Dados insuficientes para abrir nova aba", "error");
+      return;
+    }
+    
+    // Encontrar a tabela correspondente no databaseStore
+    const targetTable = databaseStore.tablesList.find(t => t.name === tabData.data.tableName);
+    
+    if (!targetTable) {
+      console.error("Tabela alvo não encontrada:", tabData.data.tableName);
+      showAlert(`Tabela "${tabData.data.tableName}" não encontrada`, "error");
+      return;
+    }
+    
+    // Criar objeto de aba completo
+    const newTab = {
+      id: tabData.id || `data-${tabData.data.connectionId}-${tabData.data.tableName}-${Date.now()}`,
+      title: tabData.title || tabData.data.tableName,
+      type: 'data',
+      connectionId: tabData.data.connectionId,
+      tableName: tabData.data.tableName,
+      filter: tabData.data.filter || '',
+      columnCount: targetTable.columnCount || 0
+    };
+    
+    console.log("Adicionando nova aba:", newTab);
+    tabsStore.addTab(newTab);
+    
+    nextTick(() => {
+      scrollToActiveTab();
+    });
+  } catch (error) {
+    console.error('Erro ao abrir aba:', error);
+    showAlert(`Falha ao abrir nova aba: ${error.message}`, 'error');
   }
 }
 </script>

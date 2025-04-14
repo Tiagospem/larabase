@@ -41,10 +41,14 @@ const props = defineProps({
   tableName: {
     type: String,
     required: true
+  },
+  filter: {
+    type: String,
+    default: ''
   }
 });
 
-const emit = defineEmits(['update-tab-data']);
+const emit = defineEmits(['update-tab-data', 'open-tab']);
 
 const activeContentTab = ref('data');
 const tabsLoaded = ref({
@@ -78,11 +82,19 @@ const currentTabComponent = computed(() => {
 });
 
 const currentTabProps = computed(() => {
-  return {
+  const baseProps = {
     connectionId: props.connectionId,
     tableName: props.tableName,
-    onLoad: (data) => handleTabData(activeContentTab.value, data)
+    onLoad: (data) => handleTabData(activeContentTab.value, data),
+    onOpenTab: (tabData) => emit('open-tab', tabData)
   };
+  
+  if (activeContentTab.value === 'data' && props.filter) {
+    console.log("Passando filtro para DataTab:", props.filter);
+    baseProps.initialFilter = props.filter;
+  }
+  
+  return baseProps;
 });
 
 function switchContentTab(tabId) {

@@ -23,10 +23,25 @@
       </div>
       
       <div class="flex items-center space-x-2">
-        <div class="relative">
-          <input type="text" placeholder="Filter..." 
-            class="input input-sm input-bordered bg-base-300 w-40" 
-            v-model="filterTerm" />
+        <div class="relative flex items-center space-x-2">
+          <div class="input-group">
+            <input 
+              type="text" 
+              placeholder="Filter..." 
+              class="input input-sm input-bordered bg-base-300 w-64" 
+              v-model="filterTerm"
+              @keyup.enter="applyFilter" />
+            <button class="btn btn-sm bg-base-300 border-base-300" @click="toggleAdvancedFilter">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 6h9.75M10.5 6a1.5 1.5 0 1 1-3 0m3 0a1.5 1.5 0 1 0-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m-9.75 0h9.75" />
+              </svg>
+            </button>
+          </div>
+          <button v-if="filterTerm || activeFilter" class="btn btn-sm btn-ghost" @click="clearFilters">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
+            </svg>
+          </button>
         </div>
         <select class="select select-sm select-bordered bg-base-300 w-32" v-model="rowsPerPage">
           <option value="10">10 rows</option>
@@ -102,10 +117,17 @@
                 <td v-for="column in columns" 
                     :key="`${rowIndex}-${column}`" 
                     class="px-4 py-2 border-r border-neutral last:border-r-0 truncate whitespace-nowrap overflow-hidden"
-                    :class="{ 'expanded': expandedColumns.includes(column) }"
+                    :class="{ 
+                      'expanded': expandedColumns.includes(column),
+                      'cursor-pointer': isForeignKeyColumn(column)
+                    }"
+                    :title="isForeignKeyColumn(column) ? 'Click to navigate to related record' : ''"
                     :style="{ width: columnWidths[column] || defaultColumnWidth(column), maxWidth: expandedColumns.includes(column) ? 'none' : (columnWidths[column] || defaultColumnWidth(column)) }"
+                    @click="isForeignKeyColumn(column) ? navigateToForeignKey(column, row[column]) : null"
                     @dblclick.stop="openEditModal(row)">
-                  {{ formatCellValue(row[column]) }}
+                  <span :class="{'text-primary font-medium': isForeignKeyColumn(column)}">
+                    {{ formatCellValue(row[column]) }}
+                  </span>
                 </td>
               </tr>
             </tbody>
@@ -287,6 +309,77 @@
       </div>
       <div class="modal-backdrop" @click="closeEditModal"></div>
     </div>
+
+    <div class="modal" :class="{ 'modal-open': showFilterModal }">
+      <div class="modal-box max-w-3xl">
+        <h3 class="font-bold text-lg mb-4 flex justify-between items-center">
+          Advanced Filter
+          <button class="btn btn-sm btn-circle" @click="showFilterModal = false">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </h3>
+        
+        <div class="mb-4">
+          <div class="form-control">
+            <label class="label">
+              <span class="label-text font-medium">SQL WHERE Clause</span>
+            </label>
+            <textarea 
+              v-model="advancedFilterTerm" 
+              class="textarea textarea-bordered h-32 font-mono"
+              placeholder="id = 1"></textarea>
+            <label class="label">
+              <span class="label-text-alt text-xs">
+                Examples: 
+                <code class="bg-base-300 p-1 cursor-pointer" @click="setExampleFilter('id = 2')">id = 2</code>, 
+                <code class="bg-base-300 p-1 cursor-pointer" @click="setExampleFilter('email LIKE \'%example%\'')">email LIKE '%example%'</code>,
+                <code class="bg-base-300 p-1 cursor-pointer" @click="setExampleFilter('created_at IS NOT NULL')">created_at IS NOT NULL</code>,
+                <code class="bg-base-300 p-1 cursor-pointer" @click="setExampleFilter('id > 10 AND id < 20')">id > 10 AND id < 20</code>
+              </span>
+            </label>
+          </div>
+          
+          <div class="mt-2 text-xs">
+            <p class="mb-2">Available columns:</p>
+            <div class="flex flex-wrap gap-1 mb-4">
+              <span 
+                v-for="column in columns" 
+                :key="column" 
+                class="badge badge-primary cursor-pointer"
+                @click="insertColumnName(column)">
+                {{ column }}
+              </span>
+            </div>
+            
+            <p class="mb-2">Common operators:</p>
+            <div class="flex flex-wrap gap-1">
+              <span 
+                v-for="op in ['=', '!=', '>', '<', '>=', '<=', 'LIKE', 'IN', 'IS NULL', 'IS NOT NULL', 'BETWEEN', 'AND', 'OR']" 
+                :key="op" 
+                class="badge badge-secondary cursor-pointer"
+                @click="insertOperator(op)">
+                {{ op }}
+              </span>
+            </div>
+          </div>
+        </div>
+        
+        <div class="form-control mb-4">
+          <label class="label cursor-pointer justify-start">
+            <input type="checkbox" class="checkbox checkbox-primary" v-model="persistFilter" />
+            <span class="label-text ml-2">Persist filter (remember after reload)</span>
+          </label>
+        </div>
+        
+        <div class="modal-action">
+          <button class="btn btn-error" @click="cancelAdvancedFilter">Cancel</button>
+          <button class="btn btn-primary" @click="applyAdvancedFilter">Apply Filter</button>
+        </div>
+      </div>
+      <div class="modal-backdrop" @click="showFilterModal = false"></div>
+    </div>
   </div>
 </template>
 
@@ -308,6 +401,15 @@ const props = defineProps({
   onLoad: {
     type: Function,
     required: true
+  },
+  initialFilter: {
+    type: String,
+    default: ''
+  },
+  onOpenTab: {
+    type: Function,
+    required: false,
+    default: () => {}
   }
 });
 
@@ -352,17 +454,29 @@ const columns = computed(() => {
 });
 
 const filteredData = computed(() => {
-  if (!filterTerm.value) {
-    return tableData.value;
+  let data = tableData.value;
+  
+  // First apply the advanced SQL filter if present
+  if (activeFilter.value) {
+    try {
+      data = applySqlFilter(data, activeFilter.value);
+    } catch (error) {
+      console.error('Error applying SQL filter:', error);
+    }
   }
   
-  const term = filterTerm.value.toLowerCase();
-  return tableData.value.filter(row => {
-    return Object.values(row).some(value => {
-      if (value === null) return false;
-      return String(value).toLowerCase().includes(term);
+  // Then apply the simple text filter if present
+  if (filterTerm.value) {
+    const term = filterTerm.value.toLowerCase();
+    data = data.filter(row => {
+      return Object.values(row).some(value => {
+        if (value === null) return false;
+        return String(value).toLowerCase().includes(term);
+      });
     });
-  });
+  }
+  
+  return data;
 });
 
 const paginatedData = computed(() => {
@@ -466,11 +580,23 @@ async function loadTableData() {
       analyzeColumns();
     });
 
+    // Load foreign key information
+    await loadForeignKeyInfo();
+
     // Notify parent about the loaded data
     props.onLoad({
       columns: columns.value,
       rowCount: data.length
     });
+    
+    // Check if we have initialFilter from props and apply it
+    if (props.initialFilter) {
+      console.log("Recebido filtro inicial:", props.initialFilter);
+      advancedFilterTerm.value = props.initialFilter;
+      activeFilter.value = props.initialFilter;
+      
+      // Não precisamos atualizar a URL aqui, pois este é um filtro programático
+    }
   } catch (error) {
     loadError.value = error.message;
     showAlert(`Error loading data: ${error.message}`, 'error');
@@ -929,6 +1055,39 @@ function handleMouseUp(event) {
 onMounted(() => {
   loadTableData();
   
+  // Check URL for filters
+  const urlParams = new URLSearchParams(window.location.search);
+  const filter = urlParams.get('filter');
+  
+  if (filter) {
+    try {
+      // Decode and apply the filter
+      const decodedFilter = decodeURIComponent(filter);
+      advancedFilterTerm.value = decodedFilter;
+      activeFilter.value = decodedFilter;
+    } catch (e) {
+      console.error('Failed to parse filter from URL:', e);
+    }
+  } else if (props.initialFilter) {
+    // Use filter from props if available
+    advancedFilterTerm.value = props.initialFilter;
+    activeFilter.value = props.initialFilter;
+  } else {
+    // Check for saved filter
+    const savedFilter = localStorage.getItem(`filter:${props.connectionId}:${props.tableName}`);
+    if (savedFilter) {
+      try {
+        const parsedFilter = JSON.parse(savedFilter);
+        if (parsedFilter.active && parsedFilter.value) {
+          advancedFilterTerm.value = parsedFilter.value;
+          activeFilter.value = parsedFilter.value;
+        }
+      } catch (e) {
+        console.error('Failed to parse saved filter:', e);
+      }
+    }
+  }
+  
   window.addEventListener('keydown', handleKeyDown);
   window.addEventListener('keyup', handleKeyUp);
 });
@@ -939,6 +1098,352 @@ onUnmounted(() => {
   window.removeEventListener('mouseup', handleMouseUp);
   document.removeEventListener('mousemove', handleColumnResize);
   document.removeEventListener('mouseup', stopColumnResize);
+});
+
+const showFilterModal = ref(false);
+const advancedFilterTerm = ref('');
+const persistFilter = ref(true);
+const activeFilter = ref('');
+const originalFilterTerm = ref('');
+
+function toggleAdvancedFilter() {
+  originalFilterTerm.value = advancedFilterTerm.value;
+  showFilterModal.value = true;
+}
+
+function applyFilter() {
+  // Apply the basic filter
+  // The computed property will handle this automatically
+}
+
+function applyAdvancedFilter() {
+  activeFilter.value = advancedFilterTerm.value;
+  
+  // If persistence is enabled, save the filter
+  if (persistFilter.value && activeFilter.value) {
+    localStorage.setItem(`filter:${props.connectionId}:${props.tableName}`, JSON.stringify({
+      active: true,
+      value: activeFilter.value
+    }));
+  }
+  
+  showFilterModal.value = false;
+}
+
+function cancelAdvancedFilter() {
+  advancedFilterTerm.value = originalFilterTerm.value;
+  showFilterModal.value = false;
+}
+
+function clearFilters() {
+  filterTerm.value = '';
+  advancedFilterTerm.value = '';
+  activeFilter.value = '';
+  
+  // Clear saved filter
+  localStorage.removeItem(`filter:${props.connectionId}:${props.tableName}`);
+  
+  // Remove filter from URL
+  const url = new URL(window.location.href);
+  url.searchParams.delete('filter');
+  window.history.replaceState({}, '', url.toString());
+}
+
+function insertColumnName(column) {
+  advancedFilterTerm.value += column + ' ';
+}
+
+function insertOperator(op) {
+  advancedFilterTerm.value += ' ' + op + ' ';
+}
+
+function applySqlFilter(data, filter) {
+  if (!filter || !data || data.length === 0) return data;
+  
+  // Limpar o filtro
+  const cleanFilter = filter.trim();
+  if (!cleanFilter) return data;
+  
+  console.log(`Aplicando filtro: "${cleanFilter}" em ${data.length} linhas`);
+  
+  if (data.length > 0) {
+    console.log("Exemplo de linha antes do filtro:", JSON.stringify(data[0]));
+  }
+  
+  try {
+    // Convert the filter to a JavaScript function
+    const filterCode = convertFilterToJs(cleanFilter);
+    console.log('Filtro convertido para JS:', filterCode);
+    
+    // Criar uma cópia profunda dos dados para não modificar os originais
+    const dataCopy = JSON.parse(JSON.stringify(data));
+    
+    // Create a function from the generated code with tratamento de erros
+    let filterFn;
+    try {
+      filterFn = new Function('row', `
+        try {
+          return ${filterCode};
+        } catch (e) {
+          console.error('Erro de execução do filtro:', e);
+          return true;
+        }
+      `);
+    } catch (e) {
+      console.error("Erro ao criar função de filtro:", e);
+      // Retornar dados originais em caso de erro
+      return data;
+    }
+    
+    // Apply the filter function to each row
+    const filteredResults = dataCopy.filter(row => {
+      try {
+        const result = filterFn(row);
+        return result;
+      } catch (e) {
+        console.error('Erro aplicando filtro à linha:', e, row);
+        return true;
+      }
+    });
+    
+    console.log(`Filtro resultou em ${filteredResults.length} de ${data.length} linhas`);
+    
+    if (filteredResults.length > 0) {
+      console.log("Exemplo de linha após o filtro:", JSON.stringify(filteredResults[0]));
+    }
+    
+    return filteredResults;
+  } catch (error) {
+    console.error('Erro analisando filtro SQL:', error, filter);
+    return data;
+  }
+}
+
+function convertFilterToJs(filter) {
+  if (!filter) return 'true';
+  
+  try {
+    // Primeiro, verificar se temos um filtro comum de LIKE
+    const likeMatcher = /^\s*(\w+)\s+LIKE\s+['"](.*)['"]$/i;
+    const likeMatch = filter.match(likeMatcher);
+    
+    if (likeMatch) {
+      const [_, column, pattern] = likeMatch;
+      // Remover caracteres % para usar com includes
+      const cleanPattern = pattern.replace(/%/g, '');
+      return `row['${column}'] != null && String(row['${column}'] || '').toLowerCase().includes('${cleanPattern.toLowerCase()}')`;
+    }
+    
+    // Primeiro, verificar se temos um filtro simples de igualdade
+    const simpleEqualityRegex = /^\s*(\w+)\s*=\s*(\d+|\w+|'[^']*'|"[^"]*")\s*$/i;
+    const simpleMatch = filter.match(simpleEqualityRegex);
+    
+    if (simpleMatch) {
+      const [_, column, value] = simpleMatch;
+      // Verificar se o valor é uma string ou número
+      if (value.startsWith("'") || value.startsWith('"')) {
+        // É uma string literal
+        const strValue = value.substring(1, value.length - 1);
+        return `row['${column}'] === '${strValue}'`;
+      } else if (!isNaN(Number(value))) {
+        // É um número
+        return `row['${column}'] === ${Number(value)}`;
+      } else {
+        // É um identificador
+        return `row['${column}'] === row['${value}']`;
+      }
+    }
+    
+    // Para filtros mais complexos, continue com a abordagem atual
+    // Primeiro, vamos tratar alguns casos especiais comuns
+    if (filter.toLowerCase().match(/^where\s+/)) {
+      // Remove a palavra WHERE do início, se existir
+      filter = filter.replace(/^where\s+/i, '');
+    }
+    
+    console.log("Processando filtro complexo:", filter);
+    
+    // Proteger as strings antes do processamento para não interferir
+    // Precisamos de um regex que capture corretamente strings com %
+    const stringLiterals = [];
+    let stringReplacedFilter = filter.replace(/'([^']*)'/g, (match, content) => {
+      const placeholder = `__STRING_${stringLiterals.length}__`;
+      stringLiterals.push(match);
+      return placeholder;
+    });
+    
+    // Tratar o LIKE diretamente com um regex mais robusto
+    stringReplacedFilter = stringReplacedFilter.replace(/(\w+)\s+LIKE\s+(__STRING_\d+__)/gi, (match, column, placeholder) => {
+      const placeholderIndex = parseInt(placeholder.match(/__STRING_(\d+)__/)[1]);
+      // Obter a string original mas sem as aspas
+      const originalStr = stringLiterals[placeholderIndex].substring(1, stringLiterals[placeholderIndex].length - 1);
+      // Remover % para inclusão
+      const cleanPattern = originalStr.replace(/%/g, '');
+      
+      return `(row['${column}'] != null && String(row['${column}'] || '').toLowerCase().includes('${cleanPattern.toLowerCase()}'))`;
+    });
+    
+    // Tratar operadores de comparação
+    stringReplacedFilter = stringReplacedFilter
+      .replace(/([<>!=]+)/g, ' $1 ')
+      .replace(/\s+/g, ' ');
+    
+    // Tratar o operador IN
+    const inRegex = /(\w+|\[\w+\])\s+IN\s*\(\s*([^)]+)\s*\)/gi;
+    stringReplacedFilter = stringReplacedFilter.replace(inRegex, function(match, col, values) {
+      return `[${values}].includes(row['${col}'])`;
+    });
+    
+    // Substituir operadores SQL para JS
+    stringReplacedFilter = stringReplacedFilter
+      .replace(/\bAND\b/gi, ' && ')
+      .replace(/\bOR\b/gi, ' || ')
+      .replace(/\bNOT\b/gi, '!')
+      .replace(/\bIS NULL\b/gi, '=== null')
+      .replace(/\bIS NOT NULL\b/gi, '!== null')
+      .replace(/\s+=\s+/g, ' === ') // Importante: substituir = por ===
+      .replace(/\s+!=\s+/g, ' !== ');
+    
+    // Substituir nomes de colunas por acesso ao objeto row
+    // Cuidado para não substituir os placeholders de string
+    stringReplacedFilter = stringReplacedFilter.replace(/\b([a-zA-Z_]\w*)\b(?!\s*\()/g, (match, column) => {
+      // Não substituir palavras-chave SQL e JS
+      const keywords = [
+        'AND', 'OR', 'NOT', 'NULL', 'IN', 'LIKE', 'BETWEEN', 'IS', 'AS', 
+        'TRUE', 'FALSE', 'true', 'false', 'null', 'undefined',
+        'return', 'if', 'else', 'for', 'while', 'function'
+      ];
+      
+      // Não substituir os placeholders de string
+      if (match.startsWith('__STRING_')) {
+        return match;
+      }
+      
+      if (keywords.includes(match) || keywords.includes(match.toUpperCase())) {
+        return match.toUpperCase();
+      }
+      
+      // Não substituir números
+      if (!isNaN(Number(match))) {
+        return match;
+      }
+      
+      return `row['${column}']`;
+    });
+    
+    // Restaurar strings literais
+    stringLiterals.forEach((str, index) => {
+      const placeholder = `__STRING_${index}__`;
+      // Remover as aspas simples para uso no JavaScript
+      const cleanStr = str.substring(1, str.length - 1)
+                         .replace(/'/g, "\\'"); // Escape aspas simples para JS
+      
+      stringReplacedFilter = stringReplacedFilter.replace(placeholder, `'${cleanStr}'`);
+    });
+    
+    // Limpar espaços extras
+    stringReplacedFilter = stringReplacedFilter.trim();
+    
+    console.log("Filtro convertido final:", stringReplacedFilter);
+    
+    return stringReplacedFilter;
+  } catch (e) {
+    console.error('Erro ao converter filtro SQL para JS:', e, 'Filtro original:', filter);
+    return 'true'; // Fallback para não filtrar nada
+  }
+}
+
+// Adicionar função para navegar para um registro em outra tabela
+async function navigateToForeignKey(column, value) {
+  if (value === null || value === undefined) {
+    showAlert("Value is null or undefined. Cannot navigate to related record.", "error");
+    return;
+  }
+  
+  try {
+    // First, determine if this is a foreign key column
+    const structure = await databaseStore.getTableStructure(props.connectionId, props.tableName);
+    const columnInfo = structure.find(col => col.name === column);
+    
+    // Se não for chave estrangeira, retornar
+    if (!columnInfo || !columnInfo.foreign_key) {
+      showAlert(`Column "${column}" is not a foreign key.`, "info");
+      return;
+    }
+    
+    // Get the related table
+    const foreignKeys = await databaseStore.getTableForeignKeys(props.connectionId, props.tableName);
+    const foreignKey = foreignKeys.find(fk => fk.column === column);
+    
+    if (!foreignKey) {
+      showAlert(`Foreign key information not found for column "${column}".`, "error");
+      return;
+    }
+    
+    // Prepare the tab name and filter
+    const targetTable = foreignKey.referenced_table;
+    
+    // Formatar valor corretamente dependendo do tipo
+    let filterValue = value;
+    if (typeof value === 'string') {
+      // Escape single quotes in strings and wrap in quotes
+      filterValue = `'${value.replace(/'/g, "''")}'`;
+    }
+    
+    const filter = `${foreignKey.referenced_column} = ${filterValue}`;
+    const tabTitle = `${targetTable} (${filter})`;
+    
+    // Open a new tab with the data filtered
+    const newTab = {
+      id: `data-${props.connectionId}-${targetTable}-${Date.now()}`,
+      title: tabTitle,
+      type: 'data',
+      data: {
+        connectionId: props.connectionId,
+        tableName: targetTable,
+        filter: filter
+      },
+      icon: 'table'
+    };
+    
+    console.log("Opening new tab with filter:", filter);
+    
+    // Use the onOpenTab prop to open a new tab
+    props.onOpenTab(newTab);
+  } catch (error) {
+    console.error('Error navigating to foreign key:', error);
+    showAlert('Failed to navigate to foreign key: ' + error.message, 'error');
+  }
+}
+
+// Adicionar a função para verificar se uma coluna é chave estrangeira
+const foreignKeyColumns = ref([]);
+
+async function loadForeignKeyInfo() {
+  try {
+    const structure = await databaseStore.getTableStructure(props.connectionId, props.tableName);
+    if (structure && Array.isArray(structure)) {
+      foreignKeyColumns.value = structure
+        .filter(col => col.foreign_key)
+        .map(col => col.name);
+    }
+  } catch (error) {
+    console.error('Error loading foreign key info:', error);
+  }
+}
+
+function isForeignKeyColumn(column) {
+  return foreignKeyColumns.value.includes(column);
+}
+
+// Adicionar a função para definir exemplos de filtro
+function setExampleFilter(example) {
+  advancedFilterTerm.value = example;
+}
+
+// Modificar a função watch para paginatedData para depurar quando os dados são filtrados
+watch(() => paginatedData.value.length, (newLength, oldLength) => {
+  console.log(`Dados paginados mudaram: ${oldLength} -> ${newLength} linhas`);
 });
 </script>
 
