@@ -918,7 +918,97 @@ export const useDatabaseStore = defineStore('database', () => {
   
   // New function to clear all record counts when switching databases
   function clearTableRecordCounts() {
+    // Clear the counts but keep the table list
     tableRecords.value = {};
+  }
+
+  // Function to update a record in the database
+  async function updateRecord(connectionId, tableName, record) {
+    const connection = usedConnectionsStore().getConnection(connectionId);
+    
+    if (!connection) {
+      throw new Error("Connection not found");
+    }
+
+    try {
+      // Preparar registro para envio, eliminando problemas de serialização
+      const preparedRecord = {};
+      
+      // Para cada campo no registro
+      for (const key in record) {
+        let value = record[key];
+        
+        // Tratar valores especiais
+        if (value instanceof Date) {
+          // Converter datas para string ISO
+          value = value.toISOString().slice(0, 19);
+        } else if (value !== null && typeof value === 'object') {
+          // Converter objetos complexos para JSON
+          try {
+            value = JSON.stringify(value);
+          } catch (e) {
+            console.warn(`Could not stringify field ${key}:`, e);
+            // Utilizar toString() como fallback
+            value = String(value);
+          }
+        }
+        
+        preparedRecord[key] = value;
+      }
+      
+      // Definir chave de cache
+      const cacheKey = `${connectionId}:${tableName}`;
+      
+      // Para MySQL, executar a consulta de atualização real
+      if (connection.type === 'mysql') {
+        // For MySQL, execute an actual update query
+        const result = await window.api.updateRecord({
+          connection: {
+            host: connection.host,
+            port: connection.port,
+            username: connection.username,
+            password: connection.password,
+            database: connection.database
+          },
+          tableName: tableName,
+          record: preparedRecord
+        });
+        
+        if (!result.success) {
+          throw new Error(result.message || "Failed to update record");
+        }
+      }
+      
+      // Atualizar o cache local
+      if (!tableRecords.value[cacheKey]) {
+        // Se o cache não existir, não há nada para atualizar
+        console.log(`Cache not found for ${cacheKey}, skipping local update`);
+      } else if (!Array.isArray(tableRecords.value[cacheKey])) {
+        console.warn(`Cache for ${cacheKey} is not an array, cannot update`, tableRecords.value[cacheKey]);
+      } else {
+        // Cache existe e é um array, podemos atualizar
+        const index = tableRecords.value[cacheKey].findIndex(row => {
+          if (row.id && record.id) {
+            return row.id === record.id;
+          }
+          return false;
+        });
+        
+        if (index !== -1) {
+          // Atualizar o registro no array do cache
+          const updatedRecord = { ...tableRecords.value[cacheKey][index], ...record };
+          tableRecords.value[cacheKey].splice(index, 1, updatedRecord);
+          console.log(`Updated record at index ${index} in cache ${cacheKey}`);
+        } else {
+          console.log(`Record with id ${record.id} not found in cache ${cacheKey}`);
+        }
+      }
+      
+      return true;
+    } catch (error) {
+      console.error("Error updating record:", error);
+      throw error;
+    }
   }
 
   const tablesList = computed(() => {
@@ -941,6 +1031,7 @@ export const useDatabaseStore = defineStore('database', () => {
     loadModelsForTables,
     getTableModelJson,
     getAllTablesModelsJson,
-    clearTableRecordCounts
+    clearTableRecordCounts,
+    updateRecord
   };
 }); 

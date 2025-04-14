@@ -885,8 +885,6 @@ ipcMain.handle('getTableStructure', async (event, config) => {
 });
 
 ipcMain.handle('getTableForeignKeys', async (event, config) => {
-  let connection;
-
   try {
     if (!config.host || !config.port || !config.username || !config.database || !config.tableName) {
       return { 
@@ -3130,5 +3128,103 @@ ipcMain.handle('list-databases', async (event, config) => {
         console.error('Error closing MySQL connection:', err);
       }
     }
+  }
+});
+
+ipcMain.handle('updateRecord', async (event, config) => {
+  try {
+    const { connection, tableName, record } = config;
+    
+    if (!connection) {
+      throw new Error('Connection details are required');
+    }
+    
+    if (!tableName) {
+      throw new Error('Table name is required');
+    }
+    
+    if (!record || Object.keys(record).length === 0) {
+      throw new Error('Record data is required');
+    }
+    
+    // Construct the MySQL connection
+    const mysqlConfig = {
+      host: connection.host,
+      port: connection.port || 3306,
+      user: connection.username,
+      password: connection.password,
+      database: connection.database
+    };
+    
+    let conn;
+    
+    try {
+      // Usar mysql2/promise para consistência
+      conn = await mysql.createConnection(mysqlConfig);
+
+      // Check if record has an ID (for UPDATE) or not (for INSERT)
+      // In this case, we're focusing on UPDATE
+      if (!record.id) {
+        throw new Error('Record must have an ID field to update');
+      }
+      
+      // Processar valores especiais - como datas
+      const processedRecord = {};
+      for (const key in record) {
+        let value = record[key];
+        
+        // Se for uma string de data no formato ISO, converta para o formato MySQL
+        if (typeof value === 'string' && 
+            (value.match(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/) || 
+             value.match(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/))) {
+          try {
+            // Converter para formato MySQL YYYY-MM-DD HH:MM:SS
+            const date = new Date(value);
+            if (!isNaN(date.getTime())) {
+              value = date.toISOString().slice(0, 19).replace('T', ' ');
+            }
+          } catch (e) {
+            console.warn(`Failed to convert date for field ${key}:`, e);
+          }
+        }
+        
+        processedRecord[key] = value;
+      }
+      
+      // Build the SQL UPDATE statement with escaped column names
+      const columnUpdates = Object.keys(processedRecord)
+        .filter(key => key !== 'id') // Exclude ID from updates
+        .map(key => `\`${key}\` = ?`) // Escape column names with backticks
+        .join(', ');
+      
+      const updateValues = Object.keys(processedRecord)
+        .filter(key => key !== 'id')
+        .map(key => processedRecord[key]);
+      
+      // Add the WHERE id value at the end
+      updateValues.push(processedRecord.id);
+      
+      // Escape the table name too
+      const updateSql = `UPDATE \`${tableName}\` SET ${columnUpdates} WHERE \`id\` = ?`;
+      
+      // Execute the UPDATE query usando Promise
+      const [result] = await conn.execute(updateSql, updateValues);
+      
+      return {
+        success: true,
+        message: `Record updated successfully`,
+        affectedRows: result.affectedRows
+      };
+    } finally {
+      if (conn) {
+        await conn.end();
+      }
+    }
+  } catch (error) {
+    console.error('Error updating record:', error);
+    return {
+      success: false,
+      message: error.message
+    };
   }
 });

@@ -253,7 +253,8 @@
               v-else-if="isDateField(column)" 
               type="datetime-local" 
               v-model="editingRecord[column]" 
-              class="input input-bordered w-full" />
+              class="input input-bordered w-full"
+              :max="'9999-12-31T23:59'" />
               
             <input 
               v-else-if="isNumberField(column)" 
@@ -378,6 +379,30 @@ function formatCellValue(value) {
   
   if (typeof value === 'object' && value instanceof Date) {
     return value.toLocaleString();
+  }
+  
+  // Se for uma string no formato de data ISO
+  if (typeof value === 'string' && value.match(/^\d{4}-\d{2}-\d{2}T/)) {
+    try {
+      const date = new Date(value);
+      if (!isNaN(date.getTime())) {
+        return date.toLocaleString();
+      }
+    } catch (e) {
+      // Se falhar, retorna o valor original
+    }
+  }
+  
+  // Se for uma string no formato de data MySQL (YYYY-MM-DD HH:MM:SS)
+  if (typeof value === 'string' && value.match(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}/)) {
+    try {
+      const date = new Date(value.replace(' ', 'T') + 'Z');
+      if (!isNaN(date.getTime())) {
+        return date.toLocaleString();
+      }
+    } catch (e) {
+      // Se falhar, retorna o valor original
+    }
   }
   
   return String(value);
@@ -669,7 +694,35 @@ const originalRecord = ref(null);
 function openEditModal(row) {
   // Create a deep copy of the row to edit
   originalRecord.value = { ...row };
-  editingRecord.value = JSON.parse(JSON.stringify(row));
+  
+  // Processar datas para o formato compatível com inputs datetime-local
+  const processedRecord = JSON.parse(JSON.stringify(row));
+  
+  // Converter campos de data para o formato correto
+  for (const key in processedRecord) {
+    if (isDateField(key) && processedRecord[key]) {
+      // Se for uma string no formato de data
+      if (typeof processedRecord[key] === 'string') {
+        try {
+          // Para formato MySQL (YYYY-MM-DD HH:MM:SS)
+          if (processedRecord[key].includes(' ')) {
+            processedRecord[key] = processedRecord[key].replace(' ', 'T');
+          }
+          
+          // Garantir que a data seja válida e formatada corretamente
+          const date = new Date(processedRecord[key]);
+          if (!isNaN(date.getTime())) {
+            // Formato para input datetime-local (YYYY-MM-DDTHH:MM)
+            processedRecord[key] = date.toISOString().slice(0, 16);
+          }
+        } catch (e) {
+          console.warn(`Failed to process date for ${key}:`, e);
+        }
+      }
+    }
+  }
+  
+  editingRecord.value = processedRecord;
   showEditModal.value = true;
 }
 
@@ -680,9 +733,43 @@ function closeEditModal() {
 }
 
 async function saveRecord() {
-  if (!editingRecord.value) return;
+  if (!editingRecord.value) {
+    showAlert('No record to save', 'error');
+    return;
+  }
   
   try {
+    // Criar uma cópia do registro para evitar problemas de serialização
+    const recordToSave = {};
+    
+    // Processar cada campo, formatando datas corretamente
+    for (const key in editingRecord.value) {
+      let value = editingRecord.value[key];
+      
+      // Se for um campo de data e não for null
+      if (value && isDateField(key)) {
+        // Se for um string de data ISO
+        if (typeof value === 'string' && value.includes('T')) {
+          // Converter para formato yyyy-MM-ddThh:mm:ss
+          const date = new Date(value);
+          if (!isNaN(date.getTime())) {
+            // Formato correto para input datetime-local
+            value = date.toISOString().slice(0, 19).replace('Z', '');
+          }
+        }
+      }
+      
+      // Armazenar o valor processado
+      recordToSave[key] = value;
+    }
+    
+    console.log('Saving record:', recordToSave);
+    
+    if (!recordToSave.id) {
+      showAlert('Record must have an ID field to update', 'error');
+      return;
+    }
+    
     // Para melhor comparação, compara baseado na chave primária (id)
     // ou como fallback, na estrutura completa do registro
     const index = tableData.value.findIndex(row => {
@@ -692,19 +779,28 @@ async function saveRecord() {
       return JSON.stringify(row) === JSON.stringify(originalRecord.value);
     });
     
-    if (index !== -1) {
-      // Atualiza o registro nos dados locais
-      tableData.value[index] = { ...editingRecord.value };
-      showAlert('Record updated successfully', 'success');
-      
-      // Em uma implementação real, você chamaria uma API para atualizar o banco de dados
-      // await databaseStore.updateRecord(props.connectionId, props.tableName, editingRecord.value);
-    } else {
+    if (index === -1) {
       showAlert('Could not find record to update', 'error');
+      return;
     }
     
-    closeEditModal();
+    // Atualiza o registro no banco de dados
+    const result = await databaseStore.updateRecord(
+      props.connectionId, 
+      props.tableName, 
+      recordToSave
+    );
+    
+    if (result) {
+      // Atualiza o registro nos dados locais
+      tableData.value[index] = { ...recordToSave };
+      showAlert('Record updated successfully', 'success');
+      closeEditModal();
+    } else {
+      showAlert('Failed to update record. Unknown error.', 'error');
+    }
   } catch (error) {
+    console.error('Error saving record:', error);
     showAlert(`Error updating record: ${error.message}`, 'error');
   }
 }
@@ -725,7 +821,7 @@ function isLongTextField(column) {
 }
 
 function isDateField(column) {
-  return /(date|time|at$)/i.test(column);
+  return /(date|time|at$|created_at|updated_at|deleted_at)/i.test(column);
 }
 
 function isNumberField(column) {
