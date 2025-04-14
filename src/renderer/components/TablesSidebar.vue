@@ -50,11 +50,11 @@
 
     <div class="overflow-y-auto flex-1">
       <!-- Skeleton loading state -->
-      <div v-if="isLoading || isLoadingCounts" class="p-2">
-        <div v-for="i in 10" :key="i" class="flex items-center gap-2 p-1 mb-1 rounded bg-base-100 animate-pulse">
-          <div class="w-4 h-4 mr-3 bg-gray-600 rounded"></div>
-          <div class="h-3 bg-gray-600 rounded w-4/5"></div>
-          <div class="ml-auto w-8 h-4 bg-gray-600 rounded"></div>
+      <div v-if="isLoading || isLoadingCounts || !allTablesLoaded" class="p-2">
+        <div v-for="i in 10" :key="i" class="skeleton-item flex items-center gap-2 p-2 mb-1 rounded bg-base-100 animate-pulse">
+          <div class="skeleton-icon w-4 h-4 mr-3 bg-gray-600 rounded"></div>
+          <div class="skeleton-name h-4 bg-gray-600 rounded w-4/5"></div>
+          <div class="skeleton-badge ml-auto w-8 h-4 bg-gray-600 rounded"></div>
         </div>
       </div>
       
@@ -83,7 +83,7 @@
 </template>
 
 <script setup>
-import {computed, onMounted, ref, watch} from 'vue';
+import {computed, onMounted, ref, watch, onUnmounted} from 'vue';
 import {useDatabaseStore} from '@/store/database';
 
 const props = defineProps({
@@ -108,6 +108,8 @@ const searchTerm = ref('');
 const sortBy = ref(localStorage.getItem('tableSort') || 'name');
 const sortOrder = ref(localStorage.getItem('tableSortOrder') || 'asc');
 const isLoadingCounts = ref(false);
+const allTablesLoaded = ref(false);
+const loadingTimer = ref(null);
 
 const isLoading = computed(() => databaseStore.isLoading);
 const tables = computed(() => databaseStore.tablesList);
@@ -163,7 +165,16 @@ function toggleSortOrder() {
 }
 
 function loadTableRecordCounts() {
+  if (isLoadingCounts.value) return;
+  
   isLoadingCounts.value = true;
+  allTablesLoaded.value = false;
+  
+  // Clear any existing timers
+  if (loadingTimer.value) {
+    clearTimeout(loadingTimer.value);
+  }
+  
   try {
     const promises = tables.value.map(async (table) => {
       try {
@@ -174,11 +185,17 @@ function loadTableRecordCounts() {
       }
     });
     
-    return Promise.all(promises);
+    Promise.all(promises).then(() => {
+      // Add a small delay to ensure smooth transition
+      loadingTimer.value = setTimeout(() => {
+        allTablesLoaded.value = true;
+        isLoadingCounts.value = false;
+      }, 300);
+    });
   } catch (error) {
     console.error("Error loading record counts:", error);
-  } finally {
     isLoadingCounts.value = false;
+    allTablesLoaded.value = true;
   }
 }
 
@@ -201,19 +218,41 @@ function getTableModel(tableName) {
 // Watch for changes in connectionId to reload counts
 watch(() => props.connectionId, () => {
   if (props.connectionId) {
-    loadTableRecordCounts();
+    // Reset flags
+    allTablesLoaded.value = false;
+    
+    // Add a small delay before loading counts
+    loadingTimer.value = setTimeout(() => {
+      loadTableRecordCounts();
+    }, 500);
   }
 }, { immediate: true });
 
 // Watch for table list changes to load counts for new tables
-watch(() => tables.value.length, () => {
-  if (tables.value.length > 0) {
-    loadTableRecordCounts();
+watch(() => tables.value.length, (newLength) => {
+  if (newLength > 0) {
+    // Reset flags when tables change
+    allTablesLoaded.value = false;
+    
+    // Add a small delay before loading counts
+    loadingTimer.value = setTimeout(() => {
+      loadTableRecordCounts();
+    }, 300);
   }
 });
 
 onMounted(() => {
-  loadTableRecordCounts();
+  // Initial load with a slight delay to ensure DB connection is ready
+  loadingTimer.value = setTimeout(() => {
+    loadTableRecordCounts();
+  }, 500);
+});
+
+// Clean up timers when component unmounts
+onUnmounted(() => {
+  if (loadingTimer.value) {
+    clearTimeout(loadingTimer.value);
+  }
 });
 </script>
 
@@ -229,17 +268,10 @@ onMounted(() => {
   background-color: #4e4e50;
 }
 
-/* Override tooltip styles to ensure they're visible */
-.tooltip:before {
-  max-width: 200px;
-  white-space: normal;
-  z-index: 100;
-}
-
-/* Animation for skeleton loading */
+/* Skeleton animation and styles */
 @keyframes pulse {
   0%, 100% {
-    opacity: 0.5;
+    opacity: 0.6;
   }
   50% {
     opacity: 0.3;
@@ -248,6 +280,30 @@ onMounted(() => {
 
 .animate-pulse {
   animation: pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+.skeleton-item {
+  height: 40px;
+  transition: all 0.3s ease;
+}
+
+.skeleton-icon {
+  opacity: 0.7;
+}
+
+.skeleton-name {
+  opacity: 0.7;
+}
+
+.skeleton-badge {
+  opacity: 0.7;
+}
+
+/* Override tooltip styles to ensure they're visible */
+.tooltip:before {
+  max-width: 200px;
+  white-space: normal;
+  z-index: 100;
 }
 
 /* Fix for table names truncation */

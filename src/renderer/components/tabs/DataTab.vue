@@ -66,8 +66,8 @@
               <tr class="text-xs select-none">
                 <th v-for="(column, index) in columns" 
                     :key="column" 
-                    class="px-4 py-2 border-r border-neutral last:border-r-0 relative"
-                    :style="{ width: columnWidths[column] || defaultColumnWidth(column) }">
+                    class="px-4 py-2 border-r border-neutral last:border-r-0 relative whitespace-nowrap"
+                    :style="{ width: columnWidths[column] || defaultColumnWidth(column), maxWidth: columnWidths[column] || defaultColumnWidth(column) }">
                   <div class="flex items-center justify-between">
                     <span class="truncate">{{ column }}</span>
                   </div>
@@ -91,8 +91,9 @@
                   class="border-b border-neutral hover:bg-base-200 cursor-pointer">
                 <td v-for="column in columns" 
                     :key="`${rowIndex}-${column}`" 
-                    class="px-4 py-2 border-r border-neutral last:border-r-0 truncate"
+                    class="px-4 py-2 border-r border-neutral last:border-r-0 truncate whitespace-nowrap overflow-hidden"
                     :class="{ 'expanded': expandedCells.includes(`${rowIndex}-${column}`) }"
+                    :style="{ width: columnWidths[column] || defaultColumnWidth(column), maxWidth: columnWidths[column] || defaultColumnWidth(column) }"
                     @dblclick="toggleExpandCell(rowIndex, column)">
                   {{ formatCellValue(row[column]) }}
                 </td>
@@ -312,7 +313,7 @@ function defaultColumnWidth(column) {
   if (/^(created_at|updated_at|deleted_at)$/i.test(column)) return '150px';
   if (/(email|mail)$/i.test(column)) return '180px';
   if (/(name|title)$/i.test(column)) return '200px';
-  if (/(description|content|text)$/i.test(column)) return '300px';
+  if (/(description|content|text)$/i.test(column)) return '200px';
   if (/(status|type|role|category|tag)$/i.test(column)) return '120px';
   if (/(date|time)$/i.test(column)) return '150px';
   if (/(amount|price|cost|total|sum)$/i.test(column)) return '120px';
@@ -632,13 +633,13 @@ onUnmounted(() => {
 
 .expanded {
   white-space: normal !important;
-  max-width: none !important;
-  min-width: 300px !important;
   overflow: visible !important;
   position: relative;
-  z-index: 5;
-  background-color: theme('colors.base-100');
+  z-index: 10;
+  background-color: theme('colors.base-200');
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  min-width: 200px !important;
+  max-width: 400px !important;
 }
 
 .table-fixed {
@@ -667,6 +668,7 @@ onUnmounted(() => {
 .overflow-x-auto {
   overflow-x: auto;
   width: 100%;
+  max-width: 100%;
 }
 
 .pb-3 {
