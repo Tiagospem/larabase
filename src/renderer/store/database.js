@@ -1043,6 +1043,143 @@ export const useDatabaseStore = defineStore('database', () => {
     }
   }
 
+  // Adicionar função para carregar dados filtrados do banco de dados
+  async function loadFilteredTableData(connectionId, tableName, filterClause, limit = 100, page = 1) {
+    try {
+      const connection = usedConnectionsStore().getConnection(connectionId);
+      
+      if (!connection) {
+        console.error("Connection not found");
+        return { data: [], totalRecords: 0 };
+      }
+
+      if (connection.type !== 'mysql') {
+        // Para banco de dados não-MySQL, tentamos filtrar localmente
+        // Carregamos tudo primeiro (para demonstração)
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
+        if (tableContents[tableName]) {
+          const allData = tableContents[tableName];
+          
+          // Aplicar o filtro localmente usando a função existente
+          try {
+            const filterFn = new Function('row', `
+              try {
+                return ${convertFilterToJs(filterClause)};
+              } catch (e) {
+                console.error('Filter execution error:', e);
+                return false;
+              }
+            `);
+            
+            const filteredData = allData.filter(filterFn);
+            const totalRecords = filteredData.length;
+            
+            // Aplicar paginação aos dados filtrados
+            const offset = (page - 1) * limit;
+            const paginatedData = limit > 0 
+              ? filteredData.slice(offset, offset + limit) 
+              : filteredData;
+            
+            return { 
+              data: paginatedData, 
+              totalRecords, 
+              page, 
+              limit 
+            };
+          } catch (error) {
+            console.error("Error applying filter locally:", error);
+            return { data: [], totalRecords: 0, page, limit };
+          }
+        } else {
+          return { 
+            data: [], 
+            totalRecords: 0, 
+            page, 
+            limit 
+          };
+        }
+      }
+
+      // Para MySQL, enviamos a consulta com o filtro WHERE
+      const result = await window.api.getFilteredTableData({
+        host: connection.host,
+        port: connection.port,
+        username: connection.username,
+        password: connection.password,
+        database: connection.database,
+        tableName: tableName,
+        filter: filterClause,
+        limit: limit,
+        page: page
+      });
+      
+      if (result.success) {
+        // Armazenar em cache os resultados
+        const cacheKey = `${connectionId}:${tableName}:filtered`;
+        if (!tableRecords.value[cacheKey]) {
+          tableRecords.value[cacheKey] = {};
+        }
+        tableRecords.value[cacheKey].data = result.data;
+        tableRecords.value[cacheKey].totalRecords = result.totalRecords;
+        tableRecords.value[cacheKey].page = page;
+        tableRecords.value[cacheKey].limit = limit;
+        tableRecords.value[cacheKey].filter = filterClause;
+        
+        return {
+          data: result.data || [],
+          totalRecords: result.totalRecords || 0,
+          page,
+          limit
+        };
+      } else {
+        console.error("Failed to load filtered table data:", result.message);
+        return { 
+          data: [], 
+          totalRecords: 0, 
+          page, 
+          limit
+        };
+      }
+    } catch (error) {
+      console.error(`Error loading filtered data for ${tableName}:`, error);
+      return { 
+        data: [], 
+        totalRecords: 0, 
+        page, 
+        limit
+      };
+    }
+  }
+
+  // Função auxiliar para converter filtro SQL para JavaScript (simplificada)
+  function convertFilterToJs(filter) {
+    if (!filter) return 'true';
+    
+    // Remover 'WHERE' se existir
+    const cleanFilter = filter.replace(/^where\s+/i, '').trim();
+    if (!cleanFilter) return 'true';
+    
+    // Caso especial para ID
+    const idMatch = cleanFilter.match(/^\s*id\s*=\s*(\d+)\s*$/i);
+    if (idMatch) {
+      const idValue = parseInt(idMatch[1], 10);
+      if (!isNaN(idValue)) {
+        return `row.id == ${idValue} || String(row.id) == '${idValue}'`;
+      }
+    }
+    
+    // Substituições básicas
+    return cleanFilter
+      .replace(/\bAND\b/gi, '&&')
+      .replace(/\bOR\b/gi, '||')
+      .replace(/\bNOT\b/gi, '!')
+      .replace(/\bIS NULL\b/gi, '=== null')
+      .replace(/\bIS NOT NULL\b/gi, '!== null')
+      .replace(/\bLIKE\b/gi, '.includes')
+      .replace(/\s+=\s+/g, ' == ');
+  }
+
   const tablesList = computed(() => {
     return tables.value.tables || [];
   });
@@ -1064,6 +1201,7 @@ export const useDatabaseStore = defineStore('database', () => {
     getTableModelJson,
     getAllTablesModelsJson,
     clearTableRecordCounts,
-    updateRecord
+    updateRecord,
+    loadFilteredTableData
   };
 }); 
