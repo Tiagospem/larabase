@@ -39,6 +39,15 @@ try {
       
       // Artisan command related function
       runArtisanCommand: (config) => safeIpcRenderer.invoke('run-artisan-command', config),
+      listenCommandOutput: (commandId, callback) => {
+        const channel = `command-output-${commandId}`;
+        ipcRenderer.on(channel, (_, data) => callback(data));
+        return channel;
+      },
+      stopCommandListener: (channel) => {
+        ipcRenderer.removeAllListeners(channel);
+      },
+      getMigrationStatus: (config) => safeIpcRenderer.invoke('get-migration-status', config),
       
       // Settings related functions
       getSettings: () => safeIpcRenderer.invoke('get-settings'),

@@ -2646,6 +2646,9 @@ ipcMain.handle('run-artisan-command', async (event, config) => {
       };
     }
 
+    // Generate a unique ID for this command execution
+    const commandId = Date.now().toString();
+
     // Determine if we're using PHP directly or Sail
     let commandArgs = [];
     const hasSail = fs.existsSync(path.join(config.projectPath, 'vendor/bin/sail'));
@@ -2658,56 +2661,187 @@ ipcMain.handle('run-artisan-command', async (event, config) => {
       commandArgs = ['php', 'artisan', ...config.command.split(' ')];
     }
 
-    return new Promise((resolve) => {
-      let stdoutData = '';
-      let stderrData = '';
-      
-      const process = spawn(commandArgs[0], commandArgs.slice(1), {
-        cwd: config.projectPath,
-        shell: true
-      });
-
-      process.stdout.on('data', (data) => {
-        stdoutData += data.toString();
-      });
-
-      process.stderr.on('data', (data) => {
-        stderrData += data.toString();
-      });
-
-      process.on('close', (code) => {
-        if (code === 0) {
-          resolve({
-            success: true,
-            output: stdoutData,
-            command: commandArgs.join(' ')
-          });
-        } else {
-          resolve({
-            success: false,
-            message: `Process exited with code ${code}`,
-            output: stderrData || stdoutData,
-            command: commandArgs.join(' ')
-          });
-        }
-      });
-
-      process.on('error', (err) => {
-        resolve({
-          success: false,
-          message: err.message,
-          output: '',
-          command: commandArgs.join(' ')
-        });
-      });
+    // Start the command process
+    const process = spawn(commandArgs[0], commandArgs.slice(1), {
+      cwd: config.projectPath,
+      shell: true
     });
+
+    // Set up the response with initial information
+    const response = {
+      success: true,
+      commandId: commandId,
+      command: commandArgs.join(' '),
+      output: '',
+      isComplete: false
+    };
+
+    // Set up event channel for streaming output
+    const outputChannel = `command-output-${commandId}`;
+
+    // Stream stdout data
+    process.stdout.on('data', (data) => {
+      const output = data.toString();
+      // Send real-time updates to the renderer
+      if (event.sender) {
+        event.sender.send(outputChannel, {
+          commandId,
+          output,
+          type: 'stdout',
+          isComplete: false
+        });
+      }
+    });
+
+    // Stream stderr data
+    process.stderr.on('data', (data) => {
+      const output = data.toString();
+      // Send real-time updates to the renderer
+      if (event.sender) {
+        event.sender.send(outputChannel, {
+          commandId,
+          output,
+          type: 'stderr',
+          isComplete: false
+        });
+      }
+    });
+
+    // Handle process completion
+    process.on('close', (code) => {
+      const success = code === 0;
+      // Send completion notification to the renderer
+      if (event.sender) {
+        event.sender.send(outputChannel, {
+          commandId,
+          output: success ? 'Command completed successfully.' : `Command exited with code ${code}`,
+          type: success ? 'stdout' : 'stderr',
+          isComplete: true,
+          success
+        });
+      }
+    });
+
+    // Handle errors
+    process.on('error', (err) => {
+      if (event.sender) {
+        event.sender.send(outputChannel, {
+          commandId,
+          output: `Error: ${err.message}`,
+          type: 'stderr',
+          isComplete: true,
+          success: false
+        });
+      }
+    });
+
+    return response;
   } catch (error) {
     console.error('Error running artisan command:', error);
     return {
       success: false,
       message: error.message,
-      output: '',
-      command: config.command
+      pendingMigrations: [],
+      batches: []
+    };
+  }
+});
+
+// Add the handler for getting migration status
+ipcMain.handle('get-migration-status', async (event, config) => {
+  try {
+    if (!config.projectPath) {
+      return { 
+        success: false, 
+        message: 'Project path is required',
+        pendingMigrations: [],
+        batches: []
+      };
+    }
+
+    const artisanPath = path.join(config.projectPath, 'artisan');
+    if (!fs.existsSync(artisanPath)) {
+      return {
+        success: false,
+        message: 'Artisan file not found in project path',
+        pendingMigrations: [],
+        batches: []
+      };
+    }
+
+    // Determine if we're using PHP directly or Sail
+    const hasSail = fs.existsSync(path.join(config.projectPath, 'vendor/bin/sail'));
+    const useSail = config.useSail && hasSail;
+    
+    // Command to get migration status
+    const statusCommand = useSail ? 
+      ['vendor/bin/sail', 'artisan', 'migrate:status', '--no-ansi'] : 
+      ['php', 'artisan', 'migrate:status', '--no-ansi'];
+
+    // Run migration status command
+    const statusProcess = spawn(statusCommand[0], statusCommand.slice(1), {
+      cwd: config.projectPath,
+      shell: true
+    });
+
+    let statusOutput = '';
+    statusProcess.stdout.on('data', (data) => {
+      statusOutput += data.toString();
+    });
+
+    await new Promise((resolve) => {
+      statusProcess.on('close', resolve);
+    });
+
+    // Parse the migration status output
+    const pendingMigrations = [];
+    const batches = new Map();
+    
+    // Split by lines and process
+    const lines = statusOutput.split('\n');
+    for (const line of lines) {
+      // Check for pending migrations
+      const pendingMatch = line.match(/\|\s+No\s+\|\s+(.+?)\s+\|/);
+      if (pendingMatch) {
+        pendingMigrations.push(pendingMatch[1].trim());
+      }
+      
+      // Check for completed migrations with batch number
+      const completedMatch = line.match(/\|\s+Yes\s+\|\s+(.+?)\s+\|\s+(\d+)\s+\|/);
+      if (completedMatch) {
+        const migrationName = completedMatch[1].trim();
+        const batchNumber = parseInt(completedMatch[2].trim(), 10);
+        
+        if (!batches.has(batchNumber)) {
+          batches.set(batchNumber, []);
+        }
+        batches.get(batchNumber).push(migrationName);
+      }
+    }
+    
+    // Convert batches Map to array for JSON serialization
+    const batchesArray = Array.from(batches.entries()).map(([batchNumber, migrations]) => ({
+      batch: batchNumber,
+      migrations: migrations
+    }));
+    
+    // Sort batches by batch number descending (newest first)
+    batchesArray.sort((a, b) => b.batch - a.batch);
+
+    return {
+      success: true,
+      pendingMigrations,
+      batches: batchesArray,
+      hasSail,
+      output: statusOutput
+    };
+  } catch (error) {
+    console.error('Error getting migration status:', error);
+    return {
+      success: false,
+      message: error.message,
+      pendingMigrations: [],
+      batches: []
     };
   }
 });

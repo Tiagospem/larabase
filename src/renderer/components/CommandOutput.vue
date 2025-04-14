@@ -8,6 +8,9 @@
             d="M6.75 7.5l3 2.25-3 2.25m4.5 0h3m-9 8.25h13.5A2.25 2.25 0 0021 18V6a2.25 2.25 0 00-2.25-2.25H5.25A2.25 2.25 0 003 6v12a2.25 2.25 0 002.25 2.25z" />
         </svg>
         <span class="font-mono text-sm">{{ command }}</span>
+        <div v-if="!commandResult?.isComplete" class="ml-2">
+          <span class="loading loading-spinner loading-xs"></span>
+        </div>
       </div>
       <div class="flex">
         <button @click="toggleHeight" class="btn btn-xs btn-ghost" :title="isExpanded ? 'Collapse' : 'Expand'">
@@ -25,8 +28,8 @@
       </div>
     </div>
     <div class="command-output-content" :class="{ 'expanded': isExpanded }">
-      <div v-if="commandResult" class="mockup-code bg-neutral h-full overflow-auto">
-        <pre class="whitespace-pre-wrap" :class="{ 'text-green-400': commandResult.success, 'text-red-400': !commandResult.success }"><code>{{ commandResult.output || commandResult.message || 'No output' }}</code></pre>
+      <div ref="outputContainer" v-if="commandResult" class="mockup-code bg-neutral h-full overflow-auto">
+        <pre class="whitespace-pre-wrap" :class="{ 'text-green-400': commandResult.success, 'text-red-400': !commandResult.success }"><code>{{ sanitizedOutput }}</code></pre>
       </div>
       <div v-else class="flex items-center justify-center h-full text-gray-500">
         <p>No command output</p>
@@ -36,10 +39,11 @@
 </template>
 
 <script setup>
-import { ref, computed, watch } from 'vue';
+import { ref, computed, watch, nextTick } from 'vue';
 import { useCommandsStore } from '@/store/commands';
 
 const commandsStore = useCommandsStore();
+const outputContainer = ref(null);
 
 const isExpanded = ref(true);
 const showCommandOutput = computed(() => commandsStore.showCommandOutput);
@@ -50,6 +54,19 @@ const command = computed(() => {
     return cmd.substring(0, 77) + '...';
   }
   return cmd;
+});
+
+// Function to remove ANSI color codes and formatting
+const sanitizedOutput = computed(() => {
+  if (!commandResult.value?.output) {
+    return commandResult.value?.message || 'No output';
+  }
+  
+  // Remove ANSI color/formatting codes - comprehensive approach
+  return commandResult.value.output
+    .replace(/\u001b\[\d+(;\d+)?m/g, '') // Remove all ANSI color codes
+    .replace(/\[90m|\[39m|\[32;1m|\[39;22m|\[1m|\[22m/g, '') // Remove specific color format codes
+    .replace(/\u001b/g, ''); // Remove any remaining escape characters
 });
 
 function toggleHeight() {
@@ -64,6 +81,21 @@ function clearOutput() {
 watch(() => commandsStore.lastCommand, () => {
   isExpanded.value = true;
 });
+
+// Scroll to bottom whenever output changes
+watch(() => sanitizedOutput.value, () => {
+  // Use nextTick to ensure DOM is updated before scrolling
+  nextTick(() => {
+    scrollToBottom();
+  });
+}, { immediate: true });
+
+// Function to scroll to bottom of output
+function scrollToBottom() {
+  if (outputContainer.value) {
+    outputContainer.value.scrollTop = outputContainer.value.scrollHeight;
+  }
+}
 </script>
 
 <style scoped>
