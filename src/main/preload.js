@@ -37,6 +37,10 @@ try {
       deleteProjectLog: (logId) => safeIpcRenderer.invoke('delete-project-log', logId),
       clearAllProjectLogs: (config) => safeIpcRenderer.invoke('clear-all-project-logs', config),
       
+      // Settings related functions
+      getSettings: () => safeIpcRenderer.invoke('get-settings'),
+      saveSettings: (settings) => safeIpcRenderer.invoke('save-settings', settings),
+      
       // Database monitoring related functions
       monitorDatabaseOperations: (connectionId, callback) => {
         try {

@@ -161,6 +161,34 @@ ipcMain.handle('save-open-tabs', (event, tabData) => {
   return true;
 });
 
+ipcMain.handle('get-settings', () => {
+  try {
+    return store.get('settings') || {
+      openai: {
+        apiKey: '',
+        model: 'gpt-3.5-turbo'
+      },
+      language: 'en' // default to English
+    };
+  } catch (error) {
+    console.error('Error retrieving settings:', error);
+    return {
+      openai: { apiKey: '', model: 'gpt-3.5-turbo' },
+      language: 'en'
+    };
+  }
+});
+
+ipcMain.handle('save-settings', (event, settings) => {
+  try {
+    store.set('settings', settings);
+    return true;
+  } catch (error) {
+    console.error('Error saving settings:', error);
+    throw error;
+  }
+});
+
 ipcMain.handle('select-directory', async () => {
   try {
     return await dialog.showOpenDialog(mainWindow, {
