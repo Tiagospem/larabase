@@ -31,6 +31,7 @@ const StructureTab = markRaw(defineAsyncComponent(() => import('./tabs/Structure
 const IndexesTab = markRaw(defineAsyncComponent(() => import('./tabs/IndexesTab.vue')));
 const ForeignKeysTab = markRaw(defineAsyncComponent(() => import('./tabs/ForeignKeysTab.vue')));
 const MigrationsTab = markRaw(defineAsyncComponent(() => import('./tabs/MigrationsTab.vue')));
+const ModelTab = markRaw(defineAsyncComponent(() => import('./tabs/ModelTab.vue')));
 
 const props = defineProps({
   connectionId: {
@@ -51,7 +52,8 @@ const tabsLoaded = ref({
   structure: false,
   indexes: false,
   foreignKeys: false,
-  migrations: false
+  migrations: false,
+  model: false
 });
 
 const contentTabs = [
@@ -59,7 +61,8 @@ const contentTabs = [
   { id: 'structure', label: 'Structure',},
   { id: 'indexes', label: 'Indexes' },
   { id: 'foreignKeys', label: 'Foreign Keys'},
-  { id: 'migrations', label: 'Migrations' }
+  { id: 'migrations', label: 'Migrations' },
+  { id: 'model', label: 'Model' }
 ];
 
 const currentTabComponent = computed(() => {
@@ -69,6 +72,7 @@ const currentTabComponent = computed(() => {
     case 'indexes': return IndexesTab;
     case 'foreignKeys': return ForeignKeysTab;
     case 'migrations': return MigrationsTab;
+    case 'model': return ModelTab;
     default: return DataTab;
   }
 });

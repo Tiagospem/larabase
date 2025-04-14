@@ -31,6 +31,14 @@
       <div class="flex">
         <!-- Database Tools Section -->
         <div class="border-r border-neutral-700 pr-2 mr-2">
+          <button class="btn btn-ghost btn-sm" @click="showTablesModelsModal = true" title="Tables Models JSON">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" 
+              stroke="currentColor" class="w-5 h-5">
+              <path stroke-linecap="round" stroke-linejoin="round" 
+                d="M6.429 9.75L2.25 12l4.179 2.25m0-4.5l5.571 3 5.571-3m-11.142 0L2.25 7.5 12 2.25l9.75 5.25-4.179 2.25m0 0L21.75 12l-4.179 2.25m0 0l4.179 2.25L12 21.75 2.25 16.5l4.179-2.25m11.142 0l-5.571 3-5.571-3" />
+            </svg>
+          </button>
+          
           <button class="btn btn-ghost btn-sm" @click="showLiveUpdates = true" title="Live Updates">
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" 
               stroke="currentColor" class="w-5 h-5">
@@ -210,6 +218,26 @@
     :connection-id="connectionId"
     @close="showDatabaseDiagram = false"
   />
+
+  <!-- Tables Models JSON Modal -->
+  <div v-if="showTablesModelsModal" class="modal modal-open">
+    <div class="modal-box w-11/12 max-w-5xl max-h-[90vh]">
+      <h3 class="font-bold text-lg mb-4">All Tables Models Data</h3>
+      <div class="mockup-code bg-neutral mb-4 h-[60vh] overflow-auto">
+        <pre><code>{{ allTablesModelsJson }}</code></pre>
+      </div>
+      <div class="modal-action">
+        <button class="btn btn-sm btn-primary" @click="copyAllTablesJsonToClipboard">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4 mr-1">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125h-9.75a1.125 1.125 0 0 1-1.125-1.125V7.875c0-.621.504-1.125 1.125-1.125H6.75a9.06 9.06 0 0 1 1.5.124m7.5 10.376h3.375c.621 0 1.125-.504 1.125-1.125V11.25c0-4.46-3.243-8.161-7.5-8.876a9.06 9.06 0 0 0-1.5-.124H9.375c-.621 0-1.125.504-1.125 1.125v3.5m7.5 10.375H9.375a1.125 1.125 0 0 1-1.125-1.125v-9.25m12 6.625v-1.875a3.375 3.375 0 0 0-3.375-3.375h-1.5a1.125 1.125 0 0 1-1.125-1.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H9.75" />
+          </svg>
+          Copy to Clipboard
+        </button>
+        <button class="btn" @click="showTablesModelsModal = false">Close</button>
+      </div>
+    </div>
+    <div class="modal-backdrop" @click="showTablesModelsModal = false"></div>
+  </div>
 </template>
 
 <script setup>
@@ -248,6 +276,8 @@ const draggingTabId = ref(null);
 const tabsScrollRef = ref(null);
 const hasScrollLeft = ref(false);
 const hasScrollRight = ref(false);
+const showTablesModelsModal = ref(false);
+const allTablesModelsJson = ref('');
 
 const connection = computed(() => {
   return connectionsStore.getConnection(connectionId.value);
@@ -288,6 +318,18 @@ function handleUpdateTabData(tabName, data) {
   if (tab) {
     tabsStore.updateTabData(tab.id, data);
   }
+}
+
+// Global function to expose table model info for AI integration
+window.getTableModelJson = (tableName) => {
+  if (!tableName || !connectionId.value) return null;
+  return databaseStore.getTableModelJson(connectionId.value, tableName);
+}
+
+// Global function to get all tables models data
+window.getAllTablesModelsJson = () => {
+  if (!connectionId.value) return null;
+  return databaseStore.getAllTablesModelsJson(connectionId.value);
 }
 
 function goBack() {
@@ -518,6 +560,22 @@ async function selectProjectPath() {
     showAlert('Failed to select project path: ' + error.message, 'error');
   }
 }
+
+async function copyAllTablesJsonToClipboard() {
+  try {
+    await navigator.clipboard.writeText(allTablesModelsJson.value);
+    showAlert('JSON copied to clipboard', 'success');
+  } catch (error) {
+    console.error('Error copying to clipboard:', error);
+    showAlert('Failed to copy to clipboard', 'error');
+  }
+}
+
+watch(showTablesModelsModal, (isOpen) => {
+  if (isOpen) {
+    allTablesModelsJson.value = databaseStore.getAllTablesModelsJson(connectionId.value);
+  }
+});
 </script>
 
 <style scoped>

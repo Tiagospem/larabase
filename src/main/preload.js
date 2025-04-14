@@ -29,6 +29,8 @@ try {
       findTableMigrations: (config) => safeIpcRenderer.invoke('findTableMigrations', config),
       openFile: (filePath) => safeIpcRenderer.invoke('openFile', filePath),
       getDatabaseRelationships: (connectionId) => safeIpcRenderer.invoke('get-database-relationships', { connectionId }),
+      findModelsForTables: (config) => safeIpcRenderer.invoke('find-models-for-tables', config),
+      readModelFile: (filePath) => safeIpcRenderer.invoke('read-model-file', filePath),
       
       // Project logs related functions
       getProjectLogs: (config) => safeIpcRenderer.invoke('get-project-logs', config),

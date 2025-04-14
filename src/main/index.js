@@ -2449,3 +2449,142 @@ ipcMain.handle('get-database-relationships', async (event, config) => {
     };
   }
 }); 
+
+// Handler to find Laravel models for tables
+ipcMain.handle('find-models-for-tables', async (event, config) => {
+  try {
+    if (!config.projectPath) {
+      return { 
+        success: false, 
+        message: 'Missing project path',
+        models: {}
+      };
+    }
+
+    // Common directories where models might be located in Laravel
+    const modelDirs = [
+      path.join(config.projectPath, 'app', 'Models'),
+      path.join(config.projectPath, 'app')
+    ];
+
+    const foundModels = {};
+    const modelFiles = [];
+
+    // Scan for model files in each directory recursively
+    for (const dir of modelDirs) {
+      if (fs.existsSync(dir)) {
+        // Function to read directory recursively
+        const readDirRecursive = (directory) => {
+          const entries = fs.readdirSync(directory, { withFileTypes: true });
+          
+          for (const entry of entries) {
+            const fullPath = path.join(directory, entry.name);
+            
+            if (entry.isDirectory()) {
+              readDirRecursive(fullPath);
+            } else if (entry.name.endsWith('.php')) {
+              modelFiles.push(fullPath);
+            }
+          }
+        };
+        
+        readDirRecursive(dir);
+      }
+    }
+
+    // Process each file to find models and their table names
+    for (const filePath of modelFiles) {
+      try {
+        const content = fs.readFileSync(filePath, 'utf8');
+        
+        // Check if this is likely a model file (extends Model or has namespace with Model)
+        const isModel = content.includes('extends Model') || 
+                         content.includes('Illuminate\\Database\\Eloquent\\Model');
+        
+        if (!isModel) continue;
+        
+        // Extract namespace and class name
+        const namespaceMatch = content.match(/namespace\s+([^;]+);/);
+        const classMatch = content.match(/class\s+(\w+)/);
+        
+        if (!classMatch) continue;
+        
+        const className = classMatch[1];
+        const namespace = namespaceMatch ? namespaceMatch[1] : null;
+        const fullName = namespace ? `${namespace}\\${className}` : className;
+        
+        // Look for custom table name defined in the model
+        const tableMatch = content.match(/protected\s+\$table\s*=\s*['"](.*?)['"]/);
+        
+        // If table is defined explicitly, use it. Otherwise, convert class name to snake_case (Laravel convention)
+        let tableName;
+        if (tableMatch) {
+          tableName = tableMatch[1];
+        } else {
+          // Convert to snake_case and pluralize (simple pluralization)
+          tableName = className
+            .replace(/([a-z])([A-Z])/g, '$1_$2')
+            .toLowerCase();
+          
+          // Simple pluralization rule (just add s)
+          if (!tableName.endsWith('s')) {
+            tableName += 's';
+          }
+        }
+        
+        foundModels[tableName] = {
+          name: className,
+          namespace: namespace,
+          fullName: fullName,
+          path: filePath,
+          relativePath: path.relative(config.projectPath, filePath)
+        };
+      } catch (fileError) {
+        console.error(`Error processing file ${filePath}:`, fileError);
+      }
+    }
+
+    return { 
+      success: true, 
+      models: foundModels
+    };
+  } catch (error) {
+    console.error('Error finding models:', error);
+    return { success: false, message: error.message, models: {} };
+  }
+});
+
+// Handler to read model file content
+ipcMain.handle('read-model-file', async (event, filePath) => {
+  try {
+    if (!filePath) {
+      return { 
+        success: false, 
+        message: 'Missing file path',
+        content: null
+      };
+    }
+
+    if (!fs.existsSync(filePath)) {
+      return { 
+        success: false, 
+        message: 'File not found',
+        content: null
+      };
+    }
+
+    const content = fs.readFileSync(filePath, 'utf8');
+    
+    return { 
+      success: true, 
+      content: content
+    };
+  } catch (error) {
+    console.error('Error reading model file:', error);
+    return { 
+      success: false, 
+      message: error.message,
+      content: null
+    };
+  }
+});

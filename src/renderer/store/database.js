@@ -11,6 +11,7 @@ export const useDatabaseStore = defineStore('database', () => {
   const tableIndexes = ref({});
   const tableForeignKeys = ref({});
   const tableMigrations = ref({});
+  const tableModels = ref({});
 
   const mockDatabases = {
     1: {
@@ -156,6 +157,11 @@ export const useDatabaseStore = defineStore('database', () => {
       
       if (result.success && result.tables) {
         tables.value = { tables: result.tables };
+        
+        // If we have a project path, try to associate models with tables
+        if (connection.projectPath) {
+          loadModelsForTables(connectionId, connection.projectPath);
+        }
       } else {
         console.error("Failed to load tables:", result.message);
         tables.value = { tables: [] };
@@ -166,6 +172,86 @@ export const useDatabaseStore = defineStore('database', () => {
     } finally {
       isLoading.value = false;
     }
+  }
+
+  // Function to load models for tables
+  async function loadModelsForTables(connectionId, projectPath) {
+    try {
+      if (!projectPath) {
+        console.log("No project path specified for loading models");
+        return;
+      }
+
+      const result = await window.api.findModelsForTables({
+        projectPath: projectPath
+      });
+
+      if (result.success) {
+        tableModels.value[connectionId] = result.models;
+        console.log("Loaded models for tables:", result.models);
+      } else {
+        console.error("Failed to load models:", result.message);
+      }
+    } catch (error) {
+      console.error("Error loading models:", error);
+    }
+  }
+
+  // Function to get model for a table
+  function getModelForTable(connectionId, tableName) {
+    if (!tableModels.value[connectionId]) {
+      return null;
+    }
+    
+    return tableModels.value[connectionId][tableName] || null;
+  }
+
+  // Function to expose table and model information for AI integration
+  function getTableModelJson(connectionId, tableName) {
+    const model = getModelForTable(connectionId, tableName);
+    const connection = usedConnectionsStore().getConnection(connectionId);
+    
+    return JSON.stringify({
+      connectionName: connection?.name || 'Unknown',
+      database: connection?.database || 'Unknown',
+      tableName: tableName,
+      model: model ? {
+        name: model.name,
+        namespace: model.namespace,
+        fullName: model.fullName,
+        path: model.relativePath
+      } : null
+    }, null, 2);
+  }
+
+  // Function to get JSON data for all tables with their models
+  function getAllTablesModelsJson(connectionId) {
+    const connection = usedConnectionsStore().getConnection(connectionId);
+    const result = {
+      connectionName: connection?.name || 'Unknown',
+      database: connection?.database || 'Unknown',
+      tables: []
+    };
+
+    if (!tables.value.tables) {
+      return JSON.stringify(result, null, 2);
+    }
+
+    for (const table of tables.value.tables) {
+      const model = getModelForTable(connectionId, table.name);
+      result.tables.push({
+        tableName: table.name,
+        recordCount: table.recordCount,
+        model: model ? {
+          name: model.name,
+          namespace: model.namespace,
+          fullName: model.fullName,
+          path: model.relativePath
+        } : null
+      });
+    }
+
+    return JSON.stringify(result, null, 2);
   }
 
   async function getTableRecordCount(connectionId, tableName) {
@@ -827,6 +913,10 @@ export const useDatabaseStore = defineStore('database', () => {
     getTableForeignKeys,
     getTableMigrations,
     clearTableCache,
-    tablesList
+    tablesList,
+    getModelForTable,
+    loadModelsForTables,
+    getTableModelJson,
+    getAllTablesModelsJson
   };
 }); 
