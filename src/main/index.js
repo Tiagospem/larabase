@@ -4,6 +4,7 @@ const Store = require('electron-store');
 const fs = require('fs');
 const mysql = require('mysql2/promise');
 const { spawn } = require('child_process');
+const pluralize = require('pluralize');
 
 const store = new Store();
 
@@ -2587,48 +2588,93 @@ ipcMain.handle('find-models-for-tables', async (event, config) => {
       const content = model.content;
       const className = model.name;
       
-      let tableName = null;
-      
       // Method 1: Check for explicit table declaration
       const tableMatch = content.match(/protected\s+\$table\s*=\s*['"](.*?)['"]/);
       if (tableMatch) {
+        console.log(`Found explicit table name for ${className}: ${tableMatch[1]}`);
         return tableMatch[1];
       }
       
       // Method 2: Convert class name to snake_case and pluralize (Laravel convention)
-      tableName = className
+      const snakeCase = className
         .replace(/([a-z])([A-Z])/g, '$1_$2')
         .toLowerCase();
       
-      // Simple pluralization rule
-      if (!tableName.endsWith('s')) {
-        tableName += 's';
-      }
+      // Pluralize using the pluralize library
+      const tableName = pluralize.plural(snakeCase);
+      console.log(`Generated table name for ${className}: ${tableName}`);
       
       return tableName;
     };
 
-    // Process all models to detect their table names
-    const tableToModelMap = {};
-    
+    // First pass: Process all models to detect their table names using explicit declarations or conventions
     for (const model of allModelClasses) {
       const tableName = findTableForModel(model);
       if (tableName) {
-        tableToModelMap[tableName] = model;
+        foundModels[tableName] = {
+          name: model.name,
+          namespace: model.namespace,
+          fullName: model.fullName,
+          path: model.path,
+          relativePath: model.relativePath
+        };
       }
     }
     
-    // Create the final model mapping
-    for (const [tableName, model] of Object.entries(tableToModelMap)) {
-      foundModels[tableName] = {
+    // Second pass: Create a reverse mapping for singular forms
+    // This helps handle cases where table names don't follow standard pluralization
+    for (const model of allModelClasses) {
+      const modelObj = {
         name: model.name,
         namespace: model.namespace,
         fullName: model.fullName,
         path: model.path,
         relativePath: model.relativePath
       };
+      
+      // Convert class name to snake_case
+      const snakeCase = model.name
+        .replace(/([a-z])([A-Z])/g, '$1_$2')
+        .toLowerCase();
+      
+      // Try both plural and singular forms to catch all possibilities
+      const singularTable = pluralize.singular(snakeCase);
+      const pluralTable = pluralize.plural(snakeCase);
+      
+      // Add to foundModels if not already mapped
+      if (!foundModels[singularTable]) {
+        foundModels[singularTable] = modelObj;
+      }
+      
+      if (!foundModels[pluralTable]) {
+        foundModels[pluralTable] = modelObj;
+      }
+      
+      // Check for explicit table references in the content
+      const content = model.content;
+      const tableNameMatches = content.match(/table\s*=\s*['"]([^'"]+)['"]/g) || [];
+      for (const tableNameMatch of tableNameMatches) {
+        const extractedName = tableNameMatch.match(/['"]([^'"]+)['"]/);
+        if (extractedName && extractedName[1] && !foundModels[extractedName[1]]) {
+          foundModels[extractedName[1]] = modelObj;
+        }
+      }
     }
 
+    // Third pass: Look for any special cases or manually defined mappings
+    // This is where we'd handle custom table naming that doesn't follow Laravel conventions
+    const specialCases = {
+      // Add any manual mappings for edge cases
+      // These will only be used if there isn't already a mapping
+    };
+
+    for (const [tableName, modelName] of Object.entries(specialCases)) {
+      if (!foundModels[tableName] && modelFilesMap[modelName.toLowerCase()]) {
+        foundModels[tableName] = modelFilesMap[modelName.toLowerCase()];
+      }
+    }
+
+    console.log(`Found ${Object.keys(foundModels).length} model-table associations`);
     return { 
       success: true, 
       models: foundModels
@@ -3429,4 +3475,18 @@ ipcMain.handle('getFilteredTableData', async (event, config) => {
       }
     }
   }
+});
+
+// Add handlers for pluralization functions
+ipcMain.handle('get-pluralize-function', () => {
+  // We can't return the function directly, so we just acknowledge the call
+  return true;
+});
+
+ipcMain.handle('get-singular-form', (event, word) => {
+  return pluralize.singular(word);
+});
+
+ipcMain.handle('get-plural-form', (event, word) => {
+  return pluralize.plural(word);
 });

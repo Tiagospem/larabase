@@ -199,24 +199,25 @@ async function loadFactory() {
 // Find factory file based on table name or model name
 async function findFactoryFile(projectPath, tableName, model) {
   try {
-    // Convert table name to likely factory name patterns
-    // Singular form of the table name (remove trailing 's')
-    let modelName = '';
-    let singularTableName = '';
+    // Get the pluralize function from the main process
+    const pluralize = await window.api.getPluralizeFunction();
     
-    // Calculate the singular form of the table name for matching
-    singularTableName = tableName
-      .replace(/s$/, '') // Remove trailing 's' for simple singularization
-      .split('_')
-      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-      .join('');
+    // Convert table name to likely factory name patterns
+    let modelName = '';
     
     if (model) {
       // If we found a model, use its name
       modelName = model.name;
     } else {
-      // If no model found, use the singularized table name
-      modelName = singularTableName;
+      // If no model found, create a singular PascalCase name from the table
+      // First get the singular form of the table name
+      const singularTableName = await window.api.getSingularForm(tableName);
+      
+      // Convert to PascalCase
+      modelName = singularTableName
+        .split('_')
+        .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+        .join('');
     }
     
     // Common patterns for factory filenames
@@ -230,10 +231,7 @@ async function findFactoryFile(projectPath, tableName, model) {
       `${modelName.toLowerCase()}_factory.php`,
       // Try with table name directly
       `${tableName}_factory.php`,
-      `${tableName}Factory.php`,
-      // Try with singular table name with underscore
-      `${singularTableName}_factory.php`,
-      `${singularTableName.toLowerCase()}_factory.php`
+      `${tableName}Factory.php`
     ];
     
     // Common directories for factories in Laravel projects
@@ -317,6 +315,9 @@ async function findFactoryFile(projectPath, tableName, model) {
     for (const file of allFactoryFiles) {
       const content = await loadFileContent(file.path);
       
+      // Try with both singular and plural forms of the table name
+      const singularTable = await window.api.getSingularForm(tableName);
+      
       // Look for patterns indicating this is a factory for our model or table
       if (
         content.includes(`class ${modelName}Factory`) ||
@@ -327,7 +328,9 @@ async function findFactoryFile(projectPath, tableName, model) {
         (model && content.includes(`model('${model.fullName}'`)) ||
         content.includes(`table('${tableName}'`) ||
         content.includes(`'${tableName}'`) ||
-        content.includes(`"${tableName}"`)
+        content.includes(`"${tableName}"`) ||
+        content.includes(`'${singularTable}'`) ||
+        content.includes(`"${singularTable}"`)
       ) {
         return {
           name: file.name.replace(/\.php$/, ''),

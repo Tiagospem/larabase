@@ -150,7 +150,12 @@ try {
       },
 
       // SQL Editor functionality
-      executeSQLQuery: (config) => safeIpcRenderer.invoke('execute-sql-query', config)
+      executeSQLQuery: (config) => safeIpcRenderer.invoke('execute-sql-query', config),
+      
+      // Pluralization helpers
+      getPluralizeFunction: () => safeIpcRenderer.invoke('get-pluralize-function'),
+      getSingularForm: (word) => safeIpcRenderer.invoke('get-singular-form', word),
+      getPluralForm: (word) => safeIpcRenderer.invoke('get-plural-form', word)
     }
   );
 } catch (error) {
