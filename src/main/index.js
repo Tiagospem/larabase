@@ -2634,6 +2634,45 @@ ipcMain.handle('read-model-file', async (event, filePath) => {
   }
 });
 
+// Handler to list files in a directory
+ipcMain.handle('list-files', async (event, dirPath) => {
+  try {
+    if (!dirPath) {
+      return { 
+        success: false, 
+        message: 'Missing directory path',
+        files: []
+      };
+    }
+
+    if (!fs.existsSync(dirPath)) {
+      return { 
+        success: false, 
+        message: 'Directory not found',
+        files: []
+      };
+    }
+
+    const entries = fs.readdirSync(dirPath, { withFileTypes: true });
+    const files = entries.map(entry => ({
+      name: entry.name,
+      isDirectory: entry.isDirectory()
+    }));
+    
+    return { 
+      success: true, 
+      files: files
+    };
+  } catch (error) {
+    console.error('Error listing files:', error);
+    return { 
+      success: false, 
+      message: error.message,
+      files: []
+    };
+  }
+});
+
 // Add the handler for running artisan commands at an appropriate location
 ipcMain.handle('run-artisan-command', async (event, config) => {
   try {

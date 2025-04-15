@@ -34,6 +34,7 @@ try {
       getDatabaseRelationships: (connectionId) => safeIpcRenderer.invoke('get-database-relationships', { connectionId }),
       findModelsForTables: (config) => safeIpcRenderer.invoke('find-models-for-tables', config),
       readModelFile: (filePath) => safeIpcRenderer.invoke('read-model-file', filePath),
+      listFiles: (dirPath) => safeIpcRenderer.invoke('list-files', dirPath),
       
       // Project logs related functions
       getProjectLogs: (config) => safeIpcRenderer.invoke('get-project-logs', config),
