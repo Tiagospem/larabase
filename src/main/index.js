@@ -1018,7 +1018,7 @@ ipcMain.handle('getTableData', async (event, config) => {
     
     // Configurações de paginação
     const page = config.page || 1;
-    const limit = config.limit || 100;
+    const limit = parseInt(config.limit) || 100;
     const offset = (page - 1) * limit;
     
     console.log(`Fetching data from ${config.database}.${config.tableName} (page: ${page}, limit: ${limit}, offset: ${offset})`);
@@ -1030,7 +1030,7 @@ ipcMain.handle('getTableData', async (event, config) => {
     console.log(`Total records in ${config.tableName}: ${totalRecords}`);
     
     // Obter os dados da página atual
-    const [rows] = await connection.query(`SELECT * FROM ${tableName} LIMIT ? OFFSET ?`, [limit, offset]);
+    const [rows] = await connection.query(`SELECT * FROM ${tableName} LIMIT ${parseInt(limit)} OFFSET ${parseInt(offset)}`);
     
     console.log(`Fetched ${rows?.length || 0} rows from ${config.tableName} for page ${page}`);
     
@@ -3888,7 +3888,7 @@ ipcMain.handle('getFilteredTableData', async (event, config) => {
     
     // Configurações de paginação
     const page = config.page || 1;
-    const limit = config.limit || 100;
+    const limit = parseInt(config.limit) || 100;
     const offset = (page - 1) * limit;
     
     console.log(`Executing filtered query on ${config.database}.${config.tableName}`);
@@ -3911,10 +3911,10 @@ ipcMain.handle('getFilteredTableData', async (event, config) => {
     }
     
     // Consulta principal para obter os dados filtrados com paginação
-    const dataQuery = `SELECT * FROM ${tableName} WHERE ${filterClause} LIMIT ? OFFSET ?`;
+    const dataQuery = `SELECT * FROM ${tableName} WHERE ${filterClause} LIMIT ${parseInt(limit)} OFFSET ${parseInt(offset)}`;
     console.log(`Data query: ${dataQuery}`);
     
-    const [rows] = await connection.query(dataQuery, [limit, offset]);
+    const [rows] = await connection.query(dataQuery);
     
     console.log(`Fetched ${rows?.length || 0} rows from filtered data`);
     
