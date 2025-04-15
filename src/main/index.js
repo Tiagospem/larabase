@@ -4253,6 +4253,9 @@ function buildDockerRestoreCommand(config) {
   // E também force para garantir que erros sejam reportados
   command += ` --binary-mode=1 --force`;
   
+  // Adicionar o comando para criar o banco de dados se não existir
+  command += ` --init-command="CREATE DATABASE IF NOT EXISTS \\\`${database}\\\`; USE \\\`${database}\\\`;"`;
+  
   // Add database name
   command += ` ${database}`;
   
@@ -4332,6 +4335,9 @@ function buildLocalRestoreCommand(config) {
   // E também force para garantir que erros sejam reportados
   command += ` --binary-mode=1 --force`;
   
+  // Adicionar o comando para criar o banco de dados se não existir
+  command += ` --init-command="CREATE DATABASE IF NOT EXISTS \\\`${database}\\\`; USE \\\`${database}\\\`;"`;
+  
   // Add database name
   command += ` ${database}`;
   
@@ -4341,7 +4347,7 @@ function buildLocalRestoreCommand(config) {
 
 // Execute the restore command and process output with better progress monitoring
 async function executeRestoreCommand(commandObj, sqlFilePath, progress) {
-  console.log(`Executing restore command: ${commandObj.command}`);
+  console.log(`Executing restore command with object:`, JSON.stringify(commandObj));
   
   try {
     const fileSize = fs.statSync(sqlFilePath).size;
@@ -4350,13 +4356,30 @@ async function executeRestoreCommand(commandObj, sqlFilePath, progress) {
     progress(0.6); // Update progress to 60% - file is ready to be restored
     console.log('Starting database restore process');
     
-    const { command, args = [] } = commandObj;
+    // Handle both string command (old format) and object format (new format)
+    let command, args;
+    
+    if (typeof commandObj === 'string') {
+      // Old format - just a command string
+      command = commandObj;
+    } else {
+      // New format - object with command and args properties
+      ({ command, args } = commandObj);
+    }
     
     if (args && args.length > 0) {
-      // Método antigo com comando e argumentos separados
+      // Method with command and arguments as separate arrays
+      console.log(`Executing using spawn with command: ${command} and args:`, args);
       return new Promise((resolve, reject) => {
         const proc = spawn(command, args);
         let stderr = '';
+        let stdout = '';
+        
+        proc.stdout.on('data', (data) => {
+          const chunk = data.toString();
+          stdout += chunk;
+          console.log(`Restore stdout: ${chunk}`);
+        });
         
         proc.stderr.on('data', (data) => {
           const chunk = data.toString();
@@ -4369,9 +4392,12 @@ async function executeRestoreCommand(commandObj, sqlFilePath, progress) {
           progress(0.9); // Update progress to 90% - command completed
           
           if (code !== 0) {
+            console.error(`Restore failed with code ${code}`);
+            console.error(`Error output: ${stderr}`);
             return reject(new Error(`Restore failed with code ${code}: ${stderr}`));
           }
           
+          console.log('Restore completed successfully');
           resolve();
         });
         
@@ -4381,9 +4407,9 @@ async function executeRestoreCommand(commandObj, sqlFilePath, progress) {
         });
       });
     } else {
-      // Novo método com comando completo
+      // Method with full command string
+      console.log('Executing with exec method:', command);
       return new Promise((resolve, reject) => {
-        console.log('Executing with exec method');
         exec(command, (error, stdout, stderr) => {
           if (stderr) {
             console.log(`Restore stderr: ${stderr}`);
@@ -4842,6 +4868,50 @@ ipcMain.handle('simple-database-restore-unified', async (event, config) => {
         success: false,
         message: 'No target database specified'
       };
+    }
+
+    // Verificar se o banco de destino é diferente do atual
+    const isNewDatabase = targetDatabase !== connection.database;
+    
+    // Se for um novo banco de dados, verificar se ele já existe
+    if (isNewDatabase) {
+      try {
+        console.log(`Checking if database ${targetDatabase} exists`);
+        
+        // Tentar se conectar ao MySQL sem especificar um banco
+        const tempConn = await mysql.createConnection({
+          host: connection.host,
+          port: connection.port,
+          user: connection.username,
+          password: connection.password || '',
+          connectTimeout: 10000
+        });
+        
+        try {
+          // Verificar se o banco existe
+          const [existingDbs] = await tempConn.query('SHOW DATABASES');
+          const dbExists = existingDbs.some(db => 
+            (db.Database === targetDatabase || db.database === targetDatabase)
+          );
+          
+          if (!dbExists) {
+            console.log(`Database ${targetDatabase} does not exist, creating it...`);
+            // Criar o banco de dados
+            await tempConn.query(`CREATE DATABASE \`${targetDatabase}\``);
+            console.log(`Database ${targetDatabase} created successfully`);
+          } else {
+            console.log(`Database ${targetDatabase} already exists`);
+          }
+        } finally {
+          await tempConn.end();
+        }
+      } catch (dbError) {
+        console.error(`Error checking/creating database ${targetDatabase}:`, dbError);
+        return {
+          success: false,
+          message: `Failed to create target database: ${dbError.message}`
+        };
+      }
     }
 
     // Build a simple configuration for the restore

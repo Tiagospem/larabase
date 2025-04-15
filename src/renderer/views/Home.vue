@@ -302,19 +302,29 @@
         </div>
         
         <div class="form-control w-full mb-4">
-          <label class="label">
-            <span class="label-text">Target Database</span>
+          <label class="label cursor-pointer justify-start">
+            <input type="checkbox" v-model="overwriteCurrentDb" class="checkbox checkbox-sm mr-2" 
+              :disabled="isRestoring" />
+            <span class="label-text">Restore to current database ({{ restoreConfig.connection?.database }})</span>
           </label>
-          <input type="text" v-model="restoreConfig.database" placeholder="Default: same as connection" 
-            class="input input-bordered w-full" />
+          <p class="text-xs text-gray-500 mt-1">The backup will overwrite your current database</p>
+        </div>
+        
+        <div class="form-control w-full mb-4" v-if="!overwriteCurrentDb">
           <label class="label">
-            <span class="label-text-alt">Leave empty to use connection's default database</span>
+            <span class="label-text">Target Database Name</span>
+          </label>
+          <input type="text" v-model="restoreConfig.database" placeholder="Enter target database name" 
+            class="input input-bordered w-full" :disabled="isRestoring" />
+          <label class="label">
+            <span class="label-text-alt">The backup will be restored to this new database</span>
           </label>
         </div>
         
-        <div class="form-control w-full mb-4">
+        <div class="form-control w-full mb-4" v-if="!overwriteCurrentDb">
           <label class="label cursor-pointer justify-start">
-            <input type="checkbox" v-model="restoreConfig.setAsDefault" class="checkbox checkbox-sm mr-2" />
+            <input type="checkbox" v-model="restoreConfig.setAsDefault" class="checkbox checkbox-sm mr-2"
+              :disabled="isRestoring" />
             <span class="label-text">Set as default database for this connection</span>
           </label>
           <label class="label">
@@ -445,6 +455,8 @@ const filteredTables = computed(() => {
     return false;
   });
 });
+
+const overwriteCurrentDb = ref(true); // Por padrão, restaurar no banco atual
 
 onMounted(async () => {
   try {
@@ -722,6 +734,7 @@ function restoreDatabase(connection) {
   restoreProgress.value = 0;
   restoreStatus.value = '';
   isRestoreModalOpen.value = true;
+  overwriteCurrentDb.value = true; // Reset para o valor padrão
   
   // We won't fetch tables from the database anymore 
   // as we'll extract them from the SQL file when selected
@@ -784,6 +797,12 @@ async function startRestore() {
     return;
   }
   
+  // Verificar se um nome de banco foi informado quando não está usando o banco atual
+  if (!overwriteCurrentDb.value && !restoreConfig.value.database) {
+    showAlert('Please enter a target database name', 'error');
+    return;
+  }
+  
   try {
     isRestoring.value = true;
     restoreStatus.value = 'Starting database restoration...';
@@ -798,13 +817,23 @@ async function startRestore() {
     // Simple manual progress updates at key steps
     updateStatus('Preparing restoration...', 20);
     
+    // Determinar qual banco de dados usar
+    let targetDatabase;
+    if (overwriteCurrentDb.value) {
+      // Usar o banco atual da conexão
+      targetDatabase = restoreConfig.value.connection.database;
+    } else {
+      // Usar o banco informado pelo usuário
+      targetDatabase = restoreConfig.value.database;
+    }
+    
     // Use simple parameters without complex objects, functions or circular references
     const simpleConfig = {
       connectionId: restoreConfig.value.connection.id,
       filePath: restoreConfig.value.filePath,
       ignoredTables: [...restoreConfig.value.ignoredTables], // Make a copy to avoid references
-      database: restoreConfig.value.database || restoreConfig.value.connection.database, // Use custom DB or default
-      setAsDefault: restoreConfig.value.setAsDefault
+      database: targetDatabase,
+      setAsDefault: !overwriteCurrentDb.value && restoreConfig.value.setAsDefault // Somente quando não usa o banco atual
     };
     
     // Wait 300ms to let UI update
@@ -838,9 +867,10 @@ async function startRestore() {
       isRestoring.value = false;
       isRestoreModalOpen.value = false;
       
-      // Update the connection with the new database if a custom one was used
-      if (restoreConfig.value.setAsDefault || simpleConfig.database !== restoreConfig.value.connection.database) {
-        await updateConnectionDatabase(restoreConfig.value.connection.id, simpleConfig.database);
+      // Update the connection with the new database if necessary
+      if (!overwriteCurrentDb.value && restoreConfig.value.setAsDefault && 
+          targetDatabase !== restoreConfig.value.connection.database) {
+        await updateConnectionDatabase(restoreConfig.value.connection.id, targetDatabase);
       }
     } else {
       throw new Error(result.message || 'Unknown error during restoration');
