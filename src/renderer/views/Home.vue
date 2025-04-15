@@ -52,6 +52,7 @@
                     <span class="text-xs text-green-500 ml-1">({{ connection.status }})</span>
                   </h2>
                   <p class="text-xs text-gray-400">{{ connection.host || connection.path }}</p>
+                  <p class="text-xs font-medium text-blue-400">DB: {{ connection.database }}</p>
                 </div>
                 <div class="flex gap-2">
                   <button 
@@ -61,6 +62,16 @@
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" 
                       stroke="currentColor" class="w-4 h-4">
                       <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L6.832 19.82a4.5 4.5 0 01-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 011.13-1.897L16.863 4.487zm0 0L19.5 7.125" />
+                    </svg>
+                  </button>
+                  <button 
+                    class="btn btn-sm btn-ghost text-green-500" 
+                    @click.stop="restoreDatabase(connection)"
+                    title="Restore Database"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" 
+                      stroke="currentColor" class="w-4 h-4">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" />
                     </svg>
                   </button>
                   <button 
@@ -251,6 +262,114 @@
       </div>
       <div class="modal-backdrop" @click="isCreateModalOpen = false"></div>
     </div>
+
+    <div class="modal" :class="{ 'modal-open': isRestoreModalOpen }">
+      <div class="modal-box w-11/12 max-w-4xl">
+        <h3 class="font-bold text-lg mb-4">Restore Database: {{ restoreConfig.connection?.name }}</h3>
+        
+        <div class="form-control w-full mb-4">
+          <label class="label">
+            <span class="label-text">SQL Dump File (.sql or .sql.gz)</span>
+          </label>
+          <div class="flex gap-2">
+            <input type="text" v-model="restoreConfig.filePath" placeholder="Select SQL dump file" 
+              class="input input-bordered w-full" :readonly="true" />
+            <button class="btn btn-primary" @click="selectDumpFile" :disabled="isProcessingSql">
+              <span v-if="isProcessingSql" class="loading loading-spinner loading-xs mr-2"></span>
+              Browse
+            </button>
+          </div>
+          <label class="label" v-if="restoreFileError">
+            <span class="label-text-alt text-error">{{ restoreFileError }}</span>
+          </label>
+          <p class="text-xs text-gray-500 mt-1">Select a .sql or .sql.gz file to restore</p>
+        </div>
+        
+        <div v-if="isProcessingSql" class="my-4 flex items-center gap-2 text-info">
+          <span class="loading loading-spinner loading-sm"></span>
+          <p class="text-sm">{{ restoreStatus }}</p>
+        </div>
+        
+        <div v-else-if="restoreStatus && !isRestoring" class="my-4 text-sm text-info">
+          <p>{{ restoreStatus }}</p>
+        </div>
+        
+        <div v-if="isRestoring" class="mb-4">
+          <div class="w-full bg-gray-700 rounded-md h-2 mb-2">
+            <div class="bg-primary h-2 rounded-md" :style="{ width: restoreProgress + '%' }"></div>
+          </div>
+          <p class="text-sm">{{ restoreStatus }}</p>
+        </div>
+        
+        <div class="form-control w-full mb-4">
+          <label class="label">
+            <span class="label-text">Target Database</span>
+          </label>
+          <input type="text" v-model="restoreConfig.database" placeholder="Default: same as connection" 
+            class="input input-bordered w-full" />
+          <label class="label">
+            <span class="label-text-alt">Leave empty to use connection's default database</span>
+          </label>
+        </div>
+        
+        <div class="form-control w-full mb-4">
+          <label class="label cursor-pointer justify-start">
+            <input type="checkbox" v-model="restoreConfig.setAsDefault" class="checkbox checkbox-sm mr-2" />
+            <span class="label-text">Set as default database for this connection</span>
+          </label>
+          <label class="label">
+            <span class="label-text-alt">If enabled, this database will be set as the default for future connections</span>
+          </label>
+        </div>
+        
+        <div v-if="restoreConfig.tables.length > 0" class="form-control w-full mb-4">
+          <label class="label">
+            <span class="label-text">Tables to Ignore (Optional)</span>
+          </label>
+          
+          <div class="mb-2">
+            <input 
+              type="text" 
+              v-model="tableSearchQuery" 
+              placeholder="Search tables..." 
+              class="input input-bordered w-full input-sm"
+              :disabled="isRestoring"
+            />
+          </div>
+          
+          <div class="h-48 overflow-y-auto bg-base-300 rounded-md p-2" :class="{'opacity-50': isRestoring}">
+            <div v-for="table in filteredTables" :key="table.name" class="form-control">
+              <label class="label cursor-pointer justify-start gap-2" :class="{'opacity-50': isRestoring}">
+                <input type="checkbox" v-model="restoreConfig.ignoredTables" :value="table.name" 
+                  class="checkbox checkbox-sm" :disabled="isRestoring" />
+                <div class="flex items-center justify-between w-full">
+                  <span class="label-text">{{ table.name }}</span>
+                  <span v-if="table.size" class="text-xs px-2 py-0.5 rounded" 
+                    :class="getTableSizeClass(table.size)">
+                    {{ table.size }}
+                  </span>
+                </div>
+              </label>
+            </div>
+            <div v-if="filteredTables.length === 0" class="p-2 text-sm text-gray-400">
+              No tables match your search
+            </div>
+          </div>
+          <label class="label">
+            <span class="label-text-alt">Select tables to ignore during restore</span>
+          </label>
+        </div>
+        
+        <div class="modal-action">
+          <button class="btn" @click="closeRestoreModal" :disabled="isRestoring">Cancel</button>
+          <button class="btn btn-primary" @click="startRestore" :disabled="isRestoring || !restoreConfig.filePath">
+            <span v-if="isRestoring" class="loading loading-spinner loading-xs mr-2"></span>
+            Restore Database
+          </button>
+        </div>
+      </div>
+      <div class="modal-backdrop"></div>
+    </div>
   </div>
 </template>
 
@@ -289,6 +408,42 @@ const newConnection = ref({
   redisHost: '',
   redisPort: '6379',
   redisPassword: ''
+});
+
+// Restore database modal state
+const isRestoreModalOpen = ref(false);
+const restoreFileError = ref('');
+const isRestoring = ref(false);
+const restoreProgress = ref(0);
+const restoreStatus = ref('');
+const restoreConfig = ref({
+  connection: null,
+  filePath: '',
+  tables: [],
+  ignoredTables: [],
+  database: '',
+  setAsDefault: false
+});
+
+// Add loading state for SQL file processing
+const isProcessingSql = ref(false);
+
+// Table search functionality
+const tableSearchQuery = ref('');
+const filteredTables = computed(() => {
+  if (!tableSearchQuery.value) {
+    return restoreConfig.value.tables;
+  }
+  
+  const query = tableSearchQuery.value.toLowerCase();
+  return restoreConfig.value.tables.filter(table => {
+    if (typeof table === 'string') {
+      return table.toLowerCase().includes(query);
+    } else if (table.name) {
+      return table.name.toLowerCase().includes(query);
+    }
+    return false;
+  });
 });
 
 onMounted(async () => {
@@ -548,6 +703,199 @@ function getConnectionColor(type) {
       return 'bg-blue-600';
     default:
       return 'bg-gray-600';
+  }
+}
+
+// Function to open restore modal
+function restoreDatabase(connection) {
+  restoreConfig.value = {
+    connection: connection,
+    filePath: '',
+    tables: [],
+    ignoredTables: [],
+    database: '',
+    setAsDefault: false
+  };
+  
+  restoreFileError.value = '';
+  isRestoring.value = false;
+  restoreProgress.value = 0;
+  restoreStatus.value = '';
+  isRestoreModalOpen.value = true;
+  
+  // We won't fetch tables from the database anymore 
+  // as we'll extract them from the SQL file when selected
+}
+
+// Function to select SQL dump file
+async function selectDumpFile() {
+  try {
+    const result = await window.api.selectSqlDumpFile();
+    
+    if (result.canceled) {
+      return;
+    }
+    
+    const selectedPath = result.filePaths[0];
+    
+    // Validate file extension (.sql or .sql.gz)
+    if (!selectedPath.toLowerCase().endsWith('.sql') && 
+        !selectedPath.toLowerCase().endsWith('.gz') && 
+        !selectedPath.toLowerCase().endsWith('.sql.gz')) {
+      restoreFileError.value = 'Invalid file type. Please select a .sql or .sql.gz file';
+      return;
+    }
+    
+    restoreConfig.value.filePath = selectedPath;
+    restoreFileError.value = '';
+    
+    // Extract tables from the SQL file
+    isProcessingSql.value = true;
+    restoreStatus.value = 'Extracting tables from SQL file...';
+    
+    try {
+      const tableResult = await window.api.extractTablesFromSql(selectedPath);
+      
+      if (tableResult.success && tableResult.tables && tableResult.tables.length > 0) {
+        restoreConfig.value.tables = tableResult.tables;
+        restoreStatus.value = `Found ${tableResult.tables.length} tables in SQL file`;
+      } else {
+        restoreConfig.value.tables = [];
+        restoreStatus.value = tableResult.message || 'No tables found in SQL file';
+      }
+    } catch (extractError) {
+      console.error('Error extracting tables:', extractError);
+      restoreStatus.value = 'Error extracting tables from file';
+      restoreConfig.value.tables = [];
+    } finally {
+      isProcessingSql.value = false;
+    }
+  } catch (error) {
+    isProcessingSql.value = false;
+    console.error(error);
+    showAlert('Error selecting SQL dump file', 'error');
+  }
+}
+
+// Function to start the restore process
+async function startRestore() {
+  if (!restoreConfig.value.filePath || !restoreConfig.value.connection) {
+    showAlert('Please select a SQL dump file', 'error');
+    return;
+  }
+  
+  try {
+    isRestoring.value = true;
+    restoreStatus.value = 'Starting database restoration...';
+    restoreProgress.value = 10;
+    
+    // First update status in UI
+    const updateStatus = (status, progress) => {
+      restoreStatus.value = status;
+      if (progress) restoreProgress.value = progress;
+    };
+    
+    // Simple manual progress updates at key steps
+    updateStatus('Preparing restoration...', 20);
+    
+    // Use simple parameters without complex objects, functions or circular references
+    const simpleConfig = {
+      connectionId: restoreConfig.value.connection.id,
+      filePath: restoreConfig.value.filePath,
+      ignoredTables: [...restoreConfig.value.ignoredTables], // Make a copy to avoid references
+      database: restoreConfig.value.database || restoreConfig.value.connection.database, // Use custom DB or default
+      setAsDefault: restoreConfig.value.setAsDefault
+    };
+    
+    // Wait 300ms to let UI update
+    await new Promise(resolve => setTimeout(resolve, 300));
+    updateStatus('Analyzing database configuration...', 30);
+    
+    // Use timeout to simulate progress (since we can't easily get real progress)
+    let timeoutIds = [];
+    
+    timeoutIds.push(setTimeout(() => {
+      if (isRestoring.value) updateStatus('Reading SQL file...', 40);
+    }, 1000));
+    
+    timeoutIds.push(setTimeout(() => {
+      if (isRestoring.value) updateStatus('Executing restore commands...', 50);
+    }, 3000));
+    
+    timeoutIds.push(setTimeout(() => {
+      if (isRestoring.value) updateStatus('Processing SQL statements...', 70);
+    }, 6000));
+    
+    // Call a very simple API method without callbacks
+    const result = await window.api.simpleDatabaseRestore(simpleConfig);
+    
+    // Clear any remaining timeouts
+    timeoutIds.forEach(id => clearTimeout(id));
+    
+    if (result.success) {
+      updateStatus('Database restored successfully!', 100);
+      showAlert('Database restored successfully', 'success');
+      isRestoring.value = false;
+      isRestoreModalOpen.value = false;
+      
+      // Update the connection with the new database if a custom one was used
+      if (restoreConfig.value.setAsDefault || simpleConfig.database !== restoreConfig.value.connection.database) {
+        await updateConnectionDatabase(restoreConfig.value.connection.id, simpleConfig.database);
+      }
+    } else {
+      throw new Error(result.message || 'Unknown error during restoration');
+    }
+    
+  } catch (error) {
+    console.error('Error restoring database:', error);
+    restoreStatus.value = `Error: ${error.message}`;
+    restoreProgress.value = 0;
+    isRestoring.value = false;
+    showAlert(`Error restoring database: ${error.message}`, 'error');
+  }
+}
+
+// Helper function to update the connection's database name
+async function updateConnectionDatabase(connectionId, newDatabase) {
+  try {
+    const result = await window.api.updateConnectionDatabase(connectionId, newDatabase);
+    if (result.success) {
+      // Reload connections list to reflect the change
+      await connectionsStore.loadConnections();
+      showAlert(`Connection database updated to ${newDatabase}`, 'success');
+    }
+  } catch (error) {
+    console.error('Failed to update connection database:', error);
+    showAlert('Database restored, but failed to update connection settings', 'warning');
+  }
+}
+
+// Function to close modal and kill any running process
+function closeRestoreModal() {
+  if (isRestoring.value) {
+    if (confirm('Are you sure you want to cancel the database restoration?')) {
+      // Cancel restoration process
+      window.api.cancelDatabaseRestore(restoreConfig.value.connection.id);
+      isRestoring.value = false;
+      showAlert('Database restoration cancelled', 'info');
+    } else {
+      return; // Don't close if user cancels
+    }
+  }
+  
+  isRestoreModalOpen.value = false;
+  // Reset the state
+  tableSearchQuery.value = '';
+}
+
+// Function to get CSS class based on table size
+function getTableSizeClass(size) {
+  switch(size) {
+    case 'empty': return 'bg-gray-500 text-white';
+    case 'small': return 'bg-green-500 text-white';
+    case 'medium': return 'bg-yellow-500 text-white';
+    case 'large': return 'bg-red-500 text-white';
+    default: return 'bg-gray-700 text-white';
   }
 }
 </script>

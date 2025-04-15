@@ -159,7 +159,79 @@ try {
       
       // Project Database Management
       updateEnvDatabase: (projectPath, database) => safeIpcRenderer.invoke('update-env-database', projectPath, database),
-      removeConnection: (connectionId) => safeIpcRenderer.invoke('remove-connection', connectionId)
+      removeConnection: (connectionId) => safeIpcRenderer.invoke('remove-connection', connectionId),
+      
+      // Add database restoration related functions to the API
+      selectSqlDumpFile: () => safeIpcRenderer.invoke('select-sql-dump-file'),
+      startDatabaseRestore: (config) => {
+        // Generate a unique channel ID for this restoration process
+        const channelId = `restore-progress-${Date.now()}`;
+        
+        // Return a promise that resolves when the restoration process begins
+        return new Promise((resolve, reject) => {
+          // Setup a temporary one-time handler for the initial response
+          const initHandler = (event, initialResponse) => {
+            // Clean up this one-time handler
+            ipcRenderer.removeListener(`${channelId}-init`, initHandler);
+            
+            if (initialResponse.success) {
+              resolve({
+                success: true,
+                channelId,
+                message: initialResponse.message
+              });
+            } else {
+              reject(new Error(initialResponse.message || 'Failed to start restoration'));
+            }
+          };
+          
+          // Register the one-time handler
+          ipcRenderer.once(`${channelId}-init`, initHandler);
+          
+          // Start the restoration process with the generated channel ID
+          ipcRenderer.send('start-database-restore', {
+            ...config,
+            channelId
+          });
+        });
+      },
+      listenRestoreProgress: (channelId, listener) => {
+        if (channelId && listener) {
+          ipcRenderer.on(channelId, (_, data) => {
+            if (listener) listener(data);
+          });
+        }
+        return true;
+      },
+      stopRestoreListener: (channelId) => {
+        if (channelId) {
+          ipcRenderer.removeAllListeners(channelId);
+        }
+      },
+      extractTablesFromSql: (filePath) => safeIpcRenderer.invoke('extract-tables-from-sql', filePath),
+      
+      // Add method to send direct IPC messages
+      send: (channel, data) => {
+        if (typeof channel !== 'string') return;
+        
+        // List of allowed channels for send
+        const allowedSendChannels = [
+          'start-database-restore'
+        ];
+        
+        if (allowedSendChannels.includes(channel)) {
+          ipcRenderer.send(channel, data);
+        }
+      },
+      
+      // Simple database restore method without complex parameter passing
+      simpleDatabaseRestore: (config) => safeIpcRenderer.invoke('simple-database-restore-unified', config),
+      
+      // Add method to cancel an active database restore process
+      cancelDatabaseRestore: (connectionId) => safeIpcRenderer.invoke('cancel-database-restore', connectionId),
+
+      // Add method to update a connection's database name
+      updateConnectionDatabase: (connectionId, newDatabase) => safeIpcRenderer.invoke('update-connection-database', connectionId, newDatabase),
     }
   );
 } catch (error) {

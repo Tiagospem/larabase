@@ -3,7 +3,7 @@ const path = require('path');
 const Store = require('electron-store');
 const fs = require('fs');
 const mysql = require('mysql2/promise');
-const { spawn, execSync } = require('child_process');
+const { spawn, execSync, exec } = require('child_process');
 const pluralize = require('pluralize');
 
 const store = new Store();
@@ -3714,3 +3714,1256 @@ ipcMain.handle('remove-connection', async (event, connectionId) => {
     };
   }
 });
+
+// Add the following handlers for database restoration
+
+// Handler to select SQL dump file
+ipcMain.handle('select-sql-dump-file', async () => {
+  try {
+    return await dialog.showOpenDialog(mainWindow, {
+      title: 'Select SQL Dump File',
+      buttonLabel: 'Select',
+      filters: [
+        { name: 'SQL Dump Files', extensions: ['sql', 'gz'] }
+      ],
+      properties: ['openFile']
+    });
+  } catch (error) {
+    console.error('Error selecting SQL dump file:', error);
+    throw error;
+  }
+});
+
+// Handler to restore database from SQL dump
+ipcMain.handle('restore-database', async (event, config) => {
+  try {
+    if (!config.connectionId || !config.filePath) {
+      return { 
+        success: false, 
+        message: 'Missing connection ID or file path'
+      };
+    }
+
+    // Get the connection details
+    const connections = store.get('connections') || [];
+    const connection = connections.find(conn => conn.id === config.connectionId);
+    
+    if (!connection) {
+      return { 
+        success: false, 
+        message: 'Connection not found'
+      };
+    }
+
+    // Create a unique channel ID for progress updates
+    const channelId = `restore-progress-${Date.now()}`;
+    
+    // Start the restoration process asynchronously
+    // We don't await here because we want to return immediately with the channel ID
+    // and let the restoration run in the background
+    startDatabaseRestoration(event, connection, config, channelId)
+      .catch(error => {
+        console.error('Database restoration failed:', error);
+        if (event && event.sender) {
+          event.sender.send(channelId, {
+            progress: 100,
+            status: `Error: ${error.message}`,
+            complete: true,
+            success: false,
+            error: error.message
+          });
+        }
+      });
+    
+    return { 
+      success: true, 
+      message: 'Restoration process started',
+      channelId: channelId
+    };
+  } catch (error) {
+    console.error('Error starting database restoration:', error);
+    return { 
+      success: false, 
+      message: error.message || 'Failed to start restoration process'
+    };
+  }
+});
+
+// Function to handle the database restoration process
+async function startDatabaseRestoration(event, connection, config, channelId, customSendProgress = null) {
+  const sendProgress = (data) => {
+    // Log progress updates for debugging
+    console.log(`Restoration progress: ${data.progress}% - ${data.status}`);
+    
+    // If a custom progress function is provided, use it
+    if (typeof customSendProgress === 'function') {
+      customSendProgress(data);
+      return;
+    }
+    
+    // Otherwise use the default event sender
+    if (event && event.sender) {
+      event.sender.send(channelId, data);
+    }
+  };
+  
+  try {
+    // Send initial progress
+    sendProgress({ 
+      progress: 10, 
+      status: 'Preparing to restore database...',
+      complete: false
+    });
+    
+    // Make sure we have a proper connection in the config
+    // This is to avoid the error when building commands
+    if (!config.connection && connection) {
+      console.log('Moving connection object from parameter to config.connection');
+      config.connection = connection;
+    }
+    
+    // Use let instead of const for variables that will be reassigned later
+    let { filePath, ignoredTables = [] } = config;
+    
+    // Make sure we have a filePath in the config
+    if (!filePath && config.sqlFilePath) {
+      filePath = config.sqlFilePath;
+      config.filePath = config.sqlFilePath;
+    }
+    
+    let isGzipped = filePath.toLowerCase().endsWith('.gz');
+    
+    // Determine Docker or local execution
+    const useDocker = connection.usingSail || 
+                     (connection.dockerInfo && connection.dockerInfo.isDocker);
+    const containerName = useDocker ? 
+                         (connection.dockerInfo && connection.dockerInfo.dockerContainerName) : null;
+    
+    // Log the file size for debugging
+    try {
+      const stats = fs.statSync(filePath);
+      const fileSizeMB = (stats.size / (1024 * 1024)).toFixed(2);
+      console.log(`SQL dump file size: ${fileSizeMB}MB, gzipped: ${isGzipped}`);
+      
+      // Update progress with file size info
+      sendProgress({ 
+        progress: 15, 
+        status: `Processing ${fileSizeMB}MB SQL ${isGzipped ? 'gzipped ' : ''}file...`,
+        complete: false
+      });
+    } catch (statError) {
+      console.error('Error getting file stats:', statError);
+    }
+    
+    sendProgress({ 
+      progress: 20, 
+      status: `Detected ${useDocker ? 'Docker' : 'local'} MySQL environment...`,
+      complete: false
+    });
+    
+    // Prepare the command based on environment and file type
+    let command = '';
+    let commandArgs = [];
+    
+    // Create a temporary file for filtered SQL if there are tables to ignore
+    let tempFilePath = '';
+    if (ignoredTables.length > 0) {
+      sendProgress({ 
+        progress: 30, 
+        status: `Preparing to filter out ${ignoredTables.length} tables...`,
+        complete: false
+      });
+      
+      // Create temp file for filtered content
+      tempFilePath = path.join(
+        app.getPath('temp'), 
+        `filtered_dump_${Date.now()}.sql`
+      );
+      
+      // Read the SQL dump and filter out ignored tables
+      await filterSqlDump(filePath, tempFilePath, ignoredTables, isGzipped, sendProgress);
+      
+      sendProgress({ 
+        progress: 50, 
+        status: 'SQL dump filtered successfully, starting restoration...',
+        complete: false
+      });
+      
+      // Now use the filtered file for restoration
+      filePath = tempFilePath;
+      isGzipped = false; // The filtered file is plain SQL
+    } else {
+      // No tables to filter, just update progress
+      sendProgress({ 
+        progress: 40, 
+        status: 'Preparing SQL dump file for restoration...',
+        complete: false
+      });
+      
+      // Artificial delay to show progress
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      sendProgress({ 
+        progress: 50, 
+        status: 'SQL dump ready, starting restoration...',
+        complete: false
+      });
+    }
+    
+    // Build the restoration command based on environment
+    if (useDocker && containerName) {
+      // Docker execution with containerName
+      config.connection.container = containerName;
+      const dockerCmd = buildDockerRestoreCommand(config);
+      command = dockerCmd.command;
+      commandArgs = dockerCmd.args || [];
+    } else {
+      // Local execution
+      const localCmd = buildLocalRestoreCommand(config);
+      command = localCmd.command;
+      commandArgs = localCmd.args || [];
+    }
+    
+    sendProgress({ 
+      progress: 60, 
+      status: 'Executing database restoration...',
+      complete: false
+    });
+    
+    // Execute the command
+    try {
+      const result = await executeRestoreCommand({ command, args: commandArgs }, filePath, sendProgress);
+      
+      // Clean up temporary file if created
+      if (tempFilePath && fs.existsSync(tempFilePath)) {
+        fs.unlinkSync(tempFilePath);
+        console.log(`Temporary file ${tempFilePath} deleted successfully`);
+      }
+      
+      // Send completion status
+      sendProgress({ 
+        progress: 100, 
+        status: 'Database restored successfully',
+        complete: true,
+        success: true
+      });
+      
+      return result;
+    } catch (execError) {
+      console.error('Error executing restore command:', execError);
+      
+      // Clean up temporary file if created
+      if (tempFilePath && fs.existsSync(tempFilePath)) {
+        try {
+          fs.unlinkSync(tempFilePath);
+          console.log(`Temporary file ${tempFilePath} deleted successfully`);
+        } catch (cleanupError) {
+          console.error('Error cleaning up temporary file:', cleanupError);
+        }
+      }
+      
+      // Send error status
+      sendProgress({ 
+        progress: 100, 
+        status: `Error: ${execError.message}`,
+        complete: true,
+        success: false,
+        error: execError.message
+      });
+      
+      throw execError;
+    }
+  } catch (error) {
+    console.error('Error during database restoration:', error);
+    
+    // Clean up temporary file if created
+    if (config.tempFilePath && fs.existsSync(config.tempFilePath)) {
+      try {
+        fs.unlinkSync(config.tempFilePath);
+      } catch (cleanupError) {
+        console.error('Error cleaning up temporary file:', cleanupError);
+      }
+    }
+    
+    // Send error status
+    sendProgress({ 
+      progress: 100, 
+      status: `Error: ${error.message}`,
+      complete: true,
+      success: false,
+      error: error.message
+    });
+    
+    throw error;
+  }
+}
+
+async function restoreDatabase(event, config) {
+  console.log('Starting database restoration process');
+  const sender = event.sender;
+  
+  try {
+    // Validate the database connection before attempting to restore
+    try {
+      await validateDatabaseConnection(config.connection);
+      sender.send('restore:progress', { status: 'validating', progress: 10, message: 'Database connection validated' });
+    } catch (error) {
+      sender.send('restore:progress', { status: 'error', progress: 0, message: `Connection validation failed: ${error.message}` });
+      return;
+    }
+    
+    // Build the appropriate restore command based on connection type
+    let command;
+    try {
+      if (config.connection && config.connection.docker) {
+        command = buildDockerRestoreCommand(config);
+      } else {
+        command = buildLocalRestoreCommand(config);
+      }
+    } catch (commandError) {
+      console.error('Error building restore command:', commandError);
+      sender.send('restore:progress', { status: 'error', progress: 0, message: `Command error: ${commandError.message}` });
+      throw commandError;
+    }
+    
+    console.log('Executing restore command:', command);
+    sender.send('restore:progress', { status: 'preparing', progress: 20, message: 'Starting restoration process' });
+    
+    // Log a more detailed message about what's happening
+    const logDetails = {
+      command: command,
+      databaseName: config.connection.database,
+      filePath: config.sqlFilePath,
+      dockerMode: config.connection.docker ? 'Yes' : 'No',
+      isCompressed: config.sqlFilePath?.toLowerCase().endsWith('.gz') ? 'Yes' : 'No'
+    };
+    console.log('Restore details:', JSON.stringify(logDetails, null, 2));
+    
+    // Execute the command
+    const child = exec(command, { shell: '/bin/bash' }); // Use bash shell for pipefail
+    let error = '';
+    let output = '';
+    
+    child.stdout.on('data', (data) => {
+      output += data;
+      console.log(`Restore stdout: ${data.toString().trim()}`);
+      
+      // Parse the output to estimate progress
+      // MySQL dump restoration usually shows progress in percentage
+      const progressMatch = data.toString().match(/(\d+)%/);
+      if (progressMatch) {
+        const progressValue = parseInt(progressMatch[1], 10);
+        const calculatedProgress = 20 + (progressValue * 0.8); // Scale from 20% to 100%
+        sender.send('restore:progress', { 
+          status: 'restoring', 
+          progress: calculatedProgress, 
+          message: `Restoring database: ${progressValue}% complete` 
+        });
+      }
+    });
+    
+    child.stderr.on('data', (data) => {
+      // Some MySQL tools output progress information to stderr
+      const dataStr = data.toString();
+      error += dataStr;
+      console.log(`Restore stderr: ${dataStr.trim()}`);
+      
+      // Check if this is actually an error or just informational
+      if (!dataStr.includes('Warning') && !dataStr.includes('information_schema')) {
+        console.log('Restore progress:', dataStr);
+      }
+    });
+    
+    return new Promise((resolve, reject) => {
+      child.on('close', (code) => {
+        if (code === 0) {
+          console.log('Database restoration completed successfully');
+          // Verify if output or error contains any meaningful content
+          if (output.trim() || error.trim()) {
+            console.log('Command output:', output.trim());
+            console.log('Command error/info:', error.trim());
+          } else {
+            console.warn('Warning: Command had no output. This might indicate a silent failure.');
+          }
+          
+          // Check if database has content after restore
+          validateDatabaseHasContent(config.connection)
+            .then(result => {
+              if (result.hasContent) {
+                console.log(`Database now has ${result.tableCount} tables with data`);
+                sender.send('restore:progress', { 
+                  status: 'completed', 
+                  progress: 100, 
+                  message: `Database restored successfully with ${result.tableCount} tables` 
+                });
+                resolve({ success: true, message: 'Database restored successfully', tables: result.tableCount });
+              } else {
+                const warnMsg = 'Database restoration seemed to succeed, but no tables were found';
+                console.warn(warnMsg);
+                sender.send('restore:progress', { status: 'warning', progress: 100, message: warnMsg });
+                resolve({ success: true, warning: warnMsg });
+              }
+            })
+            .catch(err => {
+              console.error('Error validating database content:', err);
+              sender.send('restore:progress', { status: 'completed', progress: 100, message: 'Database restoration completed' });
+              resolve({ success: true, message: 'Database restored successfully', warning: 'Could not validate content' });
+            });
+        } else {
+          console.error('Database restoration failed with code:', code);
+          console.error('Error output:', error);
+          sender.send('restore:progress', { status: 'error', progress: 0, message: `Restoration failed: ${error}` });
+          reject(new Error(`Database restoration failed: ${error}`));
+        }
+      });
+      
+      child.on('error', (err) => {
+        console.error('Failed to start database restoration process:', err);
+        sender.send('restore:progress', { status: 'error', progress: 0, message: `Process error: ${err.message}` });
+        reject(err);
+      });
+    });
+  } catch (error) {
+    console.error('Error in database restoration process:', error);
+    sender.send('restore:progress', { status: 'error', progress: 0, message: `Error: ${error.message}` });
+    throw error;
+  }
+}
+
+// Function to check if database has content after restoration
+async function validateDatabaseHasContent(connection) {
+  try {
+    if (!connection || !connection.host || !connection.database) {
+      return { hasContent: false, error: 'Invalid connection' };
+    }
+    
+    console.log(`Validating if database ${connection.database} has content...`);
+    
+    const dbConnection = await mysql.createConnection({
+      host: connection.host,
+      port: connection.port || 3306,
+      user: connection.username || connection.user || 'root',
+      password: connection.password || '',
+      database: connection.database,
+      connectTimeout: 10000
+    });
+    
+    try {
+      // Get list of tables
+      const [rows] = await dbConnection.query(`
+        SHOW TABLES
+      `);
+      
+      if (!rows || rows.length === 0) {
+        console.log('No tables found in database');
+        return { hasContent: false, tableCount: 0 };
+      }
+      
+      // Check for at least one table with data
+      const tableCount = rows.length;
+      console.log(`Found ${tableCount} tables in database`);
+      
+      return { hasContent: tableCount > 0, tableCount };
+    } finally {
+      await dbConnection.end();
+    }
+  } catch (error) {
+    console.error('Error validating database content:', error);
+    return { hasContent: false, error: error.message };
+  }
+}
+
+/**
+ * Build a docker command for MySQL database restoration
+ * @param {Object} config - The configuration object containing restoration settings
+ * @returns {string} - The command to execute for docker restoration
+ */
+function buildDockerRestoreCommand(config) {
+  if (!config || !config.connection) {
+    console.error('Invalid config or missing connection in buildDockerRestoreCommand:', config);
+    throw new Error('Missing connection configuration for Docker restore command');
+  }
+  
+  const { connection, sqlFilePath, ignoreTables = [] } = config;
+  const { host, user, password, database, port, container } = connection;
+  
+  // Verificar se o arquivo é gzip
+  const isGzipped = sqlFilePath.toLowerCase().endsWith('.gz');
+  console.log(`Building Docker restore command for ${isGzipped ? 'gzipped' : 'regular'} SQL file`);
+  
+  // Verificar também se o arquivo não está vazio
+  try {
+    const stats = fs.statSync(sqlFilePath);
+    console.log(`SQL file size: ${(stats.size / 1024 / 1024).toFixed(2)} MB`);
+    
+    if (stats.size === 0) {
+      throw new Error('SQL file is empty (0 bytes)');
+    }
+  } catch (err) {
+    console.error('Error checking SQL file:', err);
+    throw new Error(`Error with SQL file: ${err.message}`);
+  }
+  
+  // Verify container exists
+  if (!container) {
+    console.error('Container name is missing from the Docker configuration');
+    throw new Error('Docker container name is missing or invalid');
+  }
+  
+  // Base command for docker exec with error checking
+  let command = '';
+  
+  if (isGzipped) {
+    // Para arquivos gzip, precisamos descomprimir primeiro e garantir que erros sejam propagados
+    command = `set -o pipefail && gunzip -c "${sqlFilePath}" | docker exec -i ${container} mysql`;
+  } else {
+    command = `set -o pipefail && cat "${sqlFilePath}" | docker exec -i ${container} mysql`;
+  }
+  
+  // Add credentials
+  command += ` -u${user || 'root'}`;
+  if (password) {
+    command += ` -p${password}`;
+  }
+  
+  // Add host and port if provided
+  if (host && host !== 'localhost') {
+    command += ` -h${host}`;
+  }
+  if (port) {
+    command += ` -P${port}`;
+  }
+  
+  // Adicionar a opção binary-mode para lidar com arquivos binários
+  // E também force para garantir que erros sejam reportados
+  command += ` --binary-mode=1 --force`;
+  
+  // Add database name
+  command += ` ${database}`;
+  
+  console.log(`Docker restoration command: ${command}`);
+  return command;
+}
+
+/**
+ * Build a local command for MySQL database restoration
+ * @param {Object} config - The configuration object containing restoration settings
+ * @returns {string} - The command to execute for local restoration
+ */
+function buildLocalRestoreCommand(config) {
+  if (!config || !config.connection) {
+    console.error('Invalid config or missing connection in buildLocalRestoreCommand:', config);
+    throw new Error('Missing connection configuration for local restore command');
+  }
+
+  const { connection, sqlFilePath, ignoreTables = [] } = config;
+  const { host, user, password, database, port } = connection;
+  
+  // Verificar se o arquivo é gzip
+  const isGzipped = sqlFilePath.toLowerCase().endsWith('.gz');
+  console.log(`Building local restore command for ${isGzipped ? 'gzipped' : 'regular'} SQL file`);
+  
+  // Verificar também se o arquivo não está vazio
+  try {
+    const stats = fs.statSync(sqlFilePath);
+    console.log(`SQL file size: ${(stats.size / 1024 / 1024).toFixed(2)} MB`);
+    
+    if (stats.size === 0) {
+      throw new Error('SQL file is empty (0 bytes)');
+    }
+  } catch (err) {
+    console.error('Error checking SQL file:', err);
+    throw new Error(`Error with SQL file: ${err.message}`);
+  }
+  
+  // Base command with error checking
+  let command = '';
+  
+  if (isGzipped) {
+    // Para arquivos gzip, precisamos descomprimir primeiro e garantir que erros sejam propagados
+    command = `set -o pipefail && gunzip -c "${sqlFilePath}" | mysql`;
+  } else {
+    command = `set -o pipefail && cat "${sqlFilePath}" | mysql`;
+  }
+  
+  // Add credentials
+  command += ` -u${user || 'root'}`;
+  if (password) {
+    command += ` -p${password}`;
+  }
+  
+  // Add host and port
+  command += ` -h${host || 'localhost'}`;
+  if (port) {
+    command += ` -P${port || '3306'}`;
+  }
+  
+  // Adicionar a opção binary-mode para lidar com arquivos binários
+  // E também force para garantir que erros sejam reportados
+  command += ` --binary-mode=1 --force`;
+  
+  // Add database name
+  command += ` ${database}`;
+  
+  console.log(`Local restoration command: ${command}`);
+  return command;
+}
+
+// Execute the restore command and process output with better progress monitoring
+async function executeRestoreCommand(commandObj, sqlFilePath, progress) {
+  console.log(`Executing restore command: ${commandObj.command}`);
+  
+  try {
+    const fileSize = fs.statSync(sqlFilePath).size;
+    console.log(`SQL file size: ${fileSize} bytes`);
+    
+    progress(0.6); // Update progress to 60% - file is ready to be restored
+    console.log('Starting database restore process');
+    
+    const { command, args = [] } = commandObj;
+    
+    if (args && args.length > 0) {
+      // Método antigo com comando e argumentos separados
+      return new Promise((resolve, reject) => {
+        const proc = spawn(command, args);
+        let stderr = '';
+        
+        proc.stderr.on('data', (data) => {
+          const chunk = data.toString();
+          stderr += chunk;
+          console.log(`Restore stderr: ${chunk}`);
+        });
+        
+        proc.on('close', (code) => {
+          console.log(`Restore process exited with code ${code}`);
+          progress(0.9); // Update progress to 90% - command completed
+          
+          if (code !== 0) {
+            return reject(new Error(`Restore failed with code ${code}: ${stderr}`));
+          }
+          
+          resolve();
+        });
+        
+        proc.on('error', (error) => {
+          console.error(`Restore error: ${error.message}`);
+          reject(new Error(`Failed to execute restore command: ${error.message}`));
+        });
+      });
+    } else {
+      // Novo método com comando completo
+      return new Promise((resolve, reject) => {
+        console.log('Executing with exec method');
+        exec(command, (error, stdout, stderr) => {
+          if (stderr) {
+            console.log(`Restore stderr: ${stderr}`);
+          }
+          
+          if (stdout) {
+            console.log(`Restore stdout: ${stdout}`);
+          }
+          
+          if (error) {
+            console.error(`Restore error: ${error.message}`);
+            return reject(new Error(`Restore failed: ${error.message}`));
+          }
+          
+          console.log('Restore command completed successfully');
+          progress(0.9); // Update progress to 90% - command completed
+          resolve();
+        });
+      });
+    }
+  } catch (error) {
+    console.error(`Error executing restore command: ${error.message}`);
+    throw error;
+  }
+}
+
+// Function to filter out ignored tables from SQL dump
+async function filterSqlDump(inputFile, outputFile, ignoredTables, isGzipped, sendProgress) {
+  return new Promise((resolve, reject) => {
+    try {
+      if (!ignoredTables || ignoredTables.length === 0) {
+        // No tables to ignore, just copy the file if needed
+        if (isGzipped) {
+          // Decompress the file
+          const gunzip = spawn('gunzip', ['-c', inputFile]);
+          const writeStream = fs.createWriteStream(outputFile);
+          
+          gunzip.stdout.pipe(writeStream);
+          
+          gunzip.on('error', (error) => {
+            reject(new Error(`Error decompressing file: ${error.message}`));
+          });
+          
+          writeStream.on('finish', () => {
+            resolve();
+          });
+          
+          writeStream.on('error', (error) => {
+            reject(new Error(`Error writing decompressed file: ${error.message}`));
+          });
+        } else {
+          // Just copy the file
+          fs.copyFileSync(inputFile, outputFile);
+          resolve();
+        }
+        return;
+      }
+      
+      sendProgress({ 
+        progress: 35, 
+        status: 'Reading and filtering SQL dump...',
+        complete: false
+      });
+      
+      let inputStream;
+      if (isGzipped) {
+        const gunzip = spawn('gunzip', ['-c', inputFile]);
+        inputStream = gunzip.stdout;
+        
+        gunzip.on('error', (error) => {
+          reject(new Error(`Error decompressing file: ${error.message}`));
+        });
+      } else {
+        inputStream = fs.createReadStream(inputFile);
+      }
+      
+      const writeStream = fs.createWriteStream(outputFile);
+      const lineReader = require('readline').createInterface({
+        input: inputStream,
+        crlfDelay: Infinity
+      });
+      
+      // Create patterns for tables to ignore
+      const patterns = ignoredTables.map(table => 
+        new RegExp(`^(INSERT INTO|CREATE TABLE|DROP TABLE|ALTER TABLE)\\s+\`?${table}\`?`, 'i')
+      );
+      
+      let skipSection = false;
+      let linesProcessed = 0;
+      const totalLines = 100000; // Estimate for progress calculation
+      
+      lineReader.on('line', (line) => {
+        linesProcessed++;
+        
+        // Calculate progress periodically
+        if (linesProcessed % 5000 === 0) {
+          const estimatedProgress = Math.min(45, 35 + (linesProcessed / totalLines) * 10);
+          sendProgress({ 
+            progress: estimatedProgress, 
+            status: `Processed ${linesProcessed} lines...`,
+            complete: false
+          });
+        }
+        
+        // Check for beginning of INSERT/CREATE/etc. for a table to ignore
+        if (!skipSection) {
+          for (const pattern of patterns) {
+            if (pattern.test(line)) {
+              skipSection = true;
+              break;
+            }
+          }
+        }
+        
+        // Check for end of a section to ignore (usually end of an INSERT or end of CREATE TABLE)
+        if (skipSection && /;(\s*)$/.test(line)) {
+          skipSection = false;
+          return; // Skip writing this line
+        }
+        
+        // Write the line if we're not skipping
+        if (!skipSection) {
+          writeStream.write(line + '\n');
+        }
+      });
+      
+      lineReader.on('close', () => {
+        writeStream.end();
+      });
+      
+      writeStream.on('finish', () => {
+        resolve();
+      });
+      
+      writeStream.on('error', (error) => {
+        reject(new Error(`Error writing filtered SQL: ${error.message}`));
+      });
+      
+    } catch (error) {
+      reject(error);
+    }
+  });
+}
+
+// Handler to extract table names from SQL dump file
+ipcMain.handle('extract-tables-from-sql', async (event, filePath) => {
+  try {
+    if (!filePath) {
+      return { 
+        success: false, 
+        message: 'Missing file path',
+        tables: []
+      };
+    }
+
+    if (!fs.existsSync(filePath)) {
+      return { 
+        success: false, 
+        message: 'File not found',
+        tables: []
+      };
+    }
+
+    // Check file size - large files might take long to process
+    const stats = fs.statSync(filePath);
+    const fileSizeMB = stats.size / (1024 * 1024);
+    
+    let isGzipped = filePath.toLowerCase().endsWith('.gz');
+    let maxLines = 100000; // Default limit
+    
+    // Adjust maxLines based on file size
+    if (fileSizeMB > 500) {
+      maxLines = 20000;
+    } else if (fileSizeMB > 100) {
+      maxLines = 50000;
+    }
+    
+    // For gzipped files, we can't accurately guess the uncompressed size
+    // so we'll be more conservative
+    if (isGzipped) {
+      maxLines = Math.min(maxLines, 30000);
+    }
+    
+    console.log(`Extracting tables from SQL file (${fileSizeMB.toFixed(2)}MB), scanning up to ${maxLines} lines`);
+    
+    try {
+      const tables = await extractTablesFromSqlFile(filePath, isGzipped, maxLines);
+      
+      if (tables.length === 0) {
+        return {
+          success: true,
+          message: 'No tables found in the SQL file. It may be corrupted or not a valid dump file.',
+          tables: []
+        };
+      }
+      
+      return { 
+        success: true, 
+        tables: tables,
+        message: `Found ${tables.length} tables in the SQL file`
+      };
+    } catch (extractError) {
+      console.error('Error during table extraction:', extractError);
+      
+      // Special handling for common errors
+      if (extractError.message.includes('decompressing file')) {
+        return {
+          success: false,
+          message: 'Error decompressing file. Make sure it is a valid .gz file.',
+          tables: []
+        };
+      }
+      
+      return {
+        success: false,
+        message: extractError.message || 'Failed to extract tables from SQL file',
+        tables: []
+      };
+    }
+  } catch (error) {
+    console.error('Error extracting tables from SQL dump:', error);
+    return { 
+      success: false, 
+      message: error.message || 'Failed to extract tables',
+      tables: []
+    };
+  }
+});
+
+// Function to extract table names from SQL dump file
+async function extractTablesFromSqlFile(filePath, isGzipped, maxLinesToProcess = 50000) {
+  return new Promise((resolve, reject) => {
+    try {
+      let inputStream;
+      if (isGzipped) {
+        const gunzip = spawn('gunzip', ['-c', filePath], { timeout: 30000 });
+        inputStream = gunzip.stdout;
+        
+        gunzip.on('error', (error) => {
+          reject(new Error(`Error decompressing file: ${error.message}`));
+        });
+      } else {
+        inputStream = fs.createReadStream(filePath, { 
+          highWaterMark: 64 * 1024 // 64KB chunks for better performance
+        });
+      }
+      
+      const lineReader = require('readline').createInterface({
+        input: inputStream,
+        crlfDelay: Infinity
+      });
+      
+      const tableNames = new Set();
+      const tableStats = new Map(); // To track approximate size of each table
+      
+      // Regexes to match various table operations in SQL
+      const createTableRegex = /CREATE\s+TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?[`"']?([a-zA-Z0-9_]+)[`"']?/i;
+      const insertRegex = /INSERT\s+INTO\s+[`"']?([a-zA-Z0-9_]+)[`"']?/i;
+      const dropTableRegex = /DROP\s+TABLE\s+(?:IF\s+EXISTS\s+)?[`"']?([a-zA-Z0-9_]+)[`"']?/i;
+      const alterTableRegex = /ALTER\s+TABLE\s+[`"']?([a-zA-Z0-9_]+)[`"']?/i;
+      
+      let linesProcessed = 0;
+      let currentTable = null;
+      let currentInsertSize = 0;
+      
+      lineReader.on('line', (line) => {
+        linesProcessed++;
+        
+        // Stop processing after reaching limit
+        if (linesProcessed > maxLinesToProcess) {
+          lineReader.close();
+          return;
+        }
+        
+        // Skip comments and empty lines
+        if (line.trim().startsWith('--') || line.trim().startsWith('#') || line.trim() === '') {
+          return;
+        }
+        
+        // Check if this is the start of an INSERT statement
+        const insertMatch = insertRegex.exec(line);
+        if (insertMatch) {
+          const tableName = insertMatch[1];
+          tableNames.add(tableName);
+          currentTable = tableName;
+          
+          // Count values in the INSERT statement to estimate size
+          const valueCount = (line.match(/VALUES/gi) || []).length;
+          const rowCount = (line.match(/\),\(/g) || []).length + 1; // +1 for the first row
+          
+          // Accumulate insert size
+          currentInsertSize = Math.max(currentInsertSize, rowCount);
+          
+          // Update table stats
+          if (!tableStats.has(tableName)) {
+            tableStats.set(tableName, {
+              insertCount: 1,
+              maxRowsPerInsert: rowCount,
+              totalEstimatedRows: rowCount
+            });
+          } else {
+            const stats = tableStats.get(tableName);
+            stats.insertCount++;
+            stats.maxRowsPerInsert = Math.max(stats.maxRowsPerInsert, rowCount);
+            stats.totalEstimatedRows += rowCount;
+            tableStats.set(tableName, stats);
+          }
+          
+          return;
+        }
+        
+        // If we're in a multiline INSERT statement, count additional rows
+        if (currentTable && line.includes('),(')) {
+          const rowsInLine = (line.match(/\),\(/g) || []).length;
+          if (rowsInLine > 0) {
+            const stats = tableStats.get(currentTable);
+            if (stats) {
+              stats.totalEstimatedRows += rowsInLine;
+              tableStats.set(currentTable, stats);
+            }
+          }
+        }
+        
+        // Check for end of multiline INSERT
+        if (currentTable && line.trim().endsWith(';')) {
+          currentTable = null;
+          currentInsertSize = 0;
+        }
+        
+        // Check for CREATE TABLE
+        let match;
+        if ((match = createTableRegex.exec(line)) !== null) {
+          tableNames.add(match[1]);
+          if (!tableStats.has(match[1])) {
+            tableStats.set(match[1], {
+              insertCount: 0,
+              maxRowsPerInsert: 0,
+              totalEstimatedRows: 0
+            });
+          }
+        } else if ((match = dropTableRegex.exec(line)) !== null) {
+          tableNames.add(match[1]);
+        } else if ((match = alterTableRegex.exec(line)) !== null) {
+          tableNames.add(match[1]);
+        }
+      });
+      
+      // Add timeout to prevent hanging on very large files
+      const timeout = setTimeout(() => {
+        lineReader.close();
+        console.log(`Extraction timed out after processing ${linesProcessed} lines`);
+      }, 60000); // 1 minute timeout
+      
+      lineReader.on('close', () => {
+        clearTimeout(timeout);
+        
+        // Filter out some common system tables
+        const systemTables = ['mysql', 'information_schema', 'performance_schema', 'sys'];
+        
+        // Build result with table size information
+        const tableResults = [];
+        
+        for (const tableName of tableNames) {
+          // Skip system tables
+          if (systemTables.includes(tableName.toLowerCase())) {
+            continue;
+          }
+          
+          // Get stats for this table
+          const stats = tableStats.get(tableName) || { 
+            insertCount: 0, 
+            maxRowsPerInsert: 0,
+            totalEstimatedRows: 0
+          };
+          
+          // Determine table size category
+          let sizeCategory;
+          if (stats.totalEstimatedRows === 0) {
+            sizeCategory = 'empty';
+          } else if (stats.totalEstimatedRows < 1000) {
+            sizeCategory = 'small';
+          } else if (stats.totalEstimatedRows < 100000) {
+            sizeCategory = 'medium';
+          } else {
+            sizeCategory = 'large';
+          }
+          
+          tableResults.push({
+            name: tableName,
+            size: sizeCategory,
+            estimatedRows: stats.totalEstimatedRows
+          });
+        }
+        
+        // Sort by name
+        tableResults.sort((a, b) => a.name.localeCompare(b.name));
+        
+        console.log(`Found ${tableResults.length} tables after processing ${linesProcessed} lines`);
+        console.log(`Tables by size: ${tableResults.filter(t => t.size === 'empty').length} empty, ` + 
+                   `${tableResults.filter(t => t.size === 'small').length} small, ` +
+                   `${tableResults.filter(t => t.size === 'medium').length} medium, ` +
+                   `${tableResults.filter(t => t.size === 'large').length} large`);
+        
+        resolve(tableResults);
+      });
+      
+      inputStream.on('error', (error) => {
+        clearTimeout(timeout);
+        reject(new Error(`Error reading SQL file: ${error.message}`));
+      });
+      
+    } catch (error) {
+      reject(error);
+    }
+  });
+}
+
+// Simple database restore handler - unified approach
+ipcMain.handle('simple-database-restore-unified', async (event, config) => {
+  try {
+    console.log('Starting simple database restore with config:', config);
+    
+    // Basic validation
+    if (!config || !config.connectionId || !config.filePath) {
+      return { 
+        success: false, 
+        message: 'Missing required parameters (connectionId or filePath)'
+      };
+    }
+
+    // Get the connection details
+    const connections = store.get('connections') || [];
+    const connection = connections.find(conn => conn.id === config.connectionId);
+    
+    if (!connection) {
+      return { 
+        success: false, 
+        message: 'Connection not found'
+      };
+    }
+    
+    // Verify the file exists
+    if (!fs.existsSync(config.filePath)) {
+      return {
+        success: false,
+        message: 'SQL dump file not found'
+      };
+    }
+
+    // Determine which database to use
+    const targetDatabase = config.database || connection.database;
+    
+    if (!targetDatabase) {
+      return {
+        success: false,
+        message: 'No target database specified'
+      };
+    }
+
+    // Build a simple configuration for the restore
+    const restoreConfig = {
+      connection: {
+        ...connection,
+        database: targetDatabase,
+        user: connection.username,
+        docker: connection.usingSail || 
+               (connection.dockerInfo && connection.dockerInfo.isDocker),
+        container: connection.dockerInfo?.dockerContainerName
+      },
+      sqlFilePath: config.filePath,
+      ignoredTables: config.ignoredTables || []
+    };
+
+    // Create a fake event with a sender for compatibility
+    // This simplifies the approach instead of creating a custom progress handler
+    const sender = {
+      send: (channel, data) => {
+        console.log(`Progress update: ${data.progress}% - ${data.status}`);
+        if (event && event.sender) {
+          event.sender.send('restoration-progress', { 
+            progress: data.progress 
+          });
+        }
+      }
+    };
+    
+    // Simply execute the restore function
+    try {
+      // Log some basic details
+      const isGzipped = config.filePath.toLowerCase().endsWith('.gz');
+      const useDocker = connection.usingSail || 
+                        (connection.dockerInfo && connection.dockerInfo.isDocker);
+      
+      console.log(`Restoring database: ${targetDatabase}`);
+      console.log(`Original connection database: ${connection.database}`);
+      console.log(`Docker mode: ${useDocker ? 'Yes' : 'No'}`);
+      console.log(`Gzipped file: ${isGzipped ? 'Yes' : 'No'}`);
+      console.log(`Ignored tables: ${config.ignoredTables?.length || 0}`);
+      
+      // Execute the restore function directly
+      await restoreDatabase({ sender }, restoreConfig);
+      
+      // Update the connection database if needed
+      if (config.setAsDefault && targetDatabase !== connection.database) {
+        // Get current connections list again (it might have changed)
+        const updatedConnections = store.get('connections') || [];
+        const connectionIndex = updatedConnections.findIndex(conn => conn.id === config.connectionId);
+        
+        if (connectionIndex !== -1) {
+          updatedConnections[connectionIndex].database = targetDatabase;
+          store.set('connections', updatedConnections);
+          console.log(`Updated connection to use database ${targetDatabase} as default`);
+        }
+      }
+      
+      return {
+        success: true,
+        message: 'Database restored successfully',
+        database: targetDatabase
+      };
+    } catch (restoreError) {
+      console.error('Error during database restoration:', restoreError);
+      return {
+        success: false,
+        message: restoreError.message || 'Failed to restore database'
+      };
+    }
+  } catch (error) {
+    console.error('Error in simple-database-restore-unified handler:', error);
+    return { 
+      success: false, 
+      message: error.message || 'Failed to process restore request'
+    };
+  }
+});
+
+// Handler para atualizar o banco de dados de uma conexão
+ipcMain.handle('update-connection-database', async (event, connectionId, newDatabase) => {
+  try {
+    if (!connectionId || !newDatabase) {
+      return { 
+        success: false, 
+        message: 'Connection ID and new database name are required'
+      };
+    }
+
+    console.log(`Updating database for connection ${connectionId} to ${newDatabase}`);
+
+    // Get current connections list
+    const connections = store.get('connections') || [];
+    const connectionIndex = connections.findIndex(conn => conn.id === connectionId);
+    
+    if (connectionIndex === -1) {
+      return {
+        success: false,
+        message: 'Connection not found'
+      };
+    }
+
+    // Update the database name
+    connections[connectionIndex].database = newDatabase;
+    
+    // Save the updated connections list
+    store.set('connections', connections);
+
+    console.log(`Successfully updated connection database to ${newDatabase}`);
+    return {
+      success: true,
+      message: `Connection database updated to ${newDatabase}`
+    };
+  } catch (error) {
+    console.error('Error updating connection database:', error);
+    return {
+      success: false,
+      message: error.message || 'Failed to update connection database'
+    };
+  }
+});
+
+// Function to validate a database connection
+async function validateDatabaseConnection(config) {
+  try {
+    console.log('Validating database connection:', config.database);
+    
+    if (!config.host || !config.port || !config.username || !config.database) {
+      throw new Error('Missing required connection parameters');
+    }
+    
+    const connection = await mysql.createConnection({
+      host: config.host,
+      port: config.port,
+      user: config.username,
+      password: config.password || '',
+      connectTimeout: 10000
+    });
+    
+    try {
+      const [rows] = await connection.query('SELECT 1 as connection_test');
+      
+      if (rows && rows.length > 0) {
+        console.log('Database connection validated successfully');
+        return true;
+      } else {
+        throw new Error('Connection established but query failed');
+      }
+    } finally {
+      await connection.end();
+    }
+  } catch (error) {
+    console.error('Database connection validation failed:', error);
+    throw new Error(`Connection validation failed: ${error.message}`);
+  }
+}
