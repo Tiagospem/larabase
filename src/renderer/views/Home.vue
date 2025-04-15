@@ -74,7 +74,7 @@
           <div
             v-for="connection in connectionsStore.connections"
             :key="connection.id"
-            class="card bg-base-200 shadow-xl transition-colors border border-gray-700 hover:border-gray-500"
+            class="card bg-base-200 shadow-xl transition-colors border border-neutral hover:border-gray-500"
           >
             <div class="card-body py-4 px-5">
               <div class="flex items-center space-x-4">
@@ -90,14 +90,14 @@
                   <h2 class="card-title text-base">
                     {{ connection.name }}
                     <span class="text-xs text-green-500 ml-1"
-                      >({{ connection.status }})</span
+                      >{{ connection.status }}</span
                     >
                   </h2>
                   <p class="text-xs text-gray-400">
                     {{ connection.host || connection.path }}
                   </p>
-                  <p class="text-xs font-medium text-blue-400">
-                    DB: {{ connection.database }}
+                  <p class="text-xs font-medium text-white mt-1">
+                    {{ connection.database }}
                   </p>
                 </div>
                 <div class="flex gap-2">
