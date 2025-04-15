@@ -343,31 +343,67 @@ app.whenReady().then(async () => {
   // Configure global MySQL monitoring
   setupGlobalMonitoring();
 
-  globalShortcut.register('F12', () => {
-    if (mainWindow) {
-      if (mainWindow.webContents.isDevToolsOpened()) {
-        mainWindow.webContents.closeDevTools();
-      } else {
-        mainWindow.webContents.openDevTools();
+  // Replace global shortcuts with more focused approach
+  // Only respond to shortcuts when the app window is focused
+  if (mainWindow) {
+    // Use webContents.on('before-input-event') to handle keyboard events only when the window is focused
+    mainWindow.webContents.on('before-input-event', (event, input) => {
+      // Check if the window is focused
+      if (!mainWindow.isFocused()) {
+        return;
       }
-    }
-  });
 
-  globalShortcut.register('CommandOrControl+Shift+I', () => {
-    if (mainWindow) {
-      if (mainWindow.webContents.isDevToolsOpened()) {
-        mainWindow.webContents.closeDevTools();
-      } else {
-        mainWindow.webContents.openDevTools();
+      // F12 - Toggle DevTools
+      if (input.key === 'F12' && !input.alt && !input.control && !input.meta && !input.shift) {
+        if (mainWindow.webContents.isDevToolsOpened()) {
+          mainWindow.webContents.closeDevTools();
+        } else {
+          mainWindow.webContents.openDevTools();
+        }
       }
-    }
-  });
 
-  globalShortcut.register('CommandOrControl+R', () => {
-    if (mainWindow) {
-      mainWindow.reload();
-    }
-  });
+      // Ctrl+Shift+I or Cmd+Shift+I - Toggle DevTools
+      if (input.key === 'I' && !input.alt && input.shift && (input.control || input.meta)) {
+        if (mainWindow.webContents.isDevToolsOpened()) {
+          mainWindow.webContents.closeDevTools();
+        } else {
+          mainWindow.webContents.openDevTools();
+        }
+      }
+
+      // Ctrl+R or Cmd+R - Reload window
+      if (input.key === 'r' && !input.alt && !input.shift && (input.control || input.meta)) {
+        mainWindow.reload();
+      }
+    });
+  }
+
+  // Remove global shortcut registration
+  // globalShortcut.register('F12', () => {
+  //   if (mainWindow) {
+  //     if (mainWindow.webContents.isDevToolsOpened()) {
+  //       mainWindow.webContents.closeDevTools();
+  //     } else {
+  //       mainWindow.webContents.openDevTools();
+  //     }
+  //   }
+  // });
+
+  // globalShortcut.register('CommandOrControl+Shift+I', () => {
+  //   if (mainWindow) {
+  //     if (mainWindow.webContents.isDevToolsOpened()) {
+  //       mainWindow.webContents.closeDevTools();
+  //     } else {
+  //       mainWindow.webContents.openDevTools();
+  //     }
+  //   }
+  // });
+
+  // globalShortcut.register('CommandOrControl+R', () => {
+  //   if (mainWindow) {
+  //     mainWindow.reload();
+  //   }
+  // });
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
@@ -377,7 +413,18 @@ app.whenReady().then(async () => {
 });
 
 app.on('will-quit', () => {
-  globalShortcut.unregisterAll();
+  // Perform any necessary cleanup before app quits
+  console.log('Application is quitting, performing cleanup...');
+  
+  // Clean up database connections
+  for (const [connectionId, connection] of dbMonitoringConnections.entries()) {
+    try {
+      if (connection) connection.end();
+    } catch (e) {
+      console.error(`Error closing connection ${connectionId}:`, e);
+    }
+  }
+  dbMonitoringConnections.clear();
 });
 
 app.on('window-all-closed', () => {
