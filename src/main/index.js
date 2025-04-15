@@ -4184,7 +4184,7 @@ function buildDockerRestoreCommand(config) {
     throw new Error('Missing connection configuration for Docker restore command');
   }
   
-  const { connection, sqlFilePath, ignoreTables = [] } = config;
+  const { connection, sqlFilePath, ignoredTables = [] } = config;
   const { host, user, password, database, port, container } = connection;
   
   // Verificar se o arquivo é gzip
@@ -4213,11 +4213,26 @@ function buildDockerRestoreCommand(config) {
   // Base command for docker exec with error checking
   let command = '';
   
+  // Construir os comandos sed para filtrar as tabelas ignoradas
+  let sedFilters = '';
+  if (ignoredTables && ignoredTables.length > 0) {
+    console.log(`Ignoring ${ignoredTables.length} tables: ${ignoredTables.join(', ')}`);
+    
+    // Cria comandos sed para cada tabela ignorada
+    const sedCommands = ignoredTables.map(table => {
+      return `/INSERT INTO \`${table}\`/d; /INSERT INTO "${table}"/d`;
+    });
+    
+    // Combina os comandos sed
+    sedFilters = ` | sed '${sedCommands.join('; ')}'`;
+    console.log(`Generated sed filters: ${sedFilters}`);
+  }
+  
   if (isGzipped) {
     // Para arquivos gzip, precisamos descomprimir primeiro e garantir que erros sejam propagados
-    command = `set -o pipefail && gunzip -c "${sqlFilePath}" | docker exec -i ${container} mysql`;
+    command = `set -o pipefail && gunzip -c "${sqlFilePath}"${sedFilters} | docker exec -i ${container} mysql`;
   } else {
-    command = `set -o pipefail && cat "${sqlFilePath}" | docker exec -i ${container} mysql`;
+    command = `set -o pipefail && cat "${sqlFilePath}"${sedFilters} | docker exec -i ${container} mysql`;
   }
   
   // Add credentials
@@ -4256,7 +4271,7 @@ function buildLocalRestoreCommand(config) {
     throw new Error('Missing connection configuration for local restore command');
   }
 
-  const { connection, sqlFilePath, ignoreTables = [] } = config;
+  const { connection, sqlFilePath, ignoredTables = [] } = config;
   const { host, user, password, database, port } = connection;
   
   // Verificar se o arquivo é gzip
@@ -4276,14 +4291,29 @@ function buildLocalRestoreCommand(config) {
     throw new Error(`Error with SQL file: ${err.message}`);
   }
   
+  // Construir os comandos sed para filtrar as tabelas ignoradas
+  let sedFilters = '';
+  if (ignoredTables && ignoredTables.length > 0) {
+    console.log(`Ignoring ${ignoredTables.length} tables: ${ignoredTables.join(', ')}`);
+    
+    // Cria comandos sed para cada tabela ignorada
+    const sedCommands = ignoredTables.map(table => {
+      return `/INSERT INTO \`${table}\`/d; /INSERT INTO "${table}"/d`;
+    });
+    
+    // Combina os comandos sed
+    sedFilters = ` | sed '${sedCommands.join('; ')}'`;
+    console.log(`Generated sed filters: ${sedFilters}`);
+  }
+  
   // Base command with error checking
   let command = '';
   
   if (isGzipped) {
     // Para arquivos gzip, precisamos descomprimir primeiro e garantir que erros sejam propagados
-    command = `set -o pipefail && gunzip -c "${sqlFilePath}" | mysql`;
+    command = `set -o pipefail && gunzip -c "${sqlFilePath}"${sedFilters} | mysql`;
   } else {
-    command = `set -o pipefail && cat "${sqlFilePath}" | mysql`;
+    command = `set -o pipefail && cat "${sqlFilePath}"${sedFilters} | mysql`;
   }
   
   // Add credentials
@@ -4775,6 +4805,7 @@ async function extractTablesFromSqlFile(filePath, isGzipped, maxLinesToProcess =
 ipcMain.handle('simple-database-restore-unified', async (event, config) => {
   try {
     console.log('Starting simple database restore with config:', config);
+    console.log('Ignored tables:', config.ignoredTables);
     
     // Basic validation
     if (!config || !config.connectionId || !config.filePath) {
@@ -4827,6 +4858,11 @@ ipcMain.handle('simple-database-restore-unified', async (event, config) => {
       ignoredTables: config.ignoredTables || []
     };
 
+    // Log ignored tables
+    if (config.ignoredTables && config.ignoredTables.length > 0) {
+      console.log(`Will ignore these tables: ${config.ignoredTables.join(', ')}`);
+    }
+
     // Create a fake event with a sender for compatibility
     // This simplifies the approach instead of creating a custom progress handler
     const sender = {
@@ -4851,7 +4887,7 @@ ipcMain.handle('simple-database-restore-unified', async (event, config) => {
       console.log(`Original connection database: ${connection.database}`);
       console.log(`Docker mode: ${useDocker ? 'Yes' : 'No'}`);
       console.log(`Gzipped file: ${isGzipped ? 'Yes' : 'No'}`);
-      console.log(`Ignored tables: ${config.ignoredTables?.length || 0}`);
+      console.log(`Ignored tables: ${restoreConfig.ignoredTables.length}`);
       
       // Execute the restore function directly
       await restoreDatabase({ sender }, restoreConfig);
