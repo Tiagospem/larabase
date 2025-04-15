@@ -285,9 +285,12 @@
           <p class="text-xs text-gray-500 mt-1">Select a .sql or .sql.gz file to restore</p>
         </div>
         
-        <div v-if="isProcessingSql" class="my-4 flex items-center gap-2 text-info">
+        <div v-if="isProcessingSql" class="my-4 flex items-center gap-2 text-info bg-base-300 p-3 rounded-md">
           <span class="loading loading-spinner loading-sm"></span>
-          <p class="text-sm">{{ restoreStatus }}</p>
+          <div>
+            <p class="text-sm font-medium">{{ restoreStatus }}</p>
+            <p class="text-xs mt-1">Please wait until the SQL file analysis is complete</p>
+          </div>
         </div>
         
         <div v-else-if="restoreStatus && !isRestoring" class="my-4 text-sm text-info">
@@ -304,7 +307,7 @@
         <div class="form-control w-full mb-4">
           <label class="label cursor-pointer justify-start">
             <input type="checkbox" v-model="overwriteCurrentDb" class="checkbox checkbox-sm mr-2" 
-              :disabled="isRestoring" />
+              :disabled="isRestoring || isProcessingSql" />
             <span class="label-text">Restore to current database ({{ restoreConfig.connection?.database }})</span>
           </label>
           <p class="text-xs text-gray-500 mt-1">The backup will overwrite your current database</p>
@@ -315,7 +318,7 @@
             <span class="label-text">Target Database Name</span>
           </label>
           <input type="text" v-model="restoreConfig.database" placeholder="Enter target database name" 
-            class="input input-bordered w-full" :disabled="isRestoring" />
+            class="input input-bordered w-full" :disabled="isRestoring || isProcessingSql" />
           <label class="label">
             <span class="label-text-alt">The backup will be restored to this new database</span>
           </label>
@@ -324,7 +327,7 @@
         <div class="form-control w-full mb-4" v-if="!overwriteCurrentDb">
           <label class="label cursor-pointer justify-start">
             <input type="checkbox" v-model="restoreConfig.setAsDefault" class="checkbox checkbox-sm mr-2"
-              :disabled="isRestoring" />
+              :disabled="isRestoring || isProcessingSql" />
             <span class="label-text">Set as default database for this connection</span>
           </label>
           <label class="label">
@@ -343,15 +346,17 @@
               v-model="tableSearchQuery" 
               placeholder="Search tables..." 
               class="input input-bordered w-full input-sm"
-              :disabled="isRestoring"
+              :disabled="isRestoring || isProcessingSql"
             />
           </div>
           
-          <div class="h-48 overflow-y-auto bg-base-300 rounded-md p-2" :class="{'opacity-50': isRestoring}">
+          <div class="h-48 overflow-y-auto bg-base-300 rounded-md p-2" 
+            :class="{'opacity-50': isRestoring || isProcessingSql}">
             <div v-for="table in filteredTables" :key="table.name" class="form-control">
-              <label class="label cursor-pointer justify-start gap-2" :class="{'opacity-50': isRestoring}">
+              <label class="label cursor-pointer justify-start gap-2" 
+                :class="{'opacity-50': isRestoring || isProcessingSql}">
                 <input type="checkbox" v-model="restoreConfig.ignoredTables" :value="table.name" 
-                  class="checkbox checkbox-sm" :disabled="isRestoring" />
+                  class="checkbox checkbox-sm" :disabled="isRestoring || isProcessingSql" />
                 <div class="flex items-center justify-between w-full">
                   <span class="label-text">{{ table.name }}</span>
                   <span v-if="table.size" class="text-xs px-2 py-0.5 rounded" 
@@ -372,8 +377,10 @@
         
         <div class="modal-action">
           <button class="btn" @click="closeRestoreModal" :disabled="isRestoring">Cancel</button>
-          <button class="btn btn-primary" @click="startRestore" :disabled="isRestoring || !restoreConfig.filePath">
+          <button class="btn btn-primary" @click="startRestore" 
+            :disabled="isRestoring || isProcessingSql || !restoreConfig.filePath">
             <span v-if="isRestoring" class="loading loading-spinner loading-xs mr-2"></span>
+            <span v-else-if="isProcessingSql" class="loading loading-spinner loading-xs mr-2"></span>
             Restore Database
           </button>
         </div>
@@ -764,14 +771,26 @@ async function selectDumpFile() {
     
     // Extract tables from the SQL file
     isProcessingSql.value = true;
-    restoreStatus.value = 'Extracting tables from SQL file...';
+    restoreStatus.value = 'Analyzing SQL file...';
     
     try {
+      // Show message for large files
+      const fileStats = await window.api.getFileStats(selectedPath);
+      if (fileStats && fileStats.size) {
+        const fileSizeMB = (fileStats.size / (1024 * 1024)).toFixed(2);
+        if (fileSizeMB > 100) {
+          restoreStatus.value = `Analyzing large SQL file (${fileSizeMB} MB). This may take a few minutes...`;
+        } else {
+          restoreStatus.value = `Analyzing SQL file (${fileSizeMB} MB)...`;
+        }
+      }
+      
+      // Extract tables from SQL file
       const tableResult = await window.api.extractTablesFromSql(selectedPath);
       
       if (tableResult.success && tableResult.tables && tableResult.tables.length > 0) {
         restoreConfig.value.tables = tableResult.tables;
-        restoreStatus.value = `Found ${tableResult.tables.length} tables in SQL file`;
+        restoreStatus.value = `${tableResult.tables.length} tables found in SQL file`;
       } else {
         restoreConfig.value.tables = [];
         restoreStatus.value = tableResult.message || 'No tables found in SQL file';

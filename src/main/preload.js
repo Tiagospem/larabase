@@ -232,6 +232,9 @@ try {
 
       // Add method to update a connection's database name
       updateConnectionDatabase: (connectionId, newDatabase) => safeIpcRenderer.invoke('update-connection-database', connectionId, newDatabase),
+
+      // Adicionar o método getFileStats ao api exposto pelo preload
+      getFileStats: (filePath) => ipcRenderer.invoke('get-file-stats', filePath),
     }
   );
 } catch (error) {

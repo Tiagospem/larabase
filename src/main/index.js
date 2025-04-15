@@ -5073,3 +5073,33 @@ async function validateDatabaseConnection(config) {
     throw new Error(`Connection validation failed: ${error.message}`);
   }
 }
+
+// Handler para obter estatísticas de um arquivo
+ipcMain.handle('get-file-stats', async (event, filePath) => {
+  try {
+    if (!filePath || !fs.existsSync(filePath)) {
+      return { 
+        success: false, 
+        message: 'File not found',
+        size: 0
+      };
+    }
+
+    const stats = fs.statSync(filePath);
+    
+    return {
+      success: true,
+      size: stats.size,
+      created: stats.birthtime,
+      modified: stats.mtime,
+      isDirectory: stats.isDirectory()
+    };
+  } catch (error) {
+    console.error('Error getting file stats:', error);
+    return { 
+      success: false, 
+      message: error.message,
+      size: 0
+    };
+  }
+});
