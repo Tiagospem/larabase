@@ -202,26 +202,38 @@ async function findFactoryFile(projectPath, tableName, model) {
     // Convert table name to likely factory name patterns
     // Singular form of the table name (remove trailing 's')
     let modelName = '';
+    let singularTableName = '';
+    
+    // Calculate the singular form of the table name for matching
+    singularTableName = tableName
+      .replace(/s$/, '') // Remove trailing 's' for simple singularization
+      .split('_')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+      .join('');
     
     if (model) {
       // If we found a model, use its name
       modelName = model.name;
     } else {
-      // Convert pluralized table_name to singular PascalCase
-      modelName = tableName
-        .replace(/s$/, '') // Remove trailing 's' for simple singularization
-        .split('_')
-        .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-        .join('');
+      // If no model found, use the singularized table name
+      modelName = singularTableName;
     }
     
     // Common patterns for factory filenames
     const factoryPatterns = [
+      // With model name
       `${modelName}Factory.php`,
+      // Alternative name patterns
       `${modelName.toLowerCase()}Factory.php`,
+      `${modelName}factory.php`,
       `${modelName}_factory.php`,
       `${modelName.toLowerCase()}_factory.php`,
-      `${tableName}_factory.php`
+      // Try with table name directly
+      `${tableName}_factory.php`,
+      `${tableName}Factory.php`,
+      // Try with singular table name with underscore
+      `${singularTableName}_factory.php`,
+      `${singularTableName.toLowerCase()}_factory.php`
     ];
     
     // Common directories for factories in Laravel projects
@@ -230,6 +242,9 @@ async function findFactoryFile(projectPath, tableName, model) {
       'database/Factory',
       'app/database/factories'
     ];
+    
+    // First pass: scan all factory directories and collect all PHP files
+    const allFactoryFiles = [];
     
     for (const dirPath of factoryDirs) {
       const fullDirPath = `${projectPath}/${dirPath}`;
@@ -243,41 +258,15 @@ async function findFactoryFile(projectPath, tableName, model) {
           continue;
         }
         
+        // Add all PHP files to our collection
         const entries = result.files;
-        
-        // First try exact name matches
-        for (const factoryPattern of factoryPatterns) {
-          const exactMatch = entries.find(entry => entry.name.toLowerCase() === factoryPattern.toLowerCase());
-          if (exactMatch) {
-            return {
-              name: exactMatch.name.replace(/\.php$/, ''),
-              path: `${fullDirPath}/${exactMatch.name}`,
-              relativePath: `${dirPath}/${exactMatch.name}`
-            };
-          }
-        }
-        
-        // Next, try searching file contents for model name references or table name references
         for (const entry of entries) {
           if (entry.name.endsWith('.php')) {
-            const filePath = `${fullDirPath}/${entry.name}`;
-            const content = await loadFileContent(filePath);
-            
-            // Look for patterns indicating this is a factory for our model
-            if (
-              content.includes(`class ${modelName}Factory`) ||
-              content.includes(`return ${modelName}::class`) ||
-              content.includes(`model(${modelName}::class`) ||
-              content.includes(`model('${modelName}'`) ||
-              (model && content.includes(`model('${model.fullName}'`)) ||
-              content.includes(`table('${tableName}'`)
-            ) {
-              return {
-                name: entry.name.replace(/\.php$/, ''),
-                path: filePath,
-                relativePath: `${dirPath}/${entry.name}`
-              };
-            }
+            allFactoryFiles.push({
+              name: entry.name,
+              path: `${fullDirPath}/${entry.name}`,
+              relativePath: `${dirPath}/${entry.name}`
+            });
           }
         }
       } catch (dirError) {
@@ -286,7 +275,69 @@ async function findFactoryFile(projectPath, tableName, model) {
       }
     }
     
-    // No factory found
+    // Method 1: Try exact name matches first (case insensitive)
+    for (const factoryPattern of factoryPatterns) {
+      const exactMatch = allFactoryFiles.find(
+        file => file.name.toLowerCase() === factoryPattern.toLowerCase()
+      );
+      
+      if (exactMatch) {
+        return {
+          name: exactMatch.name.replace(/\.php$/, ''),
+          path: exactMatch.path,
+          relativePath: exactMatch.relativePath
+        };
+      }
+    }
+    
+    // Method 2: Look for partial name matches
+    const partialMatches = allFactoryFiles.filter(file => {
+      const filename = file.name.toLowerCase();
+      // Check if filename contains both the model name and 'factory'
+      return (
+        filename.includes(modelName.toLowerCase()) && 
+        filename.includes('factory')
+      ) || (
+        // Or contains the table name and 'factory'
+        filename.includes(tableName.toLowerCase()) && 
+        filename.includes('factory')
+      );
+    });
+    
+    if (partialMatches.length > 0) {
+      // Found at least one partial match
+      return {
+        name: partialMatches[0].name.replace(/\.php$/, ''),
+        path: partialMatches[0].path,
+        relativePath: partialMatches[0].relativePath
+      };
+    }
+    
+    // Method 3: Search file contents for references to the model or table
+    for (const file of allFactoryFiles) {
+      const content = await loadFileContent(file.path);
+      
+      // Look for patterns indicating this is a factory for our model or table
+      if (
+        content.includes(`class ${modelName}Factory`) ||
+        content.includes(`return ${modelName}::class`) ||
+        content.includes(`model(${modelName}::class`) ||
+        content.includes(`model('${modelName}'`) ||
+        content.includes(`model('App\\\\Models\\\\${modelName}'`) ||
+        (model && content.includes(`model('${model.fullName}'`)) ||
+        content.includes(`table('${tableName}'`) ||
+        content.includes(`'${tableName}'`) ||
+        content.includes(`"${tableName}"`)
+      ) {
+        return {
+          name: file.name.replace(/\.php$/, ''),
+          path: file.path,
+          relativePath: file.relativePath
+        };
+      }
+    }
+    
+    // No factory found after all attempts
     return null;
   } catch (error) {
     console.error('Error finding factory file:', error);
