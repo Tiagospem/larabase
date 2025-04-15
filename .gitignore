@@ -2,3 +2,6 @@ tmp/*
 node_modules/*
 .idea
 dist/*
+.DS_Store
+.vscode
+7za

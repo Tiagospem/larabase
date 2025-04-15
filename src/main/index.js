@@ -86,7 +86,258 @@ async function createWindow() {
   });
 }
 
+// Add system diagnostics function to get information about Docker availability
+async function getSystemDiagnostics() {
+  const diagnostics = {
+    platform: process.platform,
+    nodeVersion: process.version,
+    electronVersion: process.versions.electron,
+    arch: process.arch,
+    env: {
+      path: process.env.PATH,
+      home: process.env.HOME || process.env.USERPROFILE,
+      shell: process.env.SHELL || process.env.ComSpec
+    },
+    docker: {
+      available: false,
+      version: null,
+      error: null
+    }
+  };
+  
+  // Check Docker with timeout to prevent blocking
+  try {
+    const dockerCheckPromise = new Promise((resolve) => {
+      try {
+        if (isDockerCliAvailable()) {
+          // Try to get Docker version
+          try {
+            const dockerVersion = execSync('docker --version', { 
+              timeout: 3000,
+              shell: true,
+              windowsHide: true
+            }).toString().trim();
+            resolve({
+              available: true,
+              version: dockerVersion,
+              error: null
+            });
+          } catch (versionError) {
+            resolve({
+              available: true,
+              version: null,
+              error: `Docker detected but version check failed: ${versionError.message}`
+            });
+          }
+        } else {
+          resolve({
+            available: false,
+            version: null,
+            error: 'Docker CLI not available'
+          });
+        }
+      } catch (error) {
+        resolve({
+          available: false,
+          version: null,
+          error: `Docker check failed: ${error.message}`
+        });
+      }
+    });
+    
+    // Apply timeout to prevent blocking
+    const timeoutPromise = new Promise((resolve) => {
+      setTimeout(() => {
+        resolve({
+          available: false,
+          version: null,
+          error: 'Docker check timed out after 5 seconds'
+        });
+      }, 5000);
+    });
+    
+    // Use first promise to resolve (Docker check or timeout)
+    diagnostics.docker = await Promise.race([dockerCheckPromise, timeoutPromise]);
+  } catch (error) {
+    diagnostics.docker = {
+      available: false,
+      version: null,
+      error: `Docker diagnostics failed: ${error.message}`
+    };
+  }
+  
+  return diagnostics;
+}
+
+// Implement OS-specific Docker check
+function checkDockerByOS() {
+  console.log(`Checking Docker specifically for: ${process.platform}`);
+  
+  try {
+    // OS-specific checks
+    if (process.platform === 'darwin') { // macOS
+      // On macOS, check Docker socket and processes
+      const socketExists = fs.existsSync('/var/run/docker.sock');
+      console.log(`Docker socket exists on macOS: ${socketExists}`);
+      
+      if (socketExists) {
+        try {
+          // Check for Docker Desktop or Docker Engine process
+          const psOutput = execSync('ps aux | grep -v grep | grep -E "Docker(Desktop|.app)"', {
+            timeout: 2000,
+            shell: true
+          }).toString();
+          
+          return psOutput.length > 0;
+        } catch (e) {
+          // Use socket existence as indication
+          return socketExists;
+        }
+      }
+      return false;
+    } 
+    else if (process.platform === 'linux') { // Linux
+      // On Linux, check socket and service status
+      const socketExists = fs.existsSync('/var/run/docker.sock');
+      console.log(`Docker socket exists on Linux: ${socketExists}`);
+      
+      if (socketExists) {
+        return true; // Socket is usually sufficient on Linux
+      }
+      
+      // Check Docker service status (systemd)
+      try {
+        execSync('systemctl is-active --quiet docker', {
+          timeout: 2000,
+          shell: true
+        });
+        return true;
+      } catch (e) {
+        // Service not active or not using systemd
+        return false;
+      }
+    } 
+    else if (process.platform === 'win32') { // Windows
+      // On Windows, check Docker Desktop and service
+      try {
+        // Check Docker Desktop in task manager
+        const tasklistOutput = execSync('tasklist /FI "IMAGENAME eq Docker Desktop.exe" /NH', {
+          timeout: 2000,
+          shell: true
+        }).toString();
+        
+        if (tasklistOutput.includes('Docker Desktop.exe')) {
+          return true;
+        }
+        
+        // Check Docker service
+        const serviceOutput = execSync('sc query docker', {
+          timeout: 2000,
+          shell: true
+        }).toString();
+        
+        return serviceOutput.includes('RUNNING');
+      } catch (e) {
+        console.log(`Error checking Docker on Windows: ${e.message}`);
+        return false;
+      }
+    }
+    
+    // For other systems, use generic method
+    return false;
+  } catch (error) {
+    console.error(`Error in OS-specific Docker check: ${error.message}`);
+    return false;
+  }
+}
+
+// Modify app initialization to preserve environment variables
 app.whenReady().then(async () => {
+  // Ensure system PATH is available and preserved
+  if (process.env.PATH) {
+    console.log(`Original system PATH: ${process.env.PATH}`);
+    
+    // For production builds, ensure Docker paths are included
+    if (process.platform === 'darwin') { // macOS
+      const additionalPaths = [
+        '/usr/local/bin',
+        '/opt/homebrew/bin', // For Apple Silicon Macs using Homebrew
+        '/Applications/Docker.app/Contents/Resources/bin'
+      ];
+      
+      // Add Docker paths if not already in PATH
+      for (const dockerPath of additionalPaths) {
+        if (!process.env.PATH.includes(dockerPath)) {
+          process.env.PATH = `${dockerPath}:${process.env.PATH}`;
+          console.log(`Added ${dockerPath} to PATH`);
+        }
+      }
+    } else if (process.platform === 'linux') { // Linux
+      const additionalPaths = [
+        '/usr/bin',
+        '/usr/local/bin',
+        '/snap/bin' // For snap-installed Docker
+      ];
+      
+      // Add Docker paths if not already in PATH
+      for (const dockerPath of additionalPaths) {
+        if (!process.env.PATH.includes(dockerPath)) {
+          process.env.PATH = `${dockerPath}:${process.env.PATH}`;
+          console.log(`Added ${dockerPath} to PATH`);
+        }
+      }
+    } else if (process.platform === 'win32') { // Windows
+      const additionalPaths = [
+        'C:\\Program Files\\Docker\\Docker\\resources\\bin',
+        'C:\\Program Files\\Docker Desktop\\resources\\bin'
+      ];
+      
+      // Add Docker paths if not already in PATH
+      for (const dockerPath of additionalPaths) {
+        if (!process.env.PATH.includes(dockerPath)) {
+          process.env.PATH = `${dockerPath};${process.env.PATH}`;
+          console.log(`Added ${dockerPath} to PATH`);
+        }
+      }
+    }
+    
+    console.log(`Enhanced PATH for Docker detection: ${process.env.PATH}`);
+  } else {
+    console.warn(`PATH environment variable not found, some features might not work correctly`);
+    // Set minimum PATH for Unix/macOS
+    if (process.platform === 'darwin' || process.platform === 'linux') {
+      process.env.PATH = '/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:/opt/homebrew/bin:/Applications/Docker.app/Contents/Resources/bin';
+      console.log(`Set default PATH for ${process.platform}: ${process.env.PATH}`);
+    } else if (process.platform === 'win32') {
+      // Default Windows paths
+      process.env.PATH = 'C:\\Windows\\System32;C:\\Windows;C:\\Program Files\\Docker\\Docker\\resources\\bin;C:\\Program Files\\Docker Desktop\\resources\\bin';
+      console.log(`Set default PATH for Windows: ${process.env.PATH}`);
+    }
+  }
+
+  // Try to locate Docker binary on disk
+  try {
+    const whichCommand = process.platform === 'win32' ? 'where docker' : 'which docker';
+    const dockerPath = execSync(whichCommand, { 
+      timeout: 2000, 
+      shell: true, 
+      windowsHide: true,
+      encoding: 'utf8'
+    }).trim();
+    console.log(`Docker binary found at: ${dockerPath}`);
+  } catch (e) {
+    console.log(`Docker binary not found in PATH: ${e.message}`);
+  }
+
+  // Log environment information
+  console.log(`Electron running on platform: ${process.platform}`);
+  console.log(`Node.js version: ${process.version}`);
+  console.log(`Electron version: ${process.versions.electron}`);
+  
+  // Get and log system diagnostics
+  const diagnostics = await getSystemDiagnostics();
+  console.log('System diagnostics:', JSON.stringify(diagnostics, null, 2));
+
   await createWindow();
 
   // Configure global MySQL monitoring
@@ -261,10 +512,61 @@ ipcMain.handle('read-env-file', async (event, projectPath) => {
 // Função para verificar se Docker CLI está disponível
 function isDockerCliAvailable() {
   try {
-    execSync('docker --version', { timeout: 3000 });
-    return true;
+    // First approach: direct Docker CLI check with enhanced options
+    try {
+      console.log('Attempting direct Docker CLI check...');
+      execSync('docker --version', { 
+        timeout: 3000,
+        shell: true,
+        windowsHide: true,
+        stdio: 'ignore',
+        env: { ...process.env } // Make sure to pass all environment variables
+      });
+      console.log('Docker CLI is available (direct check)');
+      return true;
+    } catch (directCheckError) {
+      console.log('Direct Docker CLI check failed:', directCheckError.message);
+      
+      // Second approach: try platform-specific detection
+      console.log('Falling back to OS-specific Docker detection...');
+      const osCheckResult = checkDockerByOS();
+      if (osCheckResult) {
+        console.log('Docker detected through OS-specific check');
+        return true;
+      }
+      
+      // Third approach: check for Docker socket (works on macOS/Linux)
+      if (process.platform !== 'win32') {
+        try {
+          const socketExists = fs.existsSync('/var/run/docker.sock');
+          if (socketExists) {
+            console.log('Docker socket found, Docker is likely available');
+            return true;
+          }
+        } catch (socketError) {
+          console.log('Error checking Docker socket:', socketError.message);
+        }
+      }
+      
+      // For Windows, check Docker Desktop installation location
+      if (process.platform === 'win32') {
+        try {
+          const desktopExists = fs.existsSync('C:\\Program Files\\Docker\\Docker\\Docker Desktop.exe');
+          if (desktopExists) {
+            console.log('Docker Desktop installation found on Windows');
+            return true;
+          }
+        } catch (desktopError) {
+          console.log('Error checking Docker Desktop installation:', desktopError.message);
+        }
+      }
+      
+      // All checks failed
+      console.log('All Docker detection methods failed');
+      return false;
+    }
   } catch (e) {
-    console.log('Docker CLI is not available:', e.message);
+    console.log('Docker availability check error:', e.message);
     return false;
   }
 }
@@ -287,18 +589,70 @@ function detectDockerMysql(port) {
     
     result.dockerAvailable = true;
     
-    // Obter lista de containers Docker
-    const containers = execSync('docker ps --format "{{.Names}} {{.Ports}}"', { timeout: 5000 }).toString().split('\n');
-    console.log('Active Docker containers:', containers);
-    
-    // Procurar por containers MySQL que expõem a porta especificada
-    for (const container of containers) {
-      if (container.includes(`:${port}->3306`) || container.includes(`${port}:3306`)) {
-        const containerName = container.split(' ')[0];
-        result.isDocker = true;
-        result.dockerContainerName = containerName;
-        result.message = `MySQL Docker container found: ${containerName}`;
-        break;
+    try {
+      // Obter lista de containers Docker with enhanced options
+      console.log('Attempting to list Docker containers...');
+      const containers = execSync('docker ps --format "{{.Names}} {{.Ports}}"', { 
+        timeout: 5000,
+        shell: true,
+        windowsHide: true,
+        env: { ...process.env } // Ensure all environment variables are passed
+      }).toString().split('\n');
+      
+      console.log('Active Docker containers:', containers);
+      
+      // Procurar por containers MySQL que expõem a porta especificada
+      for (const container of containers) {
+        if (container.includes(`:${port}->3306`) || container.includes(`${port}:3306`)) {
+          const containerName = container.split(' ')[0];
+          result.isDocker = true;
+          result.dockerContainerName = containerName;
+          result.message = `MySQL Docker container found: ${containerName}`;
+          break;
+        }
+      }
+      
+      // Alternative check: Try detecting MySQL containers regardless of port
+      if (!result.isDocker && containers.length > 0) {
+        console.log('No container found on specific port, checking for any MySQL containers...');
+        for (const container of containers) {
+          if (container.toLowerCase().includes('mysql') || container.toLowerCase().includes('mariadb')) {
+            const containerName = container.split(' ')[0];
+            result.isDocker = true;
+            result.dockerContainerName = containerName;
+            result.message = `MySQL-like container found: ${containerName} (not on port ${port})`;
+            console.log(`Found MySQL-like container: ${containerName}`);
+            break;
+          }
+        }
+      }
+    } catch (containerError) {
+      console.error('Error listing Docker containers:', containerError.message);
+      
+      // Fallback: Docker is available but container listing failed
+      // This can happen in production builds with permission issues
+      result.message = 'Docker detected but container listing failed. Check permissions.';
+      
+      // Try alternative method for macOS/Linux - check for running MySQL containers using grep
+      if (process.platform !== 'win32') {
+        try {
+          console.log('Trying alternative container detection...');
+          const grepCommand = `ps aux | grep -v grep | grep -E "mysql|mariadb"`;
+          const psOutput = execSync(grepCommand, { 
+            timeout: 2000, 
+            shell: true,
+            windowsHide: true
+          }).toString();
+          
+          if (psOutput.length > 0) {
+            console.log('Found MySQL process using ps aux:', psOutput.substring(0, 100) + '...');
+            result.isDocker = true;
+            result.dockerContainerName = 'mysql-container'; // Generic name, can't determine actual name
+            result.message = 'MySQL process detected, assuming Docker container';
+          }
+        } catch (psError) {
+          console.log('Alternative container detection failed:', psError.message);
+        }
       }
     }
     
