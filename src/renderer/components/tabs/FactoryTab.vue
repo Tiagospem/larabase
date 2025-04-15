@@ -10,6 +10,13 @@
           </svg>
           <span>Refresh</span>
         </button>
+        
+        <button v-if="factoryFound" class="btn btn-sm btn-primary" @click="showGenerateDataModal = true">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4 mr-1">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M20.25 6.375c0 2.278-3.694 4.125-8.25 4.125S3.75 8.653 3.75 6.375m16.5 0c0-2.278-3.694-4.125-8.25-4.125S3.75 4.097 3.75 6.375m16.5 0v11.25c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125V6.375m16.5 0v3.75m-16.5-3.75v3.75m16.5 0v3.75C20.25 16.153 16.556 18 12 18s-8.25-1.847-8.25-4.125v-3.75m16.5 0c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125" />
+          </svg>
+          Factory Data
+        </button>
       </div>
       
       <div v-if="!isLoading" class="flex items-center space-x-2">
@@ -98,7 +105,7 @@
               </div>
             </div>
             
-            <div class="flex justify-between">
+            <div class="flex justify-end">
               <button class="btn btn-sm btn-ghost" @click="openFileInEditor(factory.path)">
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" 
                   stroke="currentColor" class="w-4 h-4 mr-1">
@@ -106,13 +113,6 @@
                     d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" />
                 </svg>
                 Open File
-              </button>
-              
-              <button class="btn btn-sm btn-primary" @click="showGenerateDataModal = true">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4 mr-1">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M20.25 6.375c0 2.278-3.694 4.125-8.25 4.125S3.75 8.653 3.75 6.375m16.5 0c0-2.278-3.694-4.125-8.25-4.125S3.75 4.097 3.75 6.375m16.5 0v11.25c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125V6.375m16.5 0v3.75m-16.5-3.75v3.75m16.5 0v3.75C20.25 16.153 16.556 18 12 18s-8.25-1.847-8.25-4.125v-3.75m16.5 0c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125" />
-                </svg>
-                Factory Data
               </button>
             </div>
           </div>
@@ -127,42 +127,44 @@
     
     <!-- Factory Data Generation Modal -->
     <div v-if="showGenerateDataModal" class="modal modal-open">
-      <div class="modal-box">
-        <h3 class="font-bold text-lg">Generate Factory Data</h3>
-        <p class="py-4">How many records would you like to generate?</p>
+      <div class="modal-box bg-base-100 max-w-md">
+        <h3 class="font-bold text-lg mb-3 text-center">Generate Factory Data</h3>
         
-        <div class="form-control w-full">
-          <label class="label">
-            <span class="label-text">Number of records (1-1000)</span>
-          </label>
-          <input 
-            type="number" 
-            v-model="recordCount" 
-            min="1" 
-            max="1000" 
-            class="input input-bordered w-full" 
-            :class="{'input-error': recordCount < 1 || recordCount > 1000}"
-          />
-          <label class="label" v-if="recordCount < 1 || recordCount > 1000">
-            <span class="label-text-alt text-error">Please enter a number between 1 and 1000</span>
-          </label>
+        <p class="text-center mb-4">Create test records for {{ tableName }}</p>
+        
+        <div class="bg-primary bg-opacity-10 p-4 rounded-lg mb-5">
+          <p class="font-medium mb-2">Number of records:</p>
+          
+          <div class="form-control">
+            <input 
+              type="number" 
+              v-model="recordCount" 
+              min="1" 
+              max="1000" 
+              class="input input-bordered w-full" 
+              :class="{'input-error': recordCount < 1 || recordCount > 1000}"
+            />
+            <label class="label" v-if="recordCount < 1 || recordCount > 1000">
+              <span class="label-text-alt text-error">Please enter a number between 1 and 1000</span>
+            </label>
+          </div>
         </div>
         
-        <div class="mt-4">
-          <p class="text-sm">This will run the following command:</p>
-          <div class="mockup-code text-xs mt-2">
+        <div class="bg-neutral-content bg-opacity-10 p-4 rounded-lg mb-6">
+          <p class="text-sm font-medium mb-2">Command preview:</p>
+          <div class="mockup-code text-xs">
             <pre><code>{{ generateCommandPreview() }}</code></pre>
           </div>
         </div>
         
-        <div class="modal-action">
+        <div class="flex gap-2 justify-end">
           <button class="btn" @click="showGenerateDataModal = false">Cancel</button>
           <button 
             class="btn btn-primary" 
             @click="generateFactoryData" 
             :disabled="isGenerating || recordCount < 1 || recordCount > 1000"
           >
-            <span class="loading loading-spinner loading-xs" v-if="isGenerating"></span>
+            <span class="loading loading-spinner loading-xs mr-1" v-if="isGenerating"></span>
             Generate
           </button>
         </div>
@@ -498,7 +500,77 @@ function generateCommandPreview() {
   return `${usingSail ? 'sail' : 'php'} artisan tinker --execute="${escapedModelName}::factory(${count})->create();"`;
 }
 
-// Generate factory data using Artisan Tinker
+// Show dialog for database mismatch - design melhorado
+async function showDatabaseMismatchDialog(projectDb, connectionDb) {
+  return new Promise((resolve) => {
+    const modal = document.createElement('div');
+    modal.className = 'modal modal-open z-50';
+    modal.innerHTML = `
+      <div class="modal-box bg-base-100 w-11/12 max-w-md">
+        <h3 class="font-bold text-lg mb-3 text-center">Database Mismatch</h3>
+        
+        <p class="text-center mb-4">The factory needs to use the same database as your connection to view the created data</p>
+        
+        <div class="flex flex-col gap-3 mb-6">
+          <div class="flex items-center justify-between bg-neutral-content bg-opacity-10 p-3 rounded-lg">
+            <span class="text-sm font-medium">Project .env</span>
+            <span class="font-mono text-sm bg-base-200 px-2 py-1 rounded">${projectDb}</span>
+          </div>
+          
+          <div class="flex items-center justify-between bg-primary bg-opacity-10 p-3 rounded-lg">
+            <span class="text-sm font-medium">Your connection</span>
+            <span class="font-mono text-sm bg-base-200 px-2 py-1 rounded">${connectionDb}</span>
+          </div>
+        </div>
+        
+        <div class="space-y-2">
+          <button id="useConnection" class="btn btn-primary w-full">
+            <div class="flex flex-col items-start text-left">
+              <span class="font-semibold">Modify project's .env file with "${connectionDb}"</span>
+            </div>
+          </button>
+          
+          <button id="switchDatabase" class="btn btn-outline w-full">
+            <div class="flex flex-col items-start text-left">
+              <span class="font-semibold">Switch database</span>
+            </div>
+          </button>
+        </div>
+        
+        <div class="modal-action mt-4">
+          <button id="cancel" class="btn btn-sm btn-ghost">Cancel</button>
+        </div>
+      </div>
+      <div class="modal-backdrop"></div>
+    `;
+    
+    document.body.appendChild(modal);
+    
+    const useConnectionBtn = modal.querySelector('#useConnection');
+    const switchDatabaseBtn = modal.querySelector('#switchDatabase');
+    const cancelBtn = modal.querySelector('#cancel');
+    const backdrop = modal.querySelector('.modal-backdrop');
+    
+    useConnectionBtn.addEventListener('click', () => {
+      document.body.removeChild(modal);
+      resolve('useConnection');
+    });
+    
+    switchDatabaseBtn.addEventListener('click', () => {
+      document.body.removeChild(modal);
+      resolve('switchDatabase');
+    });
+    
+    [cancelBtn, backdrop].forEach(el => {
+      el.addEventListener('click', () => {
+        document.body.removeChild(modal);
+        resolve('cancel');
+      });
+    });
+  });
+}
+
+// Generate factory data - ajustar para remover a opção useProject
 async function generateFactoryData() {
   isGenerating.value = true;
   showGenerateDataModal.value = false;
@@ -530,13 +602,18 @@ async function generateFactoryData() {
         return;
       }
       
-      if (confirmResult === 'useProject') {
-        // We'll continue with the project's database
-        showAlert(`Using project's database: ${envConfig.DB_DATABASE}`, 'info');
-      } else if (confirmResult === 'useConnection') {
+      if (confirmResult === 'useConnection') {
         // We'll temporarily modify the .env to use our database
-        await updateEnvDatabase(projectPath, connection.value.database);
-        showAlert(`Temporarily modifying .env to use: ${connection.value.database}`, 'info');
+        showAlert(`Modifying .env to use database: ${connection.value.database}`, 'info');
+        
+        const updateResult = await updateEnvDatabase(projectPath, connection.value.database);
+        if (!updateResult) {
+          showAlert('Failed to modify .env file, operation aborted', 'error');
+          isGenerating.value = false;
+          return;
+        }
+        
+        showAlert(`Successfully updated .env file to use database: ${connection.value.database}`, 'success');
       } else if (confirmResult === 'switchDatabase') {
         // Show database switcher
         isGenerating.value = false;
@@ -563,7 +640,7 @@ async function generateFactoryData() {
     });
     
     if (commandResult && commandResult.success) {
-      showAlert(`Started generating ${count} records for ${props.tableName}`, 'info');
+      showAlert(`Generating ${count} records for ${props.tableName} table`, 'success');
       
       // Reset state
       recordCount.value = 10;
@@ -581,6 +658,8 @@ async function generateFactoryData() {
 // Update .env database temporarily
 async function updateEnvDatabase(projectPath, database) {
   try {
+    console.log('Updating .env database at path:', projectPath, 'to database:', database);
+    
     // Call the IPC function to modify the .env file
     const result = await window.api.updateEnvDatabase(projectPath, database);
     
@@ -588,105 +667,17 @@ async function updateEnvDatabase(projectPath, database) {
       throw new Error(result.message || 'Failed to update .env file');
     }
     
-    showAlert(`Successfully updated project's .env file to use database: ${database}`, 'success');
     console.log('Update .env result:', result);
+    
+    // Não tentamos verificar o resultado, pois em alguns casos a leitura
+    // pode não ser atualizada imediatamente após a escrita
+    showAlert(`Successfully updated project's .env file to use database: ${database}`, 'success');
     return true;
   } catch (error) {
     console.error('Error updating .env database:', error);
     showAlert('Failed to update project database configuration: ' + error.message, 'error');
     return false;
   }
-}
-
-// Show dialog for database mismatch
-async function showDatabaseMismatchDialog(projectDb, connectionDb) {
-  return new Promise((resolve) => {
-    const modal = document.createElement('div');
-    modal.className = 'modal modal-open z-50';
-    modal.innerHTML = `
-      <div class="modal-box max-w-2xl">
-        <h3 class="font-bold text-lg mb-2">Database Configuration Mismatch</h3>
-        
-        <div class="alert alert-warning mb-4">
-          <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
-          <span>The database in your project's .env file doesn't match the one in your connection.</span>
-        </div>
-        
-        <div class="bg-base-200 p-4 mb-4 rounded-lg">
-          <div class="flex items-center gap-2 mb-2">
-            <div class="w-1/3 font-semibold">Project Environment:</div>
-            <div class="font-mono">${projectDb}</div>
-          </div>
-          <div class="flex items-center gap-2">
-            <div class="w-1/3 font-semibold">Current Connection:</div>
-            <div class="font-mono">${connectionDb}</div>
-          </div>
-        </div>
-        
-        <p class="mb-4">Choose how to proceed with factory data generation:</p>
-        
-        <div class="space-y-2">
-          <div class="flex flex-col gap-2">
-            <button id="useProject" class="btn btn-outline w-full justify-start">
-              <div class="flex flex-col items-start text-left">
-                <span class="font-semibold">Use project's database (${projectDb})</span>
-                <span class="text-xs opacity-70">Factory data will be generated in the project's configured database</span>
-              </div>
-            </button>
-            
-            <button id="useConnection" class="btn btn-outline w-full justify-start">
-              <div class="flex flex-col items-start text-left">
-                <span class="font-semibold">Temporarily modify project's .env file</span>
-                <span class="text-xs opacity-70">Will update the project's .env to use "${connectionDb}" (backup will be created)</span>
-              </div>
-            </button>
-            
-            <button id="switchDatabase" class="btn btn-outline w-full justify-start">
-              <div class="flex flex-col items-start text-left">
-                <span class="font-semibold">Switch database connections</span>
-                <span class="text-xs opacity-70">Will run the factory using Laravel's dynamic database connection</span>
-              </div>
-            </button>
-          </div>
-        </div>
-        
-        <div class="modal-action">
-          <button id="cancel" class="btn">Cancel</button>
-        </div>
-      </div>
-      <div class="modal-backdrop"></div>
-    `;
-    
-    document.body.appendChild(modal);
-    
-    const useProjectBtn = modal.querySelector('#useProject');
-    const useConnectionBtn = modal.querySelector('#useConnection');
-    const switchDatabaseBtn = modal.querySelector('#switchDatabase');
-    const cancelBtn = modal.querySelector('#cancel');
-    const backdrop = modal.querySelector('.modal-backdrop');
-    
-    useProjectBtn.addEventListener('click', () => {
-      document.body.removeChild(modal);
-      resolve('useProject');
-    });
-    
-    useConnectionBtn.addEventListener('click', () => {
-      document.body.removeChild(modal);
-      resolve('useConnection');
-    });
-    
-    switchDatabaseBtn.addEventListener('click', () => {
-      document.body.removeChild(modal);
-      resolve('switchDatabase');
-    });
-    
-    [cancelBtn, backdrop].forEach(el => {
-      el.addEventListener('click', () => {
-        document.body.removeChild(modal);
-        resolve('cancel');
-      });
-    });
-  });
 }
 
 // Function to open database switcher in the parent component

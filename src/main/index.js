@@ -3515,26 +3515,45 @@ ipcMain.handle('update-env-database', async (event, projectPath, database) => {
     // Read the current .env file
     let envContent = fs.readFileSync(envPath, 'utf8');
     
-    // Create a backup of the original .env file
-    const backupPath = path.join(projectPath, '.env.larabase-backup');
-    fs.writeFileSync(backupPath, envContent);
+    // Divide o conteúdo em linhas para processamento linha por linha
+    const lines = envContent.split('\n');
+    let dbLineFound = false;
     
-    // Replace the DB_DATABASE entry
-    const dbRegex = /(DB_DATABASE=)(.*)$/m;
-    if (dbRegex.test(envContent)) {
-      // If DB_DATABASE exists, update it
-      envContent = envContent.replace(dbRegex, `$1${database}`);
-    } else {
-      // If DB_DATABASE doesn't exist, add it
-      envContent += `\nDB_DATABASE=${database}`;
+    // Processa cada linha individualmente para garantir que apenas linha ativa seja substituída
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      
+      // Ignora linhas comentadas
+      if (line.trim().startsWith('#')) {
+        continue;
+      }
+      
+      // Procura pela linha DB_DATABASE que não está comentada
+      if (line.trim().startsWith('DB_DATABASE=')) {
+        console.log(`Found active DB_DATABASE line: "${line}"`);
+        lines[i] = `DB_DATABASE=${database}`;
+        dbLineFound = true;
+        break;
+      }
     }
     
-    // Write the modified content back to .env
-    fs.writeFileSync(envPath, envContent);
+    // Se não encontrou nenhuma linha DB_DATABASE ativa, adiciona uma nova
+    if (!dbLineFound) {
+      console.log('No active DB_DATABASE line found, adding a new one');
+      lines.push(`DB_DATABASE=${database}`);
+    }
+    
+    // Junta as linhas novamente em um único conteúdo
+    const updatedContent = lines.join('\n');
+    
+    // Escreve o conteúdo atualizado de volta ao arquivo .env
+    fs.writeFileSync(envPath, updatedContent);
+    
+    console.log(`Successfully updated .env file with database: ${database}`);
     
     return {
       success: true,
-      message: `Updated database to ${database} in .env file. Backup created at .env.larabase-backup`
+      message: `Updated database to ${database} in .env file`
     };
   } catch (error) {
     console.error('Error updating .env database:', error);
