@@ -2536,7 +2536,10 @@ ipcMain.handle('find-models-for-tables', async (event, config) => {
                   
                   // Check if this is likely a model file
                   const isModel = content.includes('extends Model') || 
-                                  content.includes('Illuminate\\Database\\Eloquent\\Model');
+                                  content.includes('Illuminate\\Database\\Eloquent\\Model') ||
+                                  content.includes('extends Authenticatable') ||
+                                  content.includes('Illuminate\\Foundation\\Auth\\User') ||
+                                  content.includes('Illuminate\\Contracts\\Auth\\Authenticatable');
                   
                   if (isModel) {
                     // Extract namespace and class name
