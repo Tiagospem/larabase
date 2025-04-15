@@ -17,7 +17,7 @@ export const useCommandsStore = defineStore('commands', () => {
       // Create a command result object
       const commandResult = {
         id: result.commandId || Date.now().toString(),
-        command: result.command || config.command,
+        command: config.displayCommand || result.command || config.command,
         output: result.output || '',
         success: result.success,
         isComplete: false,

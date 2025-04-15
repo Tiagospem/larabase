@@ -169,20 +169,6 @@
       </div>
       <div class="modal-backdrop" @click="showGenerateDataModal = false"></div>
     </div>
-    
-    <!-- Command Output Modal -->
-    <div v-if="showCommandOutputModal" class="modal modal-open">
-      <div class="modal-box w-11/12 max-w-5xl">
-        <h3 class="font-bold text-lg">Command Output</h3>
-        <div class="mockup-code h-96 overflow-auto my-4">
-          <pre><code>{{ commandOutput }}</code></pre>
-        </div>
-        <div class="modal-action">
-          <button class="btn" @click="showCommandOutputModal = false">Close</button>
-        </div>
-      </div>
-      <div class="modal-backdrop" @click="showCommandOutputModal = false"></div>
-    </div>
   </div>
 </template>
 
@@ -190,6 +176,7 @@
 import {inject, onMounted, ref, computed} from 'vue';
 import {useDatabaseStore} from '@/store/database';
 import {useConnectionsStore} from '@/store/connections';
+import {useCommandsStore} from '@/store/commands';
 
 const showAlert = inject('showAlert');
 
@@ -215,13 +202,14 @@ const factoryContent = ref('');
 
 // Factory data generation state
 const showGenerateDataModal = ref(false);
-const showCommandOutputModal = ref(false);
-const recordCount = ref(10);
 const isGenerating = ref(false);
-const commandOutput = ref('');
+const recordCount = ref(10);
 
 const databaseStore = useDatabaseStore();
 const connectionsStore = useConnectionsStore();
+const commandsStore = useCommandsStore();
+
+const emit = defineEmits(['open-database-switcher']);
 
 const connection = computed(() => {
   return connectionsStore.getConnection(props.connectionId);
@@ -501,18 +489,19 @@ function generateCommandPreview() {
   
   const modelName = model.fullName;
   const count = recordCount.value || 10;
+  const usingSail = !!connection.value?.usingSail;
   
   // Escape backslashes for command line
   const escapedModelName = modelName.replace(/\\/g, '\\\\');
-  return `${escapedModelName}::factory(${count})->create();`;
+  
+  // Show the full command that will be executed
+  return `${usingSail ? 'sail' : 'php'} artisan tinker --execute="${escapedModelName}::factory(${count})->create();"`;
 }
 
 // Generate factory data using Artisan Tinker
 async function generateFactoryData() {
   isGenerating.value = true;
   showGenerateDataModal.value = false;
-  showCommandOutputModal.value = true;
-  commandOutput.value = 'Starting data generation...\n';
   
   try {
     // Validate requirements
@@ -529,55 +518,196 @@ async function generateFactoryData() {
     const count = recordCount.value;
     const projectPath = connection.value.projectPath;
     
+    // First, check if the database in .env matches our connection
+    const envConfig = await window.api.readEnvFile(projectPath);
+    
+    if (envConfig && envConfig.DB_DATABASE !== connection.value.database) {
+      // Show confirmation dialog
+      const confirmResult = await showDatabaseMismatchDialog(envConfig.DB_DATABASE, connection.value.database);
+      
+      if (confirmResult === 'cancel') {
+        isGenerating.value = false;
+        return;
+      }
+      
+      if (confirmResult === 'useProject') {
+        // We'll continue with the project's database
+        showAlert(`Using project's database: ${envConfig.DB_DATABASE}`, 'info');
+      } else if (confirmResult === 'useConnection') {
+        // We'll temporarily modify the .env to use our database
+        await updateEnvDatabase(projectPath, connection.value.database);
+        showAlert(`Temporarily modifying .env to use: ${connection.value.database}`, 'info');
+      } else if (confirmResult === 'switchDatabase') {
+        // Show database switcher
+        isGenerating.value = false;
+        openDatabaseSwitcher();
+        return;
+      }
+    }
+    
     // Determine if using Sail (from connection settings)
     const usingSail = !!connection.value.usingSail;
     
     // Construct the tinker command for generating factory data
-    const tinkerCommand = `${modelName}::factory(${count})->create();`;
+    const tinkerCommand = `tinker --execute="${modelName}::factory(${count})->create();"`;
     
-    commandOutput.value += `Executing factory command...\n`;
-    commandOutput.value += `Using ${usingSail ? 'Laravel Sail' : 'PHP'} to run the command.\n`;
+    // Open the command output panel
+    commandsStore.openCommandOutput();
     
-    // Configure command
-    const commandConfig = {
+    // Execute the command using the commands store
+    const commandResult = await commandsStore.runArtisanCommand({
       projectPath: projectPath,
-      command: `tinker --execute="${tinkerCommand}"`,
-      useSail: usingSail
-    };
+      command: tinkerCommand,
+      useSail: usingSail,
+      displayCommand: `Factory Data: ${usingSail ? 'sail' : 'php'} artisan tinker --execute="${modelName}::factory(${count})->create();"`
+    });
     
-    // Execute command
-    const result = await window.api.runArtisanCommand(commandConfig);
-    
-    if (result.success) {
-      commandOutput.value += `Command started with ID: ${result.commandId}\n`;
+    if (commandResult && commandResult.success) {
+      showAlert(`Started generating ${count} records for ${props.tableName}`, 'info');
       
-      // Set up listener for command output
-      const channel = window.api.listenCommandOutput(result.commandId, (data) => {
-        if (data.type === 'stdout') {
-          commandOutput.value += `${data.output}\n`;
-        } else if (data.type === 'stderr') {
-          commandOutput.value += `Error: ${data.output}\n`;
-        }
-        
-        if (data.isComplete) {
-          commandOutput.value += '\nCommand completed.';
-          isGenerating.value = false;
-          window.api.stopCommandListener(channel);
-          
-          // Show success message if no errors
-          if (data.success) {
-            showAlert(`Successfully generated ${count} records for ${props.tableName}`, 'success');
-          }
-        }
-      });
+      // Reset state
+      recordCount.value = 10;
     } else {
-      throw new Error(result.message || 'Failed to start command');
+      throw new Error((commandResult && commandResult.message) || 'Failed to start command');
     }
   } catch (error) {
     console.error('Error generating factory data:', error);
-    commandOutput.value += `\nError: ${error.message}\n`;
-    isGenerating.value = false;
     showAlert(`Failed to generate factory data: ${error.message}`, 'error');
+  } finally {
+    isGenerating.value = false;
+  }
+}
+
+// Update .env database temporarily
+async function updateEnvDatabase(projectPath, database) {
+  try {
+    // Call the IPC function to modify the .env file
+    const result = await window.api.updateEnvDatabase(projectPath, database);
+    
+    if (!result.success) {
+      throw new Error(result.message || 'Failed to update .env file');
+    }
+    
+    showAlert(`Successfully updated project's .env file to use database: ${database}`, 'success');
+    console.log('Update .env result:', result);
+    return true;
+  } catch (error) {
+    console.error('Error updating .env database:', error);
+    showAlert('Failed to update project database configuration: ' + error.message, 'error');
+    return false;
+  }
+}
+
+// Show dialog for database mismatch
+async function showDatabaseMismatchDialog(projectDb, connectionDb) {
+  return new Promise((resolve) => {
+    const modal = document.createElement('div');
+    modal.className = 'modal modal-open z-50';
+    modal.innerHTML = `
+      <div class="modal-box max-w-2xl">
+        <h3 class="font-bold text-lg mb-2">Database Configuration Mismatch</h3>
+        
+        <div class="alert alert-warning mb-4">
+          <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+          <span>The database in your project's .env file doesn't match the one in your connection.</span>
+        </div>
+        
+        <div class="bg-base-200 p-4 mb-4 rounded-lg">
+          <div class="flex items-center gap-2 mb-2">
+            <div class="w-1/3 font-semibold">Project Environment:</div>
+            <div class="font-mono">${projectDb}</div>
+          </div>
+          <div class="flex items-center gap-2">
+            <div class="w-1/3 font-semibold">Current Connection:</div>
+            <div class="font-mono">${connectionDb}</div>
+          </div>
+        </div>
+        
+        <p class="mb-4">Choose how to proceed with factory data generation:</p>
+        
+        <div class="space-y-2">
+          <div class="flex flex-col gap-2">
+            <button id="useProject" class="btn btn-outline w-full justify-start">
+              <div class="flex flex-col items-start text-left">
+                <span class="font-semibold">Use project's database (${projectDb})</span>
+                <span class="text-xs opacity-70">Factory data will be generated in the project's configured database</span>
+              </div>
+            </button>
+            
+            <button id="useConnection" class="btn btn-outline w-full justify-start">
+              <div class="flex flex-col items-start text-left">
+                <span class="font-semibold">Temporarily modify project's .env file</span>
+                <span class="text-xs opacity-70">Will update the project's .env to use "${connectionDb}" (backup will be created)</span>
+              </div>
+            </button>
+            
+            <button id="switchDatabase" class="btn btn-outline w-full justify-start">
+              <div class="flex flex-col items-start text-left">
+                <span class="font-semibold">Switch database connections</span>
+                <span class="text-xs opacity-70">Will run the factory using Laravel's dynamic database connection</span>
+              </div>
+            </button>
+          </div>
+        </div>
+        
+        <div class="modal-action">
+          <button id="cancel" class="btn">Cancel</button>
+        </div>
+      </div>
+      <div class="modal-backdrop"></div>
+    `;
+    
+    document.body.appendChild(modal);
+    
+    const useProjectBtn = modal.querySelector('#useProject');
+    const useConnectionBtn = modal.querySelector('#useConnection');
+    const switchDatabaseBtn = modal.querySelector('#switchDatabase');
+    const cancelBtn = modal.querySelector('#cancel');
+    const backdrop = modal.querySelector('.modal-backdrop');
+    
+    useProjectBtn.addEventListener('click', () => {
+      document.body.removeChild(modal);
+      resolve('useProject');
+    });
+    
+    useConnectionBtn.addEventListener('click', () => {
+      document.body.removeChild(modal);
+      resolve('useConnection');
+    });
+    
+    switchDatabaseBtn.addEventListener('click', () => {
+      document.body.removeChild(modal);
+      resolve('switchDatabase');
+    });
+    
+    [cancelBtn, backdrop].forEach(el => {
+      el.addEventListener('click', () => {
+        document.body.removeChild(modal);
+        resolve('cancel');
+      });
+    });
+  });
+}
+
+// Function to open database switcher in the parent component
+async function openDatabaseSwitcher() {
+  try {
+    // Emit the event to parent component with the current connection ID
+    emit('open-database-switcher', props.connectionId);
+    showAlert('Opening database switcher...', 'info');
+  } catch (error) {
+    console.error('Error opening database switcher:', error);
+    showAlert('Failed to open database switcher: ' + error.message, 'error');
+  }
+}
+
+// Function to refresh data
+async function refreshData() {
+  try {
+    await loadFactory();
+  } catch (error) {
+    console.error('Error refreshing data:', error);
+    showAlert('Failed to refresh factory data', 'error');
   }
 }
 

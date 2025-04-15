@@ -155,7 +155,10 @@ try {
       // Pluralization helpers
       getPluralizeFunction: () => safeIpcRenderer.invoke('get-pluralize-function'),
       getSingularForm: (word) => safeIpcRenderer.invoke('get-singular-form', word),
-      getPluralForm: (word) => safeIpcRenderer.invoke('get-plural-form', word)
+      getPluralForm: (word) => safeIpcRenderer.invoke('get-plural-form', word),
+      
+      // Project Database Management
+      updateEnvDatabase: (projectPath, database) => safeIpcRenderer.invoke('update-env-database', projectPath, database)
     }
   );
 } catch (error) {

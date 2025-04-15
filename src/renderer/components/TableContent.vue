@@ -49,7 +49,7 @@ const props = defineProps({
   }
 });
 
-const emit = defineEmits(['update-tab-data', 'open-tab']);
+const emit = defineEmits(['update-tab-data', 'open-tab', 'open-database-switcher']);
 
 const activeContentTab = ref('data');
 const tabsLoaded = ref({
@@ -90,7 +90,8 @@ const currentTabProps = computed(() => {
     connectionId: props.connectionId,
     tableName: props.tableName,
     onLoad: (data) => handleTabData(activeContentTab.value, data),
-    onOpenTab: (tabData) => emit('open-tab', tabData)
+    onOpenTab: (tabData) => emit('open-tab', tabData),
+    'onOpen-database-switcher': (connectionId) => emit('open-database-switcher', connectionId)
   };
   
   if (activeContentTab.value === 'data' && props.filter) {

@@ -168,11 +168,13 @@
             v-if="activeTab"
             :is="TableContentComponent"
             :key="activeTab.id"
-            :connection-id="activeTab.connectionId"
-            :table-name="activeTab.tableName"
-            :filter="activeTab.filter"
+            :connectionId="activeTab.connectionId" 
+            :tableName="activeTab.tableName"
+            :filter="activeTab.filter || ''"
             @update-tab-data="handleUpdateTabData"
-            @open-tab="handleOpenTab" />
+            @open-tab="handleOpenTab"
+            @open-database-switcher="handleDatabaseSwitcherFromChild"
+          />
         </keep-alive>
       </div>
     </div>
@@ -787,6 +789,11 @@ function handleOpenTab(tabData) {
     console.error('Erro ao abrir aba:', error);
     showAlert(`Falha ao abrir nova aba: ${error.message}`, 'error');
   }
+}
+
+// Function to handle database switcher request from child component
+function handleDatabaseSwitcherFromChild(connectionId) {
+  openDatabaseSwitcher();
 }
 </script>
 

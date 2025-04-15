@@ -3493,3 +3493,54 @@ ipcMain.handle('get-singular-form', (event, word) => {
 ipcMain.handle('get-plural-form', (event, word) => {
   return pluralize.plural(word);
 });
+
+// Handler to temporarily update the database in a project's .env file
+ipcMain.handle('update-env-database', async (event, projectPath, database) => {
+  try {
+    if (!projectPath || !database) {
+      return { 
+        success: false, 
+        message: 'Missing project path or database name'
+      };
+    }
+
+    const envPath = path.join(projectPath, '.env');
+    if (!fs.existsSync(envPath)) {
+      return {
+        success: false,
+        message: '.env file not found in project'
+      };
+    }
+
+    // Read the current .env file
+    let envContent = fs.readFileSync(envPath, 'utf8');
+    
+    // Create a backup of the original .env file
+    const backupPath = path.join(projectPath, '.env.larabase-backup');
+    fs.writeFileSync(backupPath, envContent);
+    
+    // Replace the DB_DATABASE entry
+    const dbRegex = /(DB_DATABASE=)(.*)$/m;
+    if (dbRegex.test(envContent)) {
+      // If DB_DATABASE exists, update it
+      envContent = envContent.replace(dbRegex, `$1${database}`);
+    } else {
+      // If DB_DATABASE doesn't exist, add it
+      envContent += `\nDB_DATABASE=${database}`;
+    }
+    
+    // Write the modified content back to .env
+    fs.writeFileSync(envPath, envContent);
+    
+    return {
+      success: true,
+      message: `Updated database to ${database} in .env file. Backup created at .env.larabase-backup`
+    };
+  } catch (error) {
+    console.error('Error updating .env database:', error);
+    return {
+      success: false,
+      message: error.message || 'Failed to update database in .env file'
+    };
+  }
+});
