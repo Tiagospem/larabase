@@ -158,7 +158,8 @@ try {
       getPluralForm: (word) => safeIpcRenderer.invoke('get-plural-form', word),
       
       // Project Database Management
-      updateEnvDatabase: (projectPath, database) => safeIpcRenderer.invoke('update-env-database', projectPath, database)
+      updateEnvDatabase: (projectPath, database) => safeIpcRenderer.invoke('update-env-database', projectPath, database),
+      removeConnection: (connectionId) => safeIpcRenderer.invoke('remove-connection', connectionId)
     }
   );
 } catch (error) {

@@ -3,7 +3,7 @@ const path = require('path');
 const Store = require('electron-store');
 const fs = require('fs');
 const mysql = require('mysql2/promise');
-const { spawn } = require('child_process');
+const { spawn, execSync } = require('child_process');
 const pluralize = require('pluralize');
 
 const store = new Store();
@@ -244,6 +244,12 @@ ipcMain.handle('read-env-file', async (event, projectPath) => {
         envConfig[key] = value;
       }
     });
+    
+    // Verificar se Docker está disponível e se algum container MySQL está usando a porta configurada
+    if (envConfig.DB_PORT) {
+      const dockerInfo = detectDockerMysql(envConfig.DB_PORT);
+      envConfig.dockerInfo = dockerInfo;
+    }
 
     return envConfig;
   } catch (error) {
@@ -251,6 +257,62 @@ ipcMain.handle('read-env-file', async (event, projectPath) => {
     return null;
   }
 });
+
+// Função para verificar se Docker CLI está disponível
+function isDockerCliAvailable() {
+  try {
+    execSync('docker --version', { timeout: 3000 });
+    return true;
+  } catch (e) {
+    console.log('Docker CLI is not available:', e.message);
+    return false;
+  }
+}
+
+// Função para detectar container MySQL usando a porta especificada
+function detectDockerMysql(port) {
+  const result = {
+    dockerAvailable: false,
+    isDocker: false,
+    dockerContainerName: null,
+    message: ''
+  };
+
+  try {
+    // Verificar se Docker CLI está disponível
+    if (!isDockerCliAvailable()) {
+      result.message = 'Docker CLI is not available';
+      return result;
+    }
+    
+    result.dockerAvailable = true;
+    
+    // Obter lista de containers Docker
+    const containers = execSync('docker ps --format "{{.Names}} {{.Ports}}"', { timeout: 5000 }).toString().split('\n');
+    console.log('Active Docker containers:', containers);
+    
+    // Procurar por containers MySQL que expõem a porta especificada
+    for (const container of containers) {
+      if (container.includes(`:${port}->3306`) || container.includes(`${port}:3306`)) {
+        const containerName = container.split(' ')[0];
+        result.isDocker = true;
+        result.dockerContainerName = containerName;
+        result.message = `MySQL Docker container found: ${containerName}`;
+        break;
+      }
+    }
+    
+    if (!result.isDocker) {
+      result.message = 'No MySQL Docker container found using this port';
+    }
+    
+    return result;
+  } catch (error) {
+    console.error('Error detecting Docker MySQL:', error);
+    result.message = `Error checking Docker containers: ${error.message}`;
+    return result;
+  }
+}
 
 ipcMain.handle('test-mysql-connection', async (event, config) => {
   let connection;
@@ -3560,6 +3622,95 @@ ipcMain.handle('update-env-database', async (event, projectPath, database) => {
     return {
       success: false,
       message: error.message || 'Failed to update database in .env file'
+    };
+  }
+});
+
+// Adicionar handler para remover uma conexão e limpar dados relacionados
+ipcMain.handle('remove-connection', async (event, connectionId) => {
+  try {
+    if (!connectionId) {
+      return { 
+        success: false, 
+        message: 'Connection ID is required'
+      };
+    }
+
+    // Get current connections list
+    const connections = store.get('connections') || [];
+    const connectionIndex = connections.findIndex(conn => conn.id === connectionId);
+    
+    if (connectionIndex === -1) {
+      return {
+        success: false,
+        message: 'Connection not found'
+      };
+    }
+
+    // Remove the connection from the list
+    connections.splice(connectionIndex, 1);
+    
+    // Save the updated connections list
+    store.set('connections', connections);
+
+    // Clean up related tabs
+    const openTabs = store.get('openTabs') || { tabs: [], activeTabId: null };
+    const updatedTabs = {
+      tabs: openTabs.tabs.filter(tab => tab.connectionId !== connectionId),
+      activeTabId: openTabs.activeTabId
+    };
+
+    // If the active tab was from this connection, reset it
+    if (updatedTabs.tabs.length === 0 || 
+        !updatedTabs.tabs.find(tab => tab.id === updatedTabs.activeTabId)) {
+      updatedTabs.activeTabId = updatedTabs.tabs.length > 0 ? updatedTabs.tabs[0].id : null;
+    }
+
+    // Save the updated tabs
+    store.set('openTabs', updatedTabs);
+
+    // Stop database monitoring if running for this connection
+    try {
+      if (dbMonitoringConnections.has(connectionId)) {
+        const connection = dbMonitoringConnections.get(connectionId);
+        if (connection) {
+          if (connection._pollingInterval) {
+            clearInterval(connection._pollingInterval);
+          }
+          await connection.end();
+        }
+        dbMonitoringConnections.delete(connectionId);
+        console.log(`Monitoring stopped for connection ${connectionId}`);
+      }
+
+      // Also clean up trigger-based monitoring
+      if (dbActivityConnections.has(connectionId)) {
+        const connectionData = dbActivityConnections.get(connectionId);
+        if (connectionData) {
+          if (connectionData.connection) {
+            await connectionData.connection.end();
+          }
+          if (connectionData.triggerConnection) {
+            await connectionData.triggerConnection.end();
+          }
+        }
+        dbActivityConnections.delete(connectionId);
+        console.log(`Trigger-based monitoring stopped for connection ${connectionId}`);
+      }
+    } catch (monitoringError) {
+      console.error(`Error stopping monitoring for connection ${connectionId}:`, monitoringError);
+      // Continue with the operation even if there's an error stopping monitoring
+    }
+
+    return {
+      success: true,
+      message: 'Connection and related data removed successfully'
+    };
+  } catch (error) {
+    console.error('Error removing connection:', error);
+    return {
+      success: false,
+      message: error.message || 'Failed to remove connection'
     };
   }
 });

@@ -118,6 +118,37 @@
           <p class="text-xs text-gray-500 mt-1">Enable if your project uses Laravel Sail (Docker)</p>
         </div>
         
+        <div v-if="dockerInfo" :class="[
+          'alert mb-4',
+          dockerInfo.isDocker ? 'alert-success' : 
+          !dockerInfo.isDocker && dockerInfo.dockerAvailable ? 'alert-warning' : 'alert-info'
+        ]">
+          <div>
+            <svg v-if="dockerInfo.isDocker" xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+            <svg v-else-if="dockerInfo.dockerAvailable" xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+            <svg v-else xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" class="stroke-current shrink-0 w-6 h-6"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+            <div>
+              <span class="font-medium">Docker Detection:</span>
+              <p>{{ dockerInfo.message }}</p>
+              <p v-if="dockerInfo.isDocker" class="text-sm mt-1">
+                <span class="font-medium">Container: </span>{{ dockerInfo.dockerContainerName }}
+              </p>
+              <p class="text-sm mt-1">
+                <span v-if="dockerInfo.isDocker">
+                  The system detected a MySQL Docker container. Configuration has been automatically adjusted.
+                </span>
+                <span v-else-if="dockerInfo.dockerAvailable">
+                  Docker is available, but no MySQL container was found running on port {{ newConnection.value.port }}. 
+                  A local connection will be used.
+                </span>
+                <span v-else>
+                  Docker was not detected. A local connection will be used.
+                </span>
+              </p>
+            </div>
+          </div>
+        </div>
+        
         <div class="divider">Database Connection</div>
         
         <div class="grid grid-cols-2 gap-4">
@@ -224,13 +255,15 @@
 </template>
 
 <script setup>
-import { onMounted, computed, inject, ref } from 'vue';
+import { onMounted, computed, inject, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { useConnectionsStore } from '@/store/connections';
+import { useTabsStore } from '@/store/tabs';
 import { v4 as uuidv4 } from 'uuid';
 
 const router = useRouter();
 const connectionsStore = useConnectionsStore();
+const tabsStore = useTabsStore();
 
 const showAlert = inject('showAlert');
 
@@ -241,6 +274,7 @@ const isCreateModalOpen = ref(false);
 const isEditMode = ref(false);
 const editConnectionId = ref(null);
 const projectPathError = ref('');
+const dockerInfo = ref(null);
 
 const newConnection = ref({
   projectPath: '',
@@ -286,6 +320,7 @@ function openCreateConnectionModal() {
   
   // Limpar todas as mensagens de erro
   projectPathError.value = '';
+  dockerInfo.value = null;
   
   // Abrir o modal
   isCreateModalOpen.value = true;
@@ -311,6 +346,7 @@ function editConnection(connection) {
   };
   
   projectPathError.value = '';
+  dockerInfo.value = connection.dockerInfo || null;
   isCreateModalOpen.value = true;
 }
 
@@ -325,11 +361,12 @@ async function selectProjectDirectory() {
     const selectedPath = result.filePaths[0];
     newConnection.value.projectPath = selectedPath;
     projectPathError.value = '';
+    dockerInfo.value = null;
 
     const isLaravelProject = await window.api.validateLaravelProject(selectedPath);
     
     if (!isLaravelProject) {
-      projectPathError.value = 'Selected directory does not appear to be a valid Laravel project';
+      projectPathError.value = 'The selected directory does not appear to be a valid Laravel project';
       return;
     }
 
@@ -370,6 +407,17 @@ async function selectProjectDirectory() {
       
       if (!newConnection.value.redisPassword || newConnection.value.redisPassword === '') {
         newConnection.value.redisPassword = envConfig.REDIS_PASSWORD || '';
+      }
+      
+      // Definir o estado do Docker baseado na informação retornada
+      if (envConfig.dockerInfo) {
+        dockerInfo.value = envConfig.dockerInfo;
+        newConnection.value.usingSail = envConfig.dockerInfo.isDocker;
+        
+        // Se for Docker, atualiza o host para o padrão do Docker
+        if (envConfig.dockerInfo.isDocker) {
+          newConnection.value.host = envConfig.DB_HOST === 'localhost' ? 'host.docker.internal' : envConfig.DB_HOST;
+        }
       }
     }
   } catch (error) {
@@ -420,7 +468,7 @@ async function saveNewConnection() {
       return;
     }
     
-    showAlert('Connection successful! Saving connection...', 'success');
+    showAlert('Connection successful! Saving configuration...', 'success');
 
     const connectionData = {
       id: isEditMode.value ? editConnectionId.value : uuidv4(),
@@ -435,6 +483,8 @@ async function saveNewConnection() {
       projectPath: newConnection.value.projectPath,
       usingSail: newConnection.value.usingSail,
       status: 'ready',
+      // Salvar informações do Docker se disponíveis
+      dockerInfo: dockerInfo.value || null,
       redis: {
         host: newConnection.value.redisHost || '',
         port: parseInt(newConnection.value.redisPort || '6379'),
@@ -462,8 +512,19 @@ async function saveNewConnection() {
 async function removeConnection(connectionId) {
   if (confirm('Are you sure you want to delete this connection? All related data will be lost.')) {
     try {
-      await connectionsStore.removeConnection(connectionId);
-      showAlert('Connection removed successfully', 'success');
+      // Close tabs associated with this connection
+      await tabsStore.closeTabsByConnectionId(connectionId);
+      
+      // Use the new remove-connection handler instead of directly modifying the store
+      const result = await window.api.removeConnection(connectionId);
+      
+      if (result.success) {
+        // Refresh the connections list
+        await connectionsStore.loadConnections();
+        showAlert('Connection and related data removed successfully', 'success');
+      } else {
+        showAlert(`Error removing connection: ${result.message}`, 'error');
+      }
     } catch (error) {
       console.error('Error removing connection:', error);
       showAlert('Error removing connection', 'error');
@@ -489,4 +550,4 @@ function getConnectionColor(type) {
       return 'bg-gray-600';
   }
 }
-</script> 
+</script>
