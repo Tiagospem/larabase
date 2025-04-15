@@ -107,6 +107,13 @@
                 </svg>
                 Open File
               </button>
+              
+              <button class="btn btn-sm btn-primary" @click="showGenerateDataModal = true">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4 mr-1">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M20.25 6.375c0 2.278-3.694 4.125-8.25 4.125S3.75 8.653 3.75 6.375m16.5 0c0-2.278-3.694-4.125-8.25-4.125S3.75 4.097 3.75 6.375m16.5 0v11.25c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125V6.375m16.5 0v3.75m-16.5-3.75v3.75m16.5 0v3.75C20.25 16.153 16.556 18 12 18s-8.25-1.847-8.25-4.125v-3.75m16.5 0c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125" />
+                </svg>
+                Factory Data
+              </button>
             </div>
           </div>
         </div>
@@ -116,6 +123,65 @@
     <div v-if="factoryFound" class="bg-base-200 px-4 py-2 border-t border-gray-800 flex justify-between items-center text-xs text-gray-400">
       <div>{{ tableName }} | Factory</div>
       <div>Factory Path: {{ factory.relativePath }}</div>
+    </div>
+    
+    <!-- Factory Data Generation Modal -->
+    <div v-if="showGenerateDataModal" class="modal modal-open">
+      <div class="modal-box">
+        <h3 class="font-bold text-lg">Generate Factory Data</h3>
+        <p class="py-4">How many records would you like to generate?</p>
+        
+        <div class="form-control w-full">
+          <label class="label">
+            <span class="label-text">Number of records (1-1000)</span>
+          </label>
+          <input 
+            type="number" 
+            v-model="recordCount" 
+            min="1" 
+            max="1000" 
+            class="input input-bordered w-full" 
+            :class="{'input-error': recordCount < 1 || recordCount > 1000}"
+          />
+          <label class="label" v-if="recordCount < 1 || recordCount > 1000">
+            <span class="label-text-alt text-error">Please enter a number between 1 and 1000</span>
+          </label>
+        </div>
+        
+        <div class="mt-4">
+          <p class="text-sm">This will run the following command:</p>
+          <div class="mockup-code text-xs mt-2">
+            <pre><code>{{ generateCommandPreview() }}</code></pre>
+          </div>
+        </div>
+        
+        <div class="modal-action">
+          <button class="btn" @click="showGenerateDataModal = false">Cancel</button>
+          <button 
+            class="btn btn-primary" 
+            @click="generateFactoryData" 
+            :disabled="isGenerating || recordCount < 1 || recordCount > 1000"
+          >
+            <span class="loading loading-spinner loading-xs" v-if="isGenerating"></span>
+            Generate
+          </button>
+        </div>
+      </div>
+      <div class="modal-backdrop" @click="showGenerateDataModal = false"></div>
+    </div>
+    
+    <!-- Command Output Modal -->
+    <div v-if="showCommandOutputModal" class="modal modal-open">
+      <div class="modal-box w-11/12 max-w-5xl">
+        <h3 class="font-bold text-lg">Command Output</h3>
+        <div class="mockup-code h-96 overflow-auto my-4">
+          <pre><code>{{ commandOutput }}</code></pre>
+        </div>
+        <div class="modal-action">
+          <button class="btn" @click="showCommandOutputModal = false">Close</button>
+        </div>
+      </div>
+      <div class="modal-backdrop" @click="showCommandOutputModal = false"></div>
     </div>
   </div>
 </template>
@@ -146,6 +212,13 @@ const props = defineProps({
 const isLoading = ref(true);
 const factory = ref(null);
 const factoryContent = ref('');
+
+// Factory data generation state
+const showGenerateDataModal = ref(false);
+const showCommandOutputModal = ref(false);
+const recordCount = ref(10);
+const isGenerating = ref(false);
+const commandOutput = ref('');
 
 const databaseStore = useDatabaseStore();
 const connectionsStore = useConnectionsStore();
@@ -418,6 +491,93 @@ async function openFileInEditor(filePath) {
   } catch (error) {
     console.error('Error opening file:', error);
     showAlert('Failed to open file', 'error');
+  }
+}
+
+// Generate command preview for display in the modal
+function generateCommandPreview() {
+  const model = databaseStore.getModelForTable(props.connectionId, props.tableName);
+  if (!model || !factory.value) return 'No model or factory found';
+  
+  const modelName = model.fullName;
+  const count = recordCount.value || 10;
+  
+  // Escape backslashes for command line
+  const escapedModelName = modelName.replace(/\\/g, '\\\\');
+  return `${escapedModelName}::factory(${count})->create();`;
+}
+
+// Generate factory data using Artisan Tinker
+async function generateFactoryData() {
+  isGenerating.value = true;
+  showGenerateDataModal.value = false;
+  showCommandOutputModal.value = true;
+  commandOutput.value = 'Starting data generation...\n';
+  
+  try {
+    // Validate requirements
+    if (!connection.value?.projectPath) {
+      throw new Error('No project path is set');
+    }
+    
+    const model = databaseStore.getModelForTable(props.connectionId, props.tableName);
+    if (!model) {
+      throw new Error('No model found for this table');
+    }
+    
+    const modelName = model.fullName;
+    const count = recordCount.value;
+    const projectPath = connection.value.projectPath;
+    
+    // Determine if using Sail (from connection settings)
+    const usingSail = !!connection.value.usingSail;
+    
+    // Construct the tinker command for generating factory data
+    const tinkerCommand = `${modelName}::factory(${count})->create();`;
+    
+    commandOutput.value += `Executing factory command...\n`;
+    commandOutput.value += `Using ${usingSail ? 'Laravel Sail' : 'PHP'} to run the command.\n`;
+    
+    // Configure command
+    const commandConfig = {
+      projectPath: projectPath,
+      command: `tinker --execute="${tinkerCommand}"`,
+      useSail: usingSail
+    };
+    
+    // Execute command
+    const result = await window.api.runArtisanCommand(commandConfig);
+    
+    if (result.success) {
+      commandOutput.value += `Command started with ID: ${result.commandId}\n`;
+      
+      // Set up listener for command output
+      const channel = window.api.listenCommandOutput(result.commandId, (data) => {
+        if (data.type === 'stdout') {
+          commandOutput.value += `${data.output}\n`;
+        } else if (data.type === 'stderr') {
+          commandOutput.value += `Error: ${data.output}\n`;
+        }
+        
+        if (data.isComplete) {
+          commandOutput.value += '\nCommand completed.';
+          isGenerating.value = false;
+          window.api.stopCommandListener(channel);
+          
+          // Show success message if no errors
+          if (data.success) {
+            showAlert(`Successfully generated ${count} records for ${props.tableName}`, 'success');
+          }
+        }
+      });
+    } else {
+      throw new Error(result.message || 'Failed to start command');
+    }
+  } catch (error) {
+    console.error('Error generating factory data:', error);
+    commandOutput.value += `\nError: ${error.message}\n`;
+    isGenerating.value = false;
+    showAlert(`Failed to generate factory data: ${error.message}`, 'error');
   }
 }
 
