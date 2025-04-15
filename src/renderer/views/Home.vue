@@ -1,7 +1,7 @@
 <template>
   <div class="flex h-full">
     <div
-      class="w-1/3 bg-neutral flex flex-col items-center justify-between p-6 border-r border-gray-800"
+      class="w-1/3 bg-[#e82b25] flex flex-col items-center justify-between p-6 border-r border-gray-800"
     >
       <div class="flex flex-col items-center">
         <img
@@ -10,11 +10,11 @@
           class="h-32 w-32 mb-2"
         />
         <h1 class="text-3xl font-bold text-white">Larabase</h1>
-        <p class="text-sm text-gray-400">Version 1.0.0</p>
+        <p class="text-sm text-white">Version 1.0.0</p>
       </div>
 
       <button
-        class="btn btn-primary w-full flex items-center gap-2 mt-8"
+        class="btn btn-neutral w-full flex items-center gap-2 mt-8"
         @click="openCreateConnectionModal"
       >
         <svg
