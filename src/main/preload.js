@@ -30,6 +30,8 @@ try {
       getTableForeignKeys: (config) => safeIpcRenderer.invoke('getTableForeignKeys', config),
       findTableMigrations: (config) => safeIpcRenderer.invoke('findTableMigrations', config),
       updateRecord: (config) => safeIpcRenderer.invoke('updateRecord', config),
+      deleteRecords: (config) => safeIpcRenderer.invoke('deleteRecords', config),
+      truncateTable: (config) => safeIpcRenderer.invoke('truncateTable', config),
       openFile: (filePath) => safeIpcRenderer.invoke('openFile', filePath),
       getDatabaseRelationships: (connectionId) => safeIpcRenderer.invoke('get-database-relationships', { connectionId }),
       findModelsForTables: (config) => safeIpcRenderer.invoke('find-models-for-tables', config),

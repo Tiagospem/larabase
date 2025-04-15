@@ -961,26 +961,26 @@ export const useDatabaseStore = defineStore('database', () => {
     if (!connection) {
       throw new Error("Connection not found");
     }
-
+    
     try {
-      // Preparar registro para envio, eliminando problemas de serialização
+      // Prepare record for sending, eliminating serialization problems
       const preparedRecord = {};
       
-      // Para cada campo no registro
+      // For each field in the record
       for (const key in record) {
         let value = record[key];
         
-        // Tratar valores especiais
+        // Handle special values
         if (value instanceof Date) {
-          // Converter datas para string ISO
+          // Convert dates to ISO string
           value = value.toISOString().slice(0, 19);
         } else if (value !== null && typeof value === 'object') {
-          // Converter objetos complexos para JSON
+          // Convert complex objects to JSON
           try {
             value = JSON.stringify(value);
           } catch (e) {
             console.warn(`Could not stringify field ${key}:`, e);
-            // Utilizar toString() como fallback
+            // Use toString() as fallback
             value = String(value);
           }
         }
@@ -988,38 +988,35 @@ export const useDatabaseStore = defineStore('database', () => {
         preparedRecord[key] = value;
       }
       
-      // Definir chave de cache
+      // Set cache key
       const cacheKey = `${connectionId}:${tableName}`;
       
-      // Para MySQL, executar a consulta de atualização real
-      if (connection.type === 'mysql') {
-        // For MySQL, execute an actual update query
-        const result = await window.api.updateRecord({
-          connection: {
-            host: connection.host,
-            port: connection.port,
-            username: connection.username,
-            password: connection.password,
-            database: connection.database
-          },
-          tableName: tableName,
-          record: preparedRecord
-        });
-        
-        if (!result.success) {
-          throw new Error(result.message || "Failed to update record");
-        }
+      // For MySQL, execute the actual update query
+      const result = await window.api.updateRecord({
+        connection: {
+          host: connection.host,
+          port: connection.port,
+          username: connection.username,
+          password: connection.password,
+          database: connection.database
+        },
+        tableName,
+        record: preparedRecord
+      });
+      
+      if (!result.success) {
+        throw new Error(result.message || "Failed to update record");
       }
       
-      // Atualizar o cache local
+      // Update the local cache
       if (!tableRecords.value[cacheKey]) {
-        // Se o cache não existir, não há nada para atualizar
+        // If the cache doesn't exist, there's nothing to update
         console.log(`Cache not found for ${cacheKey}, skipping local update`);
-      } else if (!Array.isArray(tableRecords.value[cacheKey])) {
-        console.warn(`Cache for ${cacheKey} is not an array, cannot update`, tableRecords.value[cacheKey]);
+      } else if (!tableRecords.value[cacheKey].data) {
+        console.warn(`Cache for ${cacheKey} does not have data property, cannot update`);
       } else {
-        // Cache existe e é um array, podemos atualizar
-        const index = tableRecords.value[cacheKey].findIndex(row => {
+        // Cache exists and has data, we can update
+        const index = tableRecords.value[cacheKey].data.findIndex(row => {
           if (row.id && record.id) {
             return row.id === record.id;
           }
@@ -1027,18 +1024,100 @@ export const useDatabaseStore = defineStore('database', () => {
         });
         
         if (index !== -1) {
-          // Atualizar o registro no array do cache
-          const updatedRecord = { ...tableRecords.value[cacheKey][index], ...record };
-          tableRecords.value[cacheKey].splice(index, 1, updatedRecord);
+          // Update the record in the cache array
+          const updatedRecord = { ...tableRecords.value[cacheKey].data[index], ...record };
+          tableRecords.value[cacheKey].data.splice(index, 1, updatedRecord);
           console.log(`Updated record at index ${index} in cache ${cacheKey}`);
         } else {
           console.log(`Record with id ${record.id} not found in cache ${cacheKey}`);
         }
       }
       
-      return true;
+      return result;
     } catch (error) {
       console.error("Error updating record:", error);
+      throw error;
+    }
+  }
+
+  // Function to delete records from a table
+  async function deleteRecords(connectionId, tableName, ids) {
+    const connection = usedConnectionsStore().getConnection(connectionId);
+    
+    if (!connection) {
+      throw new Error("Connection not found");
+    }
+    
+    try {
+      // Ensure we're dealing with an array of primitive values
+      const sanitizedIds = ids.map(id => {
+        // Convert any objects to strings
+        if (id !== null && typeof id === 'object') {
+          return String(id);
+        }
+        return id;
+      });
+      
+      console.log("Sanitized IDs for deletion:", sanitizedIds);
+      
+      const result = await window.api.deleteRecords({
+        connection: {
+          host: connection.host,
+          port: connection.port,
+          username: connection.username,
+          password: connection.password,
+          database: connection.database
+        },
+        tableName,
+        ids: sanitizedIds
+      });
+      
+      if (result.success) {
+        // Clear cache for this table
+        const cacheKey = `${connectionId}:${tableName}`;
+        clearTableCache(cacheKey);
+        
+        return result;
+      } else {
+        throw new Error(result.message);
+      }
+    } catch (error) {
+      console.error("Error deleting records:", error);
+      throw error;
+    }
+  }
+  
+  // Function to truncate a table
+  async function truncateTable(connectionId, tableName) {
+    const connection = usedConnectionsStore().getConnection(connectionId);
+    
+    if (!connection) {
+      throw new Error("Connection not found");
+    }
+    
+    try {
+      const result = await window.api.truncateTable({
+        connection: {
+          host: connection.host,
+          port: connection.port,
+          username: connection.username,
+          password: connection.password,
+          database: connection.database
+        },
+        tableName
+      });
+      
+      if (result.success) {
+        // Clear cache for this table
+        const cacheKey = `${connectionId}:${tableName}`;
+        clearTableCache(cacheKey);
+        
+        return result;
+      } else {
+        throw new Error(result.message);
+      }
+    } catch (error) {
+      console.error("Error truncating table:", error);
       throw error;
     }
   }
@@ -1202,6 +1281,8 @@ export const useDatabaseStore = defineStore('database', () => {
     getAllTablesModelsJson,
     clearTableRecordCounts,
     updateRecord,
-    loadFilteredTableData
+    loadFilteredTableData,
+    deleteRecords,
+    truncateTable
   };
 }); 

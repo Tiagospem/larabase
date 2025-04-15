@@ -5506,3 +5506,362 @@ ipcMain.handle('get-file-stats', async (event, filePath) => {
     };
   }
 });
+
+ipcMain.handle('deleteRecords', async (event, config) => {
+  try {
+    const { connection, tableName, ids } = config;
+    
+    if (!connection) {
+      throw new Error('Connection details are required');
+    }
+    
+    if (!tableName) {
+      throw new Error('Table name is required');
+    }
+    
+    if (!ids || !Array.isArray(ids) || ids.length === 0) {
+      throw new Error('At least one record ID is required');
+    }
+    
+    // Ensure all IDs are valid primitives
+    const validatedIds = ids.map(id => {
+      // Convert strings that contain numbers to actual numbers if possible
+      if (typeof id === 'string' && !isNaN(Number(id))) {
+        return Number(id);
+      }
+      return id;
+    });
+    
+    console.log(`Deleting ${validatedIds.length} records from ${tableName}:`, validatedIds);
+    
+    // Construct the MySQL connection
+    const mysqlConfig = {
+      host: connection.host,
+      port: connection.port || 3306,
+      user: connection.username,
+      password: connection.password,
+      database: connection.database
+    };
+    
+    let conn;
+    
+    try {
+      // Use mysql2/promise for consistency
+      conn = await mysql.createConnection(mysqlConfig);
+
+      // First check if there are foreign key constraints
+      const [fkResult] = await conn.query(`
+        SELECT 
+          TABLE_NAME as referenced_table_name,
+          COLUMN_NAME as referenced_column_name,
+          CONSTRAINT_NAME,
+          REFERENCED_TABLE_NAME as table_name,
+          REFERENCED_COLUMN_NAME as column_name
+        FROM 
+          INFORMATION_SCHEMA.KEY_COLUMN_USAGE 
+        WHERE 
+          REFERENCED_TABLE_NAME = ? 
+          AND REFERENCED_TABLE_SCHEMA = ?
+      `, [tableName, connection.database]);
+      
+      // If there are foreign key constraints, get the actual constraint details
+      if (fkResult && fkResult.length > 0) {
+        const [constraintResult] = await conn.query(`
+          SELECT 
+            k.CONSTRAINT_NAME,
+            k.TABLE_NAME as child_table,
+            k.COLUMN_NAME as child_column,
+            k.REFERENCED_TABLE_NAME as parent_table,
+            k.REFERENCED_COLUMN_NAME as parent_column,
+            r.DELETE_RULE as on_delete
+          FROM 
+            INFORMATION_SCHEMA.KEY_COLUMN_USAGE k
+          JOIN
+            INFORMATION_SCHEMA.REFERENTIAL_CONSTRAINTS r
+          ON
+            k.CONSTRAINT_NAME = r.CONSTRAINT_NAME
+            AND k.CONSTRAINT_SCHEMA = r.CONSTRAINT_SCHEMA
+          WHERE 
+            k.REFERENCED_TABLE_NAME = ? 
+            AND k.REFERENCED_TABLE_SCHEMA = ?
+        `, [tableName, connection.database]);
+        
+        // Check if any constraints have RESTRICT or NO ACTION delete rule
+        const restrictingConstraints = constraintResult.filter(
+          c => c.on_delete === 'RESTRICT' || c.on_delete === 'NO ACTION'
+        );
+        
+        if (restrictingConstraints.length > 0) {
+          // For each ID, check if it's referenced in any child tables
+          const problematicIds = [];
+          
+          for (const id of validatedIds) {
+            let hasReferences = false;
+            
+            for (const constraint of restrictingConstraints) {
+              const [refCheck] = await conn.query(`
+                SELECT 1 FROM ${conn.escapeId(constraint.child_table)} 
+                WHERE ${conn.escapeId(constraint.child_column)} = ?
+                LIMIT 1
+              `, [id]);
+              
+              if (refCheck && refCheck.length > 0) {
+                hasReferences = true;
+                break;
+              }
+            }
+            
+            if (hasReferences) {
+              problematicIds.push(id);
+            }
+          }
+          
+          if (problematicIds.length > 0) {
+            return {
+              success: false,
+              message: `Cannot delete records with IDs ${problematicIds.join(', ')} because they are referenced by other tables`,
+              problematicIds
+            };
+          }
+        }
+      }
+      
+      // Build the SQL DELETE statement
+      // Use placeholders for each ID in the WHERE clause
+      const placeholders = validatedIds.map(() => '?').join(', ');
+      const deleteSql = `DELETE FROM ${conn.escapeId(tableName)} WHERE id IN (${placeholders})`;
+      
+      // Execute the DELETE query
+      const [result] = await conn.execute(deleteSql, validatedIds);
+      
+      return {
+        success: true,
+        message: `${result.affectedRows} record(s) deleted successfully`,
+        affectedRows: result.affectedRows
+      };
+    } finally {
+      if (conn) {
+        await conn.end();
+      }
+    }
+  } catch (error) {
+    console.error('Error deleting records:', error);
+    
+    // Check for foreign key constraint error
+    if (error.code === 'ER_ROW_IS_REFERENCED_2') {
+      return {
+        success: false,
+        message: 'Cannot delete these records because they are referenced by other tables',
+        constraintError: true
+      };
+    }
+    
+    return {
+      success: false,
+      message: error.message
+    };
+  }
+});
+
+ipcMain.handle('truncateTable', async (event, config) => {
+  try {
+    const { connection, tableName } = config;
+    
+    if (!connection) {
+      throw new Error('Connection details are required');
+    }
+    
+    if (!tableName) {
+      throw new Error('Table name is required');
+    }
+    
+    // Construct the MySQL connection
+    const mysqlConfig = {
+      host: connection.host,
+      port: connection.port || 3306,
+      user: connection.username,
+      password: connection.password,
+      database: connection.database
+    };
+    
+    let conn;
+    
+    try {
+      // Use mysql2/promise for consistency
+      conn = await mysql.createConnection(mysqlConfig);
+
+      // First check if there are foreign key constraints
+      const [fkResult] = await conn.query(`
+        SELECT 
+          TABLE_NAME as referenced_table_name,
+          COLUMN_NAME as referenced_column_name,
+          CONSTRAINT_NAME,
+          REFERENCED_TABLE_NAME as table_name,
+          REFERENCED_COLUMN_NAME as column_name
+        FROM 
+          INFORMATION_SCHEMA.KEY_COLUMN_USAGE 
+        WHERE 
+          REFERENCED_TABLE_NAME = ? 
+          AND REFERENCED_TABLE_SCHEMA = ?
+      `, [tableName, connection.database]);
+      
+      // If there are foreign key constraints, we need to disable foreign key checks
+      const hasForeignKeys = fkResult && fkResult.length > 0;
+      
+      // Start transaction
+      await conn.beginTransaction();
+      
+      // Disable foreign key checks if necessary
+      if (hasForeignKeys) {
+        await conn.query('SET FOREIGN_KEY_CHECKS = 0');
+      }
+      
+      // Execute the TRUNCATE query
+      await conn.query(`TRUNCATE TABLE ${conn.escapeId(tableName)}`);
+      
+      // Re-enable foreign key checks if they were disabled
+      if (hasForeignKeys) {
+        await conn.query('SET FOREIGN_KEY_CHECKS = 1');
+      }
+      
+      // Commit the transaction
+      await conn.commit();
+      
+      return {
+        success: true,
+        message: `Table ${tableName} truncated successfully`
+      };
+    } catch (error) {
+      // Rollback on error
+      if (conn) {
+        try {
+          await conn.rollback();
+          // Ensure foreign key checks are re-enabled
+          await conn.query('SET FOREIGN_KEY_CHECKS = 1');
+        } catch (rollbackError) {
+          console.error('Error rolling back transaction:', rollbackError);
+        }
+      }
+      throw error;
+    } finally {
+      if (conn) {
+        try {
+          await conn.end();
+        } catch (closeError) {
+          console.error('Error closing connection:', closeError);
+        }
+      }
+    }
+  } catch (error) {
+    console.error('Error truncating table:', error);
+    return {
+      success: false,
+      message: error.message
+    };
+  }
+});
+
+// Adicionar handler para consulta com filtro SQL WHERE
+ipcMain.handle('getFilteredTableData', async (event, config) => {
+  let connection;
+  let monitoredConnection = null;
+
+  try {
+    // Verificar parâmetros obrigatórios
+    if (!config.host || !config.port || !config.username || !config.database || !config.tableName || !config.filter) {
+      return { 
+        success: false, 
+        message: 'Missing required parameters',
+        data: [],
+        totalRecords: 0
+      };
+    }
+
+    // Tentar usar uma conexão monitorada já existente
+    if (config.connectionId) {
+      monitoredConnection = dbMonitoringConnections.get(config.connectionId);
+      if (monitoredConnection) {
+        console.log(`Using existing monitored connection for filtered data: ${config.connectionId}`);
+        connection = monitoredConnection;
+      }
+    }
+    
+    // Se não temos uma conexão monitorada, criamos uma nova
+    if (!monitoredConnection) {
+      connection = await mysql.createConnection({
+        host: config.host,
+        port: config.port,
+        user: config.username,
+        password: config.password || '',
+        database: config.database,
+        connectTimeout: 10000
+      });
+    }
+
+    // Escapar nome da tabela para prevenir SQL injection
+    const tableName = connection.escapeId(config.tableName);
+    
+    // Limpar o filtro - remover 'WHERE' se estiver no início
+    let filterClause = config.filter.trim();
+    if (filterClause.toLowerCase().startsWith('where')) {
+      filterClause = filterClause.substring(5).trim();
+    }
+    
+    // Configurações de paginação
+    const page = config.page || 1;
+    const limit = parseInt(config.limit) || 100;
+    const offset = (page - 1) * limit;
+    
+    console.log(`Executing filtered query on ${config.database}.${config.tableName}`);
+    console.log(`Filter: ${filterClause}`);
+    console.log(`Page: ${page}, Limit: ${limit}, Offset: ${offset}`);
+    
+    // Primeiro, obter a contagem total de registros que correspondem ao filtro
+    const countQuery = `SELECT COUNT(*) as total FROM ${tableName} WHERE ${filterClause}`;
+    console.log(`Count query: ${countQuery}`);
+    
+    let totalRecords = 0;
+    try {
+      const [countResult] = await connection.query(countQuery);
+      totalRecords = countResult[0].total;
+      console.log(`Total records matching filter: ${totalRecords}`);
+    } catch (countError) {
+      console.error('Error executing count query:', countError);
+      // Em caso de erro na contagem, continuamos com a consulta principal
+      // mas retornamos totalRecords = 0, o que pode causar problemas na paginação
+    }
+    
+    // Consulta principal para obter os dados filtrados com paginação
+    const dataQuery = `SELECT * FROM ${tableName} WHERE ${filterClause} LIMIT ${parseInt(limit)} OFFSET ${parseInt(offset)}`;
+    console.log(`Data query: ${dataQuery}`);
+    
+    const [rows] = await connection.query(dataQuery);
+    
+    console.log(`Fetched ${rows?.length || 0} rows from filtered data`);
+    
+    return { 
+      success: true, 
+      data: rows || [],
+      totalRecords: totalRecords,
+      page: page,
+      limit: limit
+    };
+  } catch (error) {
+    console.error('Error fetching filtered table data:', error);
+    return { 
+      success: false, 
+      message: error.message || 'Failed to fetch filtered table data',
+      data: [],
+      totalRecords: 0
+    };
+  } finally {
+    // Apenas fechamos a conexão se NÃO for uma conexão monitorada
+    if (connection && !monitoredConnection) {
+      try {
+        await connection.end();
+      } catch (err) {
+        console.error('Error closing MySQL connection:', err);
+      }
+    }
+  }
+});

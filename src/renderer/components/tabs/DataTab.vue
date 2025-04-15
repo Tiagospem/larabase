@@ -11,6 +11,16 @@
           <span>Refresh</span>
         </button>
         <button 
+          class="btn btn-sm btn-ghost text-error"
+          :disabled="totalRecords === 0"
+          @click="confirmTruncateTable">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" 
+            stroke="currentColor" class="w-5 h-5">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+          </svg>
+          <span>Truncate</span>
+        </button>
+        <button 
           class="btn btn-sm btn-ghost"
           :disabled="selectedRows.length === 0"
           @click="deleteSelected">
@@ -417,6 +427,32 @@
       </div>
       <div class="modal-backdrop" @click="showFilterModal = false"></div>
     </div>
+    
+    <!-- Confirm truncate modal -->
+    <div class="modal" :class="{ 'modal-open': showTruncateConfirm }">
+      <div class="modal-box">
+        <h3 class="font-bold text-lg text-error">⚠️ Truncate Table</h3>
+        <p class="py-4">Are you sure you want to truncate the <strong>{{ tableName }}</strong> table? This will delete ALL records and cannot be undone.</p>
+        <div class="modal-action">
+          <button class="btn" @click="showTruncateConfirm = false">Cancel</button>
+          <button class="btn btn-error" @click="truncateTable">Truncate Table</button>
+        </div>
+      </div>
+      <div class="modal-backdrop" @click="showTruncateConfirm = false"></div>
+    </div>
+    
+    <!-- Confirm delete modal -->
+    <div class="modal" :class="{ 'modal-open': showDeleteConfirm }">
+      <div class="modal-box">
+        <h3 class="font-bold text-lg text-error">Delete Records</h3>
+        <p class="py-4">Are you sure you want to delete {{ selectedRows.length }} record(s)? This action cannot be undone.</p>
+        <div class="modal-action">
+          <button class="btn" @click="showDeleteConfirm = false">Cancel</button>
+          <button class="btn btn-error" @click="confirmDelete">Delete</button>
+        </div>
+      </div>
+      <div class="modal-backdrop" @click="showDeleteConfirm = false"></div>
+    </div>
   </div>
 </template>
 
@@ -480,6 +516,20 @@ const totalPages = computed(() => {
   if (rowsPerPage.value === 0) return 1;
   return Math.ceil(totalRecords.value / rowsPerPage.value);
 });
+
+const showEditModal = ref(false);
+const editingRecord = ref(null);
+const originalRecord = ref(null);
+
+const showFilterModal = ref(false);
+const advancedFilterTerm = ref('');
+const persistFilter = ref(true);
+const activeFilter = ref('');
+const originalFilterTerm = ref('');
+
+const showDeleteConfirm = ref(false);
+const showTruncateConfirm = ref(false);
+const deletingIds = ref([]);
 
 const databaseStore = useDatabaseStore();
 
@@ -802,14 +852,71 @@ function toggleColumnExpansion(column) {
 }
 
 function deleteSelected() {
-  if (selectedRows.value.length === 0) return;
+  if (selectedRows.length === 0) return;
   
-  // For now, just show an alert since we don't have a real implementation yet
-  showAlert(`Would delete ${selectedRows.length} rows`, 'info');
+  // Get the IDs of the selected rows - send only the IDs as primitives
+  deletingIds.value = selectedRows.value.map(index => {
+    // Ensure we're only sending the numeric or string ID
+    const id = paginatedData.value[index].id;
+    // Convert to primitive if needed
+    return typeof id === 'object' ? String(id) : id;
+  });
   
-  // In the future, implement actual deletion via database connection
-  // const idsToDelete = selectedRows.value.map(index => paginatedData.value[index].id);
-  // databaseStore.deleteRows(props.connectionId, props.tableName, idsToDelete);
+  // Show confirmation dialog
+  showDeleteConfirm.value = true;
+}
+
+async function confirmDelete() {
+  showDeleteConfirm.value = false;
+  
+  try {
+    // Make sure we're only sending an array of primitive IDs
+    const idsToDelete = [...deletingIds.value];
+    
+    console.log("Deleting IDs:", idsToDelete);
+    
+    const result = await databaseStore.deleteRecords(
+      props.connectionId, 
+      props.tableName, 
+      idsToDelete
+    );
+    
+    showAlert(result.message, 'success');
+    
+    // Clear selection and reload data
+    selectedRows.value = [];
+    await loadTableData();
+  } catch (error) {
+    console.error("Error in confirmDelete:", error);
+    if (error.message.includes('referenced by other tables')) {
+      showAlert('Cannot delete records because they are referenced by other tables. Remove the related records first or use CASCADE constraints.', 'error');
+    } else {
+      showAlert(`Error deleting records: ${error.message}`, 'error');
+    }
+  }
+}
+
+function confirmTruncateTable() {
+  showTruncateConfirm.value = true;
+}
+
+async function truncateTable() {
+  showTruncateConfirm.value = false;
+  
+  try {
+    const result = await databaseStore.truncateTable(
+      props.connectionId, 
+      props.tableName
+    );
+    
+    showAlert(result.message, 'success');
+    
+    // Clear selection and reload data
+    selectedRows.value = [];
+    await loadTableData();
+  } catch (error) {
+    showAlert(`Error truncating table: ${error.message}`, 'error');
+  }
 }
 
 const handleKeyDown = (e) => {
@@ -882,10 +989,6 @@ watch(() => currentPage.value, (newPage, oldPage) => {
     }
   }
 });
-
-const showEditModal = ref(false);
-const editingRecord = ref(null);
-const originalRecord = ref(null);
 
 function openEditModal(row) {
   // Create a deep copy of the row to edit
@@ -1173,12 +1276,6 @@ onUnmounted(() => {
   document.removeEventListener('mousemove', handleColumnResize);
   document.removeEventListener('mouseup', stopColumnResize);
 });
-
-const showFilterModal = ref(false);
-const advancedFilterTerm = ref('');
-const persistFilter = ref(true);
-const activeFilter = ref('');
-const originalFilterTerm = ref('');
 
 function toggleAdvancedFilter() {
   originalFilterTerm.value = advancedFilterTerm.value;
