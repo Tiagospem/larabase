@@ -545,16 +545,44 @@ async function loadFactoryContent(filePath) {
 function highlightCode() {
   try {
     if (factoryContent.value) {
-      highlightedCode.value = hljs.highlight(factoryContent.value, {
+      // First highlight the code
+      const highlighted = hljs.highlight(factoryContent.value, {
         language: 'php',
         ignoreIllegals: true
       }).value;
+
+      // Add line numbers to the highlighted code
+      const lines = highlighted.split('\n');
+      let processedCode = '';
+      
+      lines.forEach((line, index) => {
+        const lineNumber = index + 1;
+        const lineNumberPadded = String(lineNumber).padStart(3, ' ');
+        processedCode += `<span class="line-number">${lineNumberPadded} </span>${line}\n`;
+      });
+
+      highlightedCode.value = processedCode;
     } else {
       highlightedCode.value = '';
     }
   } catch (error) {
     console.error('Error highlighting code:', error);
-    highlightedCode.value = factoryContent.value;
+    // Fallback to plain code with line numbers if highlighting fails
+    const lines = factoryContent.value.split('\n');
+    let processedCode = '';
+    
+    lines.forEach((line, index) => {
+      const lineNumber = index + 1;
+      const lineNumberPadded = String(lineNumber).padStart(3, ' ');
+      // Escape HTML entities
+      const escapedLine = line
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+      processedCode += `<span class="line-number">${lineNumberPadded} </span>${escapedLine}\n`;
+    });
+    
+    highlightedCode.value = processedCode;
   }
 }
 
@@ -842,5 +870,32 @@ onMounted(() => {
 
 :deep(.hljs-title) {
   color: #61aeee;
+}
+
+:deep(.line-number) {
+  display: inline-block;
+  width: 2.5em;
+  color: #606366;
+  font-family: Consolas, Monaco, 'Andale Mono', monospace;
+  text-align: right;
+  padding-right: 0.5em;
+  margin-right: 0.5em;
+  user-select: none;
+  border-right: 1px solid #444;
+  position: sticky;
+  left: 0;
+  background-color: rgba(42, 42, 46, 0.8);
+}
+
+/* Add style to improve readability of code in the modal */
+:deep(pre) {
+  margin: 0;
+  font-family: Consolas, Monaco, 'Andale Mono', monospace;
+  line-height: 1.5;
+}
+
+:deep(code) {
+  font-family: Consolas, Monaco, 'Andale Mono', monospace;
+  white-space: pre;
 }
 </style>

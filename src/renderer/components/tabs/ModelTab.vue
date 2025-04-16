@@ -387,16 +387,44 @@ async function loadModelContent(filePath) {
 function highlightCode() {
   try {
     if (modelContent.value) {
-      highlightedCode.value = hljs.highlight(modelContent.value, {
+      // First highlight the code
+      const highlighted = hljs.highlight(modelContent.value, {
         language: 'php',
         ignoreIllegals: true
       }).value;
+
+      // Add line numbers to the highlighted code
+      const lines = highlighted.split('\n');
+      let processedCode = '';
+      
+      lines.forEach((line, index) => {
+        const lineNumber = index + 1;
+        const lineNumberPadded = String(lineNumber).padStart(3, ' ');
+        processedCode += `<span class="line-number">${lineNumberPadded} </span>${line}\n`;
+      });
+
+      highlightedCode.value = processedCode;
     } else {
       highlightedCode.value = '';
     }
   } catch (error) {
     console.error('Error highlighting code:', error);
-    highlightedCode.value = modelContent.value;
+    // Fallback to plain code with line numbers if highlighting fails
+    const lines = modelContent.value.split('\n');
+    let processedCode = '';
+    
+    lines.forEach((line, index) => {
+      const lineNumber = index + 1;
+      const lineNumberPadded = String(lineNumber).padStart(3, ' ');
+      // Escape HTML entities
+      const escapedLine = line
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+      processedCode += `<span class="line-number">${lineNumberPadded} </span>${escapedLine}\n`;
+    });
+    
+    highlightedCode.value = processedCode;
   }
 }
 
@@ -408,18 +436,53 @@ function highlightJsonCode() {
         ? JSON.stringify(JSON.parse(modelJson.value), null, 2)
         : JSON.stringify(modelJson.value, null, 2);
         
-      highlightedJson.value = hljs.highlight(formattedJson, {
+      // First highlight the formatted JSON
+      const highlighted = hljs.highlight(formattedJson, {
         language: 'json',
         ignoreIllegals: true
       }).value;
+
+      // Add line numbers to the highlighted JSON
+      const lines = highlighted.split('\n');
+      let processedCode = '';
+      
+      lines.forEach((line, index) => {
+        const lineNumber = index + 1;
+        const lineNumberPadded = String(lineNumber).padStart(3, ' ');
+        processedCode += `<span class="line-number">${lineNumberPadded} </span>${line}\n`;
+      });
+
+      highlightedJson.value = processedCode;
     } else {
       highlightedJson.value = '';
     }
   } catch (error) {
     console.error('Error highlighting JSON code:', error);
-    highlightedJson.value = typeof modelJson.value === 'string' 
-      ? modelJson.value 
-      : JSON.stringify(modelJson.value, null, 2);
+    try {
+      // Fallback to plain JSON with line numbers if highlighting fails
+      const formattedJson = typeof modelJson.value === 'string' 
+        ? JSON.stringify(JSON.parse(modelJson.value), null, 2)
+        : JSON.stringify(modelJson.value, null, 2);
+      
+      const lines = formattedJson.split('\n');
+      let processedCode = '';
+      
+      lines.forEach((line, index) => {
+        const lineNumber = index + 1;
+        const lineNumberPadded = String(lineNumber).padStart(3, ' ');
+        // Escape HTML entities
+        const escapedLine = line
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;');
+        processedCode += `<span class="line-number">${lineNumberPadded} </span>${escapedLine}\n`;
+      });
+      
+      highlightedJson.value = processedCode;
+    } catch (jsonError) {
+      console.error('Error formatting JSON:', jsonError);
+      highlightedJson.value = String(modelJson.value);
+    }
   }
 }
 
@@ -526,5 +589,32 @@ onMounted(() => {
 
 :deep(.hljs-title) {
   color: #61aeee;
+}
+
+:deep(.line-number) {
+  display: inline-block;
+  width: 2.5em;
+  color: #606366;
+  font-family: Consolas, Monaco, 'Andale Mono', monospace;
+  text-align: right;
+  padding-right: 0.5em;
+  margin-right: 0.5em;
+  user-select: none;
+  border-right: 1px solid #444;
+  position: sticky;
+  left: 0;
+  background-color: rgba(42, 42, 46, 0.8);
+}
+
+/* Add style to improve readability of code in the modal */
+:deep(pre) {
+  margin: 0;
+  font-family: Consolas, Monaco, 'Andale Mono', monospace;
+  line-height: 1.5;
+}
+
+:deep(code) {
+  font-family: Consolas, Monaco, 'Andale Mono', monospace;
+  white-space: pre;
 }
 </style>

@@ -235,7 +235,7 @@
           Migration: {{ selectedMigration.displayName || selectedMigration.name }}
         </h3>
         <div class="mockup-code bg-neutral mb-4 h-[60vh] overflow-auto">
-          <pre><code>{{ selectedMigration.code }}</code></pre>
+          <pre><code v-html="highlightedCode"></code></pre>
         </div>
         <div class="modal-action">
           <button class="btn" @click="selectedMigration = null">Close</button>
@@ -247,9 +247,15 @@
 </template>
 
 <script setup>
-import { inject, onMounted, ref, computed } from 'vue';
+import { inject, onMounted, ref, computed, watch } from 'vue';
 import { useDatabaseStore } from '@/store/database';
 import { useConnectionsStore } from '@/store/connections';
+import hljs from 'highlight.js/lib/core';
+import php from 'highlight.js/lib/languages/php';
+import 'highlight.js/styles/atom-one-dark.css';
+
+// Register PHP language
+hljs.registerLanguage('php', php);
 
 const showAlert = inject('showAlert');
 
@@ -272,6 +278,7 @@ const isLoading = ref(true);
 const migrations = ref([]);
 const loadError = ref(null);
 const selectedMigration = ref(null);
+const highlightedCode = ref('');
 
 const databaseStore = useDatabaseStore();
 const connectionsStore = useConnectionsStore();
@@ -325,6 +332,52 @@ function getActionTypeClass(type) {
 
 function viewMigrationCode(migration) {
   selectedMigration.value = migration;
+  highlightCode(migration.code);
+}
+
+function highlightCode(code) {
+  try {
+    if (!code) {
+      highlightedCode.value = '';
+      return;
+    }
+
+    // First highlight the code
+    const highlighted = hljs.highlight(code, {
+      language: 'php',
+      ignoreIllegals: true
+    }).value;
+
+    // Then add line numbers to the highlighted code
+    const lines = highlighted.split('\n');
+    let processedCode = '';
+    
+    lines.forEach((line, index) => {
+      const lineNumber = index + 1;
+      const lineNumberPadded = String(lineNumber).padStart(3, ' ');
+      processedCode += `<span class="line-number">${lineNumberPadded} </span>${line}\n`;
+    });
+
+    highlightedCode.value = processedCode;
+  } catch (error) {
+    console.error('Error highlighting code:', error);
+    // Fallback to plain code with line numbers if highlighting fails
+    const lines = code.split('\n');
+    let processedCode = '';
+    
+    lines.forEach((line, index) => {
+      const lineNumber = index + 1;
+      const lineNumberPadded = String(lineNumber).padStart(3, ' ');
+      // Escape HTML entities
+      const escapedLine = line
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+      processedCode += `<span class="line-number">${lineNumberPadded} </span>${escapedLine}\n`;
+    });
+    
+    highlightedCode.value = processedCode;
+  }
 }
 
 async function selectProjectPath() {
@@ -429,5 +482,63 @@ onMounted(() => {
   .timeline-box {
     width: calc(100% - 1rem);
   }
+}
+
+/* Add syntax highlighting styles */
+:deep(.hljs) {
+  background: transparent;
+  padding: 0;
+}
+
+:deep(.hljs-keyword) {
+  color: #c678dd;
+}
+
+:deep(.hljs-string) {
+  color: #98c379;
+}
+
+:deep(.hljs-function) {
+  color: #61afef;
+}
+
+:deep(.hljs-comment) {
+  color: #5c6370;
+  font-style: italic;
+}
+
+:deep(.hljs-variable) {
+  color: #e06c75;
+}
+
+:deep(.hljs-title) {
+  color: #61aeee;
+}
+
+:deep(.line-number) {
+  display: inline-block;
+  width: 2.5em;
+  color: #606366;
+  font-family: Consolas, Monaco, 'Andale Mono', monospace;
+  text-align: right;
+  padding-right: 0.5em;
+  margin-right: 0.5em;
+  user-select: none;
+  border-right: 1px solid #444;
+  position: sticky;
+  left: 0;
+  background-color: rgba(42, 42, 46, 0.8);
+}
+
+/* Add style to improve readability of code in the modal */
+:deep(pre) {
+  margin: 0;
+  font-family: Consolas, Monaco, 'Andale Mono', monospace;
+  line-height: 1.5;
+}
+
+:deep(code) {
+  font-family: Consolas, Monaco, 'Andale Mono', monospace;
+  white-space: pre;
 }
 </style>
