@@ -207,7 +207,7 @@
       <div v-if="isLoading && !isLiveUpdating" class="flex items-center justify-center h-full">
         <span class="loading loading-spinner loading-lg" />
       </div>
-
+      
       <div v-else-if="loadError" class="flex items-center justify-center h-full text-error">
         <div class="text-center">
           <svg
@@ -1018,7 +1018,10 @@ function analyzeColumns() {
 
 async function loadTableData() {
   const wasLoading = isLoading.value;
-  isLoading.value = true;
+  // Only show loading if not in a live update
+  if (!isLiveUpdating.value) {
+    isLoading.value = true;
+  }
 
   if (!loadStartTime.value) {
     loadStartTime.value = Date.now();
@@ -1213,6 +1216,9 @@ function handleTableKeyDown(e) {
   } else if (e.key === 'Escape') {
     selectedRows.value = [];
     lastSelectedId.value = null;
+  } else if (e.key === 'Delete' && selectedRows.value.length > 0) {
+    e.preventDefault();
+    deleteSelected();
   }
 }
 
@@ -2173,6 +2179,7 @@ const previousDataSnapshot = ref([]);
 const updatedRows = ref([]);
 const highlightChanges = ref(true);
 const loadStartTime = ref(0);
+const isLiveUpdating = ref(false);
 
 function updateLiveDelay() {
   liveUpdateDelay.value = liveUpdateDelaySeconds.value * 1000;
@@ -2219,6 +2226,7 @@ function startLiveUpdates() {
   liveTableInterval.value = setInterval(() => {
     if (!isLoading.value) {
       loadStartTime.value = Date.now();
+      isLiveUpdating.value = true;
 
       loadTableData()
         .then(() => {
@@ -2230,6 +2238,9 @@ function startLiveUpdates() {
         })
         .catch(error => {
           console.error('Error during live update:', error);
+        })
+        .finally(() => {
+          isLiveUpdating.value = false;
         });
     }
   }, liveUpdateDelay.value);
