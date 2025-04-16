@@ -1,7 +1,7 @@
-tmp/*
-node_modules
+tmp/
+node_modules/
 .idea
-dist/*
+dist/
 .DS_Store
 .vscode
 7za
