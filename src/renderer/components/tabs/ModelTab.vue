@@ -189,7 +189,7 @@
             <div v-if="modelContent" class="mb-4">
               <h4 class="text-sm font-medium text-gray-400 mb-2">Model Code</h4>
               <div class="mockup-code bg-neutral h-64 overflow-auto text-xs">
-                <pre><code>{{ modelContent }}</code></pre>
+                <pre><code v-html="highlightedCode"></code></pre>
               </div>
             </div>
 
@@ -248,7 +248,7 @@
       <div class="modal-box w-11/12 max-w-5xl max-h-[90vh]">
         <h3 class="font-bold text-lg mb-4">Model JSON for {{ tableName }}</h3>
         <div class="mockup-code bg-neutral mb-4 h-[60vh] overflow-auto">
-          <pre><code>{{ modelJson }}</code></pre>
+          <pre><code v-html="highlightedJson"></code></pre>
         </div>
         <div class="modal-action">
           <button class="btn btn-sm btn-primary" @click="copyJsonToClipboard">
@@ -277,9 +277,17 @@
 </template>
 
 <script setup>
-import { inject, onMounted, ref, computed } from 'vue';
+import { inject, onMounted, ref, computed, watch } from 'vue';
 import { useDatabaseStore } from '@/store/database';
 import { useConnectionsStore } from '@/store/connections';
+import hljs from 'highlight.js/lib/core';
+import php from 'highlight.js/lib/languages/php';
+import json from 'highlight.js/lib/languages/json';
+import 'highlight.js/styles/atom-one-dark.css';
+
+// Register languages
+hljs.registerLanguage('php', php);
+hljs.registerLanguage('json', json);
 
 const showAlert = inject('showAlert');
 
@@ -303,6 +311,8 @@ const model = ref(null);
 const modelJson = ref('');
 const modelContent = ref('');
 const showJsonModal = ref(false);
+const highlightedCode = ref('');
+const highlightedJson = ref('');
 
 const databaseStore = useDatabaseStore();
 const connectionsStore = useConnectionsStore();
@@ -333,6 +343,9 @@ async function loadModel() {
 
     // Generate model JSON
     modelJson.value = databaseStore.getTableModelJson(props.connectionId, props.tableName);
+    if (modelJson.value) {
+      highlightJsonCode();
+    }
 
     // Load model content if found
     if (model.value && model.value.path) {
@@ -358,15 +371,63 @@ async function loadModelContent(filePath) {
 
     if (result.success) {
       modelContent.value = result.content;
+      highlightCode();
     } else {
       console.error('Error loading model content:', result.message);
       modelContent.value = '// Unable to load model content: ' + result.message;
+      highlightedCode.value = modelContent.value;
     }
   } catch (error) {
     console.error('Error reading model file:', error);
     modelContent.value = '// Unable to load model content';
+    highlightedCode.value = modelContent.value;
   }
 }
+
+function highlightCode() {
+  try {
+    if (modelContent.value) {
+      highlightedCode.value = hljs.highlight(modelContent.value, {
+        language: 'php',
+        ignoreIllegals: true
+      }).value;
+    } else {
+      highlightedCode.value = '';
+    }
+  } catch (error) {
+    console.error('Error highlighting code:', error);
+    highlightedCode.value = modelContent.value;
+  }
+}
+
+function highlightJsonCode() {
+  try {
+    if (modelJson.value) {
+      // Format the JSON string nicely
+      const formattedJson = typeof modelJson.value === 'string' 
+        ? JSON.stringify(JSON.parse(modelJson.value), null, 2)
+        : JSON.stringify(modelJson.value, null, 2);
+        
+      highlightedJson.value = hljs.highlight(formattedJson, {
+        language: 'json',
+        ignoreIllegals: true
+      }).value;
+    } else {
+      highlightedJson.value = '';
+    }
+  } catch (error) {
+    console.error('Error highlighting JSON code:', error);
+    highlightedJson.value = typeof modelJson.value === 'string' 
+      ? modelJson.value 
+      : JSON.stringify(modelJson.value, null, 2);
+  }
+}
+
+// Watch for changes in the model content
+watch(() => modelContent.value, highlightCode);
+
+// Watch for changes in model json
+watch(() => modelJson.value, highlightJsonCode);
 
 async function selectProjectPath() {
   try {
@@ -418,7 +479,11 @@ function viewModelJson() {
 
 async function copyJsonToClipboard() {
   try {
-    await navigator.clipboard.writeText(modelJson.value);
+    const formattedJson = typeof modelJson.value === 'string' 
+      ? JSON.stringify(JSON.parse(modelJson.value), null, 2)
+      : JSON.stringify(modelJson.value, null, 2);
+      
+    await navigator.clipboard.writeText(formattedJson);
     showAlert('JSON copied to clipboard', 'success');
   } catch (error) {
     console.error('Error copying to clipboard:', error);
@@ -430,3 +495,36 @@ onMounted(() => {
   loadModel();
 });
 </script>
+
+<style scoped>
+/* Add syntax highlighting styles */
+:deep(.hljs) {
+  background: transparent;
+  padding: 0;
+}
+
+:deep(.hljs-keyword) {
+  color: #c678dd;
+}
+
+:deep(.hljs-string) {
+  color: #98c379;
+}
+
+:deep(.hljs-function) {
+  color: #61afef;
+}
+
+:deep(.hljs-comment) {
+  color: #5c6370;
+  font-style: italic;
+}
+
+:deep(.hljs-variable) {
+  color: #e06c75;
+}
+
+:deep(.hljs-title) {
+  color: #61aeee;
+}
+</style>

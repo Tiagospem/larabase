@@ -28,6 +28,7 @@
   "dependencies": {
     "daisyui": "^3.9.3",
     "electron-store": "^8.1.0",
+    "highlight.js": "^11.11.1",
     "mysql2": "^3.14.0",
     "pinia": "^2.1.6",
     "pluralize": "^8.0.0",

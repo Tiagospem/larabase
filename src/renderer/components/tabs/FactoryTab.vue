@@ -198,7 +198,7 @@
             <div v-if="factoryContent" class="mb-4">
               <h4 class="text-sm font-medium text-gray-400 mb-2">Factory Code</h4>
               <div class="mockup-code bg-neutral h-64 overflow-auto text-xs">
-                <pre><code>{{ factoryContent }}</code></pre>
+                <pre><code v-html="highlightedCode"></code></pre>
               </div>
             </div>
 
@@ -286,10 +286,16 @@
 </template>
 
 <script setup>
-import { inject, onMounted, ref, computed } from 'vue';
+import { inject, onMounted, ref, computed, watch } from 'vue';
 import { useDatabaseStore } from '@/store/database';
 import { useConnectionsStore } from '@/store/connections';
 import { useCommandsStore } from '@/store/commands';
+import hljs from 'highlight.js/lib/core';
+import php from 'highlight.js/lib/languages/php';
+import 'highlight.js/styles/atom-one-dark.css';
+
+// Register the PHP language
+hljs.registerLanguage('php', php);
 
 const showAlert = inject('showAlert');
 
@@ -311,6 +317,7 @@ const props = defineProps({
 const isLoading = ref(true);
 const factory = ref(null);
 const factoryContent = ref('');
+const highlightedCode = ref('');
 
 // Factory data generation state
 const showGenerateDataModal = ref(false);
@@ -522,15 +529,37 @@ async function loadFactoryContent(filePath) {
 
     if (result.success) {
       factoryContent.value = result.content;
+      highlightCode();
     } else {
       console.error('Error loading factory content:', result.message);
       factoryContent.value = 'Error loading factory content: ' + result.message;
+      highlightedCode.value = factoryContent.value;
     }
   } catch (error) {
     console.error('Error reading factory file:', error);
     factoryContent.value = 'Unable to load factory content';
+    highlightedCode.value = factoryContent.value;
   }
 }
+
+function highlightCode() {
+  try {
+    if (factoryContent.value) {
+      highlightedCode.value = hljs.highlight(factoryContent.value, {
+        language: 'php',
+        ignoreIllegals: true
+      }).value;
+    } else {
+      highlightedCode.value = '';
+    }
+  } catch (error) {
+    console.error('Error highlighting code:', error);
+    highlightedCode.value = factoryContent.value;
+  }
+}
+
+// Watch for changes in factory content
+watch(() => factoryContent.value, highlightCode);
 
 async function selectProjectPath() {
   try {
@@ -782,3 +811,36 @@ onMounted(() => {
   loadFactory();
 });
 </script>
+
+<style scoped>
+/* Add syntax highlighting styles */
+:deep(.hljs) {
+  background: transparent;
+  padding: 0;
+}
+
+:deep(.hljs-keyword) {
+  color: #c678dd;
+}
+
+:deep(.hljs-string) {
+  color: #98c379;
+}
+
+:deep(.hljs-function) {
+  color: #61afef;
+}
+
+:deep(.hljs-comment) {
+  color: #5c6370;
+  font-style: italic;
+}
+
+:deep(.hljs-variable) {
+  color: #e06c75;
+}
+
+:deep(.hljs-title) {
+  color: #61aeee;
+}
+</style>
