@@ -269,10 +269,10 @@ onMounted(async () => {
   // Listen for window resize events to adjust editor height
   window.addEventListener('resize', handleWindowResize);
   
-  // Load settings for OpenAI config check
+  
   await settingsStore.loadSettings();
   
-  // Get database structure for AI assistant
+  
   loadDatabaseStructure();
 });
 
@@ -297,9 +297,9 @@ function toggleEditorFullscreen () {
   isEditorFullscreen.value = !isEditorFullscreen.value;
   
   if (isEditorFullscreen.value) {
-    editorHeight.value = window.innerHeight - 100; // Full height minus header/padding
+    editorHeight.value = window.innerHeight - 100; 
   } else {
-    editorHeight.value = window.innerHeight * 0.4; // Back to default
+    editorHeight.value = window.innerHeight * 0.4; 
   }
 }
 
@@ -380,11 +380,11 @@ function startResize (e) {
 
 function onResize (e) {
   if (isResizing.value) {
-    // Set minimum and maximum height constraints
+    
     const minHeight = 100;
     const maxHeight = window.innerHeight - 200;
     
-    editorHeight.value = Math.max(minHeight, Math.min(maxHeight, e.clientY - 60)); // 60px offset for header
+    editorHeight.value = Math.max(minHeight, Math.min(maxHeight, e.clientY - 60)); 
   }
 }
 
@@ -399,27 +399,26 @@ function applySQLFromAI (sql) {
   showAIModal.value = false;
 }
 
-// Get database structure with optimized format to reduce token usage
+
 async function loadDatabaseStructure () {
   try {
-    // Show loading state for AI functionality until data is loaded
+    
     databaseStructure.value = JSON.stringify({ loading: true });
     
-    // Get the complete database structure from store
+    
     const fullStructure = await databaseStore.getAllTablesModelsJson(connectionId.value);
     
-    // The structure already includes columns, so we can use it directly
+    
     databaseStructure.value = fullStructure;
   } catch (error) {
     console.error('Error loading database structure:', error);
-    // Fallback to simplified version
+    
     databaseStructure.value = '{"tables": []}';
   }
 }
 </script>
 
 <style scoped>
-/* Data table styles */
 table {
   border-spacing: 0;
 }
@@ -430,7 +429,6 @@ th, td {
   max-width: 300px;
 }
 
-/* Custom scrollbar styles */
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;

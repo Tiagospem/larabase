@@ -221,14 +221,14 @@ const props = defineProps({
   }
 });
 
-// State
+
 const isLoading = ref(true);
 const foreignKeys = ref([]);
 const loadError = ref(null);
 
 const databaseStore = useDatabaseStore();
 
-// Computed properties
+
 const outgoingRelations = computed(() => {
   return foreignKeys.value.filter(fk => fk.type === 'outgoing');
 });
@@ -237,7 +237,7 @@ const incomingRelations = computed(() => {
   return foreignKeys.value.filter(fk => fk.type === 'incoming');
 });
 
-// Methods
+
 function getConstraintBadgeClass (action) {
   switch (action) {
     case 'CASCADE':
@@ -258,13 +258,13 @@ async function loadForeignKeys () {
   loadError.value = null;
   
   try {
-    // Use the store's getTableForeignKeys method
+    
     const tableForeignKeys = await databaseStore.getTableForeignKeys(props.connectionId, props.tableName, true);
     console.log('Loaded foreign keys:', tableForeignKeys);
     
     foreignKeys.value = tableForeignKeys;
     
-    // Notify parent component
+    
     props.onLoad({
       outgoingCount: outgoingRelations.value.length,
       incomingCount: incomingRelations.value.length
@@ -279,7 +279,7 @@ async function loadForeignKeys () {
   }
 }
 
-// Lifecycle
+
 onMounted(() => {
   loadForeignKeys();
 });

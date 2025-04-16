@@ -84,11 +84,11 @@ const sanitizedOutput = computed(() => {
     return commandResult.value?.message || 'No output';
   }
   
-  // Remove ANSI color/formatting codes - comprehensive approach
+  
   return commandResult.value.output
     .replace(/\u001b\[\d+(;\d+)?m/g, '') // Remove all ANSI color codes
     .replace(/\[90m|\[39m|\[32;1m|\[39;22m|\[1m|\[22m/g, '') // Remove specific color format codes
-    .replace(/\u001b/g, ''); // Remove any remaining escape characters
+    .replace(/\u001b/g, ''); 
 });
 
 function toggleHeight () {
@@ -99,20 +99,20 @@ function clearOutput () {
   commandsStore.closeCommandOutput();
 }
 
-// Auto expand when a new command result arrives
+
 watch(() => commandsStore.lastCommand, () => {
   isExpanded.value = true;
 });
 
-// Scroll to bottom whenever output changes
+
 watch(() => sanitizedOutput.value, () => {
-  // Use nextTick to ensure DOM is updated before scrolling
+  
   nextTick(() => {
     scrollToBottom();
   });
 }, { immediate: true });
 
-// Function to scroll to bottom of output
+
 function scrollToBottom () {
   if (outputContainer.value) {
     outputContainer.value.scrollTop = outputContainer.value.scrollHeight;

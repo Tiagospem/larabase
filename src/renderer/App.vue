@@ -38,7 +38,6 @@ body, html {
   overflow: hidden;
 }
 
-/* Custom scrollbar styles */
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;
@@ -63,7 +62,6 @@ body, html {
   background: transparent;
 }
 
-/* Firefox scrollbar */
 * {
   scrollbar-width: thin;
   scrollbar-color: rgba(150, 150, 150, 0.5) rgba(0, 0, 0, 0.1);

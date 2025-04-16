@@ -38,12 +38,12 @@ try {
       readModelFile: (filePath) => safeIpcRenderer.invoke('read-model-file', filePath),
       listFiles: (dirPath) => safeIpcRenderer.invoke('list-files', dirPath),
       
-      // Project logs related functions
+      
       getProjectLogs: (config) => safeIpcRenderer.invoke('get-project-logs', config),
       deleteProjectLog: (logId) => safeIpcRenderer.invoke('delete-project-log', logId),
       clearAllProjectLogs: (config) => safeIpcRenderer.invoke('clear-all-project-logs', config),
       
-      // Artisan command related function
+      
       runArtisanCommand: (config) => safeIpcRenderer.invoke('run-artisan-command', config),
       listenCommandOutput: (commandId, callback) => {
         const channel = `command-output-${commandId}`;
@@ -55,31 +55,31 @@ try {
       },
       getMigrationStatus: (config) => safeIpcRenderer.invoke('get-migration-status', config),
       
-      // Settings related functions
+      
       getSettings: () => safeIpcRenderer.invoke('get-settings'),
       saveSettings: (settings) => safeIpcRenderer.invoke('save-settings', settings),
       
-      // Database monitoring related functions
+      
       monitorDatabaseOperations: (connectionId, callback) => {
         try {
           const channel = `db-operation-${connectionId}`;
           console.log(`Configurando listener IPC no canal: ${channel}`);
           
-          // Remove any existing listeners for this channel to avoid duplicates
+          
           ipcRenderer.removeAllListeners(channel);
           
-          // Set up the new listener
+          
           ipcRenderer.on(channel, (_, data) => {
-            // Passar todos os dados para o callback sem filtragem
+            
             callback(data);
           });
           
-          // Start monitoring on the main process
+          
           console.log(`Calling start-db-monitoring with connectionId: ${connectionId}`);
           return ipcRenderer.invoke('start-db-monitoring', connectionId)
             .then(result => {
               console.log('Result of monitoring initialization:', result);
-              return channel; // Return channel name for cleanup
+              return channel; 
             });
         } catch (error) {
           console.error('Error in monitorDatabaseOperations:', error);
@@ -89,10 +89,10 @@ try {
       stopMonitoringDatabaseOperations: (channel) => {
         console.log(`Stopping monitoring on channel: ${channel}`);
         
-        // Remove the listener
+        
         ipcRenderer.removeAllListeners(channel);
         
-        // Extract the connection ID from the channel name
+        
         const connectionId = channel.replace('db-operation-', '');
         
         // Stop monitoring on the main process
@@ -107,17 +107,17 @@ try {
           });
       },
       
-      // New trigger-based monitoring
+      
       monitorDatabaseChanges: (connectionDetails, callback) => {
         const connectionId = connectionDetails.id || connectionDetails.connectionId;
         if (!connectionId) return Promise.reject('Connection ID is required');
         
         const channel = `db-activity-${connectionId}`;
         
-        // Set up listener to receive activity updates
+        
         ipcRenderer.on(channel, (event, data) => callback(data));
         
-        // Iniciar monitoramento via triggers no processo principal
+        
         return ipcRenderer.invoke('monitor-database-changes', connectionDetails)
           .then(result => {
             if (result.success) {
@@ -133,47 +133,47 @@ try {
           });
       },
       
-      // Get database activities since the last ID
+      
       getDatabaseChanges: (connectionId, lastId = 0) => {
         if (!connectionId) return Promise.reject('Connection ID is required');
         return ipcRenderer.invoke('get-database-changes', connectionId, lastId);
       },
       
-      // Parar monitoramento baseado em triggers
+      
       stopTriggerMonitoring: (connectionId) => {
         if (!connectionId) return Promise.reject('Connection ID is required');
         
-        // Remover todos os listeners para este canal
+        
         const channel = `db-activity-${connectionId}`;
         ipcRenderer.removeAllListeners(channel);
         
-        // Parar monitoramento no processo principal
+        
         return ipcRenderer.invoke('stop-trigger-monitoring', connectionId);
       },
 
-      // SQL Editor functionality
+      
       executeSQLQuery: (config) => safeIpcRenderer.invoke('execute-sql-query', config),
       
-      // Pluralization helpers
+      
       getPluralizeFunction: () => safeIpcRenderer.invoke('get-pluralize-function'),
       getSingularForm: (word) => safeIpcRenderer.invoke('get-singular-form', word),
       getPluralForm: (word) => safeIpcRenderer.invoke('get-plural-form', word),
       
-      // Project Database Management
+      
       updateEnvDatabase: (projectPath, database) => safeIpcRenderer.invoke('update-env-database', projectPath, database),
       removeConnection: (connectionId) => safeIpcRenderer.invoke('remove-connection', connectionId),
       
-      // Add database restoration related functions to the API
+      
       selectSqlDumpFile: () => safeIpcRenderer.invoke('select-sql-dump-file'),
       startDatabaseRestore: (config) => {
-        // Generate a unique channel ID for this restoration process
+        
         const channelId = `restore-progress-${Date.now()}`;
         
-        // Return a promise that resolves when the restoration process begins
+        
         return new Promise((resolve, reject) => {
-          // Setup a temporary one-time handler for the initial response
+          
           const initHandler = (event, initialResponse) => {
-            // Clean up this one-time handler
+            
             ipcRenderer.removeListener(`${channelId}-init`, initHandler);
             
             if (initialResponse.success) {
@@ -187,10 +187,10 @@ try {
             }
           };
           
-          // Register the one-time handler
+          
           ipcRenderer.once(`${channelId}-init`, initHandler);
           
-          // Start the restoration process with the generated channel ID
+          
           ipcRenderer.send('start-database-restore', {
             ...config,
             channelId
@@ -212,11 +212,11 @@ try {
       },
       extractTablesFromSql: (filePath) => safeIpcRenderer.invoke('extract-tables-from-sql', filePath),
       
-      // Add method to send direct IPC messages
+      
       send: (channel, data) => {
         if (typeof channel !== 'string') return;
         
-        // List of allowed channels for send
+        
         const allowedSendChannels = [
           'start-database-restore'
         ];
@@ -226,16 +226,16 @@ try {
         }
       },
       
-      // Simple database restore method without complex parameter passing
+      
       simpleDatabaseRestore: (config) => safeIpcRenderer.invoke('simple-database-restore-unified', config),
       
-      // Add method to cancel an active database restore process
+      
       cancelDatabaseRestore: (connectionId) => safeIpcRenderer.invoke('cancel-database-restore', connectionId),
 
-      // Add method to update a connection's database name
+      
       updateConnectionDatabase: (connectionId, newDatabase) => safeIpcRenderer.invoke('update-connection-database', connectionId, newDatabase),
 
-      // Add the getFileStats method to the exposed API
+      
       getFileStats: (filePath) => ipcRenderer.invoke('get-file-stats', filePath),
     }
   );

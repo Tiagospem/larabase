@@ -829,7 +829,7 @@ function formatCellValue (value) {
     return value.toLocaleString();
   }
   
-  // Se for uma string no formato de data ISO
+  
   if (typeof value === 'string' && value.match(/^\d{4}-\d{2}-\d{2}T/)) {
     try {
       const date = new Date(value);
@@ -837,11 +837,11 @@ function formatCellValue (value) {
         return date.toLocaleString();
       }
     } catch (e) {
-      // Se falhar, retorna o valor original
+      
     }
   }
   
-  // Se for uma string no formato de data MySQL (YYYY-MM-DD HH:MM:SS)
+  
   if (typeof value === 'string' && value.match(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}/)) {
     try {
       const date = new Date(value.replace(' ', 'T') + 'Z');
@@ -849,7 +849,7 @@ function formatCellValue (value) {
         return date.toLocaleString();
       }
     } catch (e) {
-      // Se falhar, retorna o valor original
+      
     }
   }
   
@@ -897,11 +897,11 @@ async function loadTableData () {
   expandedColumns.value = [];
   
   try {
-    // Clear the table cache before loading to ensure fresh data 
+    
     const cacheKey = `${props.connectionId}:${props.tableName}`;
     databaseStore.clearTableCache(cacheKey);
     
-    // Carregar apenas a página atual de dados com paginação
+    
     const result = await databaseStore.loadTableData(
       props.connectionId, 
       props.tableName, 
@@ -913,21 +913,21 @@ async function loadTableData () {
       showAlert('No data found for this page', 'warning');
     }
     
-    // Atualizar os dados da tabela
+    
     tableData.value = result.data || [];
     
-    // Atualizar a contagem total de registros para paginação
+    
     totalRecordsCount.value = result.totalRecords || 0;
 
-    // Analyze columns after data is loaded
+    
     nextTick(() => {
       analyzeColumns();
     });
 
-    // Load foreign key information
+    
     await loadForeignKeyInfo();
 
-    // Notify parent about the loaded data
+    
     props.onLoad({
       columns: columns.value,
       rowCount: result.totalRecords || 0
@@ -987,39 +987,39 @@ function getRowClasses (rowIndex) {
 }
 
 function handleRowClick (event, rowIndex) {
-  // Sempre pare a propagação do evento para evitar bugs
+  
   if (event) {
     event.preventDefault();
     event.stopPropagation();
   }
 
-  // Não processar o clique se estiver arrastando (isso é tratado pelo mouseup)
+  
   if (isDragging.value) {
     return;
   }
   
-  // Se foi um duplo clique, não alteramos a seleção
+  
   if (event && event.detail === 2) {
     return;
   }
   
-  // Comportamento com Ctrl pressionado: alternar seleção
+  
   if (ctrlKeyPressed.value) {
     const index = selectedRows.value.indexOf(rowIndex);
     if (index !== -1) {
-      // Se já está selecionada, remove
+      
       selectedRows.value.splice(index, 1);
     } else {
-      // Se não está selecionada, adiciona
+      
       selectedRows.value.push(rowIndex);
     }
     
-    // Atualiza o lastSelectedId
+    
     lastSelectedId.value = rowIndex;
     return;
   }
   
-  // Comportamento com Shift pressionado: selecionar intervalo
+  
   if (shiftKeyPressed.value && lastSelectedId.value !== null) {
     const start = Math.min(lastSelectedId.value, rowIndex);
     const end = Math.max(lastSelectedId.value, rowIndex);
@@ -1033,14 +1033,14 @@ function handleRowClick (event, rowIndex) {
     return;
   }
   
-  // Comportamento padrão: clicar em linha já selecionada a desseleciona,
-  // caso contrário seleciona apenas esta linha
+  
+  
   if (selectedRows.value.length === 1 && selectedRows.value[0] === rowIndex) {
-    // Se está clicando na única linha selecionada, desseleciona
+    
     selectedRows.value = [];
     lastSelectedId.value = null;
   } else {
-    // Senão, seleciona apenas esta linha
+    
     selectedRows.value = [rowIndex];
     lastSelectedId.value = rowIndex;
   }
@@ -1082,15 +1082,15 @@ function toggleColumnExpansion (column) {
 function deleteSelected () {
   if (selectedRows.value.length === 0) return;
   
-  // Get the IDs of the selected rows - send only the IDs as primitives
+  
   deletingIds.value = selectedRows.value.map(index => {
-    // Ensure we're only sending the numeric or string ID
+    
     const id = paginatedData.value[index].id;
-    // Convert to primitive if needed
+    
     return typeof id === 'object' ? String(id) : id;
   });
   
-  // Show confirmation dialog
+  
   showDeleteConfirm.value = true;
 }
 
@@ -1098,7 +1098,7 @@ async function confirmDelete () {
   showDeleteConfirm.value = false;
   
   try {
-    // Make sure we're only sending an array of primitive IDs
+    
     const idsToDelete = [...deletingIds.value];
     
     console.log("Deleting IDs:", idsToDelete);
@@ -1111,7 +1111,7 @@ async function confirmDelete () {
     
     showAlert(result.message, 'success');
     
-    // Clear selection and reload data
+    
     selectedRows.value = [];
     await loadTableData();
   } catch (error) {
@@ -1139,7 +1139,7 @@ async function truncateTable () {
     
     showAlert(result.message, 'success');
     
-    // Clear selection and reload data
+    
     selectedRows.value = [];
     await loadTableData();
   } catch (error) {
@@ -1208,10 +1208,10 @@ function scrollToTop () {
 
 watch(() => currentPage.value, (newPage, oldPage) => {
   if (newPage !== oldPage) {
-    // Atualizar o pageInput
+    
     pageInput.value = newPage;
     
-    // Recarregar dados do servidor apenas se não houver filtro ativo
+    
     if (!filterTerm.value && !activeFilter.value) {
       loadTableData();
     }
@@ -1219,27 +1219,27 @@ watch(() => currentPage.value, (newPage, oldPage) => {
 });
 
 function openEditModal (row) {
-  // Create a deep copy of the row to edit
+  
   originalRecord.value = { ...row };
   
-  // Processar datas para o formato compatível com inputs datetime-local
+  
   const processedRecord = JSON.parse(JSON.stringify(row));
   
-  // Converter campos de data para o formato correto
+  
   for (const key in processedRecord) {
     if (isDateField(key) && processedRecord[key]) {
-      // Se for uma string no formato de data
+      
       if (typeof processedRecord[key] === 'string') {
         try {
-          // Para formato MySQL (YYYY-MM-DD HH:MM:SS)
+          
           if (processedRecord[key].includes(' ')) {
             processedRecord[key] = processedRecord[key].replace(' ', 'T');
           }
           
-          // Garantir que a data seja válida e formatada corretamente
+          
           const date = new Date(processedRecord[key]);
           if (!isNaN(date.getTime())) {
-            // Formato para input datetime-local (YYYY-MM-DDTHH:MM)
+            
             processedRecord[key] = date.toISOString().slice(0, 16);
           }
         } catch (e) {
@@ -1266,21 +1266,21 @@ async function saveRecord () {
   }
   
   try {
-    // Criar uma cópia do registro para evitar problemas de serialização
+    
     const recordToSave = {};
     
-    // Processar cada campo, formatando datas corretamente
+    
     for (const key in editingRecord.value) {
       let value = editingRecord.value[key];
       
-      // Se for um campo de data e não for null
+      
       if (value && isDateField(key)) {
-        // Se for um string de data ISO
+        
         if (typeof value === 'string' && value.includes('T')) {
-          // Converter para formato yyyy-MM-ddThh:mm:ss
+          
           const date = new Date(value);
           if (!isNaN(date.getTime())) {
-            // Formato correto para input datetime-local
+            
             value = date.toISOString().slice(0, 19).replace('Z', '');
           }
         }
@@ -1297,8 +1297,8 @@ async function saveRecord () {
       return;
     }
     
-    // Para melhor comparação, compara baseado na chave primária (id)
-    // ou como fallback, na estrutura completa do registro
+    
+    
     const index = tableData.value.findIndex(row => {
       if (row.id && originalRecord.value.id) {
         return row.id === originalRecord.value.id;
@@ -1311,7 +1311,7 @@ async function saveRecord () {
       return;
     }
     
-    // Atualiza o registro no banco de dados
+    
     const result = await databaseStore.updateRecord(
       props.connectionId, 
       props.tableName, 
@@ -1319,7 +1319,7 @@ async function saveRecord () {
     );
     
     if (result) {
-      // Atualiza o registro nos dados locais
+      
       tableData.value[index] = { ...recordToSave };
       showAlert('Record updated successfully', 'success');
       closeEditModal();
@@ -1335,7 +1335,7 @@ async function saveRecord () {
 function getEditableColumns () {
   if (!editingRecord.value) return [];
   return Object.keys(editingRecord.value).filter(column => {
-    // Skip columns that shouldn't be edited directly
+    
     return !['id', 'created_at', 'updated_at'].includes(column);
   });
 }
@@ -1386,44 +1386,44 @@ function getFieldTypeLabel (column) {
 }
 
 function handleRowDoubleClick (row) {
-  // Prevent any selection on double click
-  // Find the row index
+  
+  
   const rowIndex = paginatedData.value.findIndex(r => r === row);
   
-  // If the row is in the selected rows, leave it
-  // If not, clear selection
+  
+  
   if (!selectedRows.value.includes(rowIndex)) {
     selectedRows.value = [];
   }
   
-  // Open the edit modal
+  
   openEditModal(row);
 }
 
 function handleMouseDown (event, rowIndex) {
-  // Para clicar com Ctrl/Shift, deixar o onClick cuidar disso
+  
   if (ctrlKeyPressed.value || shiftKeyPressed.value) {
     return;
   }
   
-  // Para clicar normal, iniciar o arrastar
+  
   isDragging.value = true;
   selectionStartId.value = rowIndex;
   
-  // Selecionar a linha atual (agora será feito pelo handleRowClick)
-  // selectedRows.value = [rowIndex];
-  // lastSelectedId.value = rowIndex;
+  
+  
+  
   
   window.addEventListener('mouseup', handleMouseUp, { once: true });
 }
 
 function handleMouseEnter (rowIndex) {
-  // Se não estamos arrastando ou não temos ponto de início, não fazer nada
+  
   if (!isDragging.value || selectionStartId.value === null) {
     return;
   }
   
-  // Selecionar intervalo entre o ponto inicial e atual
+  
   const start = Math.min(selectionStartId.value, rowIndex);
   const end = Math.max(selectionStartId.value, rowIndex);
   
@@ -1436,15 +1436,15 @@ function handleMouseEnter (rowIndex) {
 }
 
 function handleMouseUp (event) {
-  // Se não estava arrastando, é um clique simples - deixe o handleRowClick tratar
+  
   if (!isDragging.value || !selectionStartId.value) {
     isDragging.value = false;
     selectionStartId.value = null;
     return;
   }
   
-  // Se foi um arrasto real (não apenas um clique), mantenha a seleção
-  // mas marque o último item selecionado
+  
+  
   if (selectedRows.value.length > 0) {
     lastSelectedId.value = selectedRows.value[selectedRows.value.length - 1];
   }
@@ -1454,17 +1454,17 @@ function handleMouseUp (event) {
 }
 
 onMounted(() => {
-  // Verificar se temos filtro inicial e definir antes de carregar os dados
+  
   if (props.initialFilter) {
     console.log("Configurando filtro inicial:", props.initialFilter);
     advancedFilterTerm.value = props.initialFilter;
     activeFilter.value = props.initialFilter;
   }
   
-  // Carregar os dados da tabela
+  
   loadTableData();
   
-  // Verificar filtros na URL
+  
   const urlParams = new URLSearchParams(window.location.search);
   const urlFilter = urlParams.get('filter');
   
@@ -1477,7 +1477,7 @@ onMounted(() => {
       console.error('Erro ao processar filtro da URL:', e);
     }
   } else if (!props.initialFilter) {
-    // Se não tem filtro inicial ou da URL, verificar armazenamento local
+    
     const savedFilter = localStorage.getItem(`filter:${props.connectionId}:${props.tableName}`);
     if (savedFilter) {
       try {
@@ -1492,7 +1492,7 @@ onMounted(() => {
     }
   }
   
-  // Adicionar event listeners
+  
   window.addEventListener('keydown', handleKeyDown);
   window.addEventListener('keyup', handleKeyUp);
 });
@@ -1511,17 +1511,17 @@ function toggleAdvancedFilter () {
 }
 
 function applyFilter () {
-  // Reiniciar para a página 1 ao aplicar um filtro
+  
   currentPage.value = 1;
-  // A propriedade computada filteredData já aplica o filtro automaticamente
+  
 }
 
-// Melhorar a função applyAdvancedFilter para aplicar filtros no servidor
+
 async function applyAdvancedFilter () {
-  // Atualizar o filtro ativo
+  
   activeFilter.value = advancedFilterTerm.value;
   
-  // Se a persistência estiver ativada, salvar o filtro
+  
   if (persistFilter.value && activeFilter.value) {
     localStorage.setItem(`filter:${props.connectionId}:${props.tableName}`, JSON.stringify({
       active: true,
@@ -1531,10 +1531,10 @@ async function applyAdvancedFilter () {
   
   showFilterModal.value = false;
   
-  // Voltar para a primeira página ao aplicar um novo filtro
+  
   currentPage.value = 1;
   
-  // Para filtros de ID e filtros SQL que precisam ser processados no servidor
+  
   const useServerFilter = shouldUseServerFilter(activeFilter.value);
   
   if (useServerFilter) {
@@ -1547,7 +1547,7 @@ async function applyAdvancedFilter () {
     }
   } else {
     console.log("Aplicando filtro localmente");
-    // O filtro será aplicado automaticamente pelo computed filteredData
+    
   }
 }
 
@@ -1616,11 +1616,11 @@ function applySqlFilter (data, filter) {
       `);
     } catch (e) {
       console.error("Erro ao criar função de filtro:", e);
-      // Retornar dados originais em caso de erro
+      
       return data;
     }
     
-    // Apply the filter function to each row
+    
     const filteredResults = dataCopy.filter(row => {
       try {
         const result = filterFn(row);
@@ -1639,24 +1639,24 @@ function applySqlFilter (data, filter) {
   }
 }
 
-// Corrigir a função convertFilterToJs para lidar corretamente com filtros de ID
+
 function convertFilterToJs (filter) {
   if (!filter) return 'true';
   
   try {
-    // Caso especial para ID (já que é uma operação muito comum)
+    
     const idEqualityRegex = /^\s*id\s*=\s*(\d+)\s*$/i;
     const idMatch = filter.match(idEqualityRegex);
     
     if (idMatch) {
       const idValue = parseInt(idMatch[1], 10);
       if (!isNaN(idValue)) {
-        // Usar operador de igualdade não-estrita para comparar número com string
+        
         return `row['id'] == ${idValue} || String(row['id']) == '${idValue}'`;
       }
     }
     
-    // Filtro LIKE
+    
     const likeMatcher = /^\s*(\w+)\s+LIKE\s+['"](.*)['"]$/i;
     const likeMatch = filter.match(likeMatcher);
     
@@ -1674,24 +1674,24 @@ function convertFilterToJs (filter) {
     if (simpleMatch) {
       const [_, column, value] = simpleMatch;
       
-      // Verificar se o valor é uma string ou número
+      
       if (value.startsWith("'") || value.startsWith('"')) {
-        // É uma string literal
+        
         const strValue = value.substring(1, value.length - 1);
         return `row['${column}'] === '${strValue}'`;
       } else if (!isNaN(Number(value))) {
-        // É um número - criar uma condição que funcione com números e strings numéricas
+        
         const numValue = Number(value);
         return `row['${column}'] == ${numValue} || String(row['${column}']) == '${numValue}'`;
       } else {
-        // É um identificador
+        
         return `row['${column}'] === row['${value}']`;
       }
     }
     
-    // Para filtros mais complexos
+    
     if (filter.toLowerCase().match(/^where\s+/)) {
-      // Remove a palavra WHERE do início, se existir
+      
       filter = filter.replace(/^where\s+/i, '');
     }
     
@@ -1705,7 +1705,7 @@ function convertFilterToJs (filter) {
       return placeholder;
     });
     
-    // Tratar o LIKE
+    
     stringReplacedFilter = stringReplacedFilter.replace(/(\w+)\s+LIKE\s+(__STRING_\d+__)/gi, (match, column, placeholder) => {
       const placeholderIndex = parseInt(placeholder.match(/__STRING_(\d+)__/)[1]);
       const originalStr = stringLiterals[placeholderIndex].substring(1, stringLiterals[placeholderIndex].length - 1);
@@ -1732,9 +1732,9 @@ function convertFilterToJs (filter) {
       .replace(/\bNOT\b/gi, '!')
       .replace(/\bIS NULL\b/gi, '=== null')
       .replace(/\bIS NOT NULL\b/gi, '!== null')
-      .replace(/\s+=\s+/g, ' == '); // Usar == em vez de === para permitir comparação de tipos similares
+      .replace(/\s+=\s+/g, ' == '); 
     
-    // Substituir nomes de colunas por acesso ao objeto row
+    
     const keywords = [
       'AND', 'OR', 'NOT', 'NULL', 'IN', 'LIKE', 'BETWEEN', 'IS', 'AS', 
       'TRUE', 'FALSE', 'true', 'false', 'null', 'undefined',
@@ -1742,7 +1742,7 @@ function convertFilterToJs (filter) {
     ];
     
     stringReplacedFilter = stringReplacedFilter.replace(/\b([a-zA-Z_]\w*)\b(?!\s*\()/g, (match, column) => {
-      // Não substituir os placeholders de string
+      
       if (match.startsWith('__STRING_')) {
         return match;
       }
@@ -1751,7 +1751,7 @@ function convertFilterToJs (filter) {
         return match.toUpperCase();
       }
       
-      // Não substituir números
+      
       if (!isNaN(Number(match))) {
         return match;
       }
@@ -1759,7 +1759,7 @@ function convertFilterToJs (filter) {
       return `row['${column}']`;
     });
     
-    // Restaurar strings literais
+    
     stringLiterals.forEach((str, index) => {
       const placeholder = `__STRING_${index}__`;
       const cleanStr = str.substring(1, str.length - 1)
@@ -1806,13 +1806,13 @@ function shouldUseServerFilter (filter) {
     return true;
   }
   
-  // 3. Complex filters with multiple conditions
+  
   if (/\bAND\b|\bOR\b|\bIN\b|\bIS NULL\b|\bIS NOT NULL\b/i.test(cleanFilter)) {
     console.log("Detected complex filter with logical operators - Using server");
     return true;
   }
   
-  // 4. Simple equality filters for any primary or foreign key column
+  
   if (/^\s*\w+_id\s*=\s*\d+\s*$/i.test(cleanFilter)) {
     console.log("Detected foreign key filter - Using server");
     return true;
@@ -1822,10 +1822,10 @@ function shouldUseServerFilter (filter) {
   return false;
 }
 
-// Function to load filtered data directly from server
+
 async function loadFilteredData () {
   if (!activeFilter.value) {
-    // If there's no active filter, load normally
+    
     return loadTableData();
   }
   
@@ -1836,14 +1836,14 @@ async function loadFilteredData () {
   try {
     console.log(`Applying filter on server: "${activeFilter.value}"`);
     
-    // Check if the filter includes "id = X" for easier debugging
+    
     const idMatch = activeFilter.value.match(/^\s*id\s*=\s*(\d+)\s*$/i);
     if (idMatch) {
       const idValue = parseInt(idMatch[1], 10);
       console.log(`Searching for record with ID: ${idValue}`);
     }
     
-    // Carregar dados com filtro SQL diretamente do servidor
+    
     const result = await databaseStore.loadFilteredTableData(
       props.connectionId,
       props.tableName,
@@ -1856,28 +1856,28 @@ async function loadFilteredData () {
     
     if (!result.data || result.data.length === 0) {
       if (result.totalRecords > 0) {
-        // Se temos registros no total, mas não nesta página
+        
         showAlert(`No records found on page ${currentPage.value}. Total: ${result.totalRecords}`, 'info');
       } else {
-        // Se não há registros em nenhuma página
+        
         showAlert('No records match the applied filter', 'info');
       }
     } else {
       showAlert(`Found ${result.totalRecords} record(s) matching the filter`, 'success');
       
       if (idMatch && result.data.length === 1) {
-        // Se estamos buscando por ID e encontramos exatamente um resultado, destacar na UI
+        
         console.log(`Found record with ID: ${idMatch[1]}`, result.data[0]);
       }
     }
     
-    // Atualizar os dados da tabela com o resultado filtrado
+    
     tableData.value = result.data || [];
     
-    // Atualizar a contagem total baseada nos resultados filtrados
+    
     totalRecordsCount.value = result.totalRecords || 0;
     
-    // Notificar o pai sobre os dados carregados
+    
     props.onLoad({
       columns: columns.value,
       rowCount: result.totalRecords || 0
@@ -1893,7 +1893,7 @@ async function loadFilteredData () {
   }
 }
 
-// Improve the function for foreign key navigation
+
 async function navigateToForeignKey (column, value) {
   if (value === null || value === undefined) {
     showAlert("Null or undefined value. Unable to navigate to the related record.", "error");
@@ -1901,17 +1901,17 @@ async function navigateToForeignKey (column, value) {
   }
   
   try {
-    // Primeiro, determine se esta é uma chave estrangeira
+    
     const structure = await databaseStore.getTableStructure(props.connectionId, props.tableName);
     const columnInfo = structure.find(col => col.name === column);
     
-    // Se não for chave estrangeira, retornar
+    
     if (!columnInfo || !columnInfo.foreign_key) {
       console.log(`Column "${column}" is not a foreign key`);
       return;
     }
     
-    // Obter as relações de chave estrangeira
+    
     const foreignKeys = await databaseStore.getTableForeignKeys(props.connectionId, props.tableName);
     const foreignKey = foreignKeys.find(fk => fk.column === column);
     
@@ -1922,7 +1922,7 @@ async function navigateToForeignKey (column, value) {
     
     console.log("Navigating to foreign key:", foreignKey);
     
-    // Tabela alvo e coluna referenciada
+    
     const targetTable = foreignKey.referenced_table;
     const targetColumn = foreignKey.referenced_column;
     
@@ -1931,22 +1931,22 @@ async function navigateToForeignKey (column, value) {
       return;
     }
     
-    // Formatar valor corretamente dependendo do tipo
+    
     let filterValue = value;
     if (typeof value === 'string') {
-      // Escape single quotes in strings and wrap in quotes
+      
       filterValue = `'${value.replace(/'/g, "''")}'`;
     }
     
-    // Criar o filtro SQL
+    
     const filter = `${targetColumn} = ${filterValue}`;
     
-    // Criar título para a nova aba
+    
     const tabTitle = `${targetTable} (Filtered)`;
     
     console.log(`Navigating to ${targetTable} where ${filter}`);
     
-    // Dados para a nova aba
+    
     const newTab = {
       id: `data-${props.connectionId}-${targetTable}-${Date.now()}`,
       title: tabTitle,
@@ -1961,7 +1961,7 @@ async function navigateToForeignKey (column, value) {
     
     console.log("Opening new tab with filter:", filter);
     
-    // Chamar a função passada via props para abrir a nova aba
+    
     props.onOpenTab(newTab);
   } catch (error) {
     console.error('Error navigating to foreign key:', error);
@@ -1969,7 +1969,7 @@ async function navigateToForeignKey (column, value) {
   }
 }
 
-// Adicionar a função para verificar se uma coluna é chave estrangeira
+
 const foreignKeyColumns = ref([]);
 
 async function loadForeignKeyInfo () {
@@ -1989,34 +1989,34 @@ function isForeignKeyColumn (column) {
   return foreignKeyColumns.value.includes(column);
 }
 
-// Adicionar a função para definir exemplos de filtro
+
 function setExampleFilter (example) {
   advancedFilterTerm.value = example;
-  // Aplicar o filtro imediatamente se for clicado em um exemplo
+  
   applyAdvancedFilter();
 }
 
-// Modificar a função watch para paginatedData para depurar quando os dados são filtrados
+
 watch(() => paginatedData.value.length, (newLength, oldLength) => {
   console.log(`Dados paginados mudaram: ${oldLength} -> ${newLength} linhas`);
 });
 
-// Modificar o watch para reagir a mudanças no filtro ativo
+
 watch(() => activeFilter.value, (newFilter, oldFilter) => {
   if (newFilter !== oldFilter) {
     console.log(`Filtro ativo mudou: "${oldFilter}" -> "${newFilter}"`);
   }
 });
 
-// Adicionar um evento para quando rowsPerPage mudar
+
 watch(rowsPerPage, (newValue, oldValue) => {
   if (newValue !== oldValue) {
-    currentPage.value = 1; // Voltar para a primeira página
-    loadTableData(); // Sempre recarregar os dados ao mudar o número de linhas por página
+    currentPage.value = 1; 
+    loadTableData(); 
   }
 });
 
-// Adicionar log quando o total de registros mudar
+
 watch(() => totalRecordsCount.value, (newCount) => {
   console.log(`Total de registros atualizado: ${newCount}`);
 });
@@ -2053,13 +2053,11 @@ watch(() => totalRecordsCount.value, (newCount) => {
   max-width: none !important;
 }
 
-/* Add some styles to indicate which columns are expanded */
 th:has(+ tr td.expanded) {
   min-width: 200px !important;
   max-width: none !important;
 }
 
-/* Style for resize handle when column is expanded */
 .expanded-resize-handle {
   background-color: theme('colors.primary') !important;
   width: 2px !important;

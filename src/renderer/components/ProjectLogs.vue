@@ -265,12 +265,12 @@ const showDeleteConfirm = ref(false);
 const filteredLogs = computed(() => {
   let filtered = [...logs.value];
   
-  // Filter by type
+  
   if (logTypeFilter.value !== 'all') {
     filtered = filtered.filter(log => log.type === logTypeFilter.value);
   }
   
-  // Filter by search query
+  
   if (searchQuery.value) {
     const query = searchQuery.value.toLowerCase();
     filtered = filtered.filter(log => 
@@ -279,7 +279,7 @@ const filteredLogs = computed(() => {
     );
   }
   
-  // Sort by timestamp (newest first)
+  
   return filtered.sort((a, b) => b.timestamp - a.timestamp);
 });
 
@@ -319,7 +319,7 @@ async function deleteAllLogs () {
   try {
     if (!props.projectPath) return;
     
-    // Chama a API para limpar todos os arquivos de log
+    
     const result = await window.api.clearAllProjectLogs({ projectPath: props.projectPath });
     
     if (result.success) {
@@ -343,12 +343,12 @@ async function openLogFile () {
   try {
     if (!props.projectPath) return;
     
-    // First try to open the general Laravel log
+    
     let logFilePath = `${props.projectPath}/storage/logs/laravel.log`;
     
-    // If we have a log entry, use its file info
+    
     if (logs.value.length > 0 && logs.value[0].file && logs.value[0].file !== 'error') {
-      // Use the file from the most recent log
+      
       logFilePath = `${props.projectPath}/storage/logs/${logs.value[0].file}`;
     }
     
@@ -366,7 +366,7 @@ async function refreshLogs () {
       return;
     }
     
-    // Pass the project path to the API function
+    
     console.log('Refreshing logs with project path:', props.projectPath);
     const response = await window.api.getProjectLogs({ projectPath: props.projectPath });
     console.log('Got logs response:', response);
@@ -381,21 +381,21 @@ function close () {
   emit('close');
 }
 
-// Watch for changes in props.projectPath and refresh logs when it changes
+
 watch(() => props.projectPath, (newPath) => {
   if (newPath) {
     refreshLogs();
   }
 });
 
-// Watch for isOpen changes to refresh logs when modal is opened
+
 watch(() => props.isOpen, (newValue) => {
   if (newValue && props.projectPath) {
     refreshLogs();
   }
 });
 
-// Load logs when component is mounted and project path is available
+
 onMounted(() => {
   if (props.projectPath) {
     refreshLogs();

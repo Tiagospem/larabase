@@ -16,7 +16,8 @@
     "build:linux": "npm run clean && vite build && electron-builder --linux",
     "lint": "eslint --ext .js,.vue --fix src",
     "lint:check": "eslint --ext .js,.vue src",
-    "lint:fix-style": "eslint --ext .js,.vue --fix-type layout,suggestion,problem src"
+    "lint:fix-style": "eslint --ext .js,.vue --fix-type layout,suggestion,problem src",
+    "remove-comments": "node remove-comments.js"
   },
   "keywords": [],
   "author": "",
@@ -49,6 +50,7 @@
     "eslint-plugin-vue": "^10.0.0",
     "globals": "^16.0.0",
     "postcss": "^8.4.29",
+    "strip-comments": "^2.0.1",
     "vite": "^4.4.9",
     "wait-on": "^8.0.3"
   },

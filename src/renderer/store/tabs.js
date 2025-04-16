@@ -6,7 +6,7 @@ export const useTabsStore = defineStore('tabs', () => {
   const activeTabId = ref(null);
 
   async function addTab (tableData) {
-    // Verificar se deve buscar pela combinação tabela+filtro
+    
     const isFiltered = tableData.filter && tableData.filter.trim() !== '';
     
     let existingTab;
@@ -165,23 +165,23 @@ export const useTabsStore = defineStore('tabs', () => {
     await saveOpenTabs();
   }
 
-  // Close all tabs for a specific connection
+  
   async function closeTabsByConnectionId (connectionId) {
     if (!connectionId) return;
     
     const initialTabsCount = openTabs.value.length;
     openTabs.value = openTabs.value.filter(tab => tab.connectionId !== connectionId);
     
-    // If we removed tabs and the active tab was one of them, update active tab
+    
     if (initialTabsCount > openTabs.value.length) {
-      // Check if active tab still exists
+      
       if (!openTabs.value.some(tab => tab.id === activeTabId.value)) {
         activeTabId.value = openTabs.value.length > 0 ? openTabs.value[0].id : null;
       }
       await saveOpenTabs();
     }
     
-    return initialTabsCount - openTabs.value.length; // Return number of tabs closed
+    return initialTabsCount - openTabs.value.length; 
   }
 
   const activeTab = computed(() => {

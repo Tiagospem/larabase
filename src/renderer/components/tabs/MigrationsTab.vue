@@ -242,7 +242,7 @@ const props = defineProps({
   }
 });
 
-// State
+
 const isLoading = ref(true);
 const migrations = ref([]);
 const loadError = ref(null);
@@ -255,7 +255,7 @@ const connection = computed(() => {
   return connectionsStore.getConnection(props.connectionId);
 });
 
-// Methods
+
 function getMigrationStatusClass (status) {
   switch(status) {
     case 'APPLIED':
@@ -352,10 +352,10 @@ async function loadMigrations () {
   loadError.value = null;
   
   try {
-    // Use the store's getTableMigrations method
+    
     migrations.value = await databaseStore.getTableMigrations(props.connectionId, props.tableName, true);
     
-    // Notify parent component
+    
     props.onLoad({
       migrationCount: migrations.value.length
     });
@@ -368,7 +368,7 @@ async function loadMigrations () {
   }
 }
 
-// Lifecycle
+
 onMounted(() => {
   loadMigrations();
 });
@@ -380,7 +380,6 @@ onMounted(() => {
   max-width: none;
 }
 
-/* Custom timeline styling */
 .timeline-vertical::before {
   left: 50%;
 }
@@ -402,7 +401,6 @@ onMounted(() => {
   grid-column-end: 11;
 }
 
-/* Responsive adjustments for smaller screens */
 @media (max-width: 640px) {
   .timeline-box {
     width: calc(100% - 1rem);

@@ -160,14 +160,14 @@ const props = defineProps({
   }
 });
 
-// State
+
 const isLoading = ref(true);
 const indexes = ref([]);
 const loadError = ref(null);
 
 const databaseStore = useDatabaseStore();
 
-// Computed properties
+
 const hasPrimaryKey = computed(() => {
   return indexes.value.some(index => index.type === 'PRIMARY');
 });
@@ -177,7 +177,7 @@ const primaryKeyColumns = computed(() => {
   return primaryKey ? primaryKey.columns : [];
 });
 
-// Methods
+
 function getBadgeClass (type) {
   switch (type) {
     case 'PRIMARY':
@@ -198,13 +198,13 @@ async function loadIndexes () {
   loadError.value = null;
   
   try {
-    // Use the store's getTableIndexes method
+    
     const tableIndexes = await databaseStore.getTableIndexes(props.connectionId, props.tableName, true);
     console.log('Loaded indexes:', tableIndexes);
     
     indexes.value = tableIndexes;
     
-    // Notify parent component
+    
     props.onLoad({
       indexCount: indexes.value.length,
       hasPrimaryKey: hasPrimaryKey.value
@@ -219,7 +219,7 @@ async function loadIndexes () {
   }
 }
 
-// Lifecycle
+
 onMounted(() => {
   loadIndexes();
 });

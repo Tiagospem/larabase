@@ -175,7 +175,7 @@ onMounted(async () => {
 
 async function saveAndClose () {
   try {
-    // Create a clean copy of settings data to avoid reference issues
+    
     const cleanSettings = JSON.parse(JSON.stringify(settingsData.value));
     await settingsStore.updateSettings(cleanSettings);
     showAlert('Settings saved successfully', 'success');
@@ -192,7 +192,7 @@ function close () {
 
 async function loadStorageData () {
   try {
-    // Load all data from different stores
+    
     const connections = await window.api.getConnections();
     const tabs = await window.api.getOpenTabs();
     const settings = await window.api.getSettings();
@@ -218,7 +218,7 @@ async function copyStorageDataToClipboard () {
   }
 }
 
-// Load storage data when the dev mode storage viewer is opened
+
 watch(showStorageData, (newValue) => {
   if (newValue) {
     loadStorageData();

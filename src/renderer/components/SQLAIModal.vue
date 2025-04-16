@@ -186,7 +186,7 @@ async function generateCode () {
     return;
   }
   
-  // Check if OpenAI API key is configured
+  
   if (!settingsStore.settings.openai.apiKey) {
     showAlert('OpenAI API key is not configured. Please set it in the Settings.', 'error');
     return;
@@ -195,10 +195,10 @@ async function generateCode () {
   isLoading.value = true;
   
   try {
-    // Prepare prompt for OpenAI
+    
     const language = settingsStore.settings.language || 'en';
     
-    // Fixed system prompt
+    
     const systemPrompt = `
 You are a SQL-to-Eloquent converter for Laravel applications.
 Your task is to convert raw SQL queries to their equivalent Laravel Eloquent Query Builder syntax.
@@ -264,7 +264,7 @@ Use the database structure info provided to ensure correct table names, column n
 All responses must be in ${language === 'en' ? 'English' : language === 'pt' ? 'Portuguese' : 'Spanish'}.
 Be precise and generate production-ready code.`;
 
-    // Create the complete prompt with optimized database structure
+    
     const messages = [
       { role: 'system', content: systemPrompt },
       { role: 'user', content: `Database Structure:
@@ -284,7 +284,7 @@ Important notes:
 Request: ${userQuery.value}` }
     ];
     
-    // Call OpenAI API with reduced max_tokens to prevent context length issues
+    
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -294,8 +294,8 @@ Request: ${userQuery.value}` }
       body: JSON.stringify({
         model: settingsStore.settings.openai.model || 'gpt-3.5-turbo',
         messages: messages,
-        temperature: 0.2, // Lower temperature for more focused code generation
-        max_tokens: 1000  // Reduced from 2000 to ensure we stay within limits
+        temperature: 0.2, 
+        max_tokens: 1000  
       })
     });
     
@@ -315,7 +315,7 @@ Request: ${userQuery.value}` }
     let sqlCode = sqlMatch ? sqlMatch[1].trim() : 'No SQL code generated';
     let eloquentCode = eloquentMatch ? eloquentMatch[1].trim() : 'No Eloquent code generated';
     
-    // Clean up the Eloquent code
+    
     eloquentCode = cleanEloquentCode(eloquentCode);
     
     aiResponse.value = {
@@ -358,9 +358,9 @@ function close () {
   emit('close');
 }
 
-// Helper function to clean up Eloquent code
+
 function cleanEloquentCode (code) {
-  // Remove PHP tags if present
+  
   let cleanCode = code.replace(/^<\?php\s*/i, '').replace(/\s*\?>$/i, '');
   
   // Remove unnecessary imports
@@ -373,7 +373,7 @@ function cleanEloquentCode (code) {
   for (const line of lines) {
     if (importSection) {
       if (line.trim().startsWith('use ')) {
-        // Skip unnecessary imports
+        
         if (!line.includes('Illuminate\\Database\\Eloquent\\') && 
             !line.includes('Illuminate\\Support\\') && 
             !line.includes('Illuminate\\Database\\Query\\') &&
@@ -404,7 +404,6 @@ pre {
   word-break: break-word;
 }
 
-/* Add syntax highlighting styles */
 .language-php .keyword {
   color: #c678dd;
 }

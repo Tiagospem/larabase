@@ -284,7 +284,7 @@ const props = defineProps({
   }
 });
 
-// State
+
 const isLoading = ref(true);
 const model = ref(null);
 const modelJson = ref('');
@@ -340,10 +340,10 @@ async function loadModel () {
   }
 }
 
-// Load model file content
+
 async function loadModelContent (filePath) {
   try {
-    // Use the IPC method to read the model file
+    
     const result = await window.api.readModelFile(filePath);
     
     if (result.success) {
@@ -416,7 +416,7 @@ async function copyJsonToClipboard () {
   }
 }
 
-// Lifecycle
+
 onMounted(() => {
   loadModel();
 });

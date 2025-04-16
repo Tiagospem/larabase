@@ -326,7 +326,7 @@ function clearUpdates () {
 function parseChanges (details) {
   if (!details) return [];
   
-  // Remove prefix like "Changed: " or "Updated: "
+  
   const changesText = details.replace(/^(Changed|Updated):\s*/i, '');
   
   // Split by comma to get individual changes
@@ -364,24 +364,24 @@ function startMonitoring () {
   
   loading.value = true;
   
-  // Clear any previous updates
+  
   updates.value = [];
   
-  // Set up the monitoring
+  
   window.api.monitorDatabaseOperations(props.connectionId, (data) => {
     console.log('Received database operation:', data);
     
-    // Add the update to our list
+    
     if (data && data.table) {
       updates.value.unshift(data);
       
-      // Once we receive data, we can consider monitoring initialized
+      
       if (loading.value) {
         loading.value = false;
         clearTimeout(initTimeout);
       }
       
-      // Limit the number of updates we store to avoid memory issues
+      
       if (updates.value.length > 1000) {
         updates.value = updates.value.slice(0, 500);
       }
@@ -392,7 +392,7 @@ function startMonitoring () {
     monitoringChannel = channel;
     connected.value = true;
     
-    // Set a timeout to stop loading after 5 seconds even if no data is received
+    
     initTimeout = setTimeout(() => {
       loading.value = false;
     }, 5000);
@@ -444,20 +444,20 @@ function close () {
   emit('close');
 }
 
-// Watch for changes in isOpen to start/stop monitoring
+
 watch(() => props.isOpen, (newValue) => {
   if (newValue) {
-    // Start monitoring when modal is opened
+    
     startMonitoring();
   } else {
-    // Stop monitoring when modal is closed
+    
     if (connected.value) {
       stopMonitoring();
     }
   }
 });
 
-// Clean up when component is unmounted
+
 onUnmounted(() => {
   if (connected.value) {
     stopMonitoring();
@@ -469,7 +469,7 @@ onUnmounted(() => {
   }
 });
 
-// Format SQL for display
+
 function formatSql (sql) {
   if (!sql) return '';
   

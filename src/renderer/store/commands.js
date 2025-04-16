@@ -14,7 +14,7 @@ export const useCommandsStore = defineStore('commands', () => {
     try {
       const result = await window.api.runArtisanCommand(config);
       
-      // Create a command result object
+      
       const commandResult = {
         id: result.commandId || Date.now().toString(),
         command: config.displayCommand || result.command || config.command,
@@ -101,7 +101,7 @@ export const useCommandsStore = defineStore('commands', () => {
   
   function closeCommandOutput () {
     showCommandOutput.value = false;
-    // Also clean up any active listeners
+    
     if (activeListenerChannel.value) {
       window.api.stopCommandListener(activeListenerChannel.value);
       activeListenerChannel.value = null;

@@ -23,7 +23,6 @@ body {
   flex-direction: column;
 }
 
-/* Custom scrollbar styles */
 .modal-box::-webkit-scrollbar {
   width: 8px;
 }

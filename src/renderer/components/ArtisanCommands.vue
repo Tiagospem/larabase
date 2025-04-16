@@ -339,49 +339,49 @@ const expandLastMigrations = ref(false);
 const expandStepsMigrations = ref(false);
 const expandBatchMigrations = ref(false);
 
-// Computed property para mostrar as migrações afetadas pelo rollback por steps
+
 const stepMigrations = computed(() => {
-  // Vamos obter todas as migrações de todos os batches e ordená-las por data/timestamp
-  // Este método garante que peguemos as migrações mais recentes independente do batch
   
-  // 1. Coletar todas as migrações de todos os batches com seus metadados
+  
+  
+  
   const migrationsWithMetadata = [];
   
   batches.value.forEach(batch => {
     if (batch.migrations && Array.isArray(batch.migrations)) {
       batch.migrations.forEach(migration => {
-        // Para cada migração, armazenamos o nome e também dados para ordenação
+        
         migrationsWithMetadata.push({
           name: migration,
-          // Extrair o timestamp da migração (normalmente nos primeiros caracteres)
-          timestamp: migration.substring(0, 14), // formato: YYYY_MM_DD_HHmmss
+          
+          timestamp: migration.substring(0, 14), 
           batch: batch.batch
         });
       });
     }
   });
   
-  // 2. Ordenar todas as migrações pelo timestamp (mais recente primeiro)
+  
   migrationsWithMetadata.sort((a, b) => {
-    // Primeiro tentar ordenar pelo batch (mais recente primeiro)
+    
     if (a.batch !== b.batch) {
       return b.batch - a.batch;
     }
-    // Se mesmo batch, ordenar pelo timestamp (mais recente primeiro)
+    
     return b.timestamp.localeCompare(a.timestamp);
   });
   
-  // 3. Obter apenas os nomes das migrações, já na ordem correta
+  
   const orderedMigrations = migrationsWithMetadata.map(item => item.name);
   
-  // Log para debug
+  
   console.log('All migrations ordered by recency:', orderedMigrations);
   
-  // 4. Retornar apenas o número desejado de migrações
+  
   return orderedMigrations.slice(0, rollbackSteps.value);
 });
 
-// Computed property para mostrar as migrações afetadas pelo rollback por batch
+
 const batchMigrations = computed(() => {
   if (!selectedBatch.value) return [];
   
@@ -389,15 +389,15 @@ const batchMigrations = computed(() => {
   return batch ? batch.migrations : [];
 });
 
-// Helper to format migration names for display
+
 function formatMigrationName (migration) {
-  // Remove .php extension if present
+  
   let name = migration.replace(/\.php$/, '');
   
   // Format timestamp_name to a more readable format
   const parts = name.split('_');
   if (parts.length >= 4 && parts[0].length === 4) {
-    // Assuming the first 4 parts form a timestamp (YYYY_MM_DD_HHMMSS)
+    
     const dateStr = `${parts[0]}-${parts[1]}-${parts[2]}`;
     const restOfName = parts.slice(3).join('_');
     return `${dateStr} ${restOfName}`;
@@ -406,7 +406,7 @@ function formatMigrationName (migration) {
   return name;
 }
 
-// Helper to format a list of migrations
+
 function formatMigrationsList (migrations) {
   if (!migrations || migrations.length === 0) return '';
   
@@ -470,7 +470,7 @@ async function refreshMigrationStatus () {
       
       hasSail.value = result.hasSail || false;
       
-      // Verificar se temos dados de migrações
+      
       if (pendingMigrations.value.length === 0 && batches.value.length === 0) {
         console.log('No migrations found in the status output');
         if (result.output) {
@@ -505,10 +505,10 @@ async function runMigration (command) {
       connectionId: props.connectionId
     });
     
-    // Atualizar o status das migrações após executar o comando
+    
     await refreshMigrationStatus();
     
-    // Close the modal after a short delay to ensure the output panel is shown first
+    
     setTimeout(() => {
       close();
     }, 300);
@@ -520,8 +520,8 @@ async function runMigration (command) {
 }
 
 async function runSingleMigration (migration) {
-  // O arquivo migration já pode conter a extensão .php
-  // Vamos garantir que estamos usando apenas o nome do arquivo, sem o caminho
+  
+  
   const migrationFileName = migration.includes('.php') 
     ? migration 
     : `${migration}.php`;
@@ -534,8 +534,8 @@ async function runSingleMigration (migration) {
   isLoading.value = true;
   
   try {
-    // Usar o migration diretamente no comando, sem especificar o path
-    // Laravel identificará a migration pelo seu nome
+    
+    
     await commandsStore.runArtisanCommand({
       command: `migrate --path=database/migrations/${migrationFileName}`,
       projectPath: props.projectPath,
@@ -543,10 +543,10 @@ async function runSingleMigration (migration) {
       connectionId: props.connectionId
     });
     
-    // Atualizar o status das migrações após executar o comando
+    
     await refreshMigrationStatus();
     
-    // Close the modal after a short delay to ensure the output panel is shown first
+    
     setTimeout(() => {
       close();
     }, 300);
@@ -557,7 +557,7 @@ async function runSingleMigration (migration) {
   }
 }
 
-// Função para executar o rollback
+
 async function runRollback () {
   let command = 'migrate:rollback';
   
@@ -582,10 +582,10 @@ async function runRollback () {
       connectionId: props.connectionId
     });
     
-    // Atualizar o status das migrações após executar o comando
+    
     await refreshMigrationStatus();
     
-    // Close the modal after a short delay to ensure the output panel is shown first
+    
     setTimeout(() => {
       close();
     }, 300);
@@ -600,28 +600,28 @@ function close () {
   emit('close');
 }
 
-// Check for migration status when component is mounted
+
 onMounted(() => {
   checkForSail();
 });
 
-// Watch for project path changes
+
 watch(() => props.projectPath, () => {
   checkForSail();
 });
 
-// Watch for sail option changes
+
 watch(() => useSail.value, () => {
   refreshMigrationStatus();
 });
 
-// Watch para opções de rollback
+
 watch(() => selectedRollbackOption.value, () => {
-  // Resetar estados de expansão
+  
   expandStepsMigrations.value = false;
   expandBatchMigrations.value = false;
   
-  // Definir valores padrão quando mudar de opção
+  
   if (selectedRollbackOption.value === 'batch' && batches.value.length > 0) {
     selectedBatch.value = batches.value[0].batch;
   } else if (selectedRollbackOption.value === 'steps') {
@@ -629,13 +629,13 @@ watch(() => selectedRollbackOption.value, () => {
   }
 });
 
-// Watch para quando os batches são carregados
+
 watch(() => batches.value, () => {
-  // Resetar estados de expansão
+  
   expandStepsMigrations.value = false;
   expandBatchMigrations.value = false;
   
-  // Definir o batch padrão quando os batches são carregados
+  
   if (selectedRollbackOption.value === 'batch' && batches.value.length > 0) {
     selectedBatch.value = batches.value[0].batch;
   }

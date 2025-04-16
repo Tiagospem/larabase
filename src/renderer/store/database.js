@@ -158,7 +158,7 @@ export const useDatabaseStore = defineStore('database', () => {
       if (result.success && result.tables) {
         tables.value = { tables: result.tables };
         
-        // If we have a project path, try to associate models with tables
+        
         if (connection.projectPath) {
           loadModelsForTables(connectionId, connection.projectPath);
         }
@@ -174,7 +174,7 @@ export const useDatabaseStore = defineStore('database', () => {
     }
   }
 
-  // Function to load models for tables
+  
   async function loadModelsForTables (connectionId, projectPath) {
     try {
       if (!projectPath) {
@@ -197,7 +197,7 @@ export const useDatabaseStore = defineStore('database', () => {
     }
   }
 
-  // Function to get model for a table
+  
   function getModelForTable (connectionId, tableName) {
     if (!tableModels.value[connectionId]) {
       return null;
@@ -206,7 +206,7 @@ export const useDatabaseStore = defineStore('database', () => {
     return tableModels.value[connectionId][tableName] || null;
   }
 
-  // Function to expose table and model information for AI integration
+  
   function getTableModelJson (connectionId, tableName) {
     const model = getModelForTable(connectionId, tableName);
     const connection = usedConnectionsStore().getConnection(connectionId);
@@ -224,7 +224,7 @@ export const useDatabaseStore = defineStore('database', () => {
     }, null, 2);
   }
 
-  // Function to get JSON data for all tables with their models
+  
   async function getAllTablesModelsJson (connectionId) {
     const connection = usedConnectionsStore().getConnection(connectionId);
     const result = {
@@ -237,16 +237,16 @@ export const useDatabaseStore = defineStore('database', () => {
       return JSON.stringify(result, null, 2);
     }
 
-    // Process tables to include structure information
+    
     for (const table of tables.value.tables) {
       try {
-        // Get column information
+        
         const columns = await getTableStructure(connectionId, table.name);
         
-        // Get model information
+        
         const model = getModelForTable(connectionId, table.name);
         
-        // Create enhanced table info with columns
+        
         const tableInfo = {
           tableName: table.name,
           recordCount: table.recordCount,
@@ -269,7 +269,7 @@ export const useDatabaseStore = defineStore('database', () => {
         
         result.tables.push(tableInfo);
       } catch (error) {
-        // If getting structure fails, add basic info
+        
         const model = getModelForTable(connectionId, table.name);
         result.tables.push({
           tableName: table.name,
@@ -290,7 +290,7 @@ export const useDatabaseStore = defineStore('database', () => {
 
   async function getTableRecordCount (connectionId, tableName) {
     try {
-      // Check if we already have the count cached
+      
       const cacheKey = `${connectionId}:${tableName}`;
       if (tableRecords.value[cacheKey]?.count !== undefined) {
         return tableRecords.value[cacheKey].count;
@@ -304,14 +304,14 @@ export const useDatabaseStore = defineStore('database', () => {
       }
 
       if (connection.type !== 'mysql') {
-        // Use mock data for non-MySQL databases
+        
         if (tableContents[tableName]) {
           return tableContents[tableName].length;
         }
         return Math.floor(Math.random() * 100);
       }
 
-      // For MySQL, get real record count
+      
       const result = await window.api.getTableRecordCount({
         host: connection.host,
         port: connection.port,
@@ -322,7 +322,7 @@ export const useDatabaseStore = defineStore('database', () => {
       });
       
       if (result.success) {
-        // Cache the result
+        
         if (!tableRecords.value[cacheKey]) {
           tableRecords.value[cacheKey] = {};
         }
@@ -348,7 +348,7 @@ export const useDatabaseStore = defineStore('database', () => {
       }
 
       if (connection.type !== 'mysql') {
-        // Use mock data for non-MySQL connections
+        
         await new Promise(resolve => setTimeout(resolve, 500));
         
         if (tableContents[tableName]) {
@@ -377,7 +377,7 @@ export const useDatabaseStore = defineStore('database', () => {
         }
       }
 
-      // For MySQL, get real data with pagination
+      
       const result = await window.api.getTableData({
         host: connection.host,
         port: connection.port,
@@ -390,7 +390,7 @@ export const useDatabaseStore = defineStore('database', () => {
       });
       
       if (result.success) {
-        // Cache the result
+        
         const cacheKey = `${connectionId}:${tableName}`;
         if (!tableRecords.value[cacheKey]) {
           tableRecords.value[cacheKey] = {};
@@ -426,7 +426,7 @@ export const useDatabaseStore = defineStore('database', () => {
     }
   }
 
-  // New functions for tab functionality
+  
   async function getTableStructure (connectionId, tableName, force = false) {
     const cacheKey = `${connectionId}:${tableName}:structure`;
     if (!force && tableStructures.value[cacheKey]) {
@@ -442,11 +442,11 @@ export const useDatabaseStore = defineStore('database', () => {
       }
 
       if (connection.type !== 'mysql') {
-        // Use mock data for non-MySQL databases
-        await new Promise(resolve => setTimeout(resolve, 500)); // Simulate loading
         
-        // For a real application, this would make an API call to get the structure
-        // For now we'll use mock data
+        await new Promise(resolve => setTimeout(resolve, 500)); 
+        
+        
+        
         let structure = [];
         
         if (tableName === 'users') {
@@ -785,10 +785,10 @@ export const useDatabaseStore = defineStore('database', () => {
       }
 
       if (connection.type !== 'mysql') {
-        await new Promise(resolve => setTimeout(resolve, 500)); // Simulate loading
+        await new Promise(resolve => setTimeout(resolve, 500)); 
         
-        // For a real application, this would make an API call to get the foreign keys
-        // For now we'll use mock data
+        
+        
         let foreignKeys = [];
         
         if (tableName === 'users') {
@@ -864,7 +864,7 @@ export const useDatabaseStore = defineStore('database', () => {
             }
           ];
         } else {
-          // Default empty foreign keys for other tables
+          
           foreignKeys = [];
         }
         
@@ -872,7 +872,7 @@ export const useDatabaseStore = defineStore('database', () => {
         return foreignKeys;
       }
       
-      // Para MySQL, obter as foreign keys reais
+      
       const result = await window.api.getTableForeignKeys({
         host: connection.host,
         port: connection.port,
@@ -909,15 +909,15 @@ export const useDatabaseStore = defineStore('database', () => {
         return [];
       }
       
-      // Verificar se esta conexão tem um caminho de projeto associado
+      
       if (!connection.projectPath) {
-        // Se não tiver caminho de projeto, retornamos um array vazio
+        
         console.log("No project path associated with this connection");
         tableMigrations.value[cacheKey] = [];
         return [];
       }
       
-      // Usar a nova API para buscar migrações
+      
       const result = await window.api.findTableMigrations({
         projectPath: connection.projectPath,
         tableName: tableName
@@ -936,10 +936,10 @@ export const useDatabaseStore = defineStore('database', () => {
     }
   }
 
-  // Limpar o cache de uma tabela específica
+  
   function clearTableCache (cacheKey) {
     if (cacheKey) {
-      // Clear specific cache entry
+      
       delete tableRecords.value[cacheKey];
       delete tableStructures.value[cacheKey];
       delete tableIndexes.value[cacheKey];
@@ -948,13 +948,13 @@ export const useDatabaseStore = defineStore('database', () => {
     }
   }
   
-  // New function to clear all record counts when switching databases
+  
   function clearTableRecordCounts () {
-    // Clear the counts but keep the table list
+    
     tableRecords.value = {};
   }
 
-  // Function to update a record in the database
+  
   async function updateRecord (connectionId, tableName, record) {
     const connection = usedConnectionsStore().getConnection(connectionId);
     
@@ -963,24 +963,24 @@ export const useDatabaseStore = defineStore('database', () => {
     }
     
     try {
-      // Prepare record for sending, eliminating serialization problems
+      
       const preparedRecord = {};
       
-      // For each field in the record
+      
       for (const key in record) {
         let value = record[key];
         
-        // Handle special values
+        
         if (value instanceof Date) {
-          // Convert dates to ISO string
+          
           value = value.toISOString().slice(0, 19);
         } else if (value !== null && typeof value === 'object') {
-          // Convert complex objects to JSON
+          
           try {
             value = JSON.stringify(value);
           } catch (e) {
             console.warn(`Could not stringify field ${key}:`, e);
-            // Use toString() as fallback
+            
             value = String(value);
           }
         }
@@ -988,10 +988,10 @@ export const useDatabaseStore = defineStore('database', () => {
         preparedRecord[key] = value;
       }
       
-      // Set cache key
+      
       const cacheKey = `${connectionId}:${tableName}`;
       
-      // For MySQL, execute the actual update query
+      
       const result = await window.api.updateRecord({
         connection: {
           host: connection.host,
@@ -1008,14 +1008,14 @@ export const useDatabaseStore = defineStore('database', () => {
         throw new Error(result.message || "Failed to update record");
       }
       
-      // Update the local cache
+      
       if (!tableRecords.value[cacheKey]) {
-        // If the cache doesn't exist, there's nothing to update
+        
         console.log(`Cache not found for ${cacheKey}, skipping local update`);
       } else if (!tableRecords.value[cacheKey].data) {
         console.warn(`Cache for ${cacheKey} does not have data property, cannot update`);
       } else {
-        // Cache exists and has data, we can update
+        
         const index = tableRecords.value[cacheKey].data.findIndex(row => {
           if (row.id && record.id) {
             return row.id === record.id;
@@ -1024,7 +1024,7 @@ export const useDatabaseStore = defineStore('database', () => {
         });
         
         if (index !== -1) {
-          // Update the record in the cache array
+          
           const updatedRecord = { ...tableRecords.value[cacheKey].data[index], ...record };
           tableRecords.value[cacheKey].data.splice(index, 1, updatedRecord);
           console.log(`Updated record at index ${index} in cache ${cacheKey}`);
@@ -1040,7 +1040,7 @@ export const useDatabaseStore = defineStore('database', () => {
     }
   }
 
-  // Function to delete records from a table
+  
   async function deleteRecords (connectionId, tableName, ids) {
     const connection = usedConnectionsStore().getConnection(connectionId);
     
@@ -1049,9 +1049,9 @@ export const useDatabaseStore = defineStore('database', () => {
     }
     
     try {
-      // Ensure we're dealing with an array of primitive values
+      
       const sanitizedIds = ids.map(id => {
-        // Convert any objects to strings
+        
         if (id !== null && typeof id === 'object') {
           return String(id);
         }
@@ -1073,7 +1073,7 @@ export const useDatabaseStore = defineStore('database', () => {
       });
       
       if (result.success) {
-        // Clear cache for this table
+        
         const cacheKey = `${connectionId}:${tableName}`;
         clearTableCache(cacheKey);
         
@@ -1087,7 +1087,7 @@ export const useDatabaseStore = defineStore('database', () => {
     }
   }
   
-  // Function to truncate a table
+  
   async function truncateTable (connectionId, tableName) {
     const connection = usedConnectionsStore().getConnection(connectionId);
     
@@ -1108,7 +1108,7 @@ export const useDatabaseStore = defineStore('database', () => {
       });
       
       if (result.success) {
-        // Clear cache for this table
+        
         const cacheKey = `${connectionId}:${tableName}`;
         clearTableCache(cacheKey);
         
@@ -1122,7 +1122,7 @@ export const useDatabaseStore = defineStore('database', () => {
     }
   }
 
-  // Adicionar função para carregar dados filtrados do banco de dados
+  
   async function loadFilteredTableData (connectionId, tableName, filterClause, limit = 100, page = 1) {
     try {
       const connection = usedConnectionsStore().getConnection(connectionId);
@@ -1133,14 +1133,14 @@ export const useDatabaseStore = defineStore('database', () => {
       }
 
       if (connection.type !== 'mysql') {
-        // Para banco de dados não-MySQL, tentamos filtrar localmente
-        // Carregamos tudo primeiro (para demonstração)
+        
+        
         await new Promise(resolve => setTimeout(resolve, 500));
         
         if (tableContents[tableName]) {
           const allData = tableContents[tableName];
           
-          // Aplicar o filtro localmente usando a função existente
+          
           try {
             const filterFn = new Function('row', `
               try {
@@ -1154,7 +1154,7 @@ export const useDatabaseStore = defineStore('database', () => {
             const filteredData = allData.filter(filterFn);
             const totalRecords = filteredData.length;
             
-            // Aplicar paginação aos dados filtrados
+            
             const offset = (page - 1) * limit;
             const paginatedData = limit > 0 
               ? filteredData.slice(offset, offset + limit) 
@@ -1180,7 +1180,7 @@ export const useDatabaseStore = defineStore('database', () => {
         }
       }
 
-      // Para MySQL, enviamos a consulta com o filtro WHERE
+      
       const result = await window.api.getFilteredTableData({
         host: connection.host,
         port: connection.port,
@@ -1194,7 +1194,7 @@ export const useDatabaseStore = defineStore('database', () => {
       });
       
       if (result.success) {
-        // Armazenar em cache os resultados
+        
         const cacheKey = `${connectionId}:${tableName}:filtered`;
         if (!tableRecords.value[cacheKey]) {
           tableRecords.value[cacheKey] = {};
@@ -1231,15 +1231,15 @@ export const useDatabaseStore = defineStore('database', () => {
     }
   }
 
-  // Função auxiliar para converter filtro SQL para JavaScript (simplificada)
+  
   function convertFilterToJs (filter) {
     if (!filter) return 'true';
     
-    // Remover 'WHERE' se existir
+    
     const cleanFilter = filter.replace(/^where\s+/i, '').trim();
     if (!cleanFilter) return 'true';
     
-    // Caso especial para ID
+    
     const idMatch = cleanFilter.match(/^\s*id\s*=\s*(\d+)\s*$/i);
     if (idMatch) {
       const idValue = parseInt(idMatch[1], 10);
@@ -1248,7 +1248,7 @@ export const useDatabaseStore = defineStore('database', () => {
       }
     }
     
-    // Substituições básicas
+    
     return cleanFilter
       .replace(/\bAND\b/gi, '&&')
       .replace(/\bOR\b/gi, '||')

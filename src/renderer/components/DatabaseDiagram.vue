@@ -151,7 +151,7 @@ function close () {
 
 async function loadD3 () {
   if (!window.d3) {
-    // If D3 is not available in the window object, create a script element to load it
+    
     return new Promise((resolve, reject) => {
       const script = document.createElement('script');
       script.src = 'https://d3js.org/d3.v7.min.js';
@@ -167,23 +167,23 @@ async function refreshDiagram () {
   if (!props.connectionId) return;
   
   try {
-    // Fetch tables if not already loaded
+    
     if (databaseStore.tablesList.length === 0) {
       await databaseStore.loadTables(props.connectionId);
     }
     
-    // Update the list of tables for the filter dropdown
+    
     tablesList.value = databaseStore.tablesList.map(t => t.name);
     
-    // Fetch relationships data from the API
+    
     const relationshipsData = await window.api.getDatabaseRelationships(props.connectionId);
     
-    // Handle error response
+    
     if (relationshipsData && relationshipsData.success === false) {
       console.error('Error fetching relationships:', relationshipsData.message);
       relationships.value = [];
     } else {
-      // Check if we got an array of relationships
+      
       if (Array.isArray(relationshipsData)) {
         relationships.value = relationshipsData;
         console.log(`Loaded ${relationshipsData.length} relationships for diagram`);
@@ -193,7 +193,7 @@ async function refreshDiagram () {
       }
     }
     
-    // Load D3.js if not already loaded
+    
     if (!d3) {
       d3 = await loadD3();
     }
@@ -207,7 +207,7 @@ async function refreshDiagram () {
 function renderDiagram () {
   if (!d3 || !svgContainer.value) return;
   
-  // Clear previous diagram
+  
   svgContainer.value.innerHTML = '';
   
   const width = svgContainer.value.clientWidth;
@@ -232,7 +232,7 @@ function renderDiagram () {
     .attr('height', height)
     .attr('viewBox', [0, 0, width, height]);
     
-  // Add a background rectangle to make panning easier
+  
   svg.append('rect')
     .attr('width', width)
     .attr('height', height)
@@ -243,21 +243,21 @@ function renderDiagram () {
     .on('mouseup', endPan)
     .on('mouseleave', endPan);
   
-  // Add a group for all visualization elements with zoom and pan
+  
   const mainGroup = svg.append('g')
     .attr('transform', `translate(${panPosition.value.x}, ${panPosition.value.y}) scale(${zoomLevel.value})`);
   
-  // Create a force simulation
+  
   const simulation = d3.forceSimulation()
     .force('link', d3.forceLink().id(d => d.id).distance(180))
     .force('charge', d3.forceManyBody().strength(-500))
     .force('center', d3.forceCenter(width / 2, height / 2))
-    .force('collision', d3.forceCollide().radius(80)); // Prevent node overlap
+    .force('collision', d3.forceCollide().radius(80)); 
   
-  // Get table structure information to enrich the visualization
+  
   const tableInfo = {};
   
-  // Find table info in the store if available
+  
   if (databaseStore.tablesList.length > 0) {
     databaseStore.tablesList.forEach(tableData => {
       if (tables.includes(tableData.name)) {
@@ -268,7 +268,7 @@ function renderDiagram () {
     });
   }
   
-  // Create nodes for each table
+  
   const nodes = tables.map(table => ({ 
     id: table, 
     table,
@@ -279,7 +279,7 @@ function renderDiagram () {
     ).length
   }));
   
-  // Create links from relationships
+  
   const links = filteredRelationships.map(rel => ({
     source: rel.sourceTable,
     target: rel.targetTable,
@@ -287,7 +287,7 @@ function renderDiagram () {
     isInferred: rel.inferred || false
   }));
   
-  // Count relationship types for each table
+  
   const relationshipCounts = {};
   tables.forEach(table => {
     relationshipCounts[table] = {
@@ -296,7 +296,7 @@ function renderDiagram () {
     };
   });
   
-  // Add arrowhead marker definition
+  
   mainGroup.append('defs').append('marker')
     .attr('id', 'arrowhead')
     .attr('viewBox', '0 -5 10 10')
@@ -309,7 +309,7 @@ function renderDiagram () {
     .attr('d', 'M0,-5L10,0L0,5')
     .attr('fill', '#666');
   
-  // Add marker for inferred relationships
+  
   mainGroup.append('defs').append('marker')
     .attr('id', 'arrowhead-inferred')
     .attr('viewBox', '0 -5 10 10')
@@ -323,7 +323,7 @@ function renderDiagram () {
     .attr('fill', '#999')
     .attr('stroke-dasharray', '2,2');
   
-  // Draw links
+  
   const link = mainGroup.append('g')
     .selectAll('line')
     .data(links)
@@ -334,7 +334,7 @@ function renderDiagram () {
     .attr('stroke-dasharray', d => d.isInferred ? '3,3' : null)
     .attr('marker-end', d => d.isInferred ? 'url(#arrowhead-inferred)' : 'url(#arrowhead)');
   
-  // Link text (relationship info)
+  
   const linkText = mainGroup.append('g')
     .selectAll('text')
     .data(links)
@@ -345,7 +345,7 @@ function renderDiagram () {
     .attr('text-anchor', 'middle')
     .text(d => d.relation);
   
-  // Draw table nodes
+  
   const node = mainGroup.append('g')
     .selectAll('g')
     .data(nodes)
@@ -353,7 +353,7 @@ function renderDiagram () {
     .append('g')
     .attr('class', d => d.isFocused ? 'node-focused' : 'node');
   
-  // Table node rectangles
+  
   node.append('rect')
     .attr('width', 140)
     .attr('height', 60)
@@ -363,7 +363,7 @@ function renderDiagram () {
     .attr('stroke', d => d.isFocused ? '#4b9afa' : '#666')
     .attr('stroke-width', d => d.isFocused ? 2 : 1);
   
-  // Table names
+  
   node.append('text')
     .attr('dx', 70)
     .attr('dy', 20)
@@ -373,7 +373,7 @@ function renderDiagram () {
     .attr('font-weight', 'bold')
     .text(d => d.table);
   
-  // Table column count
+  
   node.append('text')
     .attr('dx', 70)
     .attr('dy', 38)
@@ -382,7 +382,7 @@ function renderDiagram () {
     .attr('font-size', '10px')
     .text(d => `Columns: ${d.columnCount}`);
   
-  // Relationship counts
+  
   node.append('text')
     .attr('dx', 70)
     .attr('dy', 52)
@@ -394,13 +394,13 @@ function renderDiagram () {
       return `Rel: ${counts.incoming} in, ${counts.outgoing} out`;
     });
   
-  // Make nodes draggable
+  
   node.call(d3.drag()
     .on('start', dragstarted)
     .on('drag', dragged)
     .on('end', dragended))
     .on('click', (event, d) => {
-      // Set this table as focus when clicked
+      
       focusTable.value = d.id === focusTable.value ? '' : d.id;
     });
   
@@ -424,7 +424,7 @@ function renderDiagram () {
       return targetNode ? (height / 2) : 0;
     });
     
-  // Position nodes in a circle initially
+  
   const radius = Math.min(width, height) / 3;
   const angleStep = (2 * Math.PI) / nodes.length;
   nodes.forEach((node, i) => {
@@ -438,7 +438,7 @@ function renderDiagram () {
     .attr('x', d => (width / 2))
     .attr('y', d => (height / 2));
   
-  // Simulation tick function
+  
   simulation.nodes(nodes).on('tick', () => {
     link
       .attr('x1', d => d.source.x)
@@ -455,12 +455,12 @@ function renderDiagram () {
   
   simulation.force('link').links(links);
   
-  // Run a few ticks to "warm up" the simulation
+  
   for (let i = 0; i < 20; i++) {
     simulation.tick();
   }
   
-  // Update the positions after initial ticks
+  
   link
     .attr('x1', d => d.source.x)
     .attr('y1', d => d.source.y)
@@ -473,9 +473,9 @@ function renderDiagram () {
     .attr('x', d => (d.source.x + d.target.x) / 2)
     .attr('y', d => (d.source.y + d.target.y) / 2);
   
-  // Panning event handlers
+  
   function startPan (event) {
-    if (event.button === 0) { // only left mouse button
+    if (event.button === 0) { 
       isPanning.value = true;
       lastMousePosition.value = { x: event.clientX, y: event.clientY };
       svg.style('cursor', 'grabbing');
@@ -502,7 +502,7 @@ function renderDiagram () {
     svg.style('cursor', 'move');
   }
   
-  // Drag functions
+  
   function dragstarted (event) {
     if (!event.active) simulation.alphaTarget(0.3).restart();
     event.subject.fx = event.subject.x;
@@ -537,15 +537,15 @@ function resetZoom () {
   renderDiagram();
 }
 
-// Watch for changes in isOpen to load data
+
 watch(() => props.isOpen, async (newValue) => {
   if (newValue) {
     loading.value = true;
     await refreshDiagram();
     
-    // Use nextTick to ensure the DOM is updated and then force rendering
+    
     nextTick(() => {
-      // Give a short delay to ensure everything is properly mounted
+      
       setTimeout(() => {
         if (relationships.value.length > 0) {
           renderDiagram();
@@ -555,35 +555,35 @@ watch(() => props.isOpen, async (newValue) => {
       }, 100);
     });
   } else {
-    // Cleanup when closing modal
+    
     if (svgContainer.value) {
       svgContainer.value.removeEventListener('wheel', handleWheel);
     }
   }
 });
 
-// Watch for changes in focusTable to re-render the diagram
+
 watch(() => focusTable.value, () => {
   renderDiagram();
 });
 
-// Add a resize observer to rerender diagram when container size changes
+
 onMounted(() => {
-  // Create a resize observer to detect container size changes
+  
   const resizeObserver = new ResizeObserver(() => {
     if (props.isOpen && relationships.value.length > 0 && svgContainer.value) {
       renderDiagram();
     }
   });
   
-  // Observe the SVG container when it becomes available
+  
   watch(() => svgContainer.value, (newVal) => {
     if (newVal) {
       resizeObserver.observe(newVal);
     }
   });
   
-  // Clean up observer on component unmount
+  
   onUnmounted(() => {
     if (svgContainer.value) {
       resizeObserver.unobserve(svgContainer.value);
@@ -593,36 +593,36 @@ onMounted(() => {
   });
 });
 
-// Add event listeners for mouse wheel zoom in the SVG container
+
 function setupWheelZoom () {
   if (!svgContainer.value) return;
   
-  // Remove any existing listeners first
+  
   svgContainer.value.removeEventListener('wheel', handleWheel);
   
-  // Add wheel event listener for zooming
+  
   svgContainer.value.addEventListener('wheel', handleWheel);
 }
 
-// Handle mouse wheel events for zooming
+
 function handleWheel (event) {
   event.preventDefault();
   
-  // Determine zoom direction
+  
   const isZoomIn = event.deltaY < 0;
   
-  // Adjust zoom level based on wheel direction
+  
   if (isZoomIn) {
     zoomLevel.value += 0.1;
   } else {
     zoomLevel.value = Math.max(0.1, zoomLevel.value - 0.1);
   }
   
-  // Re-render the diagram with new zoom level
+  
   renderDiagram();
 }
 
-// Add the wheel zoom setup to the onModalFullyOpen function
+
 function onModalFullyOpen () {
   if (relationships.value.length > 0 && svgContainer.value) {
     console.log('Modal fully opened, rendering diagram');
@@ -631,7 +631,7 @@ function onModalFullyOpen () {
   }
 }
 
-// Also set up wheel zoom when the diagram is refreshed
+
 async function onRefreshClick () {
   loading.value = true;
   await refreshDiagram();
@@ -670,7 +670,6 @@ async function onRefreshClick () {
   padding: 8px;
 }
 
-/* Add a floating info panel */
 .info-panel {
   position: absolute;
   bottom: 10px;
@@ -694,7 +693,6 @@ async function onRefreshClick () {
   color: #fff;
 }
 
-/* Custom styles for the node interaction */
 :deep(.node:hover rect) {
   stroke: #4b9afa;
   stroke-width: 2px;

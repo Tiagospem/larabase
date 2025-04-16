@@ -222,7 +222,7 @@ function loadTableRecordCounts () {
   isLoadingCounts.value = true;
   allTablesLoaded.value = false;
   
-  // Clear any existing timers
+  
   if (loadingTimer.value) {
     clearTimeout(loadingTimer.value);
   }
@@ -238,7 +238,7 @@ function loadTableRecordCounts () {
     });
     
     Promise.all(promises).then(() => {
-      // Add a small delay to ensure smooth transition
+      
       loadingTimer.value = setTimeout(() => {
         allTablesLoaded.value = true;
         isLoadingCounts.value = false;
@@ -267,26 +267,26 @@ function getTableModel (tableName) {
   return databaseStore.getModelForTable(props.connectionId, tableName);
 }
 
-// Watch for changes in connectionId to reload counts
+
 watch(() => props.connectionId, () => {
   if (props.connectionId) {
-    // Reset flags
+    
     allTablesLoaded.value = false;
     
-    // Add a small delay before loading counts
+    
     loadingTimer.value = setTimeout(() => {
       loadTableRecordCounts();
     }, 500);
   }
 }, { immediate: true });
 
-// Watch for table list changes to load counts for new tables
+
 watch(() => tables.value.length, (newLength) => {
   if (newLength > 0) {
-    // Reset flags when tables change
+    
     allTablesLoaded.value = false;
     
-    // Add a small delay before loading counts
+    
     loadingTimer.value = setTimeout(() => {
       loadTableRecordCounts();
     }, 300);
@@ -294,13 +294,13 @@ watch(() => tables.value.length, (newLength) => {
 });
 
 onMounted(() => {
-  // Initial load with a slight delay to ensure DB connection is ready
+  
   loadingTimer.value = setTimeout(() => {
     loadTableRecordCounts();
   }, 500);
 });
 
-// Clean up timers when component unmounts
+
 onUnmounted(() => {
   if (loadingTimer.value) {
     clearTimeout(loadingTimer.value);
@@ -320,7 +320,6 @@ onUnmounted(() => {
   background-color: #4e4e50;
 }
 
-/* Skeleton animation and styles */
 @keyframes pulse {
   0%, 100% {
     opacity: 0.6;
@@ -351,14 +350,12 @@ onUnmounted(() => {
   opacity: 0.7;
 }
 
-/* Override tooltip styles to ensure they're visible */
 .tooltip:before {
   max-width: 200px;
   white-space: normal;
   z-index: 100;
 }
 
-/* Fix for table names truncation */
 .table-name-container {
   max-width: calc(100% - 5px);
   overflow: hidden;

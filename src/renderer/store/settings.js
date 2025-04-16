@@ -7,7 +7,7 @@ export const useSettingsStore = defineStore('settings', () => {
       apiKey: '',
       model: 'gpt-3.5-turbo'
     },
-    language: 'en', // en, pt, es
+    language: 'en', 
     devMode: false
   });
   
@@ -43,7 +43,7 @@ export const useSettingsStore = defineStore('settings', () => {
   async function saveSettings () {
     try {
       if (window.api) {
-        // Create a clean serializable copy of the settings object
+        
         const serializableSettings = JSON.parse(JSON.stringify(settings.value));
         await window.api.saveSettings(serializableSettings);
       }

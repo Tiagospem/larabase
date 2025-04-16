@@ -14,22 +14,22 @@ const originalCreateConnection = mysql.createConnection;
 
 function setupGlobalMonitoring () {
   mysql.createConnection = async function (...args) {
-    // Chama a função original para criar a conexão
+    
     const connection = await originalCreateConnection.apply(this, args);
     
-    // Verifica se estamos conectando a um banco que já está sendo monitorado
+    
     const config = args[0];
     console.log("New database connection created:", config.host, config.database);
     
-    // Procura em todas as conexões monitoradas
+    
     for (const [connectionId, monitoredConn] of dbMonitoringConnections.entries()) {
-      // Se já temos uma conexão monitorando esse mesmo banco
+      
       if (monitoredConn._config && 
           monitoredConn._config.host === config.host && 
           monitoredConn._config.database === config.database) {
         
         console.log(`Auto-monitoring new connection to ${config.database} (from monitored connection ${connectionId})`);
-        // Setup do monitoramento nesta nova conexão
+        
         setupMonitoring(connection, config.database);
         break;
       }
@@ -88,7 +88,7 @@ async function createWindow () {
   });
 }
 
-// Add system diagnostics function to get information about Docker availability
+
 async function getSystemDiagnostics () {
   const diagnostics = {
     platform: process.platform,
@@ -107,12 +107,12 @@ async function getSystemDiagnostics () {
     }
   };
   
-  // Check Docker with timeout to prevent blocking
+  
   try {
     const dockerCheckPromise = new Promise((resolve) => {
       try {
         if (isDockerCliAvailable()) {
-          // Try to get Docker version
+          
           try {
             const dockerVersion = execSync('docker --version', { 
               timeout: 3000,
@@ -147,7 +147,7 @@ async function getSystemDiagnostics () {
       }
     });
     
-    // Apply timeout to prevent blocking
+    
     const timeoutPromise = new Promise((resolve) => {
       setTimeout(() => {
         resolve({
@@ -158,7 +158,7 @@ async function getSystemDiagnostics () {
       }, 5000);
     });
     
-    // Use first promise to resolve (Docker check or timeout)
+    
     diagnostics.docker = await Promise.race([dockerCheckPromise, timeoutPromise]);
   } catch (error) {
     diagnostics.docker = {
@@ -171,20 +171,20 @@ async function getSystemDiagnostics () {
   return diagnostics;
 }
 
-// Implement OS-specific Docker check
+
 function checkDockerByOS () {
   console.log(`Checking Docker specifically for: ${process.platform}`);
   
   try {
-    // OS-specific checks
-    if (process.platform === 'darwin') { // macOS
-      // On macOS, check Docker socket and processes
+    
+    if (process.platform === 'darwin') { 
+      
       const socketExists = fs.existsSync('/var/run/docker.sock');
       console.log(`Docker socket exists on macOS: ${socketExists}`);
       
       if (socketExists) {
         try {
-          // Check for Docker Desktop or Docker Engine process
+          
           const psOutput = execSync('ps aux | grep -v grep | grep -E "Docker(Desktop|.app)"', {
             timeout: 2000,
             shell: true
@@ -192,22 +192,22 @@ function checkDockerByOS () {
           
           return psOutput.length > 0;
         } catch (e) {
-          // Use socket existence as indication
+          
           return socketExists;
         }
       }
       return false;
     } 
-    else if (process.platform === 'linux') { // Linux
-      // On Linux, check socket and service status
+    else if (process.platform === 'linux') { 
+      
       const socketExists = fs.existsSync('/var/run/docker.sock');
       console.log(`Docker socket exists on Linux: ${socketExists}`);
       
       if (socketExists) {
-        return true; // Socket is usually sufficient on Linux
+        return true; 
       }
       
-      // Check Docker service status (systemd)
+      
       try {
         execSync('systemctl is-active --quiet docker', {
           timeout: 2000,
@@ -215,14 +215,14 @@ function checkDockerByOS () {
         });
         return true;
       } catch (e) {
-        // Service not active or not using systemd
+        
         return false;
       }
     } 
-    else if (process.platform === 'win32') { // Windows
-      // On Windows, check Docker Desktop and service
+    else if (process.platform === 'win32') { 
+      
       try {
-        // Check Docker Desktop in task manager
+        
         const tasklistOutput = execSync('tasklist /FI "IMAGENAME eq Docker Desktop.exe" /NH', {
           timeout: 2000,
           shell: true
@@ -232,7 +232,7 @@ function checkDockerByOS () {
           return true;
         }
         
-        // Check Docker service
+        
         const serviceOutput = execSync('sc query docker', {
           timeout: 2000,
           shell: true
@@ -245,7 +245,7 @@ function checkDockerByOS () {
       }
     }
     
-    // For other systems, use generic method
+    
     return false;
   } catch (error) {
     console.error(`Error in OS-specific Docker check: ${error.message}`);
@@ -253,48 +253,48 @@ function checkDockerByOS () {
   }
 }
 
-// Modify app initialization to preserve environment variables
+
 app.whenReady().then(async () => {
-  // Ensure system PATH is available and preserved
+  
   if (process.env.PATH) {
     console.log(`Original system PATH: ${process.env.PATH}`);
     
-    // For production builds, ensure Docker paths are included
-    if (process.platform === 'darwin') { // macOS
+    
+    if (process.platform === 'darwin') { 
       const additionalPaths = [
         '/usr/local/bin',
-        '/opt/homebrew/bin', // For Apple Silicon Macs using Homebrew
+        '/opt/homebrew/bin', 
         '/Applications/Docker.app/Contents/Resources/bin'
       ];
       
-      // Add Docker paths if not already in PATH
+      
       for (const dockerPath of additionalPaths) {
         if (!process.env.PATH.includes(dockerPath)) {
           process.env.PATH = `${dockerPath}:${process.env.PATH}`;
           console.log(`Added ${dockerPath} to PATH`);
         }
       }
-    } else if (process.platform === 'linux') { // Linux
+    } else if (process.platform === 'linux') { 
       const additionalPaths = [
         '/usr/bin',
         '/usr/local/bin',
-        '/snap/bin' // For snap-installed Docker
+        '/snap/bin' 
       ];
       
-      // Add Docker paths if not already in PATH
+      
       for (const dockerPath of additionalPaths) {
         if (!process.env.PATH.includes(dockerPath)) {
           process.env.PATH = `${dockerPath}:${process.env.PATH}`;
           console.log(`Added ${dockerPath} to PATH`);
         }
       }
-    } else if (process.platform === 'win32') { // Windows
+    } else if (process.platform === 'win32') { 
       const additionalPaths = [
         'C:\\Program Files\\Docker\\Docker\\resources\\bin',
         'C:\\Program Files\\Docker Desktop\\resources\\bin'
       ];
       
-      // Add Docker paths if not already in PATH
+      
       for (const dockerPath of additionalPaths) {
         if (!process.env.PATH.includes(dockerPath)) {
           process.env.PATH = `${dockerPath};${process.env.PATH}`;
@@ -306,18 +306,18 @@ app.whenReady().then(async () => {
     console.log(`Enhanced PATH for Docker detection: ${process.env.PATH}`);
   } else {
     console.warn(`PATH environment variable not found, some features might not work correctly`);
-    // Set minimum PATH for Unix/macOS
+    
     if (process.platform === 'darwin' || process.platform === 'linux') {
       process.env.PATH = '/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:/opt/homebrew/bin:/Applications/Docker.app/Contents/Resources/bin';
       console.log(`Set default PATH for ${process.platform}: ${process.env.PATH}`);
     } else if (process.platform === 'win32') {
-      // Default Windows paths
+      
       process.env.PATH = 'C:\\Windows\\System32;C:\\Windows;C:\\Program Files\\Docker\\Docker\\resources\\bin;C:\\Program Files\\Docker Desktop\\resources\\bin';
       console.log(`Set default PATH for Windows: ${process.env.PATH}`);
     }
   }
 
-  // Try to locate Docker binary on disk
+  
   try {
     const whichCommand = process.platform === 'win32' ? 'where docker' : 'which docker';
     const dockerPath = execSync(whichCommand, { 
@@ -331,31 +331,31 @@ app.whenReady().then(async () => {
     console.log(`Docker binary not found in PATH: ${e.message}`);
   }
 
-  // Log environment information
+  
   console.log(`Electron running on platform: ${process.platform}`);
   console.log(`Node.js version: ${process.version}`);
   console.log(`Electron version: ${process.versions.electron}`);
   
-  // Get and log system diagnostics
+  
   const diagnostics = await getSystemDiagnostics();
   console.log('System diagnostics:', JSON.stringify(diagnostics, null, 2));
 
   await createWindow();
 
-  // Configure global MySQL monitoring
+  
   setupGlobalMonitoring();
 
-  // Replace global shortcuts with more focused approach
-  // Only respond to shortcuts when the app window is focused
+  
+  
   if (mainWindow) {
-    // Use webContents.on('before-input-event') to handle keyboard events only when the window is focused
+    
     mainWindow.webContents.on('before-input-event', (event, input) => {
-      // Check if the window is focused
+      
       if (!mainWindow.isFocused()) {
         return;
       }
 
-      // F12 - Toggle DevTools
+      
       if (input.key === 'F12' && !input.alt && !input.control && !input.meta && !input.shift) {
         if (mainWindow.webContents.isDevToolsOpened()) {
           mainWindow.webContents.closeDevTools();
@@ -364,7 +364,7 @@ app.whenReady().then(async () => {
         }
       }
 
-      // Ctrl+Shift+I or Cmd+Shift+I - Toggle DevTools
+      
       if (input.key === 'I' && !input.alt && input.shift && (input.control || input.meta)) {
         if (mainWindow.webContents.isDevToolsOpened()) {
           mainWindow.webContents.closeDevTools();
@@ -373,39 +373,39 @@ app.whenReady().then(async () => {
         }
       }
 
-      // Ctrl+R or Cmd+R - Reload window
+      
       if (input.key === 'r' && !input.alt && !input.shift && (input.control || input.meta)) {
         mainWindow.reload();
       }
     });
   }
 
-  // Remove global shortcut registration
-  // globalShortcut.register('F12', () => {
-  //   if (mainWindow) {
-  //     if (mainWindow.webContents.isDevToolsOpened()) {
-  //       mainWindow.webContents.closeDevTools();
-  //     } else {
-  //       mainWindow.webContents.openDevTools();
-  //     }
-  //   }
-  // });
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
 
-  // globalShortcut.register('CommandOrControl+Shift+I', () => {
-  //   if (mainWindow) {
-  //     if (mainWindow.webContents.isDevToolsOpened()) {
-  //       mainWindow.webContents.closeDevTools();
-  //     } else {
-  //       mainWindow.webContents.openDevTools();
-  //     }
-  //   }
-  // });
+  
+  
+  
+  
+  
+  
+  
+  
+  
 
-  // globalShortcut.register('CommandOrControl+R', () => {
-  //   if (mainWindow) {
-  //     mainWindow.reload();
-  //   }
-  // });
+  
+  
+  
+  
+  
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
@@ -415,10 +415,10 @@ app.whenReady().then(async () => {
 });
 
 app.on('will-quit', () => {
-  // Perform any necessary cleanup before app quits
+  
   console.log('Application is quitting, performing cleanup...');
   
-  // Clean up database connections
+  
   for (const [connectionId, connection] of dbMonitoringConnections.entries()) {
     try {
       if (connection) connection.end();
@@ -470,7 +470,7 @@ ipcMain.handle('get-settings', () => {
         apiKey: '',
         model: 'gpt-3.5-turbo'
       },
-      language: 'en' // default to English
+      language: 'en' 
     };
   } catch (error) {
     console.error('Error retrieving settings:', error);
@@ -569,14 +569,14 @@ function isDockerCliAvailable () {
         shell: true,
         windowsHide: true,
         stdio: 'ignore',
-        env: { ...process.env } // Make sure to pass all environment variables
+        env: { ...process.env } 
       });
       console.log('Docker CLI is available (direct check)');
       return true;
     } catch (directCheckError) {
       console.log('Direct Docker CLI check failed:', directCheckError.message);
       
-      // Second approach: try platform-specific detection
+      
       console.log('Falling back to OS-specific Docker detection...');
       const osCheckResult = checkDockerByOS();
       if (osCheckResult) {
@@ -584,7 +584,7 @@ function isDockerCliAvailable () {
         return true;
       }
       
-      // Third approach: check for Docker socket (works on macOS/Linux)
+      
       if (process.platform !== 'win32') {
         try {
           const socketExists = fs.existsSync('/var/run/docker.sock');
@@ -597,7 +597,7 @@ function isDockerCliAvailable () {
         }
       }
       
-      // For Windows, check Docker Desktop installation location
+      
       if (process.platform === 'win32') {
         try {
           const desktopExists = fs.existsSync('C:\\Program Files\\Docker\\Docker\\Docker Desktop.exe');
@@ -610,7 +610,7 @@ function isDockerCliAvailable () {
         }
       }
       
-      // All checks failed
+      
       console.log('All Docker detection methods failed');
       return false;
     }
@@ -620,7 +620,7 @@ function isDockerCliAvailable () {
   }
 }
 
-// Função para detectar container MySQL usando a porta especificada
+
 function detectDockerMysql (port) {
   const result = {
     dockerAvailable: false,
@@ -639,18 +639,18 @@ function detectDockerMysql (port) {
     result.dockerAvailable = true;
     
     try {
-      // Obter lista de containers Docker with enhanced options
+      
       console.log('Attempting to list Docker containers...');
       const containers = execSync('docker ps --format "{{.Names}} {{.Ports}}"', { 
         timeout: 5000,
         shell: true,
         windowsHide: true,
-        env: { ...process.env } // Ensure all environment variables are passed
+        env: { ...process.env } 
       }).toString().split('\n');
       
       console.log('Active Docker containers:', containers);
       
-      // Procurar por containers MySQL que expõem a porta especificada
+      
       for (const container of containers) {
         if (container.includes(`:${port}->3306`) || container.includes(`${port}:3306`)) {
           const containerName = container.split(' ')[0];
@@ -661,7 +661,7 @@ function detectDockerMysql (port) {
         }
       }
       
-      // Alternative check: Try detecting MySQL containers regardless of port
+      
       if (!result.isDocker && containers.length > 0) {
         console.log('No container found on specific port, checking for any MySQL containers...');
         for (const container of containers) {
@@ -678,11 +678,11 @@ function detectDockerMysql (port) {
     } catch (containerError) {
       console.error('Error listing Docker containers:', containerError.message);
       
-      // Fallback: Docker is available but container listing failed
-      // This can happen in production builds with permission issues
+      
+      
       result.message = 'Docker detected but container listing failed. Check permissions.';
       
-      // Try alternative method for macOS/Linux - check for running MySQL containers using grep
+      
       if (process.platform !== 'win32') {
         try {
           console.log('Trying alternative container detection...');
@@ -696,7 +696,7 @@ function detectDockerMysql (port) {
           if (psOutput.length > 0) {
             console.log('Found MySQL process using ps aux:', psOutput.substring(0, 100) + '...');
             result.isDocker = true;
-            result.dockerContainerName = 'mysql-container'; // Generic name, can't determine actual name
+            result.dockerContainerName = 'mysql-container'; 
             result.message = 'MySQL process detected, assuming Docker container';
           }
         } catch (psError) {
@@ -778,7 +778,7 @@ ipcMain.handle('list-tables', async (event, config) => {
   let monitoredConnection = null;
 
   try {
-    // Se recebermos apenas o connectionId, precisamos buscar os detalhes da conexão
+    
     if (config.connectionId && (!config.host || !config.port || !config.username || !config.database)) {
       console.log(`Getting connection details for list tables, ID: ${config.connectionId}`);
       const connections = store.get('connections') || [];
@@ -792,7 +792,7 @@ ipcMain.handle('list-tables', async (event, config) => {
         };
       }
       
-      // Preencher os dados da conexão
+      
       config.host = connectionDetails.host;
       config.port = connectionDetails.port;
       config.username = connectionDetails.username;
@@ -808,7 +808,7 @@ ipcMain.handle('list-tables', async (event, config) => {
       };
     }
 
-    // Tentar usar uma conexão monitorada já existente
+    
     let useMonitoredConnection = false;
     
     if (config.connectionId) {
@@ -820,7 +820,7 @@ ipcMain.handle('list-tables', async (event, config) => {
       }
     }
     
-    // Se não temos uma conexão monitorada, criamos uma nova
+    
     if (!useMonitoredConnection) {
       connection = await mysql.createConnection({
         host: config.host,
@@ -862,7 +862,7 @@ ipcMain.handle('list-tables', async (event, config) => {
       tables: []
     };
   } finally {
-    // Apenas fechamos a conexão se NÃO for uma conexão monitorada
+    
     if (connection && !monitoredConnection) {
       try {
         await connection.end();
@@ -877,7 +877,7 @@ ipcMain.handle('getTableRecordCount', async (event, config) => {
   let connection;
 
   try {
-    // Se recebermos apenas o connectionId, precisamos buscar os detalhes da conexão
+    
     if (config.connectionId && (!config.host || !config.port || !config.username || !config.database)) {
       console.log(`Getting connection details for ID: ${config.connectionId}`);
       const connections = store.get('connections') || [];
@@ -891,7 +891,7 @@ ipcMain.handle('getTableRecordCount', async (event, config) => {
         };
       }
       
-      // Preencher os dados da conexão
+      
       config.host = connectionDetails.host;
       config.port = connectionDetails.port;
       config.username = connectionDetails.username;
@@ -957,7 +957,7 @@ ipcMain.handle('getTableData', async (event, config) => {
   let monitoredConnection = null;
 
   try {
-    // Se recebermos apenas o connectionId, precisamos buscar os detalhes da conexão
+    
     if (config.connectionId && (!config.host || !config.port || !config.username || !config.database)) {
       console.log(`Getting connection details for table data, ID: ${config.connectionId}`);
       const connections = store.get('connections') || [];
@@ -972,7 +972,7 @@ ipcMain.handle('getTableData', async (event, config) => {
         };
       }
       
-      // Preencher os dados da conexão
+      
       config.host = connectionDetails.host;
       config.port = connectionDetails.port;
       config.username = connectionDetails.username;
@@ -989,7 +989,7 @@ ipcMain.handle('getTableData', async (event, config) => {
       };
     }
 
-    // Tentar usar uma conexão monitorada já existente
+    
     let useMonitoredConnection = false;
     
     if (config.connectionId) {
@@ -1001,7 +1001,7 @@ ipcMain.handle('getTableData', async (event, config) => {
       }
     }
     
-    // Se não temos uma conexão monitorada, criamos uma nova
+    
     if (!useMonitoredConnection) {
       connection = await mysql.createConnection({
         host: config.host,
@@ -1050,7 +1050,7 @@ ipcMain.handle('getTableData', async (event, config) => {
       totalRecords: 0
     };
   } finally {
-    // Apenas fechamos a conexão se NÃO for uma conexão monitorada
+    
     if (connection && !monitoredConnection) {
       try {
         await connection.end();
@@ -1074,7 +1074,7 @@ ipcMain.handle('findTableMigrations', async (event, config) => {
     const tableName = config.tableName;
     const migrationsPath = path.join(config.projectPath, 'database', 'migrations');
     
-    // Verificar se o diretório de migrations existe
+    
     if (!fs.existsSync(migrationsPath)) {
       return { 
         success: false, 
@@ -1083,26 +1083,26 @@ ipcMain.handle('findTableMigrations', async (event, config) => {
       };
     }
 
-    // Ler todos os arquivos do diretório de migrations
+    
     const migrationFiles = fs.readdirSync(migrationsPath)
-      .filter(file => file.endsWith('.php'));  // Filtra apenas arquivos PHP
+      .filter(file => file.endsWith('.php'));  
     
     const relevantMigrations = [];
     
-    // Para cada arquivo, verificar se contém referências à tabela
+    
     for (const file of migrationFiles) {
       const filePath = path.join(migrationsPath, file);
       const content = fs.readFileSync(filePath, 'utf8');
       
-      // Procurar referências à tabela no conteúdo do arquivo
+      
       const tablePattern = new RegExp(`['"](${tableName})['"]|Schema::create\\(['"]${tableName}['"]|Schema::table\\(['"]${tableName}['"]`, 'i');
       
       if (tablePattern.test(content)) {
-        // Extrair informações da migração do nome do arquivo
+        
         const nameParts = file.split('_');
         const timestamp = nameParts[0];
         
-        // Data formatada baseada no timestamp da migração (formato YYYY_MM_DD)
+        
         const year = timestamp.substring(0, 4);
         const month = timestamp.substring(4, 6);
         const day = timestamp.substring(6, 8);
@@ -1110,7 +1110,7 @@ ipcMain.handle('findTableMigrations', async (event, config) => {
         const dateString = `${year}-${month}-${day}`;
         const date = new Date(dateString);
         
-        // Tenta extrair o nome da migração do arquivo
+        
         let migrationName = file.replace(/^\d+_/, '').replace('.php', '');
         
         // Dessnakify o nome (converter create_users_table para Create Users Table)
@@ -1119,7 +1119,7 @@ ipcMain.handle('findTableMigrations', async (event, config) => {
           .map(word => word.charAt(0).toUpperCase() + word.slice(1))
           .join(' ');
         
-        // Determinar o tipo de ação com base no nome e conteúdo
+        
         const actions = [];
         
         if (content.includes(`Schema::create('${tableName}'`) || content.includes(`Schema::create("${tableName}"`)) {
@@ -1127,17 +1127,17 @@ ipcMain.handle('findTableMigrations', async (event, config) => {
         } else if (content.includes(`Schema::table('${tableName}'`) || content.includes(`Schema::table("${tableName}"`)) {
           actions.push({ type: 'ALTER', description: `Modified ${tableName} table` });
           
-          // Checar se adiciona colunas
+          
           if (content.includes('->add') || content.match(/\$table->\w+\(/g)) {
             actions.push({ type: 'ADD', description: 'Added columns' });
           }
           
-          // Checar se remove colunas
+          
           if (content.includes('->drop') || content.includes('dropColumn')) {
             actions.push({ type: 'DROP', description: 'Removed columns' });
           }
           
-          // Checar chaves estrangeiras
+          
           if (content.includes('foreign') || content.includes('references')) {
             actions.push({ type: 'FOREIGN KEY', description: 'Modified foreign keys' });
           }
@@ -1147,10 +1147,10 @@ ipcMain.handle('findTableMigrations', async (event, config) => {
           actions.push({ type: 'DROP', description: `Dropped table` });
         }
         
-        // Status da migração (assumimos que está aplicada se o arquivo existe)
+        
         const status = 'APPLIED';
         
-        // Adicionar à lista de migrações relevantes
+        
         relevantMigrations.push({
           id: file,
           name: file,
@@ -1165,7 +1165,7 @@ ipcMain.handle('findTableMigrations', async (event, config) => {
       }
     }
     
-    // Ordenar migrações por data (mais recente primeiro)
+    
     relevantMigrations.sort((a, b) => {
       return new Date(b.created_at) - new Date(a.created_at);
     });
@@ -1186,7 +1186,7 @@ ipcMain.handle('findTableMigrations', async (event, config) => {
 
 ipcMain.handle('openFile', async (event, filePath) => {
   try {
-    // Lista de possíveis caminhos de IDEs populares
+    
     const editors = [
       { name: 'PHPStorm', paths: [
         '/Applications/PhpStorm.app/Contents/MacOS/phpstorm',
@@ -1210,7 +1210,7 @@ ipcMain.handle('openFile', async (event, filePath) => {
       ]}
     ];
     
-    // Verificar se algum dos editores está disponível
+    
     for (const editor of editors) {
       for (const editorPath of editor.paths) {
         try {
@@ -1224,13 +1224,13 @@ ipcMain.handle('openFile', async (event, filePath) => {
             return { success: true, editor: editor.name };
           }
         } catch (e) {
-          // Ignorar e tentar o próximo caminho
+          
           console.log(`Failed to open with ${editor.name} at ${editorPath}: ${e.message}`);
         }
       }
     }
     
-    // Se nenhum editor específico for encontrado, use o aplicativo padrão
+    
     console.log('No specific IDE found, using default application');
     await shell.openPath(filePath);
     return { success: true, editor: 'default' };
@@ -1245,7 +1245,7 @@ ipcMain.handle('getTableStructure', async (event, config) => {
   let monitoredConnection = null;
 
   try {
-    // Se recebermos apenas o connectionId, precisamos buscar os detalhes da conexão
+    
     if (config.connectionId && (!config.host || !config.port || !config.username || !config.database)) {
       console.log(`Getting connection details for table structure, ID: ${config.connectionId}`);
       const connections = store.get('connections') || [];
@@ -1259,7 +1259,7 @@ ipcMain.handle('getTableStructure', async (event, config) => {
         };
       }
       
-      // Preencher os dados da conexão
+      
       config.host = connectionDetails.host;
       config.port = connectionDetails.port;
       config.username = connectionDetails.username;
@@ -1275,7 +1275,7 @@ ipcMain.handle('getTableStructure', async (event, config) => {
       };
     }
 
-    // Tentar usar uma conexão monitorada já existente
+    
     let useMonitoredConnection = false;
     
     if (config.connectionId) {
@@ -1287,7 +1287,7 @@ ipcMain.handle('getTableStructure', async (event, config) => {
       }
     }
     
-    // Se não temos uma conexão monitorada, criamos uma nova
+    
     if (!useMonitoredConnection) {
       connection = await mysql.createConnection({
         host: config.host,
@@ -1538,13 +1538,13 @@ ipcMain.handle('get-project-logs', async (event, config) => {
     const lines = logContent.split('\n');
     console.log(`Found ${lines.length} lines in log file`);
     
-    // Display first few lines to help with debugging
+    
     console.log('First 5 lines of log:');
     for (let i = 0; i < Math.min(5, lines.length); i++) {
       console.log(`Line ${i+1}: "${lines[i]}"`);
     }
     
-    // Simple parser that works with various Laravel log formats
+    
     const logEntries = [];
     let currentEntry = null;
     
@@ -1552,17 +1552,17 @@ ipcMain.handle('get-project-logs', async (event, config) => {
       const line = lines[i].trim();
       if (!line) continue;
       
-      // Check if this is a new log entry by looking for the timestamp pattern
-      // Laravel logs usually start with a timestamp in brackets
+      
+      
       const timestampMatch = line.match(/^\[(\d{4}-\d{2}-\d{2}[T\s]\d{2}:\d{2}:\d{2}\.?\d*(?:[\+-]\d{4})?)\]/);
       
       if (timestampMatch) {
-        // If we have a current entry, add it to the results before starting new one
+        
         if (currentEntry) {
           logEntries.push(currentEntry);
         }
         
-        // Try to determine log type from the line
+        
         let type = 'info';
         if (line.toLowerCase().includes('error') || line.toLowerCase().includes('exception')) {
           type = 'error';
@@ -1574,36 +1574,36 @@ ipcMain.handle('get-project-logs', async (event, config) => {
           type = 'info';
         }
         
-        // Start a new entry
+        
         currentEntry = {
           id: `log_${Date.now()}_${i}`,
           timestamp: new Date(timestampMatch[1]).getTime(),
           type: type.toLowerCase(),
-          message: line, // Store the whole line as message initially
+          message: line, 
           stack: null,
           file: logFileName
         };
       } else if (currentEntry) {
-        // This is a continuation of the previous entry
+        
         if (line.includes('Stack trace:')) {
           currentEntry.stack = '';
         } else if (currentEntry.stack !== null) {
           currentEntry.stack += line + '\n';
         } else {
-          // Append to the message
+          
           currentEntry.message += '\n' + line;
         }
       }
     }
     
-    // Don't forget the last entry
+    
     if (currentEntry) {
       logEntries.push(currentEntry);
     }
     
     console.log(`Parsed ${logEntries.length} log entries`);
     
-    // If no entries were found, provide a single entry with raw file content sample
+    
     if (logEntries.length === 0) {
       console.log('No parsable log entries found, providing raw sample');
       
@@ -1633,9 +1633,9 @@ ipcMain.handle('get-project-logs', async (event, config) => {
 });
 
 ipcMain.handle('delete-project-log', async (event, logId) => {
-  // In a real implementation, this would delete the specific log entry
-  // This is a stub as we can't easily delete a specific log from a log file
-  // without rewriting the entire file
+  
+  
+  
   console.log('Delete log requested for:', logId);
   return { success: true };
 });
@@ -1652,7 +1652,7 @@ ipcMain.handle('clear-all-project-logs', async (event, config) => {
       return { success: false, message: 'Logs directory not found' };
     }
 
-    // Get all log files
+    
     const logFiles = fs.readdirSync(logsPath)
       .filter(file => file.endsWith('.log'));
     
@@ -1662,7 +1662,7 @@ ipcMain.handle('clear-all-project-logs', async (event, config) => {
 
     console.log(`Clearing ${logFiles.length} log files in ${logsPath}`);
     
-    // Clear each log file (write an empty string to it)
+    
     let clearedCount = 0;
     for (const logFile of logFiles) {
       try {
@@ -1686,29 +1686,29 @@ ipcMain.handle('clear-all-project-logs', async (event, config) => {
   }
 });
 
-// Database monitoring
+
 const dbMonitoringConnections = new Map();
-const dbActivityConnections = new Map();  // Nova estrutura para conexões de monitoramento via triggers
+const dbActivityConnections = new Map();  
 
 function setupMonitoring (connection, monitoredTables) {
   if (!connection) return false;
 
-  // Verificar se a conexão já foi modificada para evitar sobreposição
+  
   if (connection._isMonitored) {
     console.log('[MONITOR] This connection is already being monitored');
     return true;
   }
 
-  // Iniciar monitoramento real-time com polling
+  
   startProcessListPolling(connection);
   
-  // Marcar conexão como monitorada
+  
   connection._isMonitored = true;
   
   return true;
 }
 
-// Nova função para monitorar o banco por meio de polling do process list
+
 async function startProcessListPolling (connection) {
   if (!connection || !connection._config) {
     console.error('[MONITOR] Invalid connection for process list polling');
@@ -1719,10 +1719,10 @@ async function startProcessListPolling (connection) {
   
   console.log(`[MONITOR] Starting process list polling for connection ${connectionId}`);
   
-  // Cache de queries já processadas (para evitar duplicatas)
+  
   connection._processedQueries = new Set();
   
-  // Função que executa o polling
+  
   const pollProcessList = async () => {
     if (!dbMonitoringConnections.has(connectionId)) {
       if (connection._pollingInterval) {
@@ -1734,7 +1734,7 @@ async function startProcessListPolling (connection) {
     }
     
     try {
-      // Consultar a lista de processos em execução
+      
       const [processList] = await connection.query(`
         SELECT 
           id,
@@ -1751,50 +1751,50 @@ async function startProcessListPolling (connection) {
           AND command != 'Sleep'
       `);
       
-      // Processar cada processo
+      
       for (const process of processList) {
-        // Ignorar processos sem informação
+        
         if (!process.info) continue;
         
-        // Identificar SQL
+        
         const sql = process.info;
         
-        // Criar um hash para identificar a query (para evitar duplicatas)
+        
         const queryHash = require('crypto')
           .createHash('md5')
           .update(`${process.id}-${sql}`)
           .digest('hex');
         
-        // Se já processamos esta query recentemente, pular
+        
         if (connection._processedQueries.has(queryHash)) {
           continue;
         }
         
-        // Adicionar à lista de queries processadas
+        
         connection._processedQueries.add(queryHash);
         
-        // Limitar o tamanho do cache
+        
         if (connection._processedQueries.size > 100) {
-          // Limpar primeiro terço do cache para evitar crescimento descontrolado
+          
           const itemsToDelete = Array.from(connection._processedQueries).slice(0, 30);
           for (const item of itemsToDelete) {
             connection._processedQueries.delete(item);
           }
         }
         
-        // Extrair informações da query
+        
         let operation = 'QUERY';
         let tableName = 'unknown';
         
-        // Identificar a operação e tabela
+        
         const firstWord = sql.trim().split(' ')[0].toUpperCase();
         
         if (['SELECT', 'INSERT', 'UPDATE', 'DELETE', 'CREATE', 'ALTER', 'DROP', 'TRUNCATE'].includes(firstWord)) {
           operation = firstWord;
           
-          // Expressões regulares para extrair tabelas de diferentes operações
+          
           if (operation === 'SELECT') {
-            // SELECT ... FROM table
+            
             const match = sql.match(/FROM\s+`?([a-zA-Z0-9_]+)`?/i);
             if (match && match[1]) {
               tableName = match[1].replace(/`/g, '');
@@ -1806,7 +1806,7 @@ async function startProcessListPolling (connection) {
               tableName = match[1].replace(/`/g, '');
             }
           } else if (operation === 'UPDATE') {
-            // UPDATE table
+            
             const match = sql.match(/UPDATE\s+`?([a-zA-Z0-9_]+)`?/i);
             if (match && match[1]) {
               tableName = match[1].replace(/`/g, '');
@@ -1818,7 +1818,7 @@ async function startProcessListPolling (connection) {
               tableName = match[1].replace(/`/g, '');
             }
           } else if (['CREATE', 'ALTER', 'DROP', 'TRUNCATE'].includes(operation)) {
-            // CREATE/ALTER/DROP/TRUNCATE TABLE table
+            
             const match = sql.match(/(CREATE|ALTER|DROP|TRUNCATE)\s+TABLE\s+`?([a-zA-Z0-9_]+)`?/i);
             if (match && match[2]) {
               tableName = match[2].replace(/`/g, '');
@@ -1914,12 +1914,12 @@ ipcMain.handle('start-db-monitoring', async (event, connectionId) => {
     console.log(`Connection found: ${connection.name}`);
     console.log(`Details: ${connection.host}:${connection.port}/${connection.database}`);
     
-    // Check if we have all necessary information
+    
     if (!connection.host || !connection.port || !connection.username || !connection.database) {
       return { success: false, message: 'Incomplete connection information' };
     }
     
-    // Create database connection
+    
     const dbConnection = await mysql.createConnection({
       host: connection.host,
       port: connection.port,
@@ -1937,7 +1937,7 @@ ipcMain.handle('start-db-monitoring', async (event, connectionId) => {
     await dbConnection.query('SELECT 1');
     console.log('Connection test successful');
     
-    // Criar tabela de log se não existir - esquema melhorado
+    
     await dbConnection.query(`
       CREATE TABLE IF NOT EXISTS ${activityLogTable} (
         id INT AUTO_INCREMENT PRIMARY KEY,
@@ -1954,7 +1954,7 @@ ipcMain.handle('start-db-monitoring', async (event, connectionId) => {
     
     console.log(`Activity log table created/verified: ${activityLogTable}`);
     
-    // Obter lista de tabelas
+    
     const [tables] = await dbConnection.query(`
       SELECT table_name 
       FROM information_schema.tables 
@@ -1965,7 +1965,7 @@ ipcMain.handle('start-db-monitoring', async (event, connectionId) => {
     
     console.log(`Found ${tables.length} tables to monitor in ${connection.database}`);
     
-    // Criar triggers para cada tabela
+    
     let triggersCreated = 0;
     for (const table of tables) {
       const tableName = table.table_name || table.TABLE_NAME;
@@ -1973,12 +1973,12 @@ ipcMain.handle('start-db-monitoring', async (event, connectionId) => {
       try {
         console.log(`Setting up triggers for table ${tableName}`);
         
-        // Remover triggers existentes
+        
         await dbConnection.query(`DROP TRIGGER IF EXISTS ${tableName}_after_insert`);
         await dbConnection.query(`DROP TRIGGER IF EXISTS ${tableName}_after_update`);
         await dbConnection.query(`DROP TRIGGER IF EXISTS ${tableName}_after_delete`);
         
-        // Obter colunas da tabela
+        
         const [columns] = await dbConnection.query(`
           SELECT COLUMN_NAME, COLUMN_KEY
           FROM INFORMATION_SCHEMA.COLUMNS 
@@ -1986,16 +1986,16 @@ ipcMain.handle('start-db-monitoring', async (event, connectionId) => {
           ORDER BY ORDINAL_POSITION
         `, [connection.database, tableName]);
         
-        // Extrair nomes das colunas
+        
         const columnNames = columns.map(col => col.COLUMN_NAME || col.column_name);
         
-        // Encontrar chave primária ou coluna ID
+        
         const primaryKeyColumn = columns.find(col => 
           (col.COLUMN_KEY === 'PRI') || 
           ['id', 'uuid', 'key'].includes(col.COLUMN_NAME.toLowerCase())
         );
         
-        // Determinar como identificar registros
+        
         let idRef, oldIdRef;
         
         if (primaryKeyColumn) {
@@ -2004,7 +2004,7 @@ ipcMain.handle('start-db-monitoring', async (event, connectionId) => {
           oldIdRef = `COALESCE(OLD.\`${idColumn}\`, 'unknown')`;
           console.log(`Using primary key column: ${idColumn} for table ${tableName}`);
         } else if (columnNames.length > 0) {
-          // Usar primeira coluna se não tiver ID
+          
           idRef = `CONCAT('Row with ${columnNames[0]}=', COALESCE(NEW.\`${columnNames[0]}\`, 'null'))`;
           oldIdRef = `CONCAT('Row with ${columnNames[0]}=', COALESCE(OLD.\`${columnNames[0]}\`, 'null'))`;
           console.log(`Using first column: ${columnNames[0]} for table ${tableName}`);
@@ -2014,15 +2014,15 @@ ipcMain.handle('start-db-monitoring', async (event, connectionId) => {
           console.log(`No suitable identifier column found for table ${tableName}`);
         }
         
-        // Selecionar as primeiras colunas para previsualização (no máximo 5)
+        
         const previewColumns = columnNames.slice(0, 5);
         
-        // Preview strings para inserções
+        
         const insertPreview = previewColumns.map(col => 
           `'${col}: ', COALESCE(NEW.\`${col}\`, 'null')`
         ).join(", ' | ', ");
         
-        // Preview strings para atualizações
+        
         const updatePreviewParts = previewColumns.map(col => 
           `IF(
             (OLD.\`${col}\` IS NULL AND NEW.\`${col}\` IS NOT NULL) OR 
@@ -2034,12 +2034,12 @@ ipcMain.handle('start-db-monitoring', async (event, connectionId) => {
         );
         const updatePreview = `CONCAT_WS(', ', ${updatePreviewParts.join(', ')})`;
         
-        // Preview strings para exclusões
+        
         const deletePreview = previewColumns.map(col => 
           `'${col}: ', COALESCE(OLD.\`${col}\`, 'null')`
         ).join(", ' | ', ");
         
-        // Criar trigger para INSERT
+        
         await dbConnection.query(`
           CREATE TRIGGER ${tableName}_after_insert
           AFTER INSERT ON ${tableName}
@@ -2062,7 +2062,7 @@ ipcMain.handle('start-db-monitoring', async (event, connectionId) => {
           END;
         `);
         
-        // Criar trigger para UPDATE
+        
         await dbConnection.query(`
           CREATE TRIGGER ${tableName}_after_update
           AFTER UPDATE ON ${tableName}
@@ -2087,7 +2087,7 @@ ipcMain.handle('start-db-monitoring', async (event, connectionId) => {
           END;
         `);
         
-        // Criar trigger para DELETE
+        
         await dbConnection.query(`
           CREATE TRIGGER ${tableName}_after_delete
           AFTER DELETE ON ${tableName}
@@ -2119,7 +2119,7 @@ ipcMain.handle('start-db-monitoring', async (event, connectionId) => {
     
     console.log(`Created ${triggersCreated} triggers across ${tables.length} tables`);
     
-    // Obter atividades iniciais
+    
     const [initialActivities] = await dbConnection.query(`
       SELECT 
         id,
@@ -2135,16 +2135,16 @@ ipcMain.handle('start-db-monitoring', async (event, connectionId) => {
     
     console.log(`Found ${initialActivities.length} initial activities`);
     
-    // Armazenar a conexão para uso posterior
+    
     dbMonitoringConnections.set(connectionId, dbConnection);
     
-    // Enviar as atividades iniciais para o frontend
+    
     if (mainWindow) {
       initialActivities.forEach(activity => {
         mainWindow.webContents.send(`db-operation-${connectionId}`, activity);
       });
       
-      // Enviar mensagem informativa
+      
       mainWindow.webContents.send(`db-operation-${connectionId}`, {
         timestamp: Date.now(),
         type: 'INFO',
@@ -2153,7 +2153,7 @@ ipcMain.handle('start-db-monitoring', async (event, connectionId) => {
       });
     }
     
-    // Iniciar polling para novas atividades
+    
     const lastId = initialActivities.length > 0 ? initialActivities[0].id : 0;
     startActivityPolling(connectionId, dbConnection, activityLogTable, lastId);
     
@@ -2173,16 +2173,16 @@ ipcMain.handle('start-db-monitoring', async (event, connectionId) => {
   }
 });
 
-// Função para iniciar polling de atividades
+
 function startActivityPolling (connectionId, connection, activityLogTable, lastId) {
   console.log(`Starting activity polling for connection ${connectionId}, last ID: ${lastId}`);
   
-  // Armazenar o último ID processado
+  
   connection._lastActivityId = lastId;
   
-  // Função para buscar novas atividades
+  
   const pollActivities = async () => {
-    // Verificar se a conexão ainda está ativa
+    
     if (!dbMonitoringConnections.has(connectionId)) {
       console.log(`Polling stopped for connection ${connectionId}`);
       if (connection._pollingInterval) {
@@ -2193,7 +2193,7 @@ function startActivityPolling (connectionId, connection, activityLogTable, lastI
     }
     
     try {
-      // Buscar novas atividades
+      
       const [activities] = await connection.query(`
         SELECT 
           id,
@@ -2211,13 +2211,13 @@ function startActivityPolling (connectionId, connection, activityLogTable, lastI
       if (activities.length > 0) {
         console.log(`Found ${activities.length} new activities, types: ${activities.map(a => a.type).join(', ')}`);
         
-        // Atualizar o último ID
+        
         connection._lastActivityId = activities[activities.length - 1].id;
         
-        // Enviar atividades para o frontend
+        
         if (mainWindow) {
           activities.forEach(activity => {
-            // Garantir que todas as propriedades existam
+            
             const formattedActivity = {
               ...activity,
               timestamp: activity.timestamp || new Date().toISOString(),
@@ -2234,7 +2234,7 @@ function startActivityPolling (connectionId, connection, activityLogTable, lastI
     }
   };
   
-  // Executar imediatamente e então a cada 1 segundo (mais rápido para melhor responsividade)
+  
   pollActivities();
   connection._pollingInterval = setInterval(pollActivities, 1000);
 }
@@ -2249,16 +2249,16 @@ ipcMain.handle('stop-db-monitoring', async (event, connectionId) => {
       return { success: false, message: 'Not monitoring this connection' };
     }
     
-    // Limpar polling
+    
     if (connection._pollingInterval) {
       clearInterval(connection._pollingInterval);
       connection._pollingInterval = null;
     }
     
-    // Fechar conexão
+    
     await connection.end();
     
-    // Remover do mapa
+    
     dbMonitoringConnections.delete(connectionId);
     
     return { success: true, message: 'Monitoring stopped' };
@@ -2268,7 +2268,7 @@ ipcMain.handle('stop-db-monitoring', async (event, connectionId) => {
   }
 });
 
-// Novo método para monitorar mudanças no banco de dados usando triggers
+
 ipcMain.handle('monitor-database-changes', async (event, connectionDetails) => {
   let connection = null;
   let triggerConnection = null;
@@ -2278,13 +2278,13 @@ ipcMain.handle('monitor-database-changes', async (event, connectionDetails) => {
   try {
     console.log(`Setting up trigger-based monitoring for connection ${connectionId}`);
     
-    // Validar parâmetros
+    
     if (!connectionDetails || !connectionDetails.database) {
       console.error('Database name is required for monitoring');
       return { success: false, message: 'Database name is required' };
     }
     
-    // Limpar conexão anterior se existir
+    
     if (dbActivityConnections.has(connectionId)) {
       try {
         const existingConnection = dbActivityConnections.get(connectionId);
@@ -2305,11 +2305,11 @@ ipcMain.handle('monitor-database-changes', async (event, connectionDetails) => {
     
     console.log(`Creating connection to ${connectionDetails.host}:${connectionDetails.port}/${database}`);
     
-    // Obter detalhes da conexão
+    
     let host, port, user, password;
     
     if (connectionDetails.host) {
-      // Se os detalhes já estão fornecidos diretamente
+      
       host = String(connectionDetails.host || '');
       port = Number(connectionDetails.port || 3306);
       user = String(connectionDetails.username || connectionDetails.user || '');
@@ -2371,26 +2371,26 @@ ipcMain.handle('monitor-database-changes', async (event, connectionDetails) => {
     
     console.log(`Found ${tables.length} tables to monitor`);
     
-    // Criar triggers para cada tabela
+    
     for (const table of tables) {
       const tableName = table.table_name || table.TABLE_NAME;
       
       try {
         console.log(`Setting up triggers for table ${tableName}`);
         
-        // Remover triggers existentes
+        
         await connection.query(`DROP TRIGGER IF EXISTS ${tableName}_after_insert`).catch(() => {});
         await connection.query(`DROP TRIGGER IF EXISTS ${tableName}_after_update`).catch(() => {});
         await connection.query(`DROP TRIGGER IF EXISTS ${tableName}_after_delete`).catch(() => {});
         
-        // Obter colunas da tabela
+        
         const [columns] = await connection.query(`
           SELECT COLUMN_NAME 
           FROM INFORMATION_SCHEMA.COLUMNS 
           WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ?
         `, [database, tableName]);
         
-        // Extrair nomes das colunas
+        
         const columnNames = columns.map(col => col.COLUMN_NAME || col.column_name);
         const hasId = columnNames.some(name => 
           name.toLowerCase() === 'id' || 
@@ -2398,7 +2398,7 @@ ipcMain.handle('monitor-database-changes', async (event, connectionDetails) => {
           name.toLowerCase() === 'key'
         );
         
-        // Determinar como identificar registros
+        
         let idRef = '';
         if (hasId) {
           idRef = `CONCAT_WS('', 
@@ -2511,7 +2511,7 @@ ipcMain.handle('monitor-database-changes', async (event, connectionDetails) => {
     
     console.log(`Retrieved ${initialActivities.length} initial activities`);
     
-    // Armazenar as conexões para uso posterior
+    
     dbActivityConnections.set(connectionId, {
       connection: connection,
       triggerConnection: triggerConnection,
@@ -2519,7 +2519,7 @@ ipcMain.handle('monitor-database-changes', async (event, connectionDetails) => {
       lastId: initialActivities.length > 0 ? initialActivities[0].id : 0
     });
     
-    // Enviar notificação de monitoramento iniciado
+    
     if (mainWindow) {
       mainWindow.webContents.send(`db-activity-${connectionId}`, {
         connectionId: connectionId,
@@ -2538,7 +2538,7 @@ ipcMain.handle('monitor-database-changes', async (event, connectionDetails) => {
   } catch (error) {
     console.error('Error setting up database monitoring:', error);
     
-    // Fechar conexões em caso de erro
+    
     if (connection) {
       try {
         await connection.end();
@@ -2562,12 +2562,12 @@ ipcMain.handle('monitor-database-changes', async (event, connectionDetails) => {
   }
 });
 
-// Método para obter mudanças desde a última verificação
+
 ipcMain.handle('get-database-changes', async (event, connectionId, lastId = 0) => {
   try {
     console.log(`Getting database changes for connection ${connectionId}, lastId: ${lastId}`);
     
-    // Verificar se temos uma conexão ativa para este ID
+    
     const connectionData = dbActivityConnections.get(connectionId);
     
     if (!connectionData || !connectionData.triggerConnection) {
@@ -2577,14 +2577,14 @@ ipcMain.handle('get-database-changes', async (event, connectionId, lastId = 0) =
     
     const { triggerConnection, activityLogTable } = connectionData;
     
-    // Se não for fornecido um lastId, usar o último ID registrado
+    
     if (!lastId) {
       lastId = connectionData.lastId || 0;
     }
     
     console.log(`Querying for activities with ID > ${lastId}`);
     
-    // Consultar atividades novas
+    
     const [activities] = await triggerConnection.query(`
       SELECT 
         id,
@@ -2601,7 +2601,7 @@ ipcMain.handle('get-database-changes', async (event, connectionId, lastId = 0) =
     
     console.log(`Found ${activities.length} new activities`);
     
-    // Atualizar o último ID se houver novos registros
+    
     if (activities.length > 0) {
       connectionData.lastId = Math.max(...activities.map(a => a.id));
       console.log(`Updated lastId to ${connectionData.lastId}`);
@@ -2620,7 +2620,7 @@ ipcMain.handle('get-database-changes', async (event, connectionId, lastId = 0) =
   }
 });
 
-// Método para parar o monitoramento baseado em triggers
+
 ipcMain.handle('stop-trigger-monitoring', async (event, connectionId) => {
   try {
     console.log(`Stopping trigger-based monitoring for connection ${connectionId}`);
@@ -2632,7 +2632,7 @@ ipcMain.handle('stop-trigger-monitoring', async (event, connectionId) => {
       return { success: false, message: 'Not monitoring this connection' };
     }
     
-    // Fechar conexões
+    
     if (connectionData.connection) {
       await connectionData.connection.end();
     }
@@ -2641,7 +2641,7 @@ ipcMain.handle('stop-trigger-monitoring', async (event, connectionId) => {
       await connectionData.triggerConnection.end();
     }
     
-    // Remover do mapa
+    
     dbActivityConnections.delete(connectionId);
     
     console.log(`Trigger-based monitoring stopped for ${connectionId}`);
@@ -2653,9 +2653,9 @@ ipcMain.handle('stop-trigger-monitoring', async (event, connectionId) => {
   }
 });
 
-// Cleanup database monitoring connections when the app is closing
+
 app.on('before-quit', async () => {
-  // Close all monitoring connections
+  
   for (const [connectionId, connection] of dbMonitoringConnections.entries()) {
     try {
       await connection.end();
@@ -2665,10 +2665,10 @@ app.on('before-quit', async () => {
     }
   }
   
-  // Clear the map
+  
   dbMonitoringConnections.clear();
   
-  // Close all trigger-based monitoring connections
+  
   for (const [connectionId, connectionData] of dbActivityConnections.entries()) {
     try {
       if (connectionData.connection) {
@@ -2683,11 +2683,11 @@ app.on('before-quit', async () => {
     }
   }
   
-  // Clear the trigger connections map
+  
   dbActivityConnections.clear();
 });
 
-// Novo manipulador para executar comandos SQL diretamente (para testes)
+
 ipcMain.handle('execute-test-operations', async (event, connectionId) => {
   try {
     console.log(`Executing test operations for connection ${connectionId}`);
@@ -2696,7 +2696,7 @@ ipcMain.handle('execute-test-operations', async (event, connectionId) => {
       return { success: false, message: 'Connection ID is required' };
     }
     
-    // Verificar se temos uma conexão ativa
+    
     if (!dbMonitoringConnections.has(connectionId)) {
       console.error(`No active monitoring connection for ${connectionId}`);
       return { success: false, message: 'No active monitoring connection' };
@@ -2704,7 +2704,7 @@ ipcMain.handle('execute-test-operations', async (event, connectionId) => {
     
     const connection = dbMonitoringConnections.get(connectionId);
     
-    // Criar uma tabela temporária para testes
+    
     console.log('Creating temporary test table');
     await connection.query(`
       CREATE TABLE IF NOT EXISTS _larabase_test_table (
@@ -2716,7 +2716,7 @@ ipcMain.handle('execute-test-operations', async (event, connectionId) => {
       )
     `);
     
-    // 1. INSERT - Inserir um registro
+    
     console.log('Executing INSERT test');
     const [insertResult] = await connection.query(`
       INSERT INTO _larabase_test_table (title, description)
@@ -2726,10 +2726,10 @@ ipcMain.handle('execute-test-operations', async (event, connectionId) => {
     const insertId = insertResult.insertId;
     console.log(`Inserted record with ID ${insertId}`);
     
-    // Pequena pausa para garantir que o trigger seja executado
+    
     await new Promise(resolve => setTimeout(resolve, 500));
     
-    // 2. UPDATE - Atualizar o registro
+    
     console.log('Executing UPDATE test');
     await connection.query(`
       UPDATE _larabase_test_table
@@ -2741,10 +2741,10 @@ ipcMain.handle('execute-test-operations', async (event, connectionId) => {
     
     console.log(`Updated record with ID ${insertId}`);
     
-    // Pequena pausa para garantir que o trigger seja executado
+    
     await new Promise(resolve => setTimeout(resolve, 500));
     
-    // 3. DELETE - Excluir o registro
+    
     console.log('Executing DELETE test');
     await connection.query(`
       DELETE FROM _larabase_test_table
@@ -2753,7 +2753,7 @@ ipcMain.handle('execute-test-operations', async (event, connectionId) => {
     
     console.log(`Deleted record with ID ${insertId}`);
     
-    // Verificar eventos capturados
+    
     const [activityLogs] = await connection.query(`
       SELECT action_type, table_name, record_id, details 
       FROM larabase_db_activity_log 
@@ -2779,20 +2779,20 @@ ipcMain.handle('execute-test-operations', async (event, connectionId) => {
   }
 });
 
-// Add this function after the other database-related IPC handlers
 
-// Get database relationships for diagram visualization
+
+
 ipcMain.handle('get-database-relationships', async (event, config) => {
   let connection;
   try {
-    // Helper function to get connection details
+    
     function getConnectionDetails (connectionId) {
       console.log(`Getting connection details for diagram, ID: ${connectionId}`);
       const connections = store.get('connections') || [];
       return connections.find(conn => conn.id === connectionId);
     }
 
-    // Handle the case where only the connectionId is provided
+    
     if (config.connectionId && (!config.host || !config.port || !config.username || !config.database)) {
       const connectionDetails = getConnectionDetails(config.connectionId);
       if (!connectionDetails) {
@@ -2809,7 +2809,7 @@ ipcMain.handle('get-database-relationships', async (event, config) => {
       config.database = connectionDetails.database;
     }
 
-    // Validate required parameters
+    
     if (!config.host || !config.port || !config.username || !config.database) {
       console.error('Missing connection parameters for diagram:', config);
       return {
@@ -2830,7 +2830,7 @@ ipcMain.handle('get-database-relationships', async (event, config) => {
 
     console.log('Connected to database successfully');
 
-    // Query to get all foreign key constraints from information_schema
+    
     const [rows] = await connection.query(`
       SELECT 
         TABLE_NAME AS sourceTable,
@@ -2850,11 +2850,11 @@ ipcMain.handle('get-database-relationships', async (event, config) => {
 
     console.log(`Found ${rows.length} table relationships in ${config.database}`);
     
-    // If no relationships were found, try to infer some basic relationships
+    
     if (rows.length === 0) {
       console.log('No explicit relationships found. Attempting to infer relationships from naming patterns...');
       
-      // Get all tables
+      
       const [tables] = await connection.query(`
         SELECT table_name 
         FROM information_schema.tables 
@@ -2862,13 +2862,13 @@ ipcMain.handle('get-database-relationships', async (event, config) => {
           AND table_type = 'BASE TABLE'
       `, [config.database]);
       
-      // Get columns for all tables
+      
       const inferredRelationships = [];
       
       for (const table of tables) {
         const tableName = table.table_name || table.TABLE_NAME;
         
-        // Get columns for this table
+        
         const [columns] = await connection.query(`
           SELECT 
             COLUMN_NAME as name,
@@ -2883,40 +2883,40 @@ ipcMain.handle('get-database-relationships', async (event, config) => {
             ORDINAL_POSITION
         `, [config.database, tableName]);
         
-        // Look for columns that might be foreign keys based on naming patterns
+        
         for (const column of columns) {
           const columnName = column.name;
           
-          // Common patterns for foreign keys: id_*, *_id, *_fk
+          
           if (columnName.endsWith('_id') || columnName.endsWith('_fk') || 
               (columnName.startsWith('id_') && columnName !== 'id')) {
               
-            // Extract potential table name from column name
+            
             let targetTable = null;
             
             if (columnName.endsWith('_id')) {
-              // users_id -> users
+              
               targetTable = columnName.substring(0, columnName.length - 3);
             } else if (columnName.endsWith('_fk')) {
-              // users_fk -> users
+              
               targetTable = columnName.substring(0, columnName.length - 3);
             } else if (columnName.startsWith('id_')) {
-              // id_users -> users
+              
               targetTable = columnName.substring(3);
             }
             
-            // Check if this is a valid table in the database
+            
             const targetExists = tables.some(t => 
               (t.table_name || t.TABLE_NAME).toLowerCase() === targetTable.toLowerCase()
             );
             
             if (targetExists) {
-              // Add this as an inferred relationship
+              
               inferredRelationships.push({
                 sourceTable: tableName,
                 sourceColumn: columnName,
                 targetTable: targetTable,
-                targetColumn: 'id', // assume the primary key is 'id'
+                targetColumn: 'id', 
                 constraintName: `inferred_${tableName}_${columnName}`,
                 inferred: true
               });
@@ -2927,7 +2927,7 @@ ipcMain.handle('get-database-relationships', async (event, config) => {
         }
       }
       
-      // If we found inferred relationships, return those
+      
       if (inferredRelationships.length > 0) {
         console.log(`Generated ${inferredRelationships.length} inferred relationships`);
         await connection.end();
@@ -2935,7 +2935,7 @@ ipcMain.handle('get-database-relationships', async (event, config) => {
       }
     }
 
-    // Close the connection
+    
     if (connection) {
       await connection.end();
     }
@@ -2944,7 +2944,7 @@ ipcMain.handle('get-database-relationships', async (event, config) => {
   } catch (error) {
     console.error('Error getting database relationships:', error);
     
-    // Close the connection if it exists
+    
     if (connection) {
       try {
         await connection.end();
@@ -2961,7 +2961,7 @@ ipcMain.handle('get-database-relationships', async (event, config) => {
   }
 }); 
 
-// Handler to find Laravel models for tables
+
 ipcMain.handle('find-models-for-tables', async (event, config) => {
   try {
     if (!config.projectPath) {
@@ -2972,20 +2972,20 @@ ipcMain.handle('find-models-for-tables', async (event, config) => {
       };
     }
 
-    // Common directories where models might be located in Laravel
+    
     const modelDirs = [
       path.join(config.projectPath, 'app', 'Models'),
       path.join(config.projectPath, 'app')
     ];
 
     const foundModels = {};
-    const modelFilesMap = {}; // Map to store all model files
-    const allModelClasses = []; // Store all model classes for later matching
+    const modelFilesMap = {}; 
+    const allModelClasses = []; 
 
-    // Scan for all PHP files in model directories
+    
     for (const dir of modelDirs) {
       if (fs.existsSync(dir)) {
-        // Function to read directory recursively
+        
         const readDirRecursive = (directory) => {
           try {
             const entries = fs.readdirSync(directory, { withFileTypes: true });
@@ -2999,7 +2999,7 @@ ipcMain.handle('find-models-for-tables', async (event, config) => {
                 try {
                   const content = fs.readFileSync(fullPath, 'utf8');
                   
-                  // Check if this is likely a model file
+                  
                   const isModel = content.includes('extends Model') || 
                                   content.includes('Illuminate\\Database\\Eloquent\\Model') ||
                                   content.includes('extends Authenticatable') ||
@@ -3007,7 +3007,7 @@ ipcMain.handle('find-models-for-tables', async (event, config) => {
                                   content.includes('Illuminate\\Contracts\\Auth\\Authenticatable');
                   
                   if (isModel) {
-                    // Extract namespace and class name
+                    
                     const namespaceMatch = content.match(/namespace\s+([^;]+);/);
                     const classMatch = content.match(/class\s+(\w+)/);
                     
@@ -3016,7 +3016,7 @@ ipcMain.handle('find-models-for-tables', async (event, config) => {
                       const namespace = namespaceMatch ? namespaceMatch[1] : null;
                       const fullName = namespace ? `${namespace}\\${className}` : className;
                       
-                      // Store the model file
+                      
                       modelFilesMap[className.toLowerCase()] = {
                         name: className,
                         namespace: namespace,
@@ -3026,7 +3026,7 @@ ipcMain.handle('find-models-for-tables', async (event, config) => {
                         content: content
                       };
                       
-                      // Add to the list of model classes
+                      
                       allModelClasses.push({
                         name: className,
                         namespace: namespace,
@@ -3051,12 +3051,12 @@ ipcMain.handle('find-models-for-tables', async (event, config) => {
       }
     }
 
-    // Function to find matching tables through various methods
+    
     const findTableForModel = (model) => {
       const content = model.content;
       const className = model.name;
       
-      // Method 1: Check for explicit table declaration
+      
       const tableMatch = content.match(/protected\s+\$table\s*=\s*['"](.*?)['"]/);
       if (tableMatch) {
         console.log(`Found explicit table name for ${className}: ${tableMatch[1]}`);
@@ -3431,9 +3431,9 @@ ipcMain.handle('get-migration-status', async (event, config) => {
     for (const line of lines) {
       // Check for new Laravel format (Laravel 10+):
       // "2014_10_12_000000_create_users_table ............................... [1] Ran"
-      // "2025_04_14_120118_test_teste_ssss .................................. Pending"
       
-      // Match pending migrations
+      
+      
       if (line.includes('Pending')) {
         const match = line.match(/^\s*([^\s].*?)\s+\.+\s+Pending\s*$/);
         if (match && match[1]) {
@@ -3443,7 +3443,7 @@ ipcMain.handle('get-migration-status', async (event, config) => {
         }
       }
       
-      // Match ran migrations with batch number
+      
       const ranMatch = line.match(/^\s*([^\s].*?)\s+\.+\s+\[(\d+)\]\s+Ran\s*$/);
       if (ranMatch && ranMatch[1] && ranMatch[2]) {
         const migrationName = ranMatch[1].trim();
@@ -3456,7 +3456,7 @@ ipcMain.handle('get-migration-status', async (event, config) => {
         console.log(`Found ran migration: ${migrationName} in batch ${batchNumber}`);
       }
       
-      // Also try to match the older format for backward compatibility
+      
       if (line.includes('| No ')) {
         const match = line.match(/\|\s*No\s*\|\s*(.*?)\s*\|/);
         if (match && match[1]) {
@@ -3487,14 +3487,14 @@ ipcMain.handle('get-migration-status', async (event, config) => {
       }
     }
     
-    // Se não encontramos batches no processo acima, vamos tentar um método alternativo
-    // Executar o comando "php artisan migrate:status" às vezes retorna um formato diferente
+    
+    
     if (batches.size === 0) {
       console.log('No batches found from migrate:status, trying to get from migration table...');
       
-      // Vamos executar uma consulta na tabela migrations para obter os batches
+      
       try {
-        // Ler o arquivo .env para obter informações de conexão com o banco
+        
         const envFilePath = path.join(config.projectPath, '.env');
         const envContent = fs.readFileSync(envFilePath, 'utf8');
         const dbConfig = {
@@ -3505,14 +3505,14 @@ ipcMain.handle('get-migration-status', async (event, config) => {
           database: extractEnvValue(envContent, 'DB_DATABASE') || 'laravel'
         };
         
-        // Criar uma conexão temporária com o banco
+        
         const connection = await mysql.createConnection(dbConfig);
         
-        // Obter todas as migrações do banco
+        
         const [rows] = await connection.query('SELECT * FROM migrations ORDER BY batch DESC, id DESC');
         
         if (rows && rows.length > 0) {
-          // Agrupar por batch
+          
           for (const row of rows) {
             const batchNumber = row.batch;
             const migrationName = row.migration;
@@ -3529,29 +3529,29 @@ ipcMain.handle('get-migration-status', async (event, config) => {
         await connection.end();
       } catch (dbError) {
         console.error('Error getting migrations from database:', dbError);
-        // Não falhar completamente se não conseguirmos acessar o banco
-        // Apenas criar pelo menos uma batch simulada para permitir rollback
+        
+        
         if (batches.size === 0) {
           batches.set(1, ['Example migration in batch 1']);
         }
       }
     }
     
-    // Se ainda não temos batches, vamos criar pelo menos uma para não quebrar a UI
+    
     if (batches.size === 0) {
       console.log('Creating a sample batch for UI...');
       batches.set(1, ['No migrations found in batch 1']);
     }
     
-    // Convert batches Map to array for JSON serialization
+    
     const batchesArray = Array.from(batches.entries()).map(([batchNumber, migrations]) => {
-      // Ordenar as migrações dentro de cada batch pelo timestamp da migração (mais recente primeiro)
-      // Formato típico: 2022_01_01_000000_create_users_table
+      
+      
       const sortedMigrations = [...migrations].sort((a, b) => {
-        // Extrair o timestamp da migração (primeiros 14 caracteres normalmente)
+        
         const timestampA = a.substring(0, 17);
         const timestampB = b.substring(0, 17);
-        // Ordenar do mais recente para o mais antigo
+        
         return timestampB.localeCompare(timestampA);
       });
       
@@ -3561,7 +3561,7 @@ ipcMain.handle('get-migration-status', async (event, config) => {
       };
     });
     
-    // Sort batches by batch number descending (newest first)
+    
     batchesArray.sort((a, b) => b.batch - a.batch);
 
     console.log(`Found ${pendingMigrations.length} pending migrations and ${batchesArray.length} batches`);
@@ -3584,12 +3584,12 @@ ipcMain.handle('get-migration-status', async (event, config) => {
   }
 });
 
-// Função auxiliar para extrair valores do arquivo .env
+
 function extractEnvValue (content, key) {
   const regex = new RegExp(`^${key}=(.*)$`, 'm');
   const match = content.match(regex);
   if (match && match[1]) {
-    // Remover aspas, se houver
+    
     return match[1].trim().replace(/^["']|["']$/g, '');
   }
   return null;
@@ -3609,7 +3609,7 @@ ipcMain.handle('execute-sql-query', async (event, config) => {
       };
     }
 
-    // Get connection details
+    
     const connections = store.get('connections') || [];
     const connectionDetails = connections.find(conn => conn.id === config.connectionId);
     
@@ -3621,14 +3621,14 @@ ipcMain.handle('execute-sql-query', async (event, config) => {
       };
     }
 
-    // Try to use an existing monitored connection
+    
     monitoredConnection = dbMonitoringConnections.get(config.connectionId);
     
     if (monitoredConnection) {
       console.log(`Using existing monitored connection for SQL query: ${config.connectionId}`);
       connection = monitoredConnection;
     } else {
-      // Create a new connection
+      
       connection = await mysql.createConnection({
         host: connectionDetails.host,
         port: connectionDetails.port,
@@ -3659,7 +3659,7 @@ ipcMain.handle('execute-sql-query', async (event, config) => {
       results: []
     };
   } finally {
-    // Only close the connection if it's not a monitored connection
+    
     if (connection && !monitoredConnection) {
       try {
         await connection.end();
@@ -3670,9 +3670,9 @@ ipcMain.handle('execute-sql-query', async (event, config) => {
   }
 });
 
-// Add this function after other database-related IPC handlers
 
-// List all databases available on a MySQL server
+
+
 ipcMain.handle('list-databases', async (event, config) => {
   let connection;
   
@@ -3685,7 +3685,7 @@ ipcMain.handle('list-databases', async (event, config) => {
       };
     }
 
-    // Create a connection without specifying a database
+    
     connection = await mysql.createConnection({
       host: config.host,
       port: config.port,
@@ -3698,9 +3698,9 @@ ipcMain.handle('list-databases', async (event, config) => {
     const [rows] = await connection.query('SHOW DATABASES');
     
     if (rows && rows.length > 0) {
-      // Extract database names
+      
       const databases = rows.map(row => row.Database || row.DATABASE)
-        // Filter out system databases
+        
         .filter(db => !['information_schema', 'performance_schema', 'mysql', 'sys'].includes(db));
       
       return { 
@@ -3758,7 +3758,7 @@ ipcMain.handle('updateRecord', async (event, config) => {
       throw new Error('Record data is required');
     }
     
-    // Construct the MySQL connection
+    
     const mysqlConfig = {
       host: connection.host,
       port: connection.port || 3306,
@@ -3770,26 +3770,26 @@ ipcMain.handle('updateRecord', async (event, config) => {
     let conn;
     
     try {
-      // Usar mysql2/promise para consistência
+      
       conn = await mysql.createConnection(mysqlConfig);
 
-      // Check if record has an ID (for UPDATE) or not (for INSERT)
-      // In this case, we're focusing on UPDATE
+      
+      
       if (!record.id) {
         throw new Error('Record must have an ID field to update');
       }
       
-      // Processar valores especiais - como datas
+      
       const processedRecord = {};
       for (const key in record) {
         let value = record[key];
         
-        // Se for uma string de data no formato ISO, converta para o formato MySQL
+        
         if (typeof value === 'string' && 
             (value.match(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/) || 
              value.match(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/))) {
           try {
-            // Converter para formato MySQL YYYY-MM-DD HH:MM:SS
+            
             const date = new Date(value);
             if (!isNaN(date.getTime())) {
               value = date.toISOString().slice(0, 19).replace('T', ' ');
@@ -3802,23 +3802,23 @@ ipcMain.handle('updateRecord', async (event, config) => {
         processedRecord[key] = value;
       }
       
-      // Build the SQL UPDATE statement with escaped column names
+      
       const columnUpdates = Object.keys(processedRecord)
-        .filter(key => key !== 'id') // Exclude ID from updates
-        .map(key => `\`${key}\` = ?`) // Escape column names with backticks
+        .filter(key => key !== 'id') 
+        .map(key => `\`${key}\` = ?`) 
         .join(', ');
       
       const updateValues = Object.keys(processedRecord)
         .filter(key => key !== 'id')
         .map(key => processedRecord[key]);
       
-      // Add the WHERE id value at the end
+      
       updateValues.push(processedRecord.id);
       
-      // Escape the table name too
+      
       const updateSql = `UPDATE \`${tableName}\` SET ${columnUpdates} WHERE \`id\` = ?`;
       
-      // Execute the UPDATE query usando Promise
+      
       const [result] = await conn.execute(updateSql, updateValues);
       
       return {
@@ -3840,13 +3840,13 @@ ipcMain.handle('updateRecord', async (event, config) => {
   }
 });
 
-// Adicionar handler para consulta com filtro SQL WHERE
+
 ipcMain.handle('getFilteredTableData', async (event, config) => {
   let connection;
   let monitoredConnection = null;
 
   try {
-    // Verificar parâmetros obrigatórios
+    
     if (!config.host || !config.port || !config.username || !config.database || !config.tableName || !config.filter) {
       return { 
         success: false, 
@@ -3856,7 +3856,7 @@ ipcMain.handle('getFilteredTableData', async (event, config) => {
       };
     }
 
-    // Tentar usar uma conexão monitorada já existente
+    
     if (config.connectionId) {
       monitoredConnection = dbMonitoringConnections.get(config.connectionId);
       if (monitoredConnection) {
@@ -3865,7 +3865,7 @@ ipcMain.handle('getFilteredTableData', async (event, config) => {
       }
     }
     
-    // Se não temos uma conexão monitorada, criamos uma nova
+    
     if (!monitoredConnection) {
       connection = await mysql.createConnection({
         host: config.host,
@@ -3886,7 +3886,7 @@ ipcMain.handle('getFilteredTableData', async (event, config) => {
       filterClause = filterClause.substring(5).trim();
     }
     
-    // Configurações de paginação
+    
     const page = config.page || 1;
     const limit = parseInt(config.limit) || 100;
     const offset = (page - 1) * limit;
@@ -3895,7 +3895,7 @@ ipcMain.handle('getFilteredTableData', async (event, config) => {
     console.log(`Filter: ${filterClause}`);
     console.log(`Page: ${page}, Limit: ${limit}, Offset: ${offset}`);
     
-    // Primeiro, obter a contagem total de registros que correspondem ao filtro
+    
     const countQuery = `SELECT COUNT(*) as total FROM ${tableName} WHERE ${filterClause}`;
     console.log(`Count query: ${countQuery}`);
     
@@ -3906,11 +3906,11 @@ ipcMain.handle('getFilteredTableData', async (event, config) => {
       console.log(`Total records matching filter: ${totalRecords}`);
     } catch (countError) {
       console.error('Error executing count query:', countError);
-      // Em caso de erro na contagem, continuamos com a consulta principal
-      // mas retornamos totalRecords = 0, o que pode causar problemas na paginação
+      
+      
     }
     
-    // Consulta principal para obter os dados filtrados com paginação
+    
     const dataQuery = `SELECT * FROM ${tableName} WHERE ${filterClause} LIMIT ${parseInt(limit)} OFFSET ${parseInt(offset)}`;
     console.log(`Data query: ${dataQuery}`);
     
@@ -3934,7 +3934,7 @@ ipcMain.handle('getFilteredTableData', async (event, config) => {
       totalRecords: 0
     };
   } finally {
-    // Apenas fechamos a conexão se NÃO for uma conexão monitorada
+    
     if (connection && !monitoredConnection) {
       try {
         await connection.end();
@@ -3945,9 +3945,9 @@ ipcMain.handle('getFilteredTableData', async (event, config) => {
   }
 });
 
-// Add handlers for pluralization functions
+
 ipcMain.handle('get-pluralize-function', () => {
-  // We can't return the function directly, so we just acknowledge the call
+  
   return true;
 });
 
@@ -3959,7 +3959,7 @@ ipcMain.handle('get-plural-form', (event, word) => {
   return pluralize.plural(word);
 });
 
-// Handler to temporarily update the database in a project's .env file
+
 ipcMain.handle('update-env-database', async (event, projectPath, database) => {
   try {
     if (!projectPath || !database) {
@@ -3977,23 +3977,23 @@ ipcMain.handle('update-env-database', async (event, projectPath, database) => {
       };
     }
 
-    // Read the current .env file
+    
     let envContent = fs.readFileSync(envPath, 'utf8');
     
-    // Divide o conteúdo em linhas para processamento linha por linha
+    
     const lines = envContent.split('\n');
     let dbLineFound = false;
     
-    // Processa cada linha individualmente para garantir que apenas linha ativa seja substituída
+    
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i];
       
-      // Ignora linhas comentadas
+      
       if (line.trim().startsWith('#')) {
         continue;
       }
       
-      // Procura pela linha DB_DATABASE que não está comentada
+      
       if (line.trim().startsWith('DB_DATABASE=')) {
         console.log(`Found active DB_DATABASE line: "${line}"`);
         lines[i] = `DB_DATABASE=${database}`;
@@ -4002,16 +4002,16 @@ ipcMain.handle('update-env-database', async (event, projectPath, database) => {
       }
     }
     
-    // Se não encontrou nenhuma linha DB_DATABASE ativa, adiciona uma nova
+    
     if (!dbLineFound) {
       console.log('No active DB_DATABASE line found, adding a new one');
       lines.push(`DB_DATABASE=${database}`);
     }
     
-    // Junta as linhas novamente em um único conteúdo
+    
     const updatedContent = lines.join('\n');
     
-    // Escreve o conteúdo atualizado de volta ao arquivo .env
+    
     fs.writeFileSync(envPath, updatedContent);
     
     console.log(`Successfully updated .env file with database: ${database}`);
@@ -4029,7 +4029,7 @@ ipcMain.handle('update-env-database', async (event, projectPath, database) => {
   }
 });
 
-// Adicionar handler para remover uma conexão e limpar dados relacionados
+
 ipcMain.handle('remove-connection', async (event, connectionId) => {
   try {
     if (!connectionId) {
@@ -4039,7 +4039,7 @@ ipcMain.handle('remove-connection', async (event, connectionId) => {
       };
     }
 
-    // Get current connections list
+    
     const connections = store.get('connections') || [];
     const connectionIndex = connections.findIndex(conn => conn.id === connectionId);
     
@@ -4050,29 +4050,29 @@ ipcMain.handle('remove-connection', async (event, connectionId) => {
       };
     }
 
-    // Remove the connection from the list
+    
     connections.splice(connectionIndex, 1);
     
-    // Save the updated connections list
+    
     store.set('connections', connections);
 
-    // Clean up related tabs
+    
     const openTabs = store.get('openTabs') || { tabs: [], activeTabId: null };
     const updatedTabs = {
       tabs: openTabs.tabs.filter(tab => tab.connectionId !== connectionId),
       activeTabId: openTabs.activeTabId
     };
 
-    // If the active tab was from this connection, reset it
+    
     if (updatedTabs.tabs.length === 0 || 
         !updatedTabs.tabs.find(tab => tab.id === updatedTabs.activeTabId)) {
       updatedTabs.activeTabId = updatedTabs.tabs.length > 0 ? updatedTabs.tabs[0].id : null;
     }
 
-    // Save the updated tabs
+    
     store.set('openTabs', updatedTabs);
 
-    // Stop database monitoring if running for this connection
+    
     try {
       if (dbMonitoringConnections.has(connectionId)) {
         const connection = dbMonitoringConnections.get(connectionId);
@@ -4086,7 +4086,7 @@ ipcMain.handle('remove-connection', async (event, connectionId) => {
         console.log(`Monitoring stopped for connection ${connectionId}`);
       }
 
-      // Also clean up trigger-based monitoring
+      
       if (dbActivityConnections.has(connectionId)) {
         const connectionData = dbActivityConnections.get(connectionId);
         if (connectionData) {
@@ -4102,7 +4102,7 @@ ipcMain.handle('remove-connection', async (event, connectionId) => {
       }
     } catch (monitoringError) {
       console.error(`Error stopping monitoring for connection ${connectionId}:`, monitoringError);
-      // Continue with the operation even if there's an error stopping monitoring
+      
     }
 
     return {
@@ -4118,9 +4118,9 @@ ipcMain.handle('remove-connection', async (event, connectionId) => {
   }
 });
 
-// Add the following handlers for database restoration
 
-// Handler to select SQL dump file
+
+
 ipcMain.handle('select-sql-dump-file', async () => {
   try {
     return await dialog.showOpenDialog(mainWindow, {
@@ -4137,7 +4137,7 @@ ipcMain.handle('select-sql-dump-file', async () => {
   }
 });
 
-// Handler to restore database from SQL dump
+
 ipcMain.handle('restore-database', async (event, config) => {
   try {
     if (!config.connectionId || !config.filePath) {
@@ -4147,7 +4147,7 @@ ipcMain.handle('restore-database', async (event, config) => {
       };
     }
 
-    // Get the connection details
+    
     const connections = store.get('connections') || [];
     const connection = connections.find(conn => conn.id === config.connectionId);
     
@@ -4158,12 +4158,12 @@ ipcMain.handle('restore-database', async (event, config) => {
       };
     }
 
-    // Create a unique channel ID for progress updates
+    
     const channelId = `restore-progress-${Date.now()}`;
     
-    // Start the restoration process asynchronously
-    // We don't await here because we want to return immediately with the channel ID
-    // and let the restoration run in the background
+    
+    
+    
     startDatabaseRestoration(event, connection, config, channelId)
       .catch(error => {
         console.error('Database restoration failed:', error);
@@ -4192,43 +4192,43 @@ ipcMain.handle('restore-database', async (event, config) => {
   }
 });
 
-// Function to handle the database restoration process
+
 async function startDatabaseRestoration (event, connection, config, channelId, customSendProgress = null) {
   const sendProgress = (data) => {
-    // Log progress updates for debugging
+    
     console.log(`Restoration progress: ${data.progress}% - ${data.status}`);
     
-    // If a custom progress function is provided, use it
+    
     if (typeof customSendProgress === 'function') {
       customSendProgress(data);
       return;
     }
     
-    // Otherwise use the default event sender
+    
     if (event && event.sender) {
       event.sender.send(channelId, data);
     }
   };
   
   try {
-    // Send initial progress
+    
     sendProgress({ 
       progress: 10, 
       status: 'Preparing to restore database...',
       complete: false
     });
     
-    // Make sure we have a proper connection in the config
-    // This is to avoid the error when building commands
+    
+    
     if (!config.connection && connection) {
       console.log('Moving connection object from parameter to config.connection');
       config.connection = connection;
     }
     
-    // Use let instead of const for variables that will be reassigned later
+    
     let { filePath, ignoredTables = [] } = config;
     
-    // Make sure we have a filePath in the config
+    
     if (!filePath && config.sqlFilePath) {
       filePath = config.sqlFilePath;
       config.filePath = config.sqlFilePath;
@@ -4236,19 +4236,19 @@ async function startDatabaseRestoration (event, connection, config, channelId, c
     
     let isGzipped = filePath.toLowerCase().endsWith('.gz');
     
-    // Determine Docker or local execution
+    
     const useDocker = connection.usingSail || 
                      (connection.dockerInfo && connection.dockerInfo.isDocker);
     const containerName = useDocker ? 
                          (connection.dockerInfo && connection.dockerInfo.dockerContainerName) : null;
     
-    // Log the file size for debugging
+    
     try {
       const stats = fs.statSync(filePath);
       const fileSizeMB = (stats.size / (1024 * 1024)).toFixed(2);
       console.log(`SQL dump file size: ${fileSizeMB}MB, gzipped: ${isGzipped}`);
       
-      // Update progress with file size info
+      
       sendProgress({ 
         progress: 15, 
         status: `Processing ${fileSizeMB}MB SQL ${isGzipped ? 'gzipped ' : ''}file...`,
@@ -4264,7 +4264,7 @@ async function startDatabaseRestoration (event, connection, config, channelId, c
       complete: false
     });
     
-    // Prepare the command based on environment and file type
+    
     let command = '';
     let commandArgs = [];
     
@@ -4283,7 +4283,7 @@ async function startDatabaseRestoration (event, connection, config, channelId, c
         `filtered_dump_${Date.now()}.sql`
       );
       
-      // Read the SQL dump and filter out ignored tables
+      
       await filterSqlDump(filePath, tempFilePath, ignoredTables, isGzipped, sendProgress);
       
       sendProgress({ 
@@ -4292,18 +4292,18 @@ async function startDatabaseRestoration (event, connection, config, channelId, c
         complete: false
       });
       
-      // Now use the filtered file for restoration
+      
       filePath = tempFilePath;
-      isGzipped = false; // The filtered file is plain SQL
+      isGzipped = false; 
     } else {
-      // No tables to filter, just update progress
+      
       sendProgress({ 
         progress: 40, 
         status: 'Preparing SQL dump file for restoration...',
         complete: false
       });
       
-      // Artificial delay to show progress
+      
       await new Promise(resolve => setTimeout(resolve, 500));
       
       sendProgress({ 
@@ -4313,15 +4313,15 @@ async function startDatabaseRestoration (event, connection, config, channelId, c
       });
     }
     
-    // Build the restoration command based on environment
+    
     if (useDocker && containerName) {
-      // Docker execution with containerName
+      
       config.connection.container = containerName;
       const dockerCmd = buildDockerRestoreCommand(config);
       command = dockerCmd.command;
       commandArgs = dockerCmd.args || [];
     } else {
-      // Local execution
+      
       const localCmd = buildLocalRestoreCommand(config);
       command = localCmd.command;
       commandArgs = localCmd.args || [];
@@ -4333,17 +4333,17 @@ async function startDatabaseRestoration (event, connection, config, channelId, c
       complete: false
     });
     
-    // Execute the command
+    
     try {
       const result = await executeRestoreCommand({ command, args: commandArgs }, filePath, sendProgress);
       
-      // Clean up temporary file if created
+      
       if (tempFilePath && fs.existsSync(tempFilePath)) {
         fs.unlinkSync(tempFilePath);
         console.log(`Temporary file ${tempFilePath} deleted successfully`);
       }
       
-      // Send completion status
+      
       sendProgress({ 
         progress: 100, 
         status: 'Database restored successfully',
@@ -4355,7 +4355,7 @@ async function startDatabaseRestoration (event, connection, config, channelId, c
     } catch (execError) {
       console.error('Error executing restore command:', execError);
       
-      // Clean up temporary file if created
+      
       if (tempFilePath && fs.existsSync(tempFilePath)) {
         try {
           fs.unlinkSync(tempFilePath);
@@ -4365,7 +4365,7 @@ async function startDatabaseRestoration (event, connection, config, channelId, c
         }
       }
       
-      // Send error status
+      
       sendProgress({ 
         progress: 100, 
         status: `Error: ${execError.message}`,
@@ -4379,7 +4379,7 @@ async function startDatabaseRestoration (event, connection, config, channelId, c
   } catch (error) {
     console.error('Error during database restoration:', error);
     
-    // Clean up temporary file if created
+    
     if (config.tempFilePath && fs.existsSync(config.tempFilePath)) {
       try {
         fs.unlinkSync(config.tempFilePath);
@@ -4388,7 +4388,7 @@ async function startDatabaseRestoration (event, connection, config, channelId, c
       }
     }
     
-    // Send error status
+    
     sendProgress({ 
       progress: 100, 
       status: `Error: ${error.message}`,
@@ -4406,7 +4406,7 @@ async function restoreDatabase (event, config) {
   const sender = event.sender;
   
   try {
-    // Validate the database connection before attempting to restore
+    
     try {
       await validateDatabaseConnection(config.connection);
       sender.send('restore:progress', { status: 'validating', progress: 10, message: 'Database connection validated' });
@@ -4415,7 +4415,7 @@ async function restoreDatabase (event, config) {
       return;
     }
     
-    // Build the appropriate restore command based on connection type
+    
     let command;
     try {
       if (config.connection && config.connection.docker) {
@@ -4432,7 +4432,7 @@ async function restoreDatabase (event, config) {
     console.log('Executing restore command:', command);
     sender.send('restore:progress', { status: 'preparing', progress: 20, message: 'Starting restoration process' });
     
-    // Log a more detailed message about what's happening
+    
     const logDetails = {
       command: command,
       databaseName: config.connection.database,
@@ -4442,8 +4442,8 @@ async function restoreDatabase (event, config) {
     };
     console.log('Restore details:', JSON.stringify(logDetails, null, 2));
     
-    // Execute the command
-    const child = exec(command, { shell: '/bin/bash' }); // Use bash shell for pipefail
+    
+    const child = exec(command, { shell: '/bin/bash' }); 
     let error = '';
     let output = '';
     
@@ -4451,12 +4451,12 @@ async function restoreDatabase (event, config) {
       output += data;
       console.log(`Restore stdout: ${data.toString().trim()}`);
       
-      // Parse the output to estimate progress
-      // MySQL dump restoration usually shows progress in percentage
+      
+      
       const progressMatch = data.toString().match(/(\d+)%/);
       if (progressMatch) {
         const progressValue = parseInt(progressMatch[1], 10);
-        const calculatedProgress = 20 + (progressValue * 0.8); // Scale from 20% to 100%
+        const calculatedProgress = 20 + (progressValue * 0.8); 
         sender.send('restore:progress', { 
           status: 'restoring', 
           progress: calculatedProgress, 
@@ -4466,12 +4466,12 @@ async function restoreDatabase (event, config) {
     });
     
     child.stderr.on('data', (data) => {
-      // Some MySQL tools output progress information to stderr
+      
       const dataStr = data.toString();
       error += dataStr;
       console.log(`Restore stderr: ${dataStr.trim()}`);
       
-      // Check if this is actually an error or just informational
+      
       if (!dataStr.includes('Warning') && !dataStr.includes('information_schema')) {
         console.log('Restore progress:', dataStr);
       }
@@ -4481,7 +4481,7 @@ async function restoreDatabase (event, config) {
       child.on('close', (code) => {
         if (code === 0) {
           console.log('Database restoration completed successfully');
-          // Verify if output or error contains any meaningful content
+          
           if (output.trim() || error.trim()) {
             console.log('Command output:', output.trim());
             console.log('Command error/info:', error.trim());
@@ -4489,7 +4489,7 @@ async function restoreDatabase (event, config) {
             console.warn('Warning: Command had no output. This might indicate a silent failure.');
           }
           
-          // Check if database has content after restore
+          
           validateDatabaseHasContent(config.connection)
             .then(result => {
               if (result.hasContent) {
@@ -4533,7 +4533,7 @@ async function restoreDatabase (event, config) {
   }
 }
 
-// Function to check if database has content after restoration
+
 async function validateDatabaseHasContent (connection) {
   try {
     if (!connection || !connection.host || !connection.database) {
@@ -4562,7 +4562,7 @@ async function validateDatabaseHasContent (connection) {
         return { hasContent: false, tableCount: 0 };
       }
       
-      // Check for at least one table with data
+      
       const tableCount = rows.length;
       console.log(`Found ${tableCount} tables in database`);
       
@@ -4576,11 +4576,6 @@ async function validateDatabaseHasContent (connection) {
   }
 }
 
-/**
- * Build a docker command for MySQL database restoration
- * @param {Object} config - The configuration object containing restoration settings
- * @returns {string} - The command to execute for docker restoration
- */
 function buildDockerRestoreCommand (config) {
   if (!config || !config.connection) {
     console.error('Invalid config or missing connection in buildDockerRestoreCommand:', config);
@@ -4590,11 +4585,11 @@ function buildDockerRestoreCommand (config) {
   const { connection, sqlFilePath, ignoredTables = [] } = config;
   const { host, user, password, database, port, container } = connection;
   
-  // Verificar se o arquivo é gzip
+  
   const isGzipped = sqlFilePath.toLowerCase().endsWith('.gz');
   console.log(`Building Docker restore command for ${isGzipped ? 'gzipped' : 'regular'} SQL file`);
   
-  // Verificar também se o arquivo não está vazio
+  
   try {
     const stats = fs.statSync(sqlFilePath);
     console.log(`SQL file size: ${(stats.size / 1024 / 1024).toFixed(2)} MB`);
@@ -4607,13 +4602,13 @@ function buildDockerRestoreCommand (config) {
     throw new Error(`Error with SQL file: ${err.message}`);
   }
   
-  // Verify container exists
+  
   if (!container) {
     console.error('Container name is missing from the Docker configuration');
     throw new Error('Docker container name is missing or invalid');
   }
   
-  // Base command for docker exec with error checking
+  
   let command = '';
   
   // Construir os comandos sed para filtrar as tabelas ignoradas
@@ -4656,21 +4651,16 @@ function buildDockerRestoreCommand (config) {
   // E também force para garantir que erros sejam reportados
   command += ` --binary-mode=1 --force`;
   
-  // Adicionar o comando para criar o banco de dados se não existir
+  
   command += ` --init-command="CREATE DATABASE IF NOT EXISTS \\\`${database}\\\`; USE \\\`${database}\\\`;"`;
   
-  // Add database name
+  
   command += ` ${database}`;
   
   console.log(`Docker restoration command: ${command}`);
   return command;
 }
 
-/**
- * Build a local command for MySQL database restoration
- * @param {Object} config - The configuration object containing restoration settings
- * @returns {string} - The command to execute for local restoration
- */
 function buildLocalRestoreCommand (config) {
   if (!config || !config.connection) {
     console.error('Invalid config or missing connection in buildLocalRestoreCommand:', config);
@@ -4680,11 +4670,11 @@ function buildLocalRestoreCommand (config) {
   const { connection, sqlFilePath, ignoredTables = [] } = config;
   const { host, user, password, database, port } = connection;
   
-  // Verificar se o arquivo é gzip
+  
   const isGzipped = sqlFilePath.toLowerCase().endsWith('.gz');
   console.log(`Building local restore command for ${isGzipped ? 'gzipped' : 'regular'} SQL file`);
   
-  // Verificar também se o arquivo não está vazio
+  
   try {
     const stats = fs.statSync(sqlFilePath);
     console.log(`SQL file size: ${(stats.size / 1024 / 1024).toFixed(2)} MB`);
@@ -4697,7 +4687,7 @@ function buildLocalRestoreCommand (config) {
     throw new Error(`Error with SQL file: ${err.message}`);
   }
   
-  // Construir os comandos sed para filtrar as tabelas ignoradas
+  
   let sedFilters = '';
   if (ignoredTables && ignoredTables.length > 0) {
     console.log(`Ignoring ${ignoredTables.length} tables: ${ignoredTables.join(', ')}`);
@@ -4738,17 +4728,17 @@ function buildLocalRestoreCommand (config) {
   // E também force para garantir que erros sejam reportados
   command += ` --binary-mode=1 --force`;
   
-  // Adicionar o comando para criar o banco de dados se não existir
+  
   command += ` --init-command="CREATE DATABASE IF NOT EXISTS \\\`${database}\\\`; USE \\\`${database}\\\`;"`;
   
-  // Add database name
+  
   command += ` ${database}`;
   
   console.log(`Local restoration command: ${command}`);
   return command;
 }
 
-// Execute the restore command and process output with better progress monitoring
+
 async function executeRestoreCommand (commandObj, sqlFilePath, progress) {
   console.log(`Executing restore command with object:`, JSON.stringify(commandObj));
   
@@ -4756,22 +4746,22 @@ async function executeRestoreCommand (commandObj, sqlFilePath, progress) {
     const fileSize = fs.statSync(sqlFilePath).size;
     console.log(`SQL file size: ${fileSize} bytes`);
     
-    progress(0.6); // Update progress to 60% - file is ready to be restored
+    progress(0.6); 
     console.log('Starting database restore process');
     
-    // Handle both string command (old format) and object format (new format)
+    
     let command, args;
     
     if (typeof commandObj === 'string') {
-      // Old format - just a command string
+      
       command = commandObj;
     } else {
-      // New format - object with command and args properties
+      
       ({ command, args } = commandObj);
     }
     
     if (args && args.length > 0) {
-      // Method with command and arguments as separate arrays
+      
       console.log(`Executing using spawn with command: ${command} and args:`, args);
       return new Promise((resolve, reject) => {
         const proc = spawn(command, args);
@@ -4792,7 +4782,7 @@ async function executeRestoreCommand (commandObj, sqlFilePath, progress) {
         
         proc.on('close', (code) => {
           console.log(`Restore process exited with code ${code}`);
-          progress(0.9); // Update progress to 90% - command completed
+          progress(0.9); 
           
           if (code !== 0) {
             console.error(`Restore failed with code ${code}`);
@@ -4810,7 +4800,7 @@ async function executeRestoreCommand (commandObj, sqlFilePath, progress) {
         });
       });
     } else {
-      // Method with full command string
+      
       console.log('Executing with exec method:', command);
       return new Promise((resolve, reject) => {
         exec(command, (error, stdout, stderr) => {
@@ -4828,7 +4818,7 @@ async function executeRestoreCommand (commandObj, sqlFilePath, progress) {
           }
           
           console.log('Restore command completed successfully');
-          progress(0.9); // Update progress to 90% - command completed
+          progress(0.9); 
           resolve();
         });
       });
@@ -4839,14 +4829,14 @@ async function executeRestoreCommand (commandObj, sqlFilePath, progress) {
   }
 }
 
-// Function to filter out ignored tables from SQL dump
+
 async function filterSqlDump (inputFile, outputFile, ignoredTables, isGzipped, sendProgress) {
   return new Promise((resolve, reject) => {
     try {
       if (!ignoredTables || ignoredTables.length === 0) {
-        // No tables to ignore, just copy the file if needed
+        
         if (isGzipped) {
-          // Decompress the file
+          
           const gunzip = spawn('gunzip', ['-c', inputFile]);
           const writeStream = fs.createWriteStream(outputFile);
           
@@ -4864,7 +4854,7 @@ async function filterSqlDump (inputFile, outputFile, ignoredTables, isGzipped, s
             reject(new Error(`Error writing decompressed file: ${error.message}`));
           });
         } else {
-          // Just copy the file
+          
           fs.copyFileSync(inputFile, outputFile);
           resolve();
         }
@@ -4895,19 +4885,19 @@ async function filterSqlDump (inputFile, outputFile, ignoredTables, isGzipped, s
         crlfDelay: Infinity
       });
       
-      // Create patterns for tables to ignore
+      
       const patterns = ignoredTables.map(table => 
         new RegExp(`^(INSERT INTO|CREATE TABLE|DROP TABLE|ALTER TABLE)\\s+\`?${table}\`?`, 'i')
       );
       
       let skipSection = false;
       let linesProcessed = 0;
-      const totalLines = 100000; // Estimate for progress calculation
+      const totalLines = 100000; 
       
       lineReader.on('line', (line) => {
         linesProcessed++;
         
-        // Calculate progress periodically
+        
         if (linesProcessed % 5000 === 0) {
           const estimatedProgress = Math.min(45, 35 + (linesProcessed / totalLines) * 10);
           sendProgress({ 
@@ -4917,7 +4907,7 @@ async function filterSqlDump (inputFile, outputFile, ignoredTables, isGzipped, s
           });
         }
         
-        // Check for beginning of INSERT/CREATE/etc. for a table to ignore
+        
         if (!skipSection) {
           for (const pattern of patterns) {
             if (pattern.test(line)) {
@@ -4927,13 +4917,13 @@ async function filterSqlDump (inputFile, outputFile, ignoredTables, isGzipped, s
           }
         }
         
-        // Check for end of a section to ignore (usually end of an INSERT or end of CREATE TABLE)
+        
         if (skipSection && /;(\s*)$/.test(line)) {
           skipSection = false;
-          return; // Skip writing this line
+          return; 
         }
         
-        // Write the line if we're not skipping
+        
         if (!skipSection) {
           writeStream.write(line + '\n');
         }
@@ -4957,7 +4947,7 @@ async function filterSqlDump (inputFile, outputFile, ignoredTables, isGzipped, s
   });
 }
 
-// Handler to extract table names from SQL dump file
+
 ipcMain.handle('extract-tables-from-sql', async (event, filePath) => {
   try {
     if (!filePath) {
@@ -4976,22 +4966,22 @@ ipcMain.handle('extract-tables-from-sql', async (event, filePath) => {
       };
     }
 
-    // Check file size - large files might take long to process
+    
     const stats = fs.statSync(filePath);
     const fileSizeMB = stats.size / (1024 * 1024);
     
     let isGzipped = filePath.toLowerCase().endsWith('.gz');
-    let maxLines = 100000; // Default limit
+    let maxLines = 100000; 
     
-    // Adjust maxLines based on file size
+    
     if (fileSizeMB > 500) {
       maxLines = 20000;
     } else if (fileSizeMB > 100) {
       maxLines = 50000;
     }
     
-    // For gzipped files, we can't accurately guess the uncompressed size
-    // so we'll be more conservative
+    
+    
     if (isGzipped) {
       maxLines = Math.min(maxLines, 30000);
     }
@@ -5017,7 +5007,7 @@ ipcMain.handle('extract-tables-from-sql', async (event, filePath) => {
     } catch (extractError) {
       console.error('Error during table extraction:', extractError);
       
-      // Special handling for common errors
+      
       if (extractError.message.includes('decompressing file')) {
         return {
           success: false,
@@ -5042,7 +5032,7 @@ ipcMain.handle('extract-tables-from-sql', async (event, filePath) => {
   }
 });
 
-// Function to extract table names from SQL dump file
+
 async function extractTablesFromSqlFile (filePath, isGzipped, maxLinesToProcess = 50000) {
   return new Promise((resolve, reject) => {
     try {
@@ -5056,7 +5046,7 @@ async function extractTablesFromSqlFile (filePath, isGzipped, maxLinesToProcess 
         });
       } else {
         inputStream = fs.createReadStream(filePath, { 
-          highWaterMark: 64 * 1024 // 64KB chunks for better performance
+          highWaterMark: 64 * 1024 
         });
       }
       
@@ -5066,9 +5056,9 @@ async function extractTablesFromSqlFile (filePath, isGzipped, maxLinesToProcess 
       });
       
       const tableNames = new Set();
-      const tableStats = new Map(); // To track approximate size of each table
+      const tableStats = new Map(); 
       
-      // Regexes to match various table operations in SQL
+      
       const createTableRegex = /CREATE\s+TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?[`"']?([a-zA-Z0-9_]+)[`"']?/i;
       const insertRegex = /INSERT\s+INTO\s+[`"']?([a-zA-Z0-9_]+)[`"']?/i;
       const dropTableRegex = /DROP\s+TABLE\s+(?:IF\s+EXISTS\s+)?[`"']?([a-zA-Z0-9_]+)[`"']?/i;
@@ -5081,13 +5071,13 @@ async function extractTablesFromSqlFile (filePath, isGzipped, maxLinesToProcess 
       lineReader.on('line', (line) => {
         linesProcessed++;
         
-        // Stop processing after reaching limit
+        
         if (linesProcessed > maxLinesToProcess) {
           lineReader.close();
           return;
         }
         
-        // Skip comments and empty lines
+        
         if (line.trim().startsWith('--') || line.trim().startsWith('#') || line.trim() === '') {
           return;
         }
@@ -5136,13 +5126,13 @@ async function extractTablesFromSqlFile (filePath, isGzipped, maxLinesToProcess 
           }
         }
         
-        // Check for end of multiline INSERT
+        
         if (currentTable && line.trim().endsWith(';')) {
           currentTable = null;
           currentInsertSize = 0;
         }
         
-        // Check for CREATE TABLE
+        
         let match;
         if ((match = createTableRegex.exec(line)) !== null) {
           tableNames.add(match[1]);
@@ -5160,35 +5150,35 @@ async function extractTablesFromSqlFile (filePath, isGzipped, maxLinesToProcess 
         }
       });
       
-      // Add timeout to prevent hanging on very large files
+      
       const timeout = setTimeout(() => {
         lineReader.close();
         console.log(`Extraction timed out after processing ${linesProcessed} lines`);
-      }, 60000); // 1 minute timeout
+      }, 60000); 
       
       lineReader.on('close', () => {
         clearTimeout(timeout);
         
-        // Filter out some common system tables
+        
         const systemTables = ['mysql', 'information_schema', 'performance_schema', 'sys'];
         
-        // Build result with table size information
+        
         const tableResults = [];
         
         for (const tableName of tableNames) {
-          // Skip system tables
+          
           if (systemTables.includes(tableName.toLowerCase())) {
             continue;
           }
           
-          // Get stats for this table
+          
           const stats = tableStats.get(tableName) || { 
             insertCount: 0, 
             maxRowsPerInsert: 0,
             totalEstimatedRows: 0
           };
           
-          // Determine table size category
+          
           let sizeCategory;
           if (stats.totalEstimatedRows === 0) {
             sizeCategory = 'empty';
@@ -5207,7 +5197,7 @@ async function extractTablesFromSqlFile (filePath, isGzipped, maxLinesToProcess 
           });
         }
         
-        // Sort by name
+        
         tableResults.sort((a, b) => a.name.localeCompare(b.name));
         
         console.log(`Found ${tableResults.length} tables after processing ${linesProcessed} lines`);
@@ -5230,13 +5220,13 @@ async function extractTablesFromSqlFile (filePath, isGzipped, maxLinesToProcess 
   });
 }
 
-// Simple database restore handler - unified approach
+
 ipcMain.handle('simple-database-restore-unified', async (event, config) => {
   try {
     console.log('Starting simple database restore with config:', config);
     console.log('Ignored tables:', config.ignoredTables);
     
-    // Basic validation
+    
     if (!config || !config.connectionId || !config.filePath) {
       return { 
         success: false, 
@@ -5244,7 +5234,7 @@ ipcMain.handle('simple-database-restore-unified', async (event, config) => {
       };
     }
 
-    // Get the connection details
+    
     const connections = store.get('connections') || [];
     const connection = connections.find(conn => conn.id === config.connectionId);
     
@@ -5255,7 +5245,7 @@ ipcMain.handle('simple-database-restore-unified', async (event, config) => {
       };
     }
     
-    // Verify the file exists
+    
     if (!fs.existsSync(config.filePath)) {
       return {
         success: false,
@@ -5263,7 +5253,7 @@ ipcMain.handle('simple-database-restore-unified', async (event, config) => {
       };
     }
 
-    // Determine which database to use
+    
     const targetDatabase = config.database || connection.database;
     
     if (!targetDatabase) {
@@ -5273,15 +5263,15 @@ ipcMain.handle('simple-database-restore-unified', async (event, config) => {
       };
     }
 
-    // Verificar se o banco de destino é diferente do atual
+    
     const isNewDatabase = targetDatabase !== connection.database;
     
-    // Se for um novo banco de dados, verificar se ele já existe
+    
     if (isNewDatabase) {
       try {
         console.log(`Checking if database ${targetDatabase} exists`);
         
-        // Tentar se conectar ao MySQL sem especificar um banco
+        
         const tempConn = await mysql.createConnection({
           host: connection.host,
           port: connection.port,
@@ -5299,7 +5289,7 @@ ipcMain.handle('simple-database-restore-unified', async (event, config) => {
           
           if (!dbExists) {
             console.log(`Database ${targetDatabase} does not exist, creating it...`);
-            // Criar o banco de dados
+            
             await tempConn.query(`CREATE DATABASE \`${targetDatabase}\``);
             console.log(`Database ${targetDatabase} created successfully`);
           } else {
@@ -5317,7 +5307,7 @@ ipcMain.handle('simple-database-restore-unified', async (event, config) => {
       }
     }
 
-    // Build a simple configuration for the restore
+    
     const restoreConfig = {
       connection: {
         ...connection,
@@ -5331,13 +5321,13 @@ ipcMain.handle('simple-database-restore-unified', async (event, config) => {
       ignoredTables: config.ignoredTables || []
     };
 
-    // Log ignored tables
+    
     if (config.ignoredTables && config.ignoredTables.length > 0) {
       console.log(`Will ignore these tables: ${config.ignoredTables.join(', ')}`);
     }
 
-    // Create a fake event with a sender for compatibility
-    // This simplifies the approach instead of creating a custom progress handler
+    
+    
     const sender = {
       send: (channel, data) => {
         console.log(`Progress update: ${data.progress}% - ${data.status}`);
@@ -5349,9 +5339,9 @@ ipcMain.handle('simple-database-restore-unified', async (event, config) => {
       }
     };
     
-    // Simply execute the restore function
+    
     try {
-      // Log some basic details
+      
       const isGzipped = config.filePath.toLowerCase().endsWith('.gz');
       const useDocker = connection.usingSail || 
                         (connection.dockerInfo && connection.dockerInfo.isDocker);
@@ -5362,12 +5352,12 @@ ipcMain.handle('simple-database-restore-unified', async (event, config) => {
       console.log(`Gzipped file: ${isGzipped ? 'Yes' : 'No'}`);
       console.log(`Ignored tables: ${restoreConfig.ignoredTables.length}`);
       
-      // Execute the restore function directly
+      
       await restoreDatabase({ sender }, restoreConfig);
       
-      // Update the connection database if needed
+      
       if (config.setAsDefault && targetDatabase !== connection.database) {
-        // Get current connections list again (it might have changed)
+        
         const updatedConnections = store.get('connections') || [];
         const connectionIndex = updatedConnections.findIndex(conn => conn.id === config.connectionId);
         
@@ -5399,7 +5389,7 @@ ipcMain.handle('simple-database-restore-unified', async (event, config) => {
   }
 });
 
-// Handler para atualizar o banco de dados de uma conexão
+
 ipcMain.handle('update-connection-database', async (event, connectionId, newDatabase) => {
   try {
     if (!connectionId || !newDatabase) {
@@ -5411,7 +5401,7 @@ ipcMain.handle('update-connection-database', async (event, connectionId, newData
 
     console.log(`Updating database for connection ${connectionId} to ${newDatabase}`);
 
-    // Get current connections list
+    
     const connections = store.get('connections') || [];
     const connectionIndex = connections.findIndex(conn => conn.id === connectionId);
     
@@ -5422,10 +5412,10 @@ ipcMain.handle('update-connection-database', async (event, connectionId, newData
       };
     }
 
-    // Update the database name
+    
     connections[connectionIndex].database = newDatabase;
     
-    // Save the updated connections list
+    
     store.set('connections', connections);
 
     console.log(`Successfully updated connection database to ${newDatabase}`);
@@ -5442,7 +5432,7 @@ ipcMain.handle('update-connection-database', async (event, connectionId, newData
   }
 });
 
-// Function to validate a database connection
+
 async function validateDatabaseConnection (config) {
   try {
     console.log('Validating database connection:', config.database);
@@ -5477,7 +5467,7 @@ async function validateDatabaseConnection (config) {
   }
 }
 
-// Handler para obter estatísticas de um arquivo
+
 ipcMain.handle('get-file-stats', async (event, filePath) => {
   try {
     if (!filePath || !fs.existsSync(filePath)) {
@@ -5523,9 +5513,9 @@ ipcMain.handle('deleteRecords', async (event, config) => {
       throw new Error('At least one record ID is required');
     }
     
-    // Ensure all IDs are valid primitives
+    
     const validatedIds = ids.map(id => {
-      // Convert strings that contain numbers to actual numbers if possible
+      
       if (typeof id === 'string' && !isNaN(Number(id))) {
         return Number(id);
       }
@@ -5534,7 +5524,7 @@ ipcMain.handle('deleteRecords', async (event, config) => {
     
     console.log(`Deleting ${validatedIds.length} records from ${tableName}:`, validatedIds);
     
-    // Construct the MySQL connection
+    
     const mysqlConfig = {
       host: connection.host,
       port: connection.port || 3306,
@@ -5546,10 +5536,10 @@ ipcMain.handle('deleteRecords', async (event, config) => {
     let conn;
     
     try {
-      // Use mysql2/promise for consistency
+      
       conn = await mysql.createConnection(mysqlConfig);
 
-      // First check if there are foreign key constraints
+      
       const [fkResult] = await conn.query(`
         SELECT 
           TABLE_NAME as referenced_table_name,
@@ -5564,7 +5554,7 @@ ipcMain.handle('deleteRecords', async (event, config) => {
           AND REFERENCED_TABLE_SCHEMA = ?
       `, [tableName, connection.database]);
       
-      // If there are foreign key constraints, get the actual constraint details
+      
       if (fkResult && fkResult.length > 0) {
         const [constraintResult] = await conn.query(`
           SELECT 
@@ -5586,13 +5576,13 @@ ipcMain.handle('deleteRecords', async (event, config) => {
             AND k.REFERENCED_TABLE_SCHEMA = ?
         `, [tableName, connection.database]);
         
-        // Check if any constraints have RESTRICT or NO ACTION delete rule
+        
         const restrictingConstraints = constraintResult.filter(
           c => c.on_delete === 'RESTRICT' || c.on_delete === 'NO ACTION'
         );
         
         if (restrictingConstraints.length > 0) {
-          // For each ID, check if it's referenced in any child tables
+          
           const problematicIds = [];
           
           for (const id of validatedIds) {
@@ -5626,12 +5616,12 @@ ipcMain.handle('deleteRecords', async (event, config) => {
         }
       }
       
-      // Build the SQL DELETE statement
-      // Use placeholders for each ID in the WHERE clause
+      
+      
       const placeholders = validatedIds.map(() => '?').join(', ');
       const deleteSql = `DELETE FROM ${conn.escapeId(tableName)} WHERE id IN (${placeholders})`;
       
-      // Execute the DELETE query
+      
       const [result] = await conn.execute(deleteSql, validatedIds);
       
       return {
@@ -5647,7 +5637,7 @@ ipcMain.handle('deleteRecords', async (event, config) => {
   } catch (error) {
     console.error('Error deleting records:', error);
     
-    // Check for foreign key constraint error
+    
     if (error.code === 'ER_ROW_IS_REFERENCED_2') {
       return {
         success: false,
@@ -5675,7 +5665,7 @@ ipcMain.handle('truncateTable', async (event, config) => {
       throw new Error('Table name is required');
     }
     
-    // Construct the MySQL connection
+    
     const mysqlConfig = {
       host: connection.host,
       port: connection.port || 3306,
@@ -5687,10 +5677,10 @@ ipcMain.handle('truncateTable', async (event, config) => {
     let conn;
     
     try {
-      // Use mysql2/promise for consistency
+      
       conn = await mysql.createConnection(mysqlConfig);
 
-      // First check if there are foreign key constraints
+      
       const [fkResult] = await conn.query(`
         SELECT 
           TABLE_NAME as referenced_table_name,
@@ -5705,26 +5695,26 @@ ipcMain.handle('truncateTable', async (event, config) => {
           AND REFERENCED_TABLE_SCHEMA = ?
       `, [tableName, connection.database]);
       
-      // If there are foreign key constraints, we need to disable foreign key checks
+      
       const hasForeignKeys = fkResult && fkResult.length > 0;
       
-      // Start transaction
+      
       await conn.beginTransaction();
       
-      // Disable foreign key checks if necessary
+      
       if (hasForeignKeys) {
         await conn.query('SET FOREIGN_KEY_CHECKS = 0');
       }
       
-      // Execute the TRUNCATE query
+      
       await conn.query(`TRUNCATE TABLE ${conn.escapeId(tableName)}`);
       
-      // Re-enable foreign key checks if they were disabled
+      
       if (hasForeignKeys) {
         await conn.query('SET FOREIGN_KEY_CHECKS = 1');
       }
       
-      // Commit the transaction
+      
       await conn.commit();
       
       return {
@@ -5732,11 +5722,11 @@ ipcMain.handle('truncateTable', async (event, config) => {
         message: `Table ${tableName} truncated successfully`
       };
     } catch (error) {
-      // Rollback on error
+      
       if (conn) {
         try {
           await conn.rollback();
-          // Ensure foreign key checks are re-enabled
+          
           await conn.query('SET FOREIGN_KEY_CHECKS = 1');
         } catch (rollbackError) {
           console.error('Error rolling back transaction:', rollbackError);

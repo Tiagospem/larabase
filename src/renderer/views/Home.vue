@@ -758,7 +758,7 @@ const filteredTables = computed(() => {
   });
 });
 
-const overwriteCurrentDb = ref(true); // Por padrão, restaurar no banco atual
+const overwriteCurrentDb = ref(true); 
 
 onMounted(async () => {
   try {
@@ -924,13 +924,13 @@ async function selectProjectDirectory () {
 
 async function saveNewConnection () {
   try {
-    // Verificar se o caminho do projeto está preenchido
+    
     if (!newConnection.value.projectPath) {
       projectPathError.value = "Project path is required";
       return;
     }
 
-    // Verificar campos obrigatórios
+    
     if (
       !newConnection.value.name ||
       !newConnection.value.host ||
@@ -941,7 +941,7 @@ async function saveNewConnection () {
       return;
     }
 
-    // Verificar se já existe uma conexão com o mesmo nome ou caminho
+    
     const exists = connectionsStore.connections.some(
       (conn) =>
         (conn.projectPath === newConnection.value.projectPath ||
@@ -989,7 +989,7 @@ async function saveNewConnection () {
       projectPath: newConnection.value.projectPath,
       usingSail: newConnection.value.usingSail,
       status: "ready",
-      // Salvar informações do Docker se disponíveis
+      
       dockerInfo: dockerInfo.value || null,
       redis: {
         host: newConnection.value.redisHost || "",
@@ -1025,14 +1025,14 @@ async function removeConnection (connectionId) {
     )
   ) {
     try {
-      // Close tabs associated with this connection
+      
       await tabsStore.closeTabsByConnectionId(connectionId);
 
-      // Use the new remove-connection handler instead of directly modifying the store
+      
       const result = await window.api.removeConnection(connectionId);
 
       if (result.success) {
-        // Refresh the connections list
+        
         await connectionsStore.loadConnections();
         showAlert(
           "Connection and related data removed successfully",
@@ -1067,7 +1067,7 @@ function getConnectionColor (type) {
   }
 }
 
-// Function to open restore modal
+
 function restoreDatabase (connection) {
   restoreConfig.value = {
     connection: connection,
@@ -1159,14 +1159,14 @@ async function selectDumpFile () {
   }
 }
 
-// Function to start the restore process
+
 async function startRestore () {
   if (!restoreConfig.value.filePath || !restoreConfig.value.connection) {
     showAlert("Please select a SQL dump file", "error");
     return;
   }
 
-  // Verificar se um nome de banco foi informado quando não está usando o banco atual
+  
   if (!overwriteCurrentDb.value && !restoreConfig.value.database) {
     showAlert("Please enter a target database name", "error");
     return;
@@ -1177,40 +1177,40 @@ async function startRestore () {
     restoreStatus.value = "Starting database restoration...";
     restoreProgress.value = 10;
 
-    // First update status in UI
+    
     const updateStatus = (status, progress) => {
       restoreStatus.value = status;
       if (progress) restoreProgress.value = progress;
     };
 
-    // Simple manual progress updates at key steps
+    
     updateStatus("Preparing restoration...", 20);
 
-    // Determinar qual banco de dados usar
+    
     let targetDatabase;
     if (overwriteCurrentDb.value) {
-      // Usar o banco atual da conexão
+      
       targetDatabase = restoreConfig.value.connection.database;
     } else {
-      // Usar o banco informado pelo usuário
+      
       targetDatabase = restoreConfig.value.database;
     }
 
-    // Use simple parameters without complex objects, functions or circular references
+    
     const simpleConfig = {
       connectionId: restoreConfig.value.connection.id,
       filePath: restoreConfig.value.filePath,
-      ignoredTables: [...restoreConfig.value.ignoredTables], // Make a copy to avoid references
+      ignoredTables: [...restoreConfig.value.ignoredTables], 
       database: targetDatabase,
       setAsDefault:
-        !overwriteCurrentDb.value && restoreConfig.value.setAsDefault, // Somente quando não usa o banco atual
+        !overwriteCurrentDb.value && restoreConfig.value.setAsDefault, 
     };
 
-    // Wait 300ms to let UI update
+    
     await new Promise((resolve) => setTimeout(resolve, 300));
     updateStatus("Analyzing database configuration...", 30);
 
-    // Use timeout to simulate progress (since we can't easily get real progress)
+    
     let timeoutIds = [];
 
     timeoutIds.push(
@@ -1232,10 +1232,10 @@ async function startRestore () {
       }, 6000)
     );
 
-    // Call a very simple API method without callbacks
+    
     const result = await window.api.simpleDatabaseRestore(simpleConfig);
 
-    // Clear any remaining timeouts
+    
     timeoutIds.forEach((id) => clearTimeout(id));
 
     if (result.success) {
@@ -1244,7 +1244,7 @@ async function startRestore () {
       isRestoring.value = false;
       isRestoreModalOpen.value = false;
 
-      // Update the connection with the new database if necessary
+      
       if (
         !overwriteCurrentDb.value &&
         restoreConfig.value.setAsDefault &&
@@ -1267,7 +1267,7 @@ async function startRestore () {
   }
 }
 
-// Helper function to update the connection's database name
+
 async function updateConnectionDatabase (connectionId, newDatabase) {
   try {
     const result = await window.api.updateConnectionDatabase(
@@ -1275,7 +1275,7 @@ async function updateConnectionDatabase (connectionId, newDatabase) {
       newDatabase
     );
     if (result.success) {
-      // Reload connections list to reflect the change
+      
       await connectionsStore.loadConnections();
       showAlert(`Connection database updated to ${newDatabase}`, "success");
     }
@@ -1288,18 +1288,18 @@ async function updateConnectionDatabase (connectionId, newDatabase) {
   }
 }
 
-// Function to close modal and kill any running process
+
 function closeRestoreModal () {
   if (isRestoring.value) {
-    // Always confirm when canceling an active restoration
+    
     if (confirm('Are you sure you want to cancel the database restoration?')) {
-      // Cancel restoration process and cleanup
+      
       window.api.cancelDatabaseRestore(restoreConfig.value.connection.id);
       isRestoring.value = false;
       restoreProgress.value = 0;
       showAlert('Database restoration cancelled', 'info');
       
-      // Close the modal and reset state
+      
       isRestoreModalOpen.value = false;
       tableSearchQuery.value = '';
     }
@@ -1307,12 +1307,12 @@ function closeRestoreModal () {
     return;
   }
   
-  // If not restoring, just close the modal
+  
   isRestoreModalOpen.value = false;
   tableSearchQuery.value = '';
 }
 
-// Function to get CSS class based on table size
+
 function getTableSizeClass (size) {
   switch (size) {
     case "empty":

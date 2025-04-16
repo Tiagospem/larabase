@@ -615,12 +615,12 @@ function handleDrop (event, targetTabId) {
   
   if (draggedTabIndex === -1 || targetTabIndex === -1) return;
 
-  // Reorder tabs
+  
   const tabs = [...openTabs.value];
   const [removed] = tabs.splice(draggedTabIndex, 1);
   tabs.splice(targetTabIndex, 0, removed);
   
-  // Update tabs order in store
+  
   tabsStore.reorderTabs(tabs);
   draggingTabId.value = null;
 }
@@ -743,7 +743,7 @@ onMounted(async () => {
     showAlert(`Connected to ${connection.value.name}`, 'success');
     await databaseStore.loadTables(connectionId.value);
     
-    // Force reload record counts for tables
+    
     databaseStore.clearTableRecordCounts();
     
     window.addEventListener('resize', checkScrollPosition);
@@ -753,7 +753,7 @@ onMounted(async () => {
       checkScrollPosition();
     });
     
-    // Make the div focusable for keyboard shortcuts
+    
     document.querySelector('.flex.flex-col.h-full')?.focus();
   } catch (error) {
     console.error(error);
@@ -827,10 +827,10 @@ async function copyAllTablesJsonToClipboard () {
 watch(showTablesModelsModal, async (isOpen) => {
   if (isOpen) {
     try {
-      // Show loading state
+      
       allTablesModelsJson.value = 'Loading table data...';
       
-      // Get complete table data with columns
+      
       allTablesModelsJson.value = await databaseStore.getAllTablesModelsJson(connectionId.value);
     } catch (error) {
       console.error('Error loading tables data:', error);
@@ -885,26 +885,26 @@ async function switchDatabase (databaseName) {
   }
 
   try {
-    // Update connection in store
+    
     await connectionsStore.updateConnection(connectionId.value, {
       database: databaseName
     });
     
-    // Close database switcher
+    
     showDatabaseSwitcher.value = false;
     
-    // Close all tabs
+    
     tabsStore.closeAllTabs();
     
-    // Reload tables for new database
+    
     await databaseStore.loadTables(connectionId.value);
     
-    // Force reload record counts
+    
     databaseStore.clearTableRecordCounts();
     
     showAlert(`Switched to database: ${databaseName}`, 'success');
     
-    // Reload page to ensure a full refresh
+    
     window.location.reload();
   } catch (error) {
     console.error('Error switching database:', error);
@@ -912,19 +912,19 @@ async function switchDatabase (databaseName) {
   }
 }
 
-// Função para abrir uma nova aba a partir de um clique em chave estrangeira
+
 function handleOpenTab (tabData) {
   try {
     console.log("Abrindo nova aba com dados:", tabData);
     
-    // Verificar se os dados estão completos
+    
     if (!tabData.data || !tabData.data.connectionId || !tabData.data.tableName) {
       console.error("Dados da aba incompletos:", tabData);
       showAlert("Dados insuficientes para abrir nova aba", "error");
       return;
     }
     
-    // Encontrar a tabela correspondente no databaseStore
+    
     const targetTable = databaseStore.tablesList.find(t => t.name === tabData.data.tableName);
     
     if (!targetTable) {
@@ -933,7 +933,7 @@ function handleOpenTab (tabData) {
       return;
     }
     
-    // Preparar o filtro se existir
+    
     const filter = tabData.data.filter || '';
     
     console.log("Filtro a ser aplicado na nova aba:", filter);
@@ -961,7 +961,7 @@ function handleOpenTab (tabData) {
   }
 }
 
-// Function to handle database switcher request from child component
+
 function handleDatabaseSwitcherFromChild (connectionId) {
   openDatabaseSwitcher();
 }
