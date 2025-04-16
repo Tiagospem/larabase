@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, globalShortcut, dialog, shell } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog, shell } = require('electron');
 const path = require('path');
 const Store = require('electron-store');
 const fs = require('fs');
@@ -63,7 +63,7 @@ async function createWindow() {
       preload: path.join(__dirname, 'preload.js'),
       devTools: true
     },
-    icon: path.join(__dirname, '../renderer/assets/larabase-logo.png')
+    icon: path.join(__dirname, '../renderer/assets/icons/png/512x512.png')
   });
 
   const isDev = process.env.NODE_ENV === 'development';
