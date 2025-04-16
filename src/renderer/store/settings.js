@@ -7,20 +7,20 @@ export const useSettingsStore = defineStore('settings', () => {
       apiKey: '',
       model: 'gpt-3.5-turbo'
     },
-    language: 'en', 
+    language: 'en',
     devMode: false
   });
-  
+
   const isLoading = ref(true);
 
-  async function loadSettings () {
+  async function loadSettings() {
     isLoading.value = true;
-    
+
     try {
       if (window.api) {
         try {
           const savedSettings = await window.api.getSettings();
-          
+
           if (savedSettings) {
             settings.value = savedSettings;
           }
@@ -30,7 +30,7 @@ export const useSettingsStore = defineStore('settings', () => {
       } else {
         console.warn('API not available, unable to load settings');
       }
-      
+
       return settings.value;
     } catch (error) {
       console.error('Error in loadSettings:', error);
@@ -40,10 +40,9 @@ export const useSettingsStore = defineStore('settings', () => {
     }
   }
 
-  async function saveSettings () {
+  async function saveSettings() {
     try {
       if (window.api) {
-        
         const serializableSettings = JSON.parse(JSON.stringify(settings.value));
         await window.api.saveSettings(serializableSettings);
       }
@@ -52,7 +51,7 @@ export const useSettingsStore = defineStore('settings', () => {
     }
   }
 
-  async function updateSettings (newSettings) {
+  async function updateSettings(newSettings) {
     settings.value = { ...settings.value, ...newSettings };
     await saveSettings();
   }
@@ -66,7 +65,7 @@ export const useSettingsStore = defineStore('settings', () => {
   });
 
   const getLanguageLabel = computed(() => {
-    return (code) => {
+    return code => {
       const option = languageOptions.value.find(opt => opt.value === code);
       return option ? option.label : code;
     };
@@ -85,4 +84,4 @@ export const useSettingsStore = defineStore('settings', () => {
     languageOptions,
     getLanguageLabel
   };
-}); 
+});

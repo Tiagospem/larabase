@@ -1,0 +1,7 @@
+node_modules
+dist
+build
+.git
+.idea
+*.lock
+package-lock.json 

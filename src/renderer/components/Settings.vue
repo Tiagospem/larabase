@@ -1,64 +1,52 @@
 <template>
   <div class="modal modal-open z-30">
     <div class="modal-box w-11/12 max-w-2xl bg-base-300">
-      <h3 class="font-bold text-lg mb-4">
-        Settings
-      </h3>
-      
+      <h3 class="font-bold text-lg mb-4">Settings</h3>
+
       <div class="space-y-4">
         <!-- OpenAI Settings -->
         <div class="card bg-neutral shadow-md">
           <div class="card-body space-y-4">
-            <h3 class="card-title text-md">
-              OpenAI API
-            </h3>
-            
+            <h3 class="card-title text-md">OpenAI API</h3>
+
             <div class="form-control">
               <label class="label">
                 <span class="label-text">API Key</span>
               </label>
-              <input 
-                v-model="settingsData.openai.apiKey" 
-                type="password" 
+              <input
+                v-model="settingsData.openai.apiKey"
+                type="password"
                 placeholder="Enter your OpenAI API key"
-                class="input input-bordered w-full" 
+                class="input input-bordered w-full"
               />
             </div>
-            
+
             <div class="form-control">
               <label class="label">
                 <span class="label-text">AI Model</span>
               </label>
               <select v-model="settingsData.openai.model" class="select select-bordered w-full">
-                <option value="gpt-3.5-turbo">
-                  GPT-3.5 Turbo
-                </option>
-                <option value="gpt-4">
-                  GPT-4
-                </option>
-                <option value="gpt-4-turbo">
-                  GPT-4 Turbo
-                </option>
+                <option value="gpt-3.5-turbo">GPT-3.5 Turbo</option>
+                <option value="gpt-4">GPT-4</option>
+                <option value="gpt-4-turbo">GPT-4 Turbo</option>
               </select>
             </div>
           </div>
         </div>
-        
+
         <!-- Language Settings -->
         <div class="card bg-neutral shadow-md">
           <div class="card-body space-y-4">
-            <h3 class="card-title text-md">
-              Language
-            </h3>
-            
+            <h3 class="card-title text-md">Language</h3>
+
             <div class="form-control">
               <label class="label">
                 <span class="label-text">AI Response Language</span>
               </label>
               <select v-model="settingsData.language" class="select select-bordered w-full">
-                <option 
-                  v-for="option in settingsStore.languageOptions" 
-                  :key="option.value" 
+                <option
+                  v-for="option in settingsStore.languageOptions"
+                  :key="option.value"
                   :value="option.value"
                 >
                   {{ option.label }}
@@ -67,21 +55,23 @@
             </div>
           </div>
         </div>
-        
+
         <!-- Developer Mode (only in development) -->
         <div v-if="isDevelopment" class="card bg-neutral shadow-md">
           <div class="card-body space-y-4">
-            <h3 class="card-title text-md">
-              Developer Options
-            </h3>
-            
+            <h3 class="card-title text-md">Developer Options</h3>
+
             <div class="form-control">
               <label class="label cursor-pointer">
                 <span class="label-text">Developer Mode</span>
-                <input v-model="settingsData.devMode" type="checkbox" class="toggle toggle-primary" />
+                <input
+                  v-model="settingsData.devMode"
+                  type="checkbox"
+                  class="toggle toggle-primary"
+                />
               </label>
             </div>
-            
+
             <div v-if="settingsData.devMode" class="mt-4">
               <button class="btn btn-sm btn-outline" @click="showStorageData = true">
                 View Electron Storage Data
@@ -90,25 +80,19 @@
           </div>
         </div>
       </div>
-      
+
       <div class="modal-action mt-6">
-        <button class="btn btn-primary" @click="saveAndClose">
-          Save
-        </button>
-        <button class="btn" @click="close">
-          Cancel
-        </button>
+        <button class="btn btn-primary" @click="saveAndClose">Save</button>
+        <button class="btn" @click="close">Cancel</button>
       </div>
     </div>
     <div class="modal-backdrop" @click="close" />
   </div>
-  
+
   <!-- Storage Data Modal (for developer mode) -->
   <div v-if="showStorageData" class="modal modal-open z-40">
     <div class="modal-box w-11/12 max-w-5xl max-h-[90vh] bg-base-300">
-      <h3 class="font-bold text-lg mb-4">
-        Electron Storage Data
-      </h3>
+      <h3 class="font-bold text-lg mb-4">Electron Storage Data</h3>
       <div class="mockup-code bg-neutral mb-4 h-[60vh] overflow-auto">
         <pre><code>{{ JSON.stringify(storageData, null, 2) }}</code></pre>
       </div>
@@ -122,13 +106,15 @@
             stroke="currentColor"
             class="w-4 h-4 mr-1"
           >
-            <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125h-9.75a1.125 1.125 0 0 1-1.125-1.125V7.875c0-.621.504-1.125 1.125-1.125H6.75a9.06 9.06 0 0 1 1.5.124m7.5 10.376h3.375c.621 0 1.125-.504 1.125-1.125V11.25c0-4.46-3.243-8.161-7.5-8.876a9.06 9.06 0 0 0-1.5-.124H9.375c-.621 0-1.125.504-1.125 1.125v3.5m7.5 10.375H9.375a1.125 1.125 0 0 1-1.125-1.125v-9.25m12 6.625v-1.875a3.375 3.375 0 0 0-3.375-3.375h-1.5a1.125 1.125 0 0 1-1.125-1.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H9.75" />
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125h-9.75a1.125 1.125 0 0 1-1.125-1.125V7.875c0-.621.504-1.125 1.125-1.125H6.75a9.06 9.06 0 0 1 1.5.124m7.5 10.376h3.375c.621 0 1.125-.504 1.125-1.125V11.25c0-4.46-3.243-8.161-7.5-8.876a9.06 9.06 0 0 0-1.5-.124H9.375c-.621 0-1.125.504-1.125 1.125v3.5m7.5 10.375H9.375a1.125 1.125 0 0 1-1.125-1.125v-9.25m12 6.625v-1.875a3.375 3.375 0 0 0-3.375-3.375h-1.5a1.125 1.125 0 0 1-1.125-1.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H9.75"
+            />
           </svg>
           Copy to Clipboard
         </button>
-        <button class="btn" @click="showStorageData = false">
-          Close
-        </button>
+        <button class="btn" @click="showStorageData = false">Close</button>
       </div>
     </div>
     <div class="modal-backdrop" @click="showStorageData = false" />
@@ -173,9 +159,8 @@ onMounted(async () => {
   Object.assign(settingsData.value, settingsStore.settings);
 });
 
-async function saveAndClose () {
+async function saveAndClose() {
   try {
-    
     const cleanSettings = JSON.parse(JSON.stringify(settingsData.value));
     await settingsStore.updateSettings(cleanSettings);
     showAlert('Settings saved successfully', 'success');
@@ -186,17 +171,16 @@ async function saveAndClose () {
   }
 }
 
-function close () {
+function close() {
   emit('close');
 }
 
-async function loadStorageData () {
+async function loadStorageData() {
   try {
-    
     const connections = await window.api.getConnections();
     const tabs = await window.api.getOpenTabs();
     const settings = await window.api.getSettings();
-    
+
     storageData.value = {
       connections,
       tabs,
@@ -208,7 +192,7 @@ async function loadStorageData () {
   }
 }
 
-async function copyStorageDataToClipboard () {
+async function copyStorageDataToClipboard() {
   try {
     await navigator.clipboard.writeText(JSON.stringify(storageData.value, null, 2));
     showAlert('Storage data copied to clipboard', 'success');
@@ -218,10 +202,9 @@ async function copyStorageDataToClipboard () {
   }
 }
 
-
-watch(showStorageData, (newValue) => {
+watch(showStorageData, newValue => {
   if (newValue) {
     loadStorageData();
   }
 });
-</script> 
+</script>

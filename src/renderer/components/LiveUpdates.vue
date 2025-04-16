@@ -2,40 +2,24 @@
   <div class="modal" :class="{ 'modal-open': isOpen }">
     <div class="modal-box max-w-4xl bg-base-300">
       <div class="flex justify-between items-center mb-4">
-        <h3 class="font-bold text-lg">
-          Live Database Updates
-        </h3>
+        <h3 class="font-bold text-lg">Live Database Updates</h3>
         <div class="flex gap-2">
           <div v-if="connected" class="badge badge-success">
             <span class="mr-1">●</span> Connected
           </div>
-          <div v-else class="badge badge-error">
-            <span class="mr-1">●</span> Disconnected
-          </div>
-          
-          <button class="btn btn-sm btn-ghost" @click="clearUpdates">
-            Clear
-          </button>
+          <div v-else class="badge badge-error"><span class="mr-1">●</span> Disconnected</div>
+
+          <button class="btn btn-sm btn-ghost" @click="clearUpdates">Clear</button>
         </div>
       </div>
 
       <div class="flex mb-4 gap-2">
         <select v-model="operationTypeFilter" class="select select-sm select-bordered">
-          <option value="all">
-            All Operations
-          </option>
-          <option value="INSERT">
-            Insert
-          </option>
-          <option value="UPDATE">
-            Update
-          </option>
-          <option value="DELETE">
-            Delete
-          </option>
-          <option value="SELECT">
-            Select
-          </option>
+          <option value="all">All Operations</option>
+          <option value="INSERT">Insert</option>
+          <option value="UPDATE">Update</option>
+          <option value="DELETE">Delete</option>
+          <option value="SELECT">Select</option>
         </select>
         <input
           v-model="tableFilter"
@@ -47,7 +31,9 @@
 
       <!-- Loading indicator -->
       <div v-if="loading" class="flex justify-center items-center py-8">
-        <div class="animate-spin rounded-full h-12 w-12 border-4 border-primary border-t-transparent" />
+        <div
+          class="animate-spin rounded-full h-12 w-12 border-4 border-primary border-t-transparent"
+        />
         <span class="ml-3 text-sm">Initializing monitoring...</span>
       </div>
 
@@ -66,7 +52,10 @@
             d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
           />
         </svg>
-        <span>No database operations detected yet. Any changes to the database will appear here automatically.</span>
+        <span
+          >No database operations detected yet. Any changes to the database will appear here
+          automatically.</span
+        >
       </div>
 
       <!-- Data table -->
@@ -74,20 +63,12 @@
         <table class="table table-xs w-full">
           <thead>
             <tr>
-              <th class="w-28">
-                Timestamp
-              </th>
-              <th class="w-20">
-                Operation
-              </th>
+              <th class="w-28">Timestamp</th>
+              <th class="w-20">Operation</th>
               <th>Table</th>
-              <th class="w-20">
-                Record ID
-              </th>
+              <th class="w-20">Record ID</th>
               <th>Details</th>
-              <th class="w-16 text-right">
-                Actions
-              </th>
+              <th class="w-16 text-right">Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -96,7 +77,10 @@
                 {{ formatTimestamp(update.timestamp) }}
               </td>
               <td>
-                <span class="badge" :class="getOperationBadgeClass(update.operation || update.type)">
+                <span
+                  class="badge"
+                  :class="getOperationBadgeClass(update.operation || update.type)"
+                >
                   {{ update.operation || update.type }}
                 </span>
               </td>
@@ -115,11 +99,23 @@
                     stroke="currentColor"
                     class="size-4"
                   >
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z" />
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z"
+                    />
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"
+                    />
                   </svg>
                 </button>
-                <button v-if="update.table && update.table !== 'system'" class="btn btn-xs" @click="goToTable(update.table)">
+                <button
+                  v-if="update.table && update.table !== 'system'"
+                  class="btn btn-xs"
+                  @click="goToTable(update.table)"
+                >
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
                     fill="none"
@@ -128,7 +124,11 @@
                     stroke="currentColor"
                     class="size-4"
                   >
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3"
+                    />
                   </svg>
                 </button>
               </td>
@@ -138,9 +138,7 @@
       </div>
 
       <div class="modal-action">
-        <button class="btn btn-primary" @click="close">
-          Close
-        </button>
+        <button class="btn btn-primary" @click="close">Close</button>
       </div>
     </div>
   </div>
@@ -148,12 +146,15 @@
   <div class="modal" :class="{ 'modal-open': showSqlDetails }">
     <div class="modal-box bg-base-300">
       <h3 class="font-bold text-lg">
-        <span class="badge mr-2" :class="getOperationBadgeClass(selectedUpdate?.operation || selectedUpdate?.type)">
+        <span
+          class="badge mr-2"
+          :class="getOperationBadgeClass(selectedUpdate?.operation || selectedUpdate?.type)"
+        >
           {{ selectedUpdate?.operation || selectedUpdate?.type }}
         </span>
         {{ selectedUpdate?.table }}
       </h3>
-      
+
       <div v-if="selectedUpdate" class="py-4">
         <div class="mb-4 text-xs flex justify-between">
           <span class="badge badge-neutral">ID: {{ selectedUpdate.recordId || 'N/A' }}</span>
@@ -161,58 +162,52 @@
         </div>
 
         <div v-if="selectedUpdate.sql" class="mt-4">
-          <h4 class="font-semibold text-sm mb-1">
-            SQL Query:
-          </h4>
-          <div class="bg-base-200 p-3 rounded-lg overflow-auto max-h-60 whitespace-pre-wrap font-mono text-sm">
+          <h4 class="font-semibold text-sm mb-1">SQL Query:</h4>
+          <div
+            class="bg-base-200 p-3 rounded-lg overflow-auto max-h-60 whitespace-pre-wrap font-mono text-sm"
+          >
             {{ formatSql(selectedUpdate.sql) }}
           </div>
         </div>
 
         <div v-if="selectedUpdate.details" class="mt-4">
-          <h4 class="font-semibold text-sm mb-1">
-            Details:
-          </h4>
-          <div class="bg-base-200 p-3 rounded-lg overflow-auto max-h-60 font-mono text-sm whitespace-pre-wrap">
+          <h4 class="font-semibold text-sm mb-1">Details:</h4>
+          <div
+            class="bg-base-200 p-3 rounded-lg overflow-auto max-h-60 font-mono text-sm whitespace-pre-wrap"
+          >
             {{ selectedUpdate.details }}
           </div>
         </div>
-        
+
         <!-- System Message -->
         <div v-if="selectedUpdate.message" class="mt-4">
-          <h4 class="font-semibold text-sm mb-1">
-            Message:
-          </h4>
+          <h4 class="font-semibold text-sm mb-1">Message:</h4>
           <div class="bg-base-200 p-3 rounded-lg overflow-auto max-h-60 text-sm">
             {{ selectedUpdate.message }}
           </div>
         </div>
-        
+
         <!-- Additional info: Affected Rows, etc. -->
         <div v-if="selectedUpdate.affectedRows" class="mt-4">
-          <h4 class="font-semibold text-sm mb-1">
-            Affected Rows:
-          </h4>
+          <h4 class="font-semibold text-sm mb-1">Affected Rows:</h4>
           <div class="bg-base-200 p-2 rounded-lg text-sm">
             {{ selectedUpdate.affectedRows }}
           </div>
         </div>
-        
+
         <!-- Raw Update Data -->
         <div class="mt-4">
-          <h4 class="font-semibold text-sm mb-1">
-            Raw Data:
-          </h4>
-          <div class="bg-base-200 p-3 rounded-lg overflow-auto max-h-60 whitespace-pre-wrap font-mono text-xs">
+          <h4 class="font-semibold text-sm mb-1">Raw Data:</h4>
+          <div
+            class="bg-base-200 p-3 rounded-lg overflow-auto max-h-60 whitespace-pre-wrap font-mono text-xs"
+          >
             {{ JSON.stringify(selectedUpdate, null, 2) }}
           </div>
         </div>
       </div>
-      
+
       <div class="modal-action">
-        <button class="btn btn-primary" @click="showSqlDetails = false">
-          Close
-        </button>
+        <button class="btn btn-primary" @click="showSqlDetails = false">Close</button>
       </div>
     </div>
   </div>
@@ -251,10 +246,12 @@ const filteredUpdates = computed(() => {
       return true;
     }
 
-    if ((update.table === 'information_schema' || 
-         update.table === 'performance_schema' || 
-         update.table === 'mysql') && 
-         update.table !== 'system') {
+    if (
+      (update.table === 'information_schema' ||
+        update.table === 'performance_schema' ||
+        update.table === 'mysql') &&
+      update.table !== 'system'
+    ) {
       return false;
     }
 
@@ -270,11 +267,9 @@ const filteredUpdates = computed(() => {
 
   if (tableFilter.value) {
     const query = tableFilter.value.toLowerCase();
-    filtered = filtered.filter(update => 
-      update.table.toLowerCase().includes(query)
-    );
+    filtered = filtered.filter(update => update.table.toLowerCase().includes(query));
   }
-  
+
   return filtered.sort((a, b) => {
     const timeA = new Date(a.timestamp).getTime();
     const timeB = new Date(b.timestamp).getTime();
@@ -282,9 +277,9 @@ const filteredUpdates = computed(() => {
   });
 });
 
-function formatTimestamp (timestamp, detailed = false) {
+function formatTimestamp(timestamp, detailed = false) {
   if (!timestamp) return 'N/A';
-  
+
   const date = new Date(timestamp);
   if (detailed) {
     return date.toLocaleString();
@@ -292,7 +287,7 @@ function formatTimestamp (timestamp, detailed = false) {
   return date.toLocaleTimeString();
 }
 
-function getOperationBadgeClass (operation) {
+function getOperationBadgeClass(operation) {
   switch (operation) {
     case 'INSERT':
       return 'badge-success';
@@ -309,36 +304,35 @@ function getOperationBadgeClass (operation) {
   }
 }
 
-function viewDetails (update) {
+function viewDetails(update) {
   selectedUpdate.value = update;
   showSqlDetails.value = true;
 }
 
-function goToTable (tableName) {
+function goToTable(tableName) {
   emit('goto-table', tableName);
   close();
 }
 
-function clearUpdates () {
+function clearUpdates() {
   updates.value = [];
 }
 
-function parseChanges (details) {
+function parseChanges(details) {
   if (!details) return [];
-  
-  
+
   const changesText = details.replace(/^(Changed|Updated):\s*/i, '');
-  
+
   // Split by comma to get individual changes
   const changeItems = changesText.split(', ');
-  
+
   // Parse each change
   return changeItems
     .filter(item => item.includes('→')) // Only include items with a change arrow
     .map(item => {
       const [fieldPart, changePart] = item.split(': ');
       if (!changePart) return null;
-      
+
       const [from, to] = changePart.split(' → ');
       return {
         field: fieldPart,
@@ -349,73 +343,68 @@ function parseChanges (details) {
     .filter(item => item !== null);
 }
 
-function startMonitoring () {
+function startMonitoring() {
   if (connected.value) {
     console.log('Already connected to database monitoring');
     return;
   }
-  
+
   if (!window.api || !window.api.monitorDatabaseOperations) {
     console.error('API for monitoring not available');
     return;
   }
-  
+
   console.log(`Starting database monitoring for connection: ${props.connectionId}`);
-  
+
   loading.value = true;
-  
-  
+
   updates.value = [];
-  
-  
-  window.api.monitorDatabaseOperations(props.connectionId, (data) => {
-    console.log('Received database operation:', data);
-    
-    
-    if (data && data.table) {
-      updates.value.unshift(data);
-      
-      
-      if (loading.value) {
+
+  window.api
+    .monitorDatabaseOperations(props.connectionId, data => {
+      console.log('Received database operation:', data);
+
+      if (data && data.table) {
+        updates.value.unshift(data);
+
+        if (loading.value) {
+          loading.value = false;
+          clearTimeout(initTimeout);
+        }
+
+        if (updates.value.length > 1000) {
+          updates.value = updates.value.slice(0, 500);
+        }
+      }
+    })
+    .then(channel => {
+      console.log('Monitoring started on channel:', channel);
+      monitoringChannel = channel;
+      connected.value = true;
+
+      initTimeout = setTimeout(() => {
         loading.value = false;
-        clearTimeout(initTimeout);
-      }
-      
-      
-      if (updates.value.length > 1000) {
-        updates.value = updates.value.slice(0, 500);
-      }
-    }
-  })
-  .then(channel => {
-    console.log('Monitoring started on channel:', channel);
-    monitoringChannel = channel;
-    connected.value = true;
-    
-    
-    initTimeout = setTimeout(() => {
+      }, 5000);
+    })
+    .catch(error => {
+      console.error('Error starting monitoring:', error);
       loading.value = false;
-    }, 5000);
-  })
-  .catch(error => {
-    console.error('Error starting monitoring:', error);
-    loading.value = false;
-  });
+    });
 }
 
-function stopMonitoring () {
+function stopMonitoring() {
   if (!connected.value || !monitoringChannel) {
     console.log('Not monitoring, nothing to stop');
     return;
   }
-  
+
   if (initTimeout) {
     clearTimeout(initTimeout);
     initTimeout = null;
   }
-  
+
   console.log('Stopping database monitoring');
-  
+
   if (!window.api || !window.api.stopMonitoringDatabaseOperations) {
     console.error('API for stopping monitoring not available');
     connected.value = false;
@@ -423,8 +412,9 @@ function stopMonitoring () {
     loading.value = false;
     return;
   }
-  
-  window.api.stopMonitoringDatabaseOperations(monitoringChannel)
+
+  window.api
+    .stopMonitoringDatabaseOperations(monitoringChannel)
     .then(result => {
       console.log('Monitoring stopped:', result);
       connected.value = false;
@@ -440,39 +430,37 @@ function stopMonitoring () {
     });
 }
 
-function close () {
+function close() {
   emit('close');
 }
 
-
-watch(() => props.isOpen, (newValue) => {
-  if (newValue) {
-    
-    startMonitoring();
-  } else {
-    
-    if (connected.value) {
-      stopMonitoring();
+watch(
+  () => props.isOpen,
+  newValue => {
+    if (newValue) {
+      startMonitoring();
+    } else {
+      if (connected.value) {
+        stopMonitoring();
+      }
     }
   }
-});
-
+);
 
 onUnmounted(() => {
   if (connected.value) {
     stopMonitoring();
   }
-  
+
   if (initTimeout) {
     clearTimeout(initTimeout);
     initTimeout = null;
   }
 });
 
-
-function formatSql (sql) {
+function formatSql(sql) {
   if (!sql) return '';
-  
+
   // Simple formatting to make SQL more readable
   return sql
     .replace(/SELECT/gi, 'SELECT\n  ')
@@ -489,4 +477,4 @@ function formatSql (sql) {
   width: 90%;
   max-width: 900px;
 }
-</style> 
+</style>

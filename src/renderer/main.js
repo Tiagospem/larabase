@@ -11,12 +11,12 @@ import SQLEditorView from './views/SQLEditorView.vue';
 const routes = [
   { path: '/', component: Home },
   { path: '/database/:id', component: DatabaseView },
-  { path: '/sql-editor/:id', component: SQLEditorView },
+  { path: '/sql-editor/:id', component: SQLEditorView }
 ];
 
 const router = createRouter({
   history: createWebHashHistory(),
-  routes,
+  routes
 });
 
 const pinia = createPinia();
@@ -24,4 +24,4 @@ const pinia = createPinia();
 const app = createApp(App);
 app.use(router);
 app.use(pinia);
-app.mount('#app'); 
+app.mount('#app');

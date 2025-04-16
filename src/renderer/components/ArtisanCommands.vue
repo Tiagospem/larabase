@@ -1,48 +1,44 @@
 <template>
   <div class="modal modal-open z-30">
     <div class="modal-box w-11/12 max-w-3xl bg-base-300">
-      <h3 class="font-bold text-lg mb-4">
-        Laravel Migrations Manager
-      </h3>
-      
+      <h3 class="font-bold text-lg mb-4">Laravel Migrations Manager</h3>
+
       <div class="space-y-4">
         <!-- Migration Commands Section -->
         <div class="card bg-neutral shadow-md">
           <div class="card-body space-y-4">
-            <h3 class="card-title text-sm">
-              Migration Commands
-            </h3>
-            
+            <h3 class="card-title text-sm">Migration Commands</h3>
+
             <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
-              <button 
-                class="btn btn-sm btn-outline" 
+              <button
+                class="btn btn-sm btn-outline"
                 :disabled="isLoading || !projectPath"
                 @click="runMigration('migrate')"
               >
                 <span v-if="isLoading" class="loading loading-spinner loading-xs mr-1" />
                 Run Migrations
               </button>
-              
-              <button 
-                class="btn btn-sm btn-outline" 
+
+              <button
+                class="btn btn-sm btn-outline"
                 :disabled="isLoading || !projectPath"
                 @click="runMigration('migrate:fresh')"
               >
                 <span v-if="isLoading" class="loading loading-spinner loading-xs mr-1" />
                 Fresh Migration
               </button>
-              
-              <button 
-                class="btn btn-sm btn-outline" 
+
+              <button
+                class="btn btn-sm btn-outline"
                 :disabled="isLoading || !projectPath"
                 @click="runMigration('migrate:fresh --seed')"
               >
                 <span v-if="isLoading" class="loading loading-spinner loading-xs mr-1" />
                 Fresh Migration with Seeds
               </button>
-              
-              <button 
-                class="btn btn-sm btn-outline" 
+
+              <button
+                class="btn btn-sm btn-outline"
                 :disabled="isLoading || !projectPath"
                 @click="runMigration('migrate:status')"
               >
@@ -50,7 +46,7 @@
                 Check Migration Status
               </button>
             </div>
-            
+
             <div v-if="hasSail" class="form-control">
               <label class="label cursor-pointer">
                 <span class="label-text">Use Laravel Sail</span>
@@ -64,49 +60,49 @@
             </div>
           </div>
         </div>
-        
+
         <!-- Pending Migrations Section -->
         <div class="card bg-neutral shadow-md">
           <div class="card-body space-y-4">
             <div class="flex justify-between items-center">
-              <h3 class="card-title text-sm">
-                Pending Migrations
-              </h3>
-              <button 
-                class="btn btn-xs btn-ghost" 
-                :disabled="isLoading" 
+              <h3 class="card-title text-sm">Pending Migrations</h3>
+              <button
+                class="btn btn-xs btn-ghost"
+                :disabled="isLoading"
                 @click="refreshMigrationStatus"
               >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
                   fill="none"
                   viewBox="0 0 24 24"
-                  stroke-width="1.5" 
+                  stroke-width="1.5"
                   stroke="currentColor"
                   class="w-4 h-4"
                   :class="{ 'animate-spin': isLoading }"
                 >
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99"
+                  />
                 </svg>
               </button>
             </div>
-            
+
             <div v-if="isLoading" class="flex justify-center py-4">
               <span class="loading loading-spinner loading-md" />
             </div>
-            
+
             <div v-else-if="pendingMigrations.length === 0" class="text-center py-2 text-gray-400">
               <p>No pending migrations</p>
             </div>
-            
+
             <div v-else class="overflow-x-auto">
               <table class="table table-compact w-full">
                 <thead>
                   <tr>
                     <th>Migration</th>
-                    <th class="w-24">
-                      Action
-                    </th>
+                    <th class="w-24">Action</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -115,8 +111,8 @@
                       {{ formatMigrationName(migration) }}
                     </td>
                     <td>
-                      <button 
-                        class="btn btn-xs btn-outline" 
+                      <button
+                        class="btn btn-xs btn-outline"
                         :disabled="isLoading"
                         @click="runSingleMigration(migration)"
                       >
@@ -127,10 +123,10 @@
                   </tr>
                 </tbody>
               </table>
-              
+
               <div class="flex justify-end mt-4">
-                <button 
-                  class="btn btn-sm btn-primary" 
+                <button
+                  class="btn btn-sm btn-primary"
                   :disabled="isLoading || !projectPath"
                   @click="runMigration('migrate')"
                 >
@@ -141,67 +137,62 @@
             </div>
           </div>
         </div>
-        
+
         <!-- Migration Batches for Rollback -->
         <div class="card bg-neutral shadow-md">
           <div class="card-body space-y-4">
-            <h3 class="card-title text-sm">
-              Rollback Migrations
-            </h3>
-            
+            <h3 class="card-title text-sm">Rollback Migrations</h3>
+
             <div v-if="isLoading" class="flex justify-center py-4">
               <span class="loading loading-spinner loading-md" />
             </div>
-            
+
             <div v-else-if="batches.length === 0" class="text-center py-2 text-gray-400">
               <p>No migrations to rollback</p>
             </div>
-            
+
             <div v-else class="space-y-4">
               <div class="form-control w-full">
                 <label class="label">
                   <span class="label-text">Rollback Strategy</span>
                 </label>
                 <select v-model="selectedRollbackOption" class="select select-bordered w-full">
-                  <option value="steps">
-                    Rollback by number of steps
-                  </option>
-                  <option value="batch">
-                    Rollback specific batch
-                  </option>
+                  <option value="steps">Rollback by number of steps</option>
+                  <option value="batch">Rollback specific batch</option>
                 </select>
               </div>
-              
+
               <!-- Rollback por steps -->
               <div v-if="selectedRollbackOption === 'steps'" class="space-y-4">
                 <div class="form-control w-full">
                   <label class="label">
                     <span class="label-text">Number of steps to rollback</span>
                   </label>
-                  
+
                   <!-- Exibir um slider e input para escolher qualquer número de steps -->
                   <div class="flex gap-2 items-center">
-                    <input 
-                      v-model.number="rollbackSteps" 
-                      type="range" 
-                      min="1" 
-                      max="20" 
+                    <input
+                      v-model.number="rollbackSteps"
+                      type="range"
+                      min="1"
+                      max="20"
                       class="range range-primary range-sm flex-1"
                     />
-                    <input 
-                      v-model.number="rollbackSteps" 
-                      type="number" 
-                      min="1" 
-                      max="100" 
+                    <input
+                      v-model.number="rollbackSteps"
+                      type="number"
+                      min="1"
+                      max="100"
                       class="input input-bordered w-20 text-center"
                     />
                   </div>
-                  
+
                   <div class="text-xs text-gray-500 mt-1">
-                    O Laravel executará o rollback das últimas {{ rollbackSteps }} migrações, independente dos batches.
+                    O Laravel executará o rollback das últimas {{ rollbackSteps }} migrações,
+                    independente dos batches.
                   </div>
                 </div>
-                
+
                 <!-- Preview das migrações afetadas pelo rollback de steps -->
                 <div v-if="rollbackSteps > 0" class="p-2 bg-base-100 rounded-md">
                   <div class="text-sm font-medium mb-2">
@@ -210,14 +201,21 @@
                   <div class="relative">
                     <ul
                       class="text-xs space-y-1 ml-2"
-                      :class="{ 'max-h-24 overflow-hidden': stepMigrations.length > 5 && !expandStepsMigrations }"
+                      :class="{
+                        'max-h-24 overflow-hidden':
+                          stepMigrations.length > 5 && !expandStepsMigrations
+                      }"
                     >
-                      <li v-for="(migration, index) in stepMigrations" :key="index" class="font-mono">
+                      <li
+                        v-for="(migration, index) in stepMigrations"
+                        :key="index"
+                        class="font-mono"
+                      >
                         {{ formatMigrationName(migration) }}
                       </li>
                     </ul>
                     <div
-                      v-if="stepMigrations.length > 5 && !expandStepsMigrations" 
+                      v-if="stepMigrations.length > 5 && !expandStepsMigrations"
                       class="absolute bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-base-100 to-transparent pointer-events-none"
                     />
                   </div>
@@ -226,12 +224,14 @@
                       class="btn btn-xs btn-ghost w-full"
                       @click="expandStepsMigrations = !expandStepsMigrations"
                     >
-                      {{ expandStepsMigrations ? 'Show less' : `Show all (${stepMigrations.length})` }}
+                      {{
+                        expandStepsMigrations ? 'Show less' : `Show all (${stepMigrations.length})`
+                      }}
                     </button>
                   </div>
                 </div>
               </div>
-              
+
               <!-- Rollback por batch específico -->
               <div v-if="selectedRollbackOption === 'batch'" class="space-y-4">
                 <div class="form-control w-full">
@@ -244,7 +244,7 @@
                     </option>
                   </select>
                 </div>
-                
+
                 <!-- Preview das migrações afetadas pelo rollback de batch -->
                 <div v-if="selectedBatch" class="p-2 bg-base-100 rounded-md">
                   <div class="text-sm font-medium mb-2">
@@ -253,14 +253,21 @@
                   <div class="relative">
                     <ul
                       class="text-xs space-y-1 ml-2"
-                      :class="{ 'max-h-24 overflow-hidden': batchMigrations.length > 5 && !expandBatchMigrations }"
+                      :class="{
+                        'max-h-24 overflow-hidden':
+                          batchMigrations.length > 5 && !expandBatchMigrations
+                      }"
                     >
-                      <li v-for="(migration, index) in batchMigrations" :key="index" class="font-mono">
+                      <li
+                        v-for="(migration, index) in batchMigrations"
+                        :key="index"
+                        class="font-mono"
+                      >
                         {{ formatMigrationName(migration) }}
                       </li>
                     </ul>
                     <div
-                      v-if="batchMigrations.length > 5 && !expandBatchMigrations" 
+                      v-if="batchMigrations.length > 5 && !expandBatchMigrations"
                       class="absolute bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-base-100 to-transparent pointer-events-none"
                     />
                   </div>
@@ -269,15 +276,17 @@
                       class="btn btn-xs btn-ghost w-full"
                       @click="expandBatchMigrations = !expandBatchMigrations"
                     >
-                      {{ expandBatchMigrations ? 'Show less' : `Show all (${batchMigrations.length})` }}
+                      {{
+                        expandBatchMigrations ? 'Show less' : `Show all (${batchMigrations.length})`
+                      }}
                     </button>
                   </div>
                 </div>
               </div>
-              
+
               <div class="flex justify-end">
-                <button 
-                  class="btn btn-sm btn-error" 
+                <button
+                  class="btn btn-sm btn-error"
                   :disabled="isLoading || !projectPath"
                   @click="runRollback"
                 >
@@ -288,19 +297,20 @@
             </div>
           </div>
         </div>
-        
+
         <div v-if="projectPath" class="text-xs text-gray-400">
           <span>Project: {{ projectPath }}</span>
         </div>
         <div v-else class="text-xs text-red-400">
-          <span>No Laravel project path configured. Please set a project path in the connection settings.</span>
+          <span
+            >No Laravel project path configured. Please set a project path in the connection
+            settings.</span
+          >
         </div>
       </div>
-      
+
       <div class="modal-action mt-6">
-        <button class="btn" @click="close">
-          Close
-        </button>
+        <button class="btn" @click="close">Close</button>
       </div>
     </div>
     <div class="modal-backdrop" @click="close" />
@@ -339,105 +349,87 @@ const expandLastMigrations = ref(false);
 const expandStepsMigrations = ref(false);
 const expandBatchMigrations = ref(false);
 
-
 const stepMigrations = computed(() => {
-  
-  
-  
-  
   const migrationsWithMetadata = [];
-  
+
   batches.value.forEach(batch => {
     if (batch.migrations && Array.isArray(batch.migrations)) {
       batch.migrations.forEach(migration => {
-        
         migrationsWithMetadata.push({
           name: migration,
-          
-          timestamp: migration.substring(0, 14), 
+
+          timestamp: migration.substring(0, 14),
           batch: batch.batch
         });
       });
     }
   });
-  
-  
+
   migrationsWithMetadata.sort((a, b) => {
-    
     if (a.batch !== b.batch) {
       return b.batch - a.batch;
     }
-    
+
     return b.timestamp.localeCompare(a.timestamp);
   });
-  
-  
+
   const orderedMigrations = migrationsWithMetadata.map(item => item.name);
-  
-  
+
   console.log('All migrations ordered by recency:', orderedMigrations);
-  
-  
+
   return orderedMigrations.slice(0, rollbackSteps.value);
 });
 
-
 const batchMigrations = computed(() => {
   if (!selectedBatch.value) return [];
-  
+
   const batch = batches.value.find(b => b.batch === selectedBatch.value);
   return batch ? batch.migrations : [];
 });
 
-
-function formatMigrationName (migration) {
-  
+function formatMigrationName(migration) {
   let name = migration.replace(/\.php$/, '');
-  
+
   // Format timestamp_name to a more readable format
   const parts = name.split('_');
   if (parts.length >= 4 && parts[0].length === 4) {
-    
     const dateStr = `${parts[0]}-${parts[1]}-${parts[2]}`;
     const restOfName = parts.slice(3).join('_');
     return `${dateStr} ${restOfName}`;
   }
-  
+
   return name;
 }
 
-
-function formatMigrationsList (migrations) {
+function formatMigrationsList(migrations) {
   if (!migrations || migrations.length === 0) return '';
-  
-  return migrations
-    .map(formatMigrationName)
-    .join(', ');
+
+  return migrations.map(formatMigrationName).join(', ');
 }
 
 // Helper to get a description of what will be included in each step
-function getStepDescription (steps) {
+function getStepDescription(steps) {
   if (!batches.value || batches.value.length === 0) return 'No batches';
-  
+
   const totalBatches = Math.min(steps, batches.value.length);
   let totalMigrations = 0;
-  
+
   for (let i = 0; i < totalBatches; i++) {
     if (batches.value[i] && batches.value[i].migrations) {
       totalMigrations += batches.value[i].migrations.length;
     }
   }
-  
+
   if (steps > batches.value.length) {
     return `${totalMigrations} migrations (limited to ${batches.value.length} available batches)`;
   }
-  
+
   return `${totalMigrations} migrations`;
 }
 
-async function checkForSail () {
+async function checkForSail() {
   if (!props.projectPath) return;
-  
+
   try {
     await refreshMigrationStatus();
   } catch (error) {
@@ -446,31 +438,30 @@ async function checkForSail () {
   }
 }
 
-async function refreshMigrationStatus () {
+async function refreshMigrationStatus() {
   if (!props.projectPath) {
     showAlert('No Laravel project path configured', 'error');
     return;
   }
-  
+
   isLoading.value = true;
-  
+
   try {
     const result = await window.api.getMigrationStatus({
       projectPath: props.projectPath,
       useSail: useSail.value,
       connectionId: props.connectionId
     });
-    
+
     if (result.success) {
       console.log('Migration status result:', result);
       pendingMigrations.value = result.pendingMigrations || [];
       batches.value = result.batches || [];
-      
+
       console.log('Batches receiveed:', batches.value);
-      
+
       hasSail.value = result.hasSail || false;
-      
-      
+
       if (pendingMigrations.value.length === 0 && batches.value.length === 0) {
         console.log('No migrations found in the status output');
         if (result.output) {
@@ -489,14 +480,14 @@ async function refreshMigrationStatus () {
   }
 }
 
-async function runMigration (command) {
+async function runMigration(command) {
   if (!props.projectPath) {
     showAlert('No Laravel project path configured', 'error');
     return;
   }
-  
+
   isLoading.value = true;
-  
+
   try {
     await commandsStore.runArtisanCommand({
       command: command,
@@ -504,11 +495,9 @@ async function runMigration (command) {
       useSail: useSail.value,
       connectionId: props.connectionId
     });
-    
-    
+
     await refreshMigrationStatus();
-    
-    
+
     setTimeout(() => {
       close();
     }, 300);
@@ -519,34 +508,26 @@ async function runMigration (command) {
   }
 }
 
-async function runSingleMigration (migration) {
-  
-  
-  const migrationFileName = migration.includes('.php') 
-    ? migration 
-    : `${migration}.php`;
-  
+async function runSingleMigration(migration) {
+  const migrationFileName = migration.includes('.php') ? migration : `${migration}.php`;
+
   if (!props.projectPath) {
     showAlert('No Laravel project path configured', 'error');
     return;
   }
-  
+
   isLoading.value = true;
-  
+
   try {
-    
-    
     await commandsStore.runArtisanCommand({
       command: `migrate --path=database/migrations/${migrationFileName}`,
       projectPath: props.projectPath,
       useSail: useSail.value,
       connectionId: props.connectionId
     });
-    
-    
+
     await refreshMigrationStatus();
-    
-    
+
     setTimeout(() => {
       close();
     }, 300);
@@ -557,23 +538,22 @@ async function runSingleMigration (migration) {
   }
 }
 
-
-async function runRollback () {
+async function runRollback() {
   let command = 'migrate:rollback';
-  
+
   if (selectedRollbackOption.value === 'steps' && rollbackSteps.value > 0) {
     command += ` --step=${rollbackSteps.value}`;
   } else if (selectedRollbackOption.value === 'batch' && selectedBatch.value) {
     command = `migrate:rollback --batch=${selectedBatch.value}`;
   }
-  
+
   if (!props.projectPath) {
     showAlert('No Laravel project path configured', 'error');
     return;
   }
-  
+
   isLoading.value = true;
-  
+
   try {
     await commandsStore.runArtisanCommand({
       command: command,
@@ -581,11 +561,9 @@ async function runRollback () {
       useSail: useSail.value,
       connectionId: props.connectionId
     });
-    
-    
+
     await refreshMigrationStatus();
-    
-    
+
     setTimeout(() => {
       close();
     }, 300);
@@ -596,48 +574,52 @@ async function runRollback () {
   }
 }
 
-function close () {
+function close() {
   emit('close');
 }
-
 
 onMounted(() => {
   checkForSail();
 });
 
-
-watch(() => props.projectPath, () => {
-  checkForSail();
-});
-
-
-watch(() => useSail.value, () => {
-  refreshMigrationStatus();
-});
-
-
-watch(() => selectedRollbackOption.value, () => {
-  
-  expandStepsMigrations.value = false;
-  expandBatchMigrations.value = false;
-  
-  
-  if (selectedRollbackOption.value === 'batch' && batches.value.length > 0) {
-    selectedBatch.value = batches.value[0].batch;
-  } else if (selectedRollbackOption.value === 'steps') {
-    rollbackSteps.value = 1;
+watch(
+  () => props.projectPath,
+  () => {
+    checkForSail();
   }
-});
+);
 
-
-watch(() => batches.value, () => {
-  
-  expandStepsMigrations.value = false;
-  expandBatchMigrations.value = false;
-  
-  
-  if (selectedRollbackOption.value === 'batch' && batches.value.length > 0) {
-    selectedBatch.value = batches.value[0].batch;
+watch(
+  () => useSail.value,
+  () => {
+    refreshMigrationStatus();
   }
-}, { immediate: true });
-</script> 
+);
+
+watch(
+  () => selectedRollbackOption.value,
+  () => {
+    expandStepsMigrations.value = false;
+    expandBatchMigrations.value = false;
+
+    if (selectedRollbackOption.value === 'batch' && batches.value.length > 0) {
+      selectedBatch.value = batches.value[0].batch;
+    } else if (selectedRollbackOption.value === 'steps') {
+      rollbackSteps.value = 1;
+    }
+  }
+);
+
+watch(
+  () => batches.value,
+  () => {
+    expandStepsMigrations.value = false;
+    expandBatchMigrations.value = false;
+
+    if (selectedRollbackOption.value === 'batch' && batches.value.length > 0) {
+      selectedBatch.value = batches.value[0].batch;
+    }
+  },
+  { immediate: true }
+);
+</script>

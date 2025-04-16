@@ -1,6 +1,8 @@
 import js from '@eslint/js';
 import globals from 'globals';
 import vue from 'eslint-plugin-vue';
+import prettierPlugin from 'eslint-plugin-prettier';
+import prettierConfig from 'eslint-config-prettier';
 
 export default [
   {
@@ -26,7 +28,11 @@ export default [
   },
   js.configs.recommended,
   ...vue.configs['flat/recommended'],
+  prettierConfig,
   {
+    plugins: {
+      prettier: prettierPlugin
+    },
     files: ['**/*.js', '**/*.vue'],
     rules: {
       'no-console': process.env.NODE_ENV === 'production' ? 'warn' : 'off',
@@ -43,7 +49,8 @@ export default [
       'vue/max-attributes-per-line': ['error', {
         singleline: { max: 3 },
         multiline: { max: 1 }
-      }]
+      }],
+      'prettier/prettier': 'error'
     }
   }
 ]; 

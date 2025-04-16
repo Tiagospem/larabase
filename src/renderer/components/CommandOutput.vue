@@ -6,13 +6,13 @@
           xmlns="http://www.w3.org/2000/svg"
           fill="none"
           viewBox="0 0 24 24"
-          stroke-width="1.5" 
+          stroke-width="1.5"
           stroke="currentColor"
           class="w-5 h-5 mr-2"
         >
           <path
             stroke-linecap="round"
-            stroke-linejoin="round" 
+            stroke-linejoin="round"
             d="M6.75 7.5l3 2.25-3 2.25m4.5 0h3m-9 8.25h13.5A2.25 2.25 0 0021 18V6a2.25 2.25 0 00-2.25-2.25H5.25A2.25 2.25 0 003 6v12a2.25 2.25 0 002.25 2.25z"
           />
         </svg>
@@ -22,12 +22,16 @@
         </div>
       </div>
       <div class="flex">
-        <button class="btn btn-xs btn-ghost" :title="isExpanded ? 'Collapse' : 'Expand'" @click="toggleHeight">
+        <button
+          class="btn btn-xs btn-ghost"
+          :title="isExpanded ? 'Collapse' : 'Expand'"
+          @click="toggleHeight"
+        >
           <svg
             xmlns="http://www.w3.org/2000/svg"
             fill="none"
             viewBox="0 0 24 24"
-            stroke-width="1.5" 
+            stroke-width="1.5"
             stroke="currentColor"
             class="w-4 h-4"
             :class="{ 'transform rotate-180': !isExpanded }"
@@ -49,9 +53,19 @@
         </button>
       </div>
     </div>
-    <div class="command-output-content" :class="{ 'expanded': isExpanded }">
-      <div v-if="commandResult" ref="outputContainer" class="mockup-code bg-neutral h-full overflow-auto">
-        <pre class="whitespace-pre-wrap" :class="{ 'text-green-400': commandResult.success, 'text-red-400': !commandResult.success }"><code>{{ sanitizedOutput }}</code></pre>
+    <div class="command-output-content" :class="{ expanded: isExpanded }">
+      <div
+        v-if="commandResult"
+        ref="outputContainer"
+        class="mockup-code bg-neutral h-full overflow-auto"
+      >
+        <pre
+          class="whitespace-pre-wrap"
+          :class="{
+            'text-green-400': commandResult.success,
+            'text-red-400': !commandResult.success
+          }"
+        ><code>{{ sanitizedOutput }}</code></pre>
       </div>
       <div v-else class="flex items-center justify-center h-full text-gray-500">
         <p>No command output</p>
@@ -83,37 +97,39 @@ const sanitizedOutput = computed(() => {
   if (!commandResult.value?.output) {
     return commandResult.value?.message || 'No output';
   }
-  
-  
+
   return commandResult.value.output
     .replace(/\u001b\[\d+(;\d+)?m/g, '') // Remove all ANSI color codes
     .replace(/\[90m|\[39m|\[32;1m|\[39;22m|\[1m|\[22m/g, '') // Remove specific color format codes
-    .replace(/\u001b/g, ''); 
+    .replace(/\u001b/g, '');
 });
 
-function toggleHeight () {
+function toggleHeight() {
   isExpanded.value = !isExpanded.value;
 }
 
-function clearOutput () {
+function clearOutput() {
   commandsStore.closeCommandOutput();
 }
 
+watch(
+  () => commandsStore.lastCommand,
+  () => {
+    isExpanded.value = true;
+  }
+);
 
-watch(() => commandsStore.lastCommand, () => {
-  isExpanded.value = true;
-});
+watch(
+  () => sanitizedOutput.value,
+  () => {
+    nextTick(() => {
+      scrollToBottom();
+    });
+  },
+  { immediate: true }
+);
 
-
-watch(() => sanitizedOutput.value, () => {
-  
-  nextTick(() => {
-    scrollToBottom();
-  });
-}, { immediate: true });
-
-
-function scrollToBottom () {
+function scrollToBottom() {
   if (outputContainer.value) {
     outputContainer.value.scrollTop = outputContainer.value.scrollHeight;
   }
@@ -149,4 +165,4 @@ function scrollToBottom () {
 .command-output-content.expanded {
   height: 400px;
 }
-</style> 
+</style>

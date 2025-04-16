@@ -2,9 +2,7 @@
   <div v-if="message" class="fixed bottom-4 right-4 z-[9999] max-w-sm">
     <div :class="['alert', alertClass]">
       <span>{{ message }}</span>
-      <button class="btn btn-ghost btn-sm btn-circle" @click="close">
-        ✕
-      </button>
+      <button class="btn btn-ghost btn-sm btn-circle" @click="close">✕</button>
     </div>
   </div>
 </template>
@@ -15,7 +13,7 @@ import { watch, computed, onUnmounted } from 'vue';
 const props = defineProps({
   type: {
     type: String,
-    default: 'info',
+    default: 'info'
   },
   message: {
     type: String,
@@ -41,23 +39,30 @@ const close = () => {
 
 const alertClass = computed(() => {
   switch (props.type) {
-    case 'success': return 'alert-success';
-    case 'warning': return 'alert-warning';
-    case 'error': return 'alert-error';
-    default: return 'alert-info';
+    case 'success':
+      return 'alert-success';
+    case 'warning':
+      return 'alert-warning';
+    case 'error':
+      return 'alert-error';
+    default:
+      return 'alert-info';
   }
 });
 
-watch(() => props.message, (newMessage) => {
-  if (newMessage && props.autoClose) {
-    if (timeoutId) clearTimeout(timeoutId);
-    timeoutId = setTimeout(() => {
-      close();
-    }, props.duration);
+watch(
+  () => props.message,
+  newMessage => {
+    if (newMessage && props.autoClose) {
+      if (timeoutId) clearTimeout(timeoutId);
+      timeoutId = setTimeout(() => {
+        close();
+      }, props.duration);
+    }
   }
-});
+);
 
 onUnmounted(() => {
   if (timeoutId) clearTimeout(timeoutId);
 });
-</script> 
+</script>

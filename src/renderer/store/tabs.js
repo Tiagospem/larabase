@@ -5,25 +5,26 @@ export const useTabsStore = defineStore('tabs', () => {
   const openTabs = ref([]);
   const activeTabId = ref(null);
 
-  async function addTab (tableData) {
-    
+  async function addTab(tableData) {
     const isFiltered = tableData.filter && tableData.filter.trim() !== '';
-    
+
     let existingTab;
-    
+
     if (isFiltered) {
       // Se tem filtro, precisamos verificar se existe uma aba exatamente igual (tabela e filtro)
-      existingTab = openTabs.value.find(tab =>
-        tab.connectionId === tableData.connectionId &&
-        tab.tableName === tableData.tableName &&
-        tab.filter === tableData.filter
+      existingTab = openTabs.value.find(
+        tab =>
+          tab.connectionId === tableData.connectionId &&
+          tab.tableName === tableData.tableName &&
+          tab.filter === tableData.filter
       );
     } else {
       // Sem filtro, verificamos apenas a tabela
-      existingTab = openTabs.value.find(tab =>
-        tab.connectionId === tableData.connectionId &&
-        tab.tableName === tableData.tableName &&
-        (!tab.filter || tab.filter.trim() === '')
+      existingTab = openTabs.value.find(
+        tab =>
+          tab.connectionId === tableData.connectionId &&
+          tab.tableName === tableData.tableName &&
+          (!tab.filter || tab.filter.trim() === '')
       );
     }
 
@@ -36,9 +37,8 @@ export const useTabsStore = defineStore('tabs', () => {
     let tabTitle = tableData.tableName;
     if (isFiltered) {
       // Adicionar uma versão resumida do filtro ao título
-      const shortFilter = tableData.filter.length > 20 
-        ? tableData.filter.substring(0, 20) + '...' 
-        : tableData.filter;
+      const shortFilter =
+        tableData.filter.length > 20 ? tableData.filter.substring(0, 20) + '...' : tableData.filter;
       tabTitle = `${tableData.tableName} (${shortFilter})`;
     }
 
@@ -50,10 +50,10 @@ export const useTabsStore = defineStore('tabs', () => {
       filter: tableData.filter || '',
       data: null,
       isLoading: true,
-      columnCount: tableData.columnCount || 0,
+      columnCount: tableData.columnCount || 0
     };
 
-    console.log("Criando nova aba com filtro:", newTab.filter);
+    console.log('Criando nova aba com filtro:', newTab.filter);
 
     openTabs.value.push(newTab);
     activeTabId.value = newTab.id;
@@ -63,14 +63,15 @@ export const useTabsStore = defineStore('tabs', () => {
     return newTab;
   }
 
-  async function removeTab (tabId) {
+  async function removeTab(tabId) {
     const index = openTabs.value.findIndex(tab => tab.id === tabId);
 
     if (index !== -1) {
       openTabs.value.splice(index, 1);
 
       if (activeTabId.value === tabId) {
-        activeTabId.value = openTabs.value.length > 0
+        activeTabId.value =
+          openTabs.value.length > 0
             ? openTabs.value[Math.min(index, openTabs.value.length - 1)].id
             : null;
       }
@@ -79,7 +80,7 @@ export const useTabsStore = defineStore('tabs', () => {
     }
   }
 
-  async function updateTabData (tabId, data) {
+  async function updateTabData(tabId, data) {
     const tab = openTabs.value.find(tab => tab.id === tabId);
     if (tab) {
       tab.data = data;
@@ -88,18 +89,18 @@ export const useTabsStore = defineStore('tabs', () => {
     }
   }
 
-  function activateTab (tabId) {
+  function activateTab(tabId) {
     if (openTabs.value.some(tab => tab.id === tabId)) {
       activeTabId.value = tabId;
     }
   }
 
-  async function reorderTabs (newTabsOrder) {
+  async function reorderTabs(newTabsOrder) {
     openTabs.value = newTabsOrder;
     await saveOpenTabs();
   }
 
-  async function saveOpenTabs () {
+  async function saveOpenTabs() {
     try {
       if (window.api) {
         const simplifiedTabs = openTabs.value.map(tab => ({
@@ -109,7 +110,7 @@ export const useTabsStore = defineStore('tabs', () => {
           title: tab.title,
           filter: tab.filter || '',
           rowCount: tab.data?.rowCount || 0,
-          columnCount: tab.data?.columns?.length || 0,
+          columnCount: tab.data?.columns?.length || 0
         }));
 
         await window.api.saveOpenTabs({
@@ -125,19 +126,22 @@ export const useTabsStore = defineStore('tabs', () => {
         title: tab.title,
         filter: tab.filter || '',
         columnCount: tab.columnCount || 0,
-        rowCount: tab.data?.rowCount || 0,
+        rowCount: tab.data?.rowCount || 0
       }));
 
-      localStorage.setItem('openTabs', JSON.stringify({
-        tabs: simplifiedTabs,
-        activeTabId: activeTabId.value
-      }));
+      localStorage.setItem(
+        'openTabs',
+        JSON.stringify({
+          tabs: simplifiedTabs,
+          activeTabId: activeTabId.value
+        })
+      );
     } catch (error) {
       console.error(error);
     }
   }
 
-  async function loadSavedTabs () {
+  async function loadSavedTabs() {
     try {
       if (window.api) {
         const savedTabs = await window.api.getOpenTabs();
@@ -159,29 +163,26 @@ export const useTabsStore = defineStore('tabs', () => {
     }
   }
 
-  async function closeAllTabs () {
+  async function closeAllTabs() {
     openTabs.value = [];
     activeTabId.value = null;
     await saveOpenTabs();
   }
 
-  
-  async function closeTabsByConnectionId (connectionId) {
+  async function closeTabsByConnectionId(connectionId) {
     if (!connectionId) return;
-    
+
     const initialTabsCount = openTabs.value.length;
     openTabs.value = openTabs.value.filter(tab => tab.connectionId !== connectionId);
-    
-    
+
     if (initialTabsCount > openTabs.value.length) {
-      
       if (!openTabs.value.some(tab => tab.id === activeTabId.value)) {
         activeTabId.value = openTabs.value.length > 0 ? openTabs.value[0].id : null;
       }
       await saveOpenTabs();
     }
-    
-    return initialTabsCount - openTabs.value.length; 
+
+    return initialTabsCount - openTabs.value.length;
   }
 
   const activeTab = computed(() => {
@@ -201,4 +202,4 @@ export const useTabsStore = defineStore('tabs', () => {
     closeAllTabs,
     closeTabsByConnectionId
   };
-}); 
+});
