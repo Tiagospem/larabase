@@ -1882,13 +1882,13 @@ ipcMain.handle('start-db-monitoring', async (event, connectionId) => {
   try {
     console.log(`Starting database monitoring for connection ${connectionId}`);
     
-    // Validar connectionId
+    // Validate connectionId
     if (!connectionId) {
-      console.error('ConnectionId inválido ou não fornecido');
-      return { success: false, message: 'ID de conexão inválido' };
+      console.error('Invalid connectionId or not provided');
+      return { success: false, message: 'Invalid connection ID' };
     }
     
-    // Limpar conexão anterior se existir
+    // Clear previous connection if it exists
     if (dbMonitoringConnections.has(connectionId)) {
       try {
         const existingConnection = dbMonitoringConnections.get(connectionId);
@@ -1902,7 +1902,7 @@ ipcMain.handle('start-db-monitoring', async (event, connectionId) => {
       }
     }
     
-    // Obter detalhes da conexão
+    // Get connection details
     const connections = store.get('connections') || [];
     const connection = connections.find(conn => conn.id === connectionId);
     
@@ -1914,12 +1914,12 @@ ipcMain.handle('start-db-monitoring', async (event, connectionId) => {
     console.log(`Connection found: ${connection.name}`);
     console.log(`Details: ${connection.host}:${connection.port}/${connection.database}`);
     
-    // Verificar se temos todas as informações necessárias
+    // Check if we have all necessary information
     if (!connection.host || !connection.port || !connection.username || !connection.database) {
       return { success: false, message: 'Incomplete connection information' };
     }
     
-    // Criar conexão ao banco de dados
+    // Create database connection
     const dbConnection = await mysql.createConnection({
       host: connection.host,
       port: connection.port,
@@ -1927,7 +1927,7 @@ ipcMain.handle('start-db-monitoring', async (event, connectionId) => {
       password: connection.password || '',
       database: connection.database,
       dateStrings: true,
-      multipleStatements: true // Habilitar múltiplas instruções para criar triggers mais complexos
+      multipleStatements: true // Enable multiple statements for creating complex triggers
     });
     
     console.log(`Connection established to ${connection.database}`);

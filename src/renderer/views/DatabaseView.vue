@@ -758,8 +758,8 @@ function handleOpenTab(tabData) {
     const targetTable = databaseStore.tablesList.find(t => t.name === tabData.data.tableName);
     
     if (!targetTable) {
-      console.error("Tabela alvo não encontrada:", tabData.data.tableName);
-      showAlert(`Tabela "${tabData.data.tableName}" não encontrada`, "error");
+      console.error("Target table not found:", tabData.data.tableName);
+      showAlert(`Table "${tabData.data.tableName}" not found`, "error");
       return;
     }
     

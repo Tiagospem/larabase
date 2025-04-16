@@ -1547,8 +1547,8 @@ function convertFilterToJs(filter) {
     
     return stringReplacedFilter;
   } catch (e) {
-    console.error('Erro ao converter filtro SQL para JS:', e, 'Filtro original:', filter);
-    return 'true'; // Fallback para não filtrar nada
+    console.error('Error converting SQL filter to JS:', e, 'Original filter:', filter);
+    return 'true'; // Fallback to not filter anything
   }
 }
 
@@ -1556,48 +1556,48 @@ function convertFilterToJs(filter) {
 function shouldUseServerFilter(filter) {
   if (!filter) return false;
   
-  // Limpar o filtro
+  // Clean the filter
   const cleanFilter = filter.trim();
   if (!cleanFilter) return false;
 
-  console.log("Verificando se deve usar filtro do servidor para:", cleanFilter);
+  console.log("Checking if server filter should be used for:", cleanFilter);
   
-  // 1. Filtro de ID - SEMPRE usar o servidor para buscas diretas por ID
+  // 1. ID Filter - ALWAYS use server for direct ID searches
   const idMatch = cleanFilter.match(/^\s*id\s*=\s*(\d+)\s*$/i);
   if (idMatch) {
     const idValue = parseInt(idMatch[1], 10);
     if (!isNaN(idValue)) {
-      console.log(`Detectado filtro de ID: ${idValue} - Usando o servidor`);
+      console.log(`Detected ID filter: ${idValue} - Using server`);
       return true;
     }
   }
   
-  // 2. Filtro com operador LIKE (pode envolver muitos registros)
+  // 2. Filter with LIKE operator (may involve many records)
   if (/\bLIKE\b/i.test(cleanFilter)) {
-    console.log("Detectado filtro LIKE - Usando o servidor");
+    console.log("Detected LIKE filter - Using server");
     return true;
   }
   
-  // 3. Filtros complexos com múltiplas condições
+  // 3. Complex filters with multiple conditions
   if (/\bAND\b|\bOR\b|\bIN\b|\bIS NULL\b|\bIS NOT NULL\b/i.test(cleanFilter)) {
-    console.log("Detectado filtro complexo com operadores lógicos - Usando o servidor");
+    console.log("Detected complex filter with logical operators - Using server");
     return true;
   }
   
-  // 4. Filtros de igualdade simples para qualquer coluna chave primária ou estrangeira
+  // 4. Simple equality filters for any primary or foreign key column
   if (/^\s*\w+_id\s*=\s*\d+\s*$/i.test(cleanFilter)) {
-    console.log("Detectado filtro de chave estrangeira - Usando o servidor");
+    console.log("Detected foreign key filter - Using server");
     return true;
   }
   
-  console.log("Usando filtro local para:", cleanFilter);
+  console.log("Using local filter for:", cleanFilter);
   return false;
 }
 
-// Função para carregar dados filtrados diretamente do servidor
+// Function to load filtered data directly from server
 async function loadFilteredData() {
   if (!activeFilter.value) {
-    // Se não há filtro ativo, carregamos normalmente
+    // If there's no active filter, load normally
     return loadTableData();
   }
   
@@ -1606,13 +1606,13 @@ async function loadFilteredData() {
   selectedRows.value = [];
   
   try {
-    console.log(`Aplicando filtro no servidor: "${activeFilter.value}"`);
+    console.log(`Applying filter on server: "${activeFilter.value}"`);
     
-    // Verificar se o filtro inclui "id = X" para facilitar a depuração
+    // Check if the filter includes "id = X" for easier debugging
     const idMatch = activeFilter.value.match(/^\s*id\s*=\s*(\d+)\s*$/i);
     if (idMatch) {
       const idValue = parseInt(idMatch[1], 10);
-      console.log(`Buscando registro com ID: ${idValue}`);
+      console.log(`Searching for record with ID: ${idValue}`);
     }
     
     // Carregar dados com filtro SQL diretamente do servidor
@@ -1629,17 +1629,17 @@ async function loadFilteredData() {
     if (!result.data || result.data.length === 0) {
       if (result.totalRecords > 0) {
         // Se temos registros no total, mas não nesta página
-        showAlert(`Nenhum registro encontrado na página ${currentPage.value}. Total: ${result.totalRecords}`, 'info');
+        showAlert(`No records found on page ${currentPage.value}. Total: ${result.totalRecords}`, 'info');
       } else {
         // Se não há registros em nenhuma página
-        showAlert('Nenhum registro corresponde ao filtro aplicado', 'info');
+        showAlert('No records match the applied filter', 'info');
       }
     } else {
-      showAlert(`Encontrado ${result.totalRecords} registro(s) correspondente(s) ao filtro`, 'success');
+      showAlert(`Found ${result.totalRecords} record(s) matching the filter`, 'success');
       
       if (idMatch && result.data.length === 1) {
         // Se estamos buscando por ID e encontramos exatamente um resultado, destacar na UI
-        console.log(`Encontrado registro com ID: ${idMatch[1]}`, result.data[0]);
+        console.log(`Found record with ID: ${idMatch[1]}`, result.data[0]);
       }
     }
     
@@ -1655,9 +1655,9 @@ async function loadFilteredData() {
       rowCount: result.totalRecords || 0
     });
   } catch (error) {
-    console.error('Erro ao aplicar filtro:', error);
+    console.error('Error applying filter:', error);
     loadError.value = error.message;
-    showAlert(`Erro ao aplicar filtro: ${error.message}`, 'error');
+    showAlert(`Error applying filter: ${error.message}`, 'error');
     tableData.value = [];
     totalRecordsCount.value = 0;
   } finally {
@@ -1665,10 +1665,10 @@ async function loadFilteredData() {
   }
 }
 
-// Melhorar a função de navegação para chave estrangeira
+// Improve the function for foreign key navigation
 async function navigateToForeignKey(column, value) {
   if (value === null || value === undefined) {
-    showAlert("Valor nulo ou indefinido. Impossível navegar para o registro relacionado.", "error");
+    showAlert("Null or undefined value. Unable to navigate to the related record.", "error");
     return;
   }
   
@@ -1679,7 +1679,7 @@ async function navigateToForeignKey(column, value) {
     
     // Se não for chave estrangeira, retornar
     if (!columnInfo || !columnInfo.foreign_key) {
-      console.log(`A coluna "${column}" não é uma chave estrangeira`);
+      console.log(`Column "${column}" is not a foreign key`);
       return;
     }
     
@@ -1688,18 +1688,18 @@ async function navigateToForeignKey(column, value) {
     const foreignKey = foreignKeys.find(fk => fk.column === column);
     
     if (!foreignKey) {
-      console.error(`Informação de chave estrangeira não encontrada para a coluna "${column}"`);
+      console.error(`Foreign key information not found for column "${column}"`);
       return;
     }
     
-    console.log("Navegando para chave estrangeira:", foreignKey);
+    console.log("Navigating to foreign key:", foreignKey);
     
     // Tabela alvo e coluna referenciada
     const targetTable = foreignKey.referenced_table;
     const targetColumn = foreignKey.referenced_column;
     
     if (!targetTable || !targetColumn) {
-      console.error("Tabela ou coluna de referência não encontrada na chave estrangeira");
+      console.error("Referenced table or column not found in foreign key");
       return;
     }
     
@@ -1714,9 +1714,9 @@ async function navigateToForeignKey(column, value) {
     const filter = `${targetColumn} = ${filterValue}`;
     
     // Criar título para a nova aba
-    const tabTitle = `${targetTable} (Filtrado)`;
+    const tabTitle = `${targetTable} (Filtered)`;
     
-    console.log(`Navegando para ${targetTable} onde ${filter}`);
+    console.log(`Navigating to ${targetTable} where ${filter}`);
     
     // Dados para a nova aba
     const newTab = {
@@ -1731,13 +1731,13 @@ async function navigateToForeignKey(column, value) {
       icon: 'table'
     };
     
-    console.log("Abrindo nova aba com filtro:", filter);
+    console.log("Opening new tab with filter:", filter);
     
     // Chamar a função passada via props para abrir a nova aba
     props.onOpenTab(newTab);
   } catch (error) {
-    console.error('Erro ao navegar para chave estrangeira:', error);
-    showAlert('Falha ao navegar para registro relacionado: ' + error.message, 'error');
+    console.error('Error navigating to foreign key:', error);
+    showAlert('Failed to navigate to related record: ' + error.message, 'error');
   }
 }
 

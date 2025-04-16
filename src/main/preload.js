@@ -75,14 +75,14 @@ try {
           });
           
           // Start monitoring on the main process
-          console.log(`Chamando start-db-monitoring com connectionId: ${connectionId}`);
+          console.log(`Calling start-db-monitoring with connectionId: ${connectionId}`);
           return ipcRenderer.invoke('start-db-monitoring', connectionId)
             .then(result => {
-              console.log('Resultado do início do monitoramento:', result);
+              console.log('Result of monitoring initialization:', result);
               return channel; // Return channel name for cleanup
             });
         } catch (error) {
-          console.error('Erro em monitorDatabaseOperations:', error);
+          console.error('Error in monitorDatabaseOperations:', error);
           throw error;
         }
       },
@@ -107,14 +107,14 @@ try {
           });
       },
       
-      // Novo monitoramento baseado em triggers
+      // New trigger-based monitoring
       monitorDatabaseChanges: (connectionDetails, callback) => {
         const connectionId = connectionDetails.id || connectionDetails.connectionId;
         if (!connectionId) return Promise.reject('Connection ID is required');
         
         const channel = `db-activity-${connectionId}`;
         
-        // Configurar listener para receber atualizações de atividade
+        // Set up listener to receive activity updates
         ipcRenderer.on(channel, (event, data) => callback(data));
         
         // Iniciar monitoramento via triggers no processo principal
@@ -133,7 +133,7 @@ try {
           });
       },
       
-      // Obter atividades do banco desde o último ID
+      // Get database activities since the last ID
       getDatabaseChanges: (connectionId, lastId = 0) => {
         if (!connectionId) return Promise.reject('Connection ID is required');
         return ipcRenderer.invoke('get-database-changes', connectionId, lastId);
@@ -235,7 +235,7 @@ try {
       // Add method to update a connection's database name
       updateConnectionDatabase: (connectionId, newDatabase) => safeIpcRenderer.invoke('update-connection-database', connectionId, newDatabase),
 
-      // Adicionar o método getFileStats ao api exposto pelo preload
+      // Add the getFileStats method to the exposed API
       getFileStats: (filePath) => ipcRenderer.invoke('get-file-stats', filePath),
     }
   );
