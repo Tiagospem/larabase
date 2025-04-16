@@ -12,6 +12,8 @@ const safeIpcRenderer = {
 
 try {
   contextBridge.exposeInMainWorld('api', {
+    selectSqlDumpFile: () => safeIpcRenderer.invoke('select-sql-dump-file'),
+
     getConnections: () => safeIpcRenderer.invoke('get-connections'),
     saveConnections: connections => safeIpcRenderer.invoke('save-connections', connections),
     getOpenTabs: () => safeIpcRenderer.invoke('get-open-tabs'),
@@ -38,11 +40,9 @@ try {
     findModelsForTables: config => safeIpcRenderer.invoke('find-models-for-tables', config),
     readModelFile: filePath => safeIpcRenderer.invoke('read-model-file', filePath),
     listFiles: dirPath => safeIpcRenderer.invoke('list-files', dirPath),
-
     getProjectLogs: config => safeIpcRenderer.invoke('get-project-logs', config),
     deleteProjectLog: logId => safeIpcRenderer.invoke('delete-project-log', logId),
     clearAllProjectLogs: config => safeIpcRenderer.invoke('clear-all-project-logs', config),
-
     runArtisanCommand: config => safeIpcRenderer.invoke('run-artisan-command', config),
     listenCommandOutput: (commandId, callback) => {
       const channel = `command-output-${commandId}`;
@@ -53,10 +53,8 @@ try {
       ipcRenderer.removeAllListeners(channel);
     },
     getMigrationStatus: config => safeIpcRenderer.invoke('get-migration-status', config),
-
     getSettings: () => safeIpcRenderer.invoke('get-settings'),
     saveSettings: settings => safeIpcRenderer.invoke('save-settings', settings),
-
     monitorDatabaseOperations: (connectionId, callback) => {
       try {
         const channel = `db-operation-${connectionId}`;
@@ -97,7 +95,6 @@ try {
           throw err;
         });
     },
-
     monitorDatabaseChanges: (connectionDetails, callback) => {
       const connectionId = connectionDetails.id || connectionDetails.connectionId;
       if (!connectionId) return Promise.reject('Connection ID is required');
@@ -119,12 +116,10 @@ try {
         }
       });
     },
-
     getDatabaseChanges: (connectionId, lastId = 0) => {
       if (!connectionId) return Promise.reject('Connection ID is required');
       return ipcRenderer.invoke('get-database-changes', connectionId, lastId);
     },
-
     stopTriggerMonitoring: connectionId => {
       if (!connectionId) return Promise.reject('Connection ID is required');
 
@@ -133,18 +128,13 @@ try {
 
       return ipcRenderer.invoke('stop-trigger-monitoring', connectionId);
     },
-
     executeSQLQuery: config => safeIpcRenderer.invoke('execute-sql-query', config),
-
     getPluralizeFunction: () => safeIpcRenderer.invoke('get-pluralize-function'),
     getSingularForm: word => safeIpcRenderer.invoke('get-singular-form', word),
     getPluralForm: word => safeIpcRenderer.invoke('get-plural-form', word),
-
     updateEnvDatabase: (projectPath, database) =>
       safeIpcRenderer.invoke('update-env-database', projectPath, database),
     removeConnection: connectionId => safeIpcRenderer.invoke('remove-connection', connectionId),
-
-    selectSqlDumpFile: () => safeIpcRenderer.invoke('select-sql-dump-file'),
     startDatabaseRestore: config => {
       const channelId = `restore-progress-${Date.now()}`;
 
@@ -185,7 +175,6 @@ try {
       }
     },
     extractTablesFromSql: filePath => safeIpcRenderer.invoke('extract-tables-from-sql', filePath),
-
     send: (channel, data) => {
       if (typeof channel !== 'string') return;
 
@@ -195,18 +184,13 @@ try {
         ipcRenderer.send(channel, data);
       }
     },
-
     simpleDatabaseRestore: config =>
       safeIpcRenderer.invoke('simple-database-restore-unified', config),
-
     cancelDatabaseRestore: connectionId =>
       safeIpcRenderer.invoke('cancel-database-restore', connectionId),
-
     updateConnectionDatabase: (connectionId, newDatabase) =>
       safeIpcRenderer.invoke('update-connection-database', connectionId, newDatabase),
-
     getFileStats: filePath => ipcRenderer.invoke('get-file-stats', filePath),
-
     setAppBadge: count => safeIpcRenderer.invoke('set-app-badge', count)
   });
 } catch (error) {

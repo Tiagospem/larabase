@@ -6,11 +6,138 @@ const mysql = require('mysql2/promise');
 const { spawn, execSync, exec } = require('child_process');
 const pluralize = require('pluralize');
 
+const { createWindow, getMainWindow } = require('./modules/window');
+const {selectSqlDumpFile} = require('./modules/restore-dump')
+
 const store = new Store();
 
 let mainWindow;
 
 const originalCreateConnection = mysql.createConnection;
+
+app.whenReady().then(async () => {
+  await createWindow();
+
+  mainWindow = getMainWindow();
+
+  selectSqlDumpFile();
+
+
+  if (process.env.PATH) {
+    console.log(`Original system PATH: ${process.env.PATH}`);
+
+    if (process.platform === 'darwin') {
+      const additionalPaths = [
+        '/usr/local/bin',
+        '/opt/homebrew/bin',
+        '/Applications/Docker.app/Contents/Resources/bin'
+      ];
+
+      for (const dockerPath of additionalPaths) {
+        if (!process.env.PATH.includes(dockerPath)) {
+          process.env.PATH = `${dockerPath}:${process.env.PATH}`;
+          console.log(`Added ${dockerPath} to PATH`);
+        }
+      }
+    } else if (process.platform === 'linux') {
+      const additionalPaths = ['/usr/bin', '/usr/local/bin', '/snap/bin'];
+
+      for (const dockerPath of additionalPaths) {
+        if (!process.env.PATH.includes(dockerPath)) {
+          process.env.PATH = `${dockerPath}:${process.env.PATH}`;
+          console.log(`Added ${dockerPath} to PATH`);
+        }
+      }
+    } else if (process.platform === 'win32') {
+      const additionalPaths = [
+        'C:\\Program Files\\Docker\\Docker\\resources\\bin',
+        'C:\\Program Files\\Docker Desktop\\resources\\bin'
+      ];
+
+      for (const dockerPath of additionalPaths) {
+        if (!process.env.PATH.includes(dockerPath)) {
+          process.env.PATH = `${dockerPath};${process.env.PATH}`;
+          console.log(`Added ${dockerPath} to PATH`);
+        }
+      }
+    }
+
+    console.log(`Enhanced PATH for Docker detection: ${process.env.PATH}`);
+  } else {
+    console.warn(`PATH environment variable not found, some features might not work correctly`);
+
+    if (process.platform === 'darwin' || process.platform === 'linux') {
+      process.env.PATH =
+          '/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:/opt/homebrew/bin:/Applications/Docker.app/Contents/Resources/bin';
+      console.log(`Set default PATH for ${process.platform}: ${process.env.PATH}`);
+    } else if (process.platform === 'win32') {
+      process.env.PATH =
+          'C:\\Windows\\System32;C:\\Windows;C:\\Program Files\\Docker\\Docker\\resources\\bin;C:\\Program Files\\Docker Desktop\\resources\\bin';
+      console.log(`Set default PATH for Windows: ${process.env.PATH}`);
+    }
+  }
+
+  try {
+    const whichCommand = process.platform === 'win32' ? 'where docker' : 'which docker';
+    const dockerPath = execSync(whichCommand, {
+      timeout: 2000,
+      shell: true,
+      windowsHide: true,
+      encoding: 'utf8'
+    }).trim();
+    console.log(`Docker binary found at: ${dockerPath}`);
+  } catch (e) {
+    console.log(`Docker binary not found in PATH: ${e.message}`);
+  }
+
+  console.log(`Electron running on platform: ${process.platform}`);
+  console.log(`Node.js version: ${process.version}`);
+  console.log(`Electron version: ${process.versions.electron}`);
+
+  const diagnostics = await getSystemDiagnostics();
+  console.log('System diagnostics:', JSON.stringify(diagnostics, null, 2));
+
+  setupGlobalMonitoring();
+
+  if (mainWindow) {
+    mainWindow.webContents.on('before-input-event', (event, input) => {
+      if (!mainWindow.isFocused()) {
+        return;
+      }
+
+      if (input.key === 'F12' && !input.alt && !input.control && !input.meta && !input.shift) {
+        if (mainWindow.webContents.isDevToolsOpened()) {
+          mainWindow.webContents.closeDevTools();
+        } else {
+          mainWindow.webContents.openDevTools();
+        }
+      }
+
+      if (input.key === 'I' && !input.alt && input.shift && (input.control || input.meta)) {
+        if (mainWindow.webContents.isDevToolsOpened()) {
+          mainWindow.webContents.closeDevTools();
+        } else {
+          mainWindow.webContents.openDevTools();
+        }
+      }
+
+      if (input.key === 'r' && !input.alt && !input.shift && (input.control || input.meta)) {
+        mainWindow.reload();
+      }
+    });
+  }
+
+  app.on('activate', () => {
+    if (BrowserWindow.getAllWindows().length === 0) {
+      createWindow();
+    }
+  });
+});
+
+
+
+
+
 
 function setupGlobalMonitoring() {
   mysql.createConnection = async function (...args) {
@@ -49,42 +176,6 @@ if (process.env.NODE_ENV === 'development') {
   } catch (err) {
     console.error('electron-reload:', err);
   }
-}
-
-async function createWindow() {
-  mainWindow = new BrowserWindow({
-    width: 1200,
-    height: 800,
-    minWidth: 1000,
-    minHeight: 700,
-    webPreferences: {
-      nodeIntegration: false,
-      contextIsolation: true,
-      preload: path.join(__dirname, 'preload.js'),
-      devTools: true
-    },
-    icon: path.join(__dirname, '../renderer/assets/icons/png/512x512.png')
-  });
-
-  const isDev = process.env.NODE_ENV === 'development';
-
-  if (isDev) {
-    await mainWindow.loadURL('http://localhost:5173');
-    mainWindow.webContents.openDevTools();
-
-    mainWindow.webContents.on('did-fail-load', (event, errorCode, errorDescription) => {
-      console.error('Failed to load URL', errorCode, errorDescription);
-      setTimeout(() => {
-        mainWindow.loadURL('http://localhost:5173');
-      }, 1000);
-    });
-  } else {
-    await mainWindow.loadFile(path.join(__dirname, '../../dist/renderer/index.html'));
-  }
-
-  mainWindow.on('closed', () => {
-    mainWindow = null;
-  });
 }
 
 async function getSystemDiagnostics() {
@@ -234,120 +325,6 @@ function checkDockerByOS() {
     return false;
   }
 }
-
-app.whenReady().then(async () => {
-  if (process.env.PATH) {
-    console.log(`Original system PATH: ${process.env.PATH}`);
-
-    if (process.platform === 'darwin') {
-      const additionalPaths = [
-        '/usr/local/bin',
-        '/opt/homebrew/bin',
-        '/Applications/Docker.app/Contents/Resources/bin'
-      ];
-
-      for (const dockerPath of additionalPaths) {
-        if (!process.env.PATH.includes(dockerPath)) {
-          process.env.PATH = `${dockerPath}:${process.env.PATH}`;
-          console.log(`Added ${dockerPath} to PATH`);
-        }
-      }
-    } else if (process.platform === 'linux') {
-      const additionalPaths = ['/usr/bin', '/usr/local/bin', '/snap/bin'];
-
-      for (const dockerPath of additionalPaths) {
-        if (!process.env.PATH.includes(dockerPath)) {
-          process.env.PATH = `${dockerPath}:${process.env.PATH}`;
-          console.log(`Added ${dockerPath} to PATH`);
-        }
-      }
-    } else if (process.platform === 'win32') {
-      const additionalPaths = [
-        'C:\\Program Files\\Docker\\Docker\\resources\\bin',
-        'C:\\Program Files\\Docker Desktop\\resources\\bin'
-      ];
-
-      for (const dockerPath of additionalPaths) {
-        if (!process.env.PATH.includes(dockerPath)) {
-          process.env.PATH = `${dockerPath};${process.env.PATH}`;
-          console.log(`Added ${dockerPath} to PATH`);
-        }
-      }
-    }
-
-    console.log(`Enhanced PATH for Docker detection: ${process.env.PATH}`);
-  } else {
-    console.warn(`PATH environment variable not found, some features might not work correctly`);
-
-    if (process.platform === 'darwin' || process.platform === 'linux') {
-      process.env.PATH =
-        '/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:/opt/homebrew/bin:/Applications/Docker.app/Contents/Resources/bin';
-      console.log(`Set default PATH for ${process.platform}: ${process.env.PATH}`);
-    } else if (process.platform === 'win32') {
-      process.env.PATH =
-        'C:\\Windows\\System32;C:\\Windows;C:\\Program Files\\Docker\\Docker\\resources\\bin;C:\\Program Files\\Docker Desktop\\resources\\bin';
-      console.log(`Set default PATH for Windows: ${process.env.PATH}`);
-    }
-  }
-
-  try {
-    const whichCommand = process.platform === 'win32' ? 'where docker' : 'which docker';
-    const dockerPath = execSync(whichCommand, {
-      timeout: 2000,
-      shell: true,
-      windowsHide: true,
-      encoding: 'utf8'
-    }).trim();
-    console.log(`Docker binary found at: ${dockerPath}`);
-  } catch (e) {
-    console.log(`Docker binary not found in PATH: ${e.message}`);
-  }
-
-  console.log(`Electron running on platform: ${process.platform}`);
-  console.log(`Node.js version: ${process.version}`);
-  console.log(`Electron version: ${process.versions.electron}`);
-
-  const diagnostics = await getSystemDiagnostics();
-  console.log('System diagnostics:', JSON.stringify(diagnostics, null, 2));
-
-  await createWindow();
-
-  setupGlobalMonitoring();
-
-  if (mainWindow) {
-    mainWindow.webContents.on('before-input-event', (event, input) => {
-      if (!mainWindow.isFocused()) {
-        return;
-      }
-
-      if (input.key === 'F12' && !input.alt && !input.control && !input.meta && !input.shift) {
-        if (mainWindow.webContents.isDevToolsOpened()) {
-          mainWindow.webContents.closeDevTools();
-        } else {
-          mainWindow.webContents.openDevTools();
-        }
-      }
-
-      if (input.key === 'I' && !input.alt && input.shift && (input.control || input.meta)) {
-        if (mainWindow.webContents.isDevToolsOpened()) {
-          mainWindow.webContents.closeDevTools();
-        } else {
-          mainWindow.webContents.openDevTools();
-        }
-      }
-
-      if (input.key === 'r' && !input.alt && !input.shift && (input.control || input.meta)) {
-        mainWindow.reload();
-      }
-    });
-  }
-
-  app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) {
-      createWindow();
-    }
-  });
-});
 
 app.on('will-quit', () => {
   console.log('Application is quitting, performing cleanup...');
@@ -3945,19 +3922,19 @@ ipcMain.handle('remove-connection', async (event, connectionId) => {
   }
 });
 
-ipcMain.handle('select-sql-dump-file', async () => {
-  try {
-    return await dialog.showOpenDialog(mainWindow, {
-      title: 'Select SQL Dump File',
-      buttonLabel: 'Select',
-      filters: [{ name: 'SQL Dump Files', extensions: ['sql', 'gz'] }],
-      properties: ['openFile']
-    });
-  } catch (error) {
-    console.error('Error selecting SQL dump file:', error);
-    throw error;
-  }
-});
+// ipcMain.handle('select-sql-dump-file', async () => {
+//   try {
+//     return await dialog.showOpenDialog(mainWindow, {
+//       title: 'Select SQL Dump File',
+//       buttonLabel: 'Select',
+//       filters: [{ name: 'SQL Dump Files', extensions: ['sql', 'gz'] }],
+//       properties: ['openFile']
+//     });
+//   } catch (error) {
+//     console.error('Error selecting SQL dump file:', error);
+//     throw error;
+//   }
+// });
 
 ipcMain.handle('restore-database', async (event, config) => {
   try {
