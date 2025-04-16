@@ -197,9 +197,7 @@
 
             <div v-if="factoryContent" class="mb-4">
               <h4 class="text-sm font-medium text-gray-400 mb-2">Factory Code</h4>
-              <div class="mockup-code bg-neutral h-64 overflow-auto text-xs">
-                <pre><code v-html="highlightedCode"></code></pre>
-              </div>
+              <PhpViewer :code="factoryContent" language="php" height="64" />
             </div>
 
             <div class="flex justify-end">
@@ -290,12 +288,7 @@ import { inject, onMounted, ref, computed, watch } from 'vue';
 import { useDatabaseStore } from '@/store/database';
 import { useConnectionsStore } from '@/store/connections';
 import { useCommandsStore } from '@/store/commands';
-import hljs from 'highlight.js/lib/core';
-import php from 'highlight.js/lib/languages/php';
-import 'highlight.js/styles/atom-one-dark.css';
-
-// Register the PHP language
-hljs.registerLanguage('php', php);
+import PhpViewer from '@/components/PhpViewer.vue';
 
 const showAlert = inject('showAlert');
 
@@ -317,7 +310,6 @@ const props = defineProps({
 const isLoading = ref(true);
 const factory = ref(null);
 const factoryContent = ref('');
-const highlightedCode = ref('');
 
 // Factory data generation state
 const showGenerateDataModal = ref(false);
@@ -529,65 +521,15 @@ async function loadFactoryContent(filePath) {
 
     if (result.success) {
       factoryContent.value = result.content;
-      highlightCode();
     } else {
       console.error('Error loading factory content:', result.message);
       factoryContent.value = 'Error loading factory content: ' + result.message;
-      highlightedCode.value = factoryContent.value;
     }
   } catch (error) {
     console.error('Error reading factory file:', error);
     factoryContent.value = 'Unable to load factory content';
-    highlightedCode.value = factoryContent.value;
   }
 }
-
-function highlightCode() {
-  try {
-    if (factoryContent.value) {
-      // First highlight the code
-      const highlighted = hljs.highlight(factoryContent.value, {
-        language: 'php',
-        ignoreIllegals: true
-      }).value;
-
-      // Add line numbers to the highlighted code
-      const lines = highlighted.split('\n');
-      let processedCode = '';
-      
-      lines.forEach((line, index) => {
-        const lineNumber = index + 1;
-        const lineNumberPadded = String(lineNumber).padStart(3, ' ');
-        processedCode += `<span class="line-number">${lineNumberPadded} </span>${line}\n`;
-      });
-
-      highlightedCode.value = processedCode;
-    } else {
-      highlightedCode.value = '';
-    }
-  } catch (error) {
-    console.error('Error highlighting code:', error);
-    // Fallback to plain code with line numbers if highlighting fails
-    const lines = factoryContent.value.split('\n');
-    let processedCode = '';
-    
-    lines.forEach((line, index) => {
-      const lineNumber = index + 1;
-      const lineNumberPadded = String(lineNumber).padStart(3, ' ');
-      // Escape HTML entities
-      const escapedLine = line
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;');
-      processedCode += `<span class="line-number">${lineNumberPadded} </span>${escapedLine}\n`;
-    });
-    
-    highlightedCode.value = processedCode;
-  }
-}
-
-// Watch for changes in factory content
-watch(() => factoryContent.value, highlightCode);
 
 async function selectProjectPath() {
   try {
@@ -841,61 +783,6 @@ onMounted(() => {
 </script>
 
 <style scoped>
-/* Add syntax highlighting styles */
-:deep(.hljs) {
-  background: transparent;
-  padding: 0;
-}
-
-:deep(.hljs-keyword) {
-  color: #c678dd;
-}
-
-:deep(.hljs-string) {
-  color: #98c379;
-}
-
-:deep(.hljs-function) {
-  color: #61afef;
-}
-
-:deep(.hljs-comment) {
-  color: #5c6370;
-  font-style: italic;
-}
-
-:deep(.hljs-variable) {
-  color: #e06c75;
-}
-
-:deep(.hljs-title) {
-  color: #61aeee;
-}
-
-:deep(.line-number) {
-  display: inline-block;
-  width: 2.5em;
-  color: #606366;
-  font-family: Consolas, Monaco, 'Andale Mono', monospace;
-  text-align: right;
-  padding-right: 0.5em;
-  margin-right: 0.5em;
-  user-select: none;
-  border-right: 1px solid #444;
-  position: sticky;
-  left: 0;
-  background-color: rgba(42, 42, 46, 0.8);
-}
-
-/* Add style to improve readability of code in the modal */
-:deep(pre) {
-  margin: 0;
-  font-family: Consolas, Monaco, 'Andale Mono', monospace;
-  line-height: 1.5;
-}
-
-:deep(code) {
-  font-family: Consolas, Monaco, 'Andale Mono', monospace;
-  white-space: pre;
-}
+/* Podemos remover todos os estilos relacionados ao highlight.js e à numeração de linhas,
+   pois agora estão centralizados no componente PhpViewer */
 </style>
