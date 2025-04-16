@@ -207,7 +207,7 @@
       <div v-if="isLoading && !isLiveUpdating" class="flex items-center justify-center h-full">
         <span class="loading loading-spinner loading-lg" />
       </div>
-      
+
       <div v-else-if="loadError" class="flex items-center justify-center h-full text-error">
         <div class="text-center">
           <svg
@@ -336,28 +336,28 @@
                 @mouseenter.stop="handleMouseEnter(rowIndex)"
               >
                 <td class="w-10 px-1 border-r border-neutral text-center">
-                  <button 
-                    class="btn btn-xs btn-circle btn-ghost" 
+                  <button
+                    class="btn btn-xs btn-circle btn-ghost"
                     title="Preview data"
                     @click.stop="openPreviewModal(row)"
                   >
-                    <svg 
-                      xmlns="http://www.w3.org/2000/svg" 
-                      fill="none" 
-                      viewBox="0 0 24 24" 
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 24 24"
                       stroke-width="1.5"
-                      stroke="currentColor" 
+                      stroke="currentColor"
                       class="w-4 h-4"
                     >
-                      <path 
-                        stroke-linecap="round" 
-                        stroke-linejoin="round" 
-                        d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z" 
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z"
                       />
-                      <path 
-                        stroke-linecap="round" 
-                        stroke-linejoin="round" 
-                        d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" 
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"
                       />
                     </svg>
                   </button>
@@ -840,114 +840,21 @@
       <div class="modal-backdrop" @click="showDeleteConfirm = false" />
     </div>
 
-    <!-- Preview modal -->
-    <div class="modal" :class="{ 'modal-open': showPreviewModal }">
-      <div class="modal-box max-w-4xl">
-        <h3 class="font-bold text-lg mb-4 flex justify-between items-center">
-          Data Preview
-          <button class="btn btn-sm btn-circle" @click="closePreviewModal">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              class="h-6 w-6"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M6 18L18 6M6 6l12 12"
-              />
-            </svg>
-          </button>
-        </h3>
-
-        <div v-if="previewingRecord" class="overflow-y-auto max-h-[60vh] divide-y divide-base-300">
-          <div v-for="column in columns" :key="column" class="py-3">
-            <div class="flex items-start mb-2">
-              <div class="font-medium text-sm w-1/4 truncate">{{ column }}</div>
-              <div class="w-3/4">
-                <!-- Null/undefined values -->
-                <div v-if="previewingRecord[column] === null || previewingRecord[column] === undefined" class="text-gray-500 italic">
-                  NULL
-                </div>
-                
-                <!-- JSON/Object data -->
-                <div v-else-if="isJsonObject(previewingRecord[column])" class="font-mono text-xs">
-                  <div class="bg-base-300 p-2 rounded-md overflow-x-auto">
-                    <pre class="whitespace-pre-wrap">{{ formatJson(previewingRecord[column]) }}</pre>
-                  </div>
-                </div>
-                
-                <!-- Array data -->
-                <div v-else-if="isArray(previewingRecord[column])" class="font-mono text-xs">
-                  <div class="bg-base-300 p-2 rounded-md">
-                    <div class="mb-1 text-primary">Array ({{ previewingRecord[column].length }} items)</div>
-                    <div v-for="(item, i) in previewingRecord[column].slice(0, 5)" :key="i" class="mb-1 pl-2 border-l-2 border-base-content">
-                      <span class="text-gray-500">[{{ i }}]</span> {{ formatPreviewValue(item) }}
-                    </div>
-                    <div v-if="previewingRecord[column].length > 5" class="text-gray-500 italic">
-                      ...and {{ previewingRecord[column].length - 5 }} more items
-                    </div>
-                  </div>
-                </div>
-                
-                <!-- Long text data -->
-                <div v-else-if="isLongText(previewingRecord[column])" class="relative">
-                  <div 
-                    class="text-sm" 
-                    :class="{'line-clamp-5': !expandedFields[column]}"
-                  >
-                    {{ previewingRecord[column] }}
-                  </div>
-                  <button 
-                    class="btn btn-xs mt-1" 
-                    @click="toggleFieldExpansion(column)"
-                  >
-                    {{ expandedFields[column] ? 'Show less' : 'Show more' }}
-                  </button>
-                </div>
-                
-                <!-- Date data -->
-                <div v-else-if="isDateField(column) && previewingRecord[column]" class="text-sm">
-                  <div class="text-primary">{{ formatDateForDisplay(previewingRecord[column]) }}</div>
-                  <div class="text-xs text-gray-500">{{ formatDateAgo(previewingRecord[column]) }}</div>
-                </div>
-                
-                <!-- Boolean data -->
-                <div v-else-if="typeof previewingRecord[column] === 'boolean'" class="text-sm">
-                  <div class="badge" :class="previewingRecord[column] ? 'badge-success' : 'badge-error'">
-                    {{ previewingRecord[column] ? 'true' : 'false' }}
-                  </div>
-                </div>
-                
-                <!-- Number data -->
-                <div v-else-if="typeof previewingRecord[column] === 'number'" class="text-sm font-mono">
-                  {{ previewingRecord[column].toLocaleString() }}
-                </div>
-                
-                <!-- Default/string data -->
-                <div v-else class="text-sm">
-                  {{ previewingRecord[column] }}
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div class="modal-action">
-          <button class="btn" @click="closePreviewModal">Close</button>
-        </div>
-      </div>
-      <div class="modal-backdrop" @click="closePreviewModal" />
-    </div>
+    <!-- Use the separate preview modal component -->
+    <DataPreviewModal
+      v-if="previewingRecord"
+      :show="showPreviewModal"
+      :record="previewingRecord"
+      :columns="columns"
+      @close="closePreviewModal"
+    />
   </div>
 </template>
 
 <script setup>
 import { ref, computed, onMounted, onUnmounted, inject, nextTick, watch } from 'vue';
 import { useDatabaseStore } from '@/store/database';
+import DataPreviewModal from '@/components/database/DataPreviewModal.vue';
 
 const showAlert = inject('showAlert');
 
@@ -1151,7 +1058,7 @@ function analyzeColumns() {
 
 async function loadTableData() {
   const wasLoading = isLoading.value;
-  // Only show loading if not in a live update
+
   if (!isLiveUpdating.value) {
     isLoading.value = true;
   }
@@ -2367,6 +2274,10 @@ function startLiveUpdates() {
             detectChangedRows();
           }
 
+          if (showPreviewModal.value && previewingRecord.value) {
+            updatePreviewData();
+          }
+
           previousDataSnapshot.value = JSON.parse(JSON.stringify(tableData.value));
         })
         .catch(error => {
@@ -2377,6 +2288,16 @@ function startLiveUpdates() {
         });
     }
   }, liveUpdateDelay.value);
+}
+
+function updatePreviewData() {
+  if (!previewingRecord.value || !previewingRecord.value.id) return;
+
+  const updatedRow = tableData.value.find(row => row.id === previewingRecord.value.id);
+
+  if (updatedRow) {
+    previewingRecord.value = JSON.parse(JSON.stringify(updatedRow));
+  }
 }
 
 function detectChangedRows() {
@@ -2421,85 +2342,17 @@ watch(highlightChanges, newValue => {
 
 const showPreviewModal = ref(false);
 const previewingRecord = ref(null);
-const expandedFields = ref({});
 
 function openPreviewModal(row) {
-  previewingRecord.value = { ...row };
+  previewingRecord.value = JSON.parse(JSON.stringify(row));
   showPreviewModal.value = true;
 }
 
 function closePreviewModal() {
   showPreviewModal.value = false;
-  previewingRecord.value = null;
-}
-
-function formatPreviewValue(value) {
-  if (typeof value === 'object') {
-    return JSON.stringify(value);
-  } else if (typeof value === 'string') {
-    return value;
-  } else if (typeof value === 'number') {
-    return value.toString();
-  } else if (typeof value === 'boolean') {
-    return value ? 'true' : 'false';
-  } else if (typeof value === 'function') {
-    return 'function';
-  } else if (typeof value === 'symbol') {
-    return value.toString();
-  } else if (typeof value === 'undefined') {
-    return 'undefined';
-  } else {
-    return 'unknown';
-  }
-}
-
-function isJsonObject(value) {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
-function isArray(value) {
-  return Array.isArray(value);
-}
-
-function isLongText(value) {
-  return typeof value === 'string' && value.length > 100;
-}
-
-function formatDateForDisplay(date) {
-  return new Date(date).toLocaleString();
-}
-
-function formatDateAgo(date) {
-  const now = new Date();
-  const diff = Math.abs(now - new Date(date));
-  const diffDays = Math.floor(diff / (1000 * 60 * 60 * 24));
-  const diffHours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-  const diffMinutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-  const diffSeconds = Math.floor((diff % (1000 * 60)) / 1000);
-
-  if (diffDays > 0) return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
-  if (diffHours > 0) return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;
-  if (diffMinutes > 0) return `${diffMinutes} minute${diffMinutes > 1 ? 's' : ''} ago`;
-  if (diffSeconds > 0) return `${diffSeconds} second${diffSeconds > 1 ? 's' : ''} ago`;
-  return 'just now';
-}
-
-function toggleFieldExpansion(column) {
-  expandedFields.value[column] = !expandedFields.value[column];
-}
-
-function formatJson(value) {
-  try {
-    if (typeof value === 'string') {
-      const parsed = JSON.parse(value);
-      return JSON.stringify(parsed, null, 2);
-    } else {
-      return JSON.stringify(value, null, 2);
-    }
-  } catch (e) {
-    // If it's not valid JSON or can't be stringified, return as is
-    return typeof value === 'string' ? value : JSON.stringify(value);
-  }
+  setTimeout(() => {
+    previewingRecord.value = null;
+  }, 300);
 }
 </script>
 
