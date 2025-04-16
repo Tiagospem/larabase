@@ -51,7 +51,7 @@ function highlightCode() {
       lines.forEach((line, index) => {
         const lineNumber = index + 1;
         const lineNumberPadded = String(lineNumber).padStart(3, ' ');
-        processedCode += `<span class="line-number">${lineNumberPadded} </span>${line}\n`;
+        processedCode += `<span class="line-number">${lineNumberPadded}</span>${line}\n`;
       });
 
       highlightedCode.value = processedCode;
@@ -73,7 +73,7 @@ function highlightCode() {
           .replace(/&/g, '&amp;')
           .replace(/</g, '&lt;')
           .replace(/>/g, '&gt;');
-        processedCode += `<span class="line-number">${lineNumberPadded} </span>${escapedLine}\n`;
+        processedCode += `<span class="line-number">${lineNumberPadded}</span>${escapedLine}\n`;
       });
       
       highlightedCode.value = processedCode;
