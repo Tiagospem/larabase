@@ -1,6 +1,8 @@
 <template>
   <div class="h-full flex flex-col">
-    <div class="bg-base-200 p-2 border-b border-neutral flex flex-wrap items-center justify-between gap-2">
+    <div
+      class="bg-base-200 p-2 border-b border-neutral flex flex-wrap items-center justify-between gap-2"
+    >
       <div class="flex flex-wrap items-center gap-2">
         <button class="btn btn-sm btn-ghost" @click="loadTableData">
           <svg
@@ -19,22 +21,22 @@
           </svg>
           <span class="hidden sm:inline">Refresh</span>
         </button>
-        
+
         <!-- Live Table Toggle Button -->
         <div class="flex items-center gap-1">
           <div class="dropdown dropdown-end">
-            <button 
-              class="btn btn-sm" 
+            <button
+              class="btn btn-sm"
               :class="isLiveTableActive ? 'btn-primary' : 'btn-ghost'"
               @click="toggleLiveTable"
             >
               <div class="flex items-center gap-1">
                 <span class="relative flex h-2 w-2">
-                  <span 
+                  <span
                     class="absolute inline-flex h-full w-full rounded-full opacity-75"
                     :class="isLiveTableActive ? 'animate-ping bg-success' : 'bg-transparent'"
                   ></span>
-                  <span 
+                  <span
                     class="relative inline-flex rounded-full h-2 w-2"
                     :class="isLiveTableActive ? 'bg-success' : 'bg-transparent'"
                   ></span>
@@ -56,19 +58,22 @@
                 <span class="hidden sm:inline">Live</span>
               </div>
             </button>
-            <div tabindex="0" class="dropdown-content z-[1] menu p-2 shadow bg-base-200 rounded-box w-52">
+            <div
+              tabindex="0"
+              class="dropdown-content z-[1] menu p-2 shadow bg-base-200 rounded-box w-52"
+            >
               <div class="p-2">
                 <div class="form-control">
                   <label class="label">
                     <span class="label-text">Update interval</span>
                   </label>
                   <div class="flex items-center gap-2">
-                    <input 
-                      v-model="liveUpdateDelaySeconds" 
-                      type="range" 
-                      min="1" 
-                      max="30" 
-                      class="range range-primary range-xs" 
+                    <input
+                      v-model="liveUpdateDelaySeconds"
+                      type="range"
+                      min="1"
+                      max="30"
+                      class="range range-primary range-xs"
                       @change="updateLiveDelay"
                     />
                     <span>{{ liveUpdateDelaySeconds }}s</span>
@@ -77,18 +82,18 @@
                 <div class="form-control mt-2">
                   <label class="label cursor-pointer">
                     <span class="label-text">Highlight changes</span>
-                    <input v-model="highlightChanges" type="checkbox" class="toggle toggle-primary toggle-sm" />
+                    <input
+                      v-model="highlightChanges"
+                      type="checkbox"
+                      class="toggle toggle-primary toggle-sm"
+                    />
                   </label>
                 </div>
               </div>
             </div>
           </div>
-          <!-- Mantenha o spinner com tamanho fixo para evitar flickering -->
-          <div class="badge badge-sm badge-ghost text-xs w-6 h-6 flex items-center justify-center">
-            <span v-if="isLiveTableActive && isLiveUpdating" class="loading loading-spinner loading-xs text-success"></span>
-          </div>
         </div>
-        
+
         <button
           class="btn btn-sm btn-ghost text-error"
           :disabled="totalRecords === 0"
@@ -129,7 +134,9 @@
               d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0"
             />
           </svg>
-          <span class="hidden sm:inline">Delete{{ selectedRows.length > 0 ? ` (${selectedRows.length})` : '' }}</span>
+          <span class="hidden sm:inline"
+            >Delete{{ selectedRows.length > 0 ? ` (${selectedRows.length})` : '' }}</span
+          >
         </button>
       </div>
 
@@ -184,7 +191,10 @@
             </svg>
           </button>
         </div>
-        <select v-model="rowsPerPage" class="select select-sm select-bordered bg-base-300 w-24 sm:w-32">
+        <select
+          v-model="rowsPerPage"
+          class="select select-sm select-bordered bg-base-300 w-24 sm:w-32"
+        >
           <option value="10">10 rows</option>
           <option value="25">25 rows</option>
           <option value="50">50 rows</option>
@@ -194,7 +204,7 @@
     </div>
 
     <div class="flex-1 overflow-auto">
-      <div v-if="isLoading" class="flex items-center justify-center h-full">
+      <div v-if="isLoading && !isLiveUpdating" class="flex items-center justify-center h-full">
         <span class="loading loading-spinner loading-lg" />
       </div>
 
@@ -1007,25 +1017,20 @@ function analyzeColumns() {
 }
 
 async function loadTableData() {
-  // Evitar mudanças repentinas no estado de isLoading para reduzir flickering
   const wasLoading = isLoading.value;
   isLoading.value = true;
-  
-  // Registrar tempo de início
+
   if (!loadStartTime.value) {
     loadStartTime.value = Date.now();
   }
-  
-  // Adicionar pequeno atraso antes de mostrar o loading para dados rápidos
+
   const loadingTimer = setTimeout(() => {
     if (isLoading.value) {
-      // Continua mostrando o loading
     }
   }, 100);
-  
+
   loadError.value = null;
-  
-  // Store selected row IDs before refresh to restore selection after
+
   const selectedRowIds = [];
   if (isLiveTableActive.value && selectedRows.value.length > 0) {
     selectedRows.value.forEach(rowIndex => {
@@ -1035,7 +1040,6 @@ async function loadTableData() {
       }
     });
   } else {
-    // Clear selection only if not in live mode
     selectedRows.value = [];
     expandedColumns.value = [];
   }
@@ -1058,7 +1062,6 @@ async function loadTableData() {
     tableData.value = result.data || [];
     totalRecordsCount.value = result.totalRecords || 0;
 
-    // Restore selection for live updates
     if (isLiveTableActive.value && selectedRowIds.length > 0) {
       selectedRows.value = [];
       paginatedData.value.forEach((row, index) => {
@@ -1066,7 +1069,7 @@ async function loadTableData() {
           selectedRows.value.push(index);
         }
       });
-      
+
       if (selectedRows.value.length > 0) {
         lastSelectedId.value = selectedRows.value[selectedRows.value.length - 1];
       }
@@ -1088,21 +1091,19 @@ async function loadTableData() {
     tableData.value = [];
     totalRecordsCount.value = 0;
   } finally {
-    // Limpar timer e atualizar isLoading com um pequeno atraso para evitar flickering
     clearTimeout(loadingTimer);
-    // Se estava carregando muito rápido, mantém o estado anterior para evitar flash
+
     if (Date.now() - loadStartTime.value < 100 && wasLoading === false) {
       isLoading.value = false;
     } else {
-      // Se estiver demorando mais, usa um timeout para suavizar a transição
       setTimeout(() => {
         isLoading.value = false;
       }, 50);
     }
-    // Resetar o tempo de início
+
     loadStartTime.value = 0;
   }
-  
+
   return Promise.resolve();
 }
 
@@ -1145,7 +1146,7 @@ function stopColumnResize(event) {
 function getRowClasses(rowIndex) {
   const isSelected = selectedRows.value.includes(rowIndex);
   const isUpdated = highlightChanges.value && updatedRows.value.includes(rowIndex);
-  
+
   return {
     'selected-row': isSelected,
     'updated-row': isUpdated && !isSelected,
@@ -1590,19 +1591,18 @@ onMounted(() => {
     activeFilter.value = props.initialFilter;
   }
 
-  // Load live table preferences
   try {
     const savedLiveEnabled = localStorage.getItem('liveTable.enabled');
     if (savedLiveEnabled === 'true') {
       isLiveTableActive.value = true;
     }
-    
+
     const savedLiveDelay = localStorage.getItem('liveTable.delay');
     if (savedLiveDelay) {
       liveUpdateDelaySeconds.value = parseInt(savedLiveDelay, 10) || 3;
       liveUpdateDelay.value = liveUpdateDelaySeconds.value * 1000;
     }
-    
+
     const savedHighlightChanges = localStorage.getItem('liveTable.highlight');
     if (savedHighlightChanges !== null) {
       highlightChanges.value = savedHighlightChanges === 'true';
@@ -1613,7 +1613,6 @@ onMounted(() => {
 
   loadTableData();
 
-  // Start live updates if enabled
   if (isLiveTableActive.value) {
     startLiveUpdates();
   }
@@ -1654,8 +1653,7 @@ onUnmounted(() => {
   window.removeEventListener('mouseup', handleMouseUp);
   document.removeEventListener('mousemove', handleColumnResize);
   document.removeEventListener('mouseup', stopColumnResize);
-  
-  // Clean up live updates interval
+
   stopLiveUpdates();
 });
 
@@ -2167,28 +2165,25 @@ watch(
   }
 );
 
-// Live Table functionality
 const isLiveTableActive = ref(false);
 const liveTableInterval = ref(null);
-const liveUpdateDelay = ref(3000); // Default: 3 seconds
-const liveUpdateDelaySeconds = ref(3); // For UI slider
+const liveUpdateDelay = ref(3000);
+const liveUpdateDelaySeconds = ref(3);
 const previousDataSnapshot = ref([]);
 const updatedRows = ref([]);
 const highlightChanges = ref(true);
-const loadStartTime = ref(0); // Para controlar tempos de carregamento
+const loadStartTime = ref(0);
 
 function updateLiveDelay() {
   liveUpdateDelay.value = liveUpdateDelaySeconds.value * 1000;
-  
-  // Save preference
+
   try {
     localStorage.setItem('liveTable.delay', String(liveUpdateDelaySeconds.value));
   } catch (e) {
     console.error('Failed to save live table delay preference', e);
   }
-  
+
   if (isLiveTableActive.value) {
-    // Reset the live updates with new interval
     stopLiveUpdates();
     startLiveUpdates();
     showAlert(`Live update interval changed to ${liveUpdateDelaySeconds.value} seconds`, 'info');
@@ -2197,17 +2192,19 @@ function updateLiveDelay() {
 
 function toggleLiveTable() {
   isLiveTableActive.value = !isLiveTableActive.value;
-  
-  // Save preference
+
   try {
     localStorage.setItem('liveTable.enabled', isLiveTableActive.value ? 'true' : 'false');
   } catch (e) {
     console.error('Failed to save live table preference', e);
   }
-  
+
   if (isLiveTableActive.value) {
     startLiveUpdates();
-    showAlert(`Live table updates activated for ${props.tableName} - refreshing every ${liveUpdateDelaySeconds.value}s`, 'success');
+    showAlert(
+      `Live table updates activated for ${props.tableName} - refreshing every ${liveUpdateDelaySeconds.value}s`,
+      'success'
+    );
   } else {
     stopLiveUpdates();
     showAlert('Live table updates stopped', 'info');
@@ -2215,56 +2212,47 @@ function toggleLiveTable() {
 }
 
 function startLiveUpdates() {
-  // Clear any existing interval first
   stopLiveUpdates();
-  
-  // Save current data snapshot
+
   previousDataSnapshot.value = JSON.parse(JSON.stringify(tableData.value));
-  
-  // Set new interval for data refresh
+
   liveTableInterval.value = setInterval(() => {
     if (!isLoading.value) {
       loadStartTime.value = Date.now();
-      
-      loadTableData().then(() => {
-        // Compare current data with previous snapshot to identify changes
-        if (highlightChanges.value) {
-          detectChangedRows();
-        }
-        
-        // Update snapshot after comparison
-        previousDataSnapshot.value = JSON.parse(JSON.stringify(tableData.value));
-      }).catch(error => {
-        console.error('Error during live update:', error);
-      });
+
+      loadTableData()
+        .then(() => {
+          if (highlightChanges.value) {
+            detectChangedRows();
+          }
+
+          previousDataSnapshot.value = JSON.parse(JSON.stringify(tableData.value));
+        })
+        .catch(error => {
+          console.error('Error during live update:', error);
+        });
     }
   }, liveUpdateDelay.value);
 }
 
-// Function to detect which rows have changed
 function detectChangedRows() {
   updatedRows.value = [];
-  
-  // No previous data to compare with
+
   if (!previousDataSnapshot.value.length) return;
-  
-  // Check each row for changes
+
   paginatedData.value.forEach((currentRow, index) => {
-    // Find matching row in previous snapshot by ID
     const previousRow = previousDataSnapshot.value.find(row => {
       if (row.id !== undefined && currentRow.id !== undefined) {
         return row.id === currentRow.id;
       }
       return false;
     });
-    
-    // If the row didn't exist before or has changes
+
     if (!previousRow || JSON.stringify(currentRow) !== JSON.stringify(previousRow)) {
       updatedRows.value.push(index);
     }
   });
-  
-  // Automatically clear highlights after 2 seconds
+
   if (updatedRows.value.length > 0) {
     setTimeout(() => {
       updatedRows.value = [];
@@ -2279,8 +2267,7 @@ function stopLiveUpdates() {
   }
 }
 
-// Watch for changes in highlight preference
-watch(highlightChanges, (newValue) => {
+watch(highlightChanges, newValue => {
   try {
     localStorage.setItem('liveTable.highlight', String(newValue));
   } catch (e) {

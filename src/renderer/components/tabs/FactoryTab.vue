@@ -286,10 +286,10 @@
 </template>
 
 <script setup>
-import {inject, onMounted, ref, computed} from 'vue';
-import {useDatabaseStore} from '@/store/database';
-import {useConnectionsStore} from '@/store/connections';
-import {useCommandsStore} from '@/store/commands';
+import { inject, onMounted, ref, computed } from 'vue';
+import { useDatabaseStore } from '@/store/database';
+import { useConnectionsStore } from '@/store/connections';
+import { useCommandsStore } from '@/store/commands';
 
 const showAlert = inject('showAlert');
 
@@ -307,7 +307,6 @@ const props = defineProps({
     required: true
   }
 });
-
 
 const isLoading = ref(true);
 const factory = ref(null);
@@ -332,8 +331,7 @@ const factoryFound = computed(() => {
   return factory.value !== null;
 });
 
-
-async function loadFactory () {
+async function loadFactory() {
   isLoading.value = true;
 
   try {
@@ -342,12 +340,14 @@ async function loadFactory () {
       return;
     }
 
-
     await databaseStore.loadModelsForTables(props.connectionId, connection.value.projectPath);
     const model = databaseStore.getModelForTable(props.connectionId, props.tableName);
 
-
-    const foundFactory = await findFactoryFile(connection.value.projectPath, props.tableName, model);
+    const foundFactory = await findFactoryFile(
+      connection.value.projectPath,
+      props.tableName,
+      model
+    );
 
     if (foundFactory) {
       factory.value = foundFactory;
@@ -356,11 +356,9 @@ async function loadFactory () {
       factory.value = null;
     }
 
-
     props.onLoad({
       factoryFound: factory.value !== null
     });
-
   } catch (error) {
     console.error('Failed to load factory:', error);
     showAlert(`Error loading factory: ${error.message}`, 'error');
@@ -370,12 +368,9 @@ async function loadFactory () {
   }
 }
 
-
-async function findFactoryFile (projectPath, tableName, model) {
+async function findFactoryFile(projectPath, tableName, model) {
   try {
-
     const pluralize = await window.api.getPluralizeFunction();
-
 
     let modelName = '';
 
@@ -409,12 +404,7 @@ async function findFactoryFile (projectPath, tableName, model) {
     ];
 
     // Common directories for factories in Laravel projects
-    const factoryDirs = [
-      'database/factories',
-      'database/Factory',
-      'app/database/factories'
-    ];
-
+    const factoryDirs = ['database/factories', 'database/Factory', 'app/database/factories'];
 
     const allFactoryFiles = [];
 
@@ -424,12 +414,10 @@ async function findFactoryFile (projectPath, tableName, model) {
       try {
         const result = await window.api.listFiles(fullDirPath);
 
-
         if (!result.success || !result.files || !Array.isArray(result.files)) {
           console.log(`No files found or invalid response for ${fullDirPath}`);
           continue;
         }
-
 
         const entries = result.files;
         for (const entry of entries) {
@@ -443,10 +431,8 @@ async function findFactoryFile (projectPath, tableName, model) {
         }
       } catch (dirError) {
         console.error(`Error accessing directory ${fullDirPath}:`, dirError);
-
       }
     }
-
 
     for (const factoryPattern of factoryPatterns) {
       const exactMatch = allFactoryFiles.find(
@@ -467,17 +453,12 @@ async function findFactoryFile (projectPath, tableName, model) {
       const filename = file.name.toLowerCase();
       // Check if filename contains both the model name and 'factory'
       return (
-        filename.includes(modelName.toLowerCase()) &&
-        filename.includes('factory')
-      ) || (
-
-        filename.includes(tableName.toLowerCase()) &&
-        filename.includes('factory')
+        (filename.includes(modelName.toLowerCase()) && filename.includes('factory')) ||
+        (filename.includes(tableName.toLowerCase()) && filename.includes('factory'))
       );
     });
 
     if (partialMatches.length > 0) {
-
       return {
         name: partialMatches[0].name.replace(/\.php$/, ''),
         path: partialMatches[0].path,
@@ -523,7 +504,7 @@ async function findFactoryFile (projectPath, tableName, model) {
 }
 
 // Helper to load file content
-async function loadFileContent (filePath) {
+async function loadFileContent(filePath) {
   try {
     const result = await window.api.readModelFile(filePath);
     return result.success ? result.content : '';
@@ -534,7 +515,7 @@ async function loadFileContent (filePath) {
 }
 
 // Load factory file content
-async function loadFactoryContent (filePath) {
+async function loadFactoryContent(filePath) {
   try {
     // Use the IPC method to read the file
     const result = await window.api.readModelFile(filePath);
@@ -551,7 +532,7 @@ async function loadFactoryContent (filePath) {
   }
 }
 
-async function selectProjectPath () {
+async function selectProjectPath() {
   try {
     const result = await window.api.selectDirectory();
 
@@ -586,7 +567,7 @@ async function selectProjectPath () {
   }
 }
 
-async function openFileInEditor (filePath) {
+async function openFileInEditor(filePath) {
   try {
     await window.api.openFile(filePath);
   } catch (error) {
@@ -595,8 +576,7 @@ async function openFileInEditor (filePath) {
   }
 }
 
-
-function generateCommandPreview () {
+function generateCommandPreview() {
   const model = databaseStore.getModelForTable(props.connectionId, props.tableName);
   if (!model || !factory.value) return 'No model or factory found';
 
@@ -604,16 +584,13 @@ function generateCommandPreview () {
   const count = recordCount.value || 10;
   const usingSail = !!connection.value?.usingSail;
 
-
   const escapedModelName = modelName.replace(/\\/g, '\\\\');
-
 
   return `${usingSail ? 'sail' : 'php'} artisan tinker --execute="${escapedModelName}::factory(${count})->create();"`;
 }
 
-
-async function showDatabaseMismatchDialog (projectDb, connectionDb) {
-  return new Promise((resolve) => {
+async function showDatabaseMismatchDialog(projectDb, connectionDb) {
+  return new Promise(resolve => {
     const modal = document.createElement('div');
     modal.className = 'modal modal-open z-50';
     modal.innerHTML = `
@@ -681,13 +658,11 @@ async function showDatabaseMismatchDialog (projectDb, connectionDb) {
   });
 }
 
-
-async function generateFactoryData () {
+async function generateFactoryData() {
   isGenerating.value = true;
   showGenerateDataModal.value = false;
 
   try {
-
     if (!connection.value?.projectPath) {
       throw new Error('No project path is set');
     }
@@ -701,12 +676,13 @@ async function generateFactoryData () {
     const count = recordCount.value;
     const projectPath = connection.value.projectPath;
 
-
     const envConfig = await window.api.readEnvFile(projectPath);
 
     if (envConfig && envConfig.DB_DATABASE !== connection.value.database) {
-
-      const confirmResult = await showDatabaseMismatchDialog(envConfig.DB_DATABASE, connection.value.database);
+      const confirmResult = await showDatabaseMismatchDialog(
+        envConfig.DB_DATABASE,
+        connection.value.database
+      );
 
       if (confirmResult === 'cancel') {
         isGenerating.value = false;
@@ -714,7 +690,6 @@ async function generateFactoryData () {
       }
 
       if (confirmResult === 'useConnection') {
-
         showAlert(`Modifying .env to use database: ${connection.value.database}`, 'info');
 
         const updateResult = await updateEnvDatabase(projectPath, connection.value.database);
@@ -724,24 +699,22 @@ async function generateFactoryData () {
           return;
         }
 
-        showAlert(`Successfully updated .env file to use database: ${connection.value.database}`, 'success');
+        showAlert(
+          `Successfully updated .env file to use database: ${connection.value.database}`,
+          'success'
+        );
       } else if (confirmResult === 'switchDatabase') {
-
         isGenerating.value = false;
         openDatabaseSwitcher();
         return;
       }
     }
 
-
     const usingSail = !!connection.value.usingSail;
-
 
     const tinkerCommand = `tinker --execute="${modelName}::factory(${count})->create();"`;
 
-
     commandsStore.openCommandOutput();
-
 
     const commandResult = await commandsStore.runArtisanCommand({
       projectPath: projectPath,
@@ -752,7 +725,6 @@ async function generateFactoryData () {
 
     if (commandResult && commandResult.success) {
       showAlert(`Generating ${count} records for ${props.tableName} table`, 'success');
-
 
       recordCount.value = 10;
     } else {
@@ -766,11 +738,9 @@ async function generateFactoryData () {
   }
 }
 
-
-async function updateEnvDatabase (projectPath, database) {
+async function updateEnvDatabase(projectPath, database) {
   try {
     console.log('Updating .env database at path:', projectPath, 'to database:', database);
-
 
     const result = await window.api.updateEnvDatabase(projectPath, database);
 
@@ -779,8 +749,6 @@ async function updateEnvDatabase (projectPath, database) {
     }
 
     console.log('Update .env result:', result);
-
-
 
     showAlert(`Successfully updated project's .env file to use database: ${database}`, 'success');
     return true;
@@ -791,10 +759,8 @@ async function updateEnvDatabase (projectPath, database) {
   }
 }
 
-
-async function openDatabaseSwitcher () {
+async function openDatabaseSwitcher() {
   try {
-
     emit('open-database-switcher', props.connectionId);
     showAlert('Opening database switcher...', 'info');
   } catch (error) {
@@ -803,8 +769,7 @@ async function openDatabaseSwitcher () {
   }
 }
 
-
-async function refreshData () {
+async function refreshData() {
   try {
     await loadFactory();
   } catch (error) {
@@ -812,7 +777,6 @@ async function refreshData () {
     showAlert('Failed to refresh factory data', 'error');
   }
 }
-
 
 onMounted(() => {
   loadFactory();
