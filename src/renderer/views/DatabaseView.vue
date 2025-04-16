@@ -1,26 +1,47 @@
 <template>
-  <div class="flex flex-col h-full" @keydown.ctrl.k.prevent="openDatabaseSwitcher" @keydown.meta.k.prevent="openDatabaseSwitcher" tabindex="0">
+  <div
+    class="flex flex-col h-full"
+    tabindex="0"
+    @keydown.ctrl.k.prevent="openDatabaseSwitcher"
+    @keydown.meta.k.prevent="openDatabaseSwitcher"
+  >
     <header class="bg-neutral px-4 py-2 border-b border-neutral flex items-center justify-between">
       <div class="flex items-center">
         <button class="btn btn-ghost btn-sm mr-2" @click="goBack">
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" 
-            stroke="currentColor" class="w-5 h-5">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke-width="1.5" 
+            stroke="currentColor"
+            class="w-5 h-5"
+          >
             <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
           </svg>
         </button>
         
-        <div class="w-8 h-8 rounded-full flex items-center justify-center mr-2" 
-          :class="getConnectionColor(connection?.type)">
+        <div
+          class="w-8 h-8 rounded-full flex items-center justify-center mr-2" 
+          :class="getConnectionColor(connection?.type)"
+        >
           <span class="text-white font-bold text-sm">{{ connection?.icon }}</span>
         </div>
         
         <div>
-          <h1 class="text-lg font-semibold">{{ connection?.name }}</h1>
+          <h1 class="text-lg font-semibold">
+            {{ connection?.name }}
+          </h1>
           <div class="text-xs text-gray-400 flex items-center">
             <span>{{ connection?.database || connection?.path }}</span>
-            <button @click="showConnectionInfo = true" class="ml-1 text-gray-400 hover:text-gray-300">
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" 
-                stroke="currentColor" class="w-4 h-4">
+            <button class="ml-1 text-gray-400 hover:text-gray-300" @click="showConnectionInfo = true">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke-width="1.5" 
+                stroke="currentColor"
+                class="w-4 h-4"
+              >
                 <path stroke-linecap="round" stroke-linejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z" />
               </svg>
             </button>
@@ -31,51 +52,105 @@
       <div class="flex">
         <!-- Database Tools Section -->
         <div class="border-r border-neutral-700 pr-2 mr-2">          
-          <button class="btn btn-ghost btn-sm" @click="showTablesModelsModal = true" title="Tables Models JSON">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" 
-              stroke="currentColor" class="w-5 h-5">
-              <path stroke-linecap="round" stroke-linejoin="round" 
-                d="M6.429 9.75L2.25 12l4.179 2.25m0-4.5l5.571 3 5.571-3m-11.142 0L2.25 7.5 12 2.25l9.75 5.25-4.179 2.25m0 0L21.75 12l-4.179 2.25m0 0l4.179 2.25L12 21.75 2.25 16.5l4.179-2.25m11.142 0l-5.571 3-5.571-3" />
+          <button class="btn btn-ghost btn-sm" title="Tables Models JSON" @click="showTablesModelsModal = true">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke-width="1.5" 
+              stroke="currentColor"
+              class="w-5 h-5"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round" 
+                d="M6.429 9.75L2.25 12l4.179 2.25m0-4.5l5.571 3 5.571-3m-11.142 0L2.25 7.5 12 2.25l9.75 5.25-4.179 2.25m0 0L21.75 12l-4.179 2.25m0 0l4.179 2.25L12 21.75 2.25 16.5l4.179-2.25m11.142 0l-5.571 3-5.571-3"
+              />
             </svg>
           </button>
           
-          <button class="btn btn-ghost btn-sm" @click="openSqlEditor" title="SQL Editor">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" 
-              stroke="currentColor" class="w-5 h-5">
-              <path stroke-linecap="round" stroke-linejoin="round" 
-                d="M6.75 7.5l3 2.25-3 2.25m4.5 0h3m-9 8.25h13.5A2.25 2.25 0 0021 18V6a2.25 2.25 0 00-2.25-2.25H5.25A2.25 2.25 0 003 6v12a2.25 2.25 0 002.25 2.25z" />
+          <button class="btn btn-ghost btn-sm" title="SQL Editor" @click="openSqlEditor">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke-width="1.5" 
+              stroke="currentColor"
+              class="w-5 h-5"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round" 
+                d="M6.75 7.5l3 2.25-3 2.25m4.5 0h3m-9 8.25h13.5A2.25 2.25 0 0021 18V6a2.25 2.25 0 00-2.25-2.25H5.25A2.25 2.25 0 003 6v12a2.25 2.25 0 002.25 2.25z"
+              />
             </svg>
           </button>
           
-          <button class="btn btn-ghost btn-sm" @click="showLiveUpdates = true" title="Live Updates">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" 
-              stroke="currentColor" class="w-5 h-5">
-              <path stroke-linecap="round" stroke-linejoin="round" 
-                d="M9.348 14.651a3.75 3.75 0 010-5.303m5.304 0a3.75 3.75 0 010 5.303m-7.425 2.122a6.75 6.75 0 010-9.546m9.546 0a6.75 6.75 0 010 9.546M5.106 18.894c-3.808-3.808-3.808-9.98 0-13.789m13.788 0c3.808 3.808 3.808 9.981 0 13.79M12 12h.008v.007H12V12zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" />
+          <button class="btn btn-ghost btn-sm" title="Live Updates" @click="showLiveUpdates = true">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke-width="1.5" 
+              stroke="currentColor"
+              class="w-5 h-5"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round" 
+                d="M9.348 14.651a3.75 3.75 0 010-5.303m5.304 0a3.75 3.75 0 010 5.303m-7.425 2.122a6.75 6.75 0 010-9.546m9.546 0a6.75 6.75 0 010 9.546M5.106 18.894c-3.808-3.808-3.808-9.98 0-13.789m13.788 0c3.808 3.808 3.808 9.981 0 13.79M12 12h.008v.007H12V12zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z"
+              />
             </svg>
           </button>
           
-          <button class="btn btn-ghost btn-sm" @click="showDatabaseDiagram = true" title="Database Diagram">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" 
-              stroke="currentColor" class="w-5 h-5">
-              <path stroke-linecap="round" stroke-linejoin="round" 
-                d="M7.875 14.25l1.214 1.942a2.25 2.25 0 001.908 1.058h2.006c.776 0 1.497-.4 1.908-1.058l1.214-1.942M2.41 9h4.636a2.25 2.25 0 011.872 1.002l.164.246a2.25 2.25 0 001.872 1.002h2.092a2.25 2.25 0 001.872-1.002l.164-.246A2.25 2.25 0 0116.954 9h4.636M2.41 9a2.25 2.25 0 00-.16.832V12a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 12V9.832c0-.287-.055-.57-.16-.832M2.41 9a2.25 2.25 0 01.382-.632l3.285-3.832a2.25 2.25 0 011.708-.786h8.43c.657 0 1.281.287 1.709.786l3.284 3.832c.163.19.291.404.382.632M4.5 20.25h15A2.25 2.25 0 0021.75 18v-2.625c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125V18a2.25 2.25 0 002.25 2.25z" />
+          <button class="btn btn-ghost btn-sm" title="Database Diagram" @click="showDatabaseDiagram = true">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke-width="1.5" 
+              stroke="currentColor"
+              class="w-5 h-5"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round" 
+                d="M7.875 14.25l1.214 1.942a2.25 2.25 0 001.908 1.058h2.006c.776 0 1.497-.4 1.908-1.058l1.214-1.942M2.41 9h4.636a2.25 2.25 0 011.872 1.002l.164.246a2.25 2.25 0 001.872 1.002h2.092a2.25 2.25 0 001.872-1.002l.164-.246A2.25 2.25 0 0116.954 9h4.636M2.41 9a2.25 2.25 0 00-.16.832V12a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 12V9.832c0-.287-.055-.57-.16-.832M2.41 9a2.25 2.25 0 01.382-.632l3.285-3.832a2.25 2.25 0 011.708-.786h8.43c.657 0 1.281.287 1.709.786l3.284 3.832c.163.19.291.404.382.632M4.5 20.25h15A2.25 2.25 0 0021.75 18v-2.625c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125V18a2.25 2.25 0 002.25 2.25z"
+              />
             </svg>
           </button>
           
-          <button class="btn btn-ghost btn-sm" @click="showProjectLogs = true" title="Project Logs">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" 
-              stroke="currentColor" class="w-5 h-5">
-              <path stroke-linecap="round" stroke-linejoin="round" 
-                d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
+          <button class="btn btn-ghost btn-sm" title="Project Logs" @click="showProjectLogs = true">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke-width="1.5" 
+              stroke="currentColor"
+              class="w-5 h-5"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round" 
+                d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z"
+              />
             </svg>
           </button>
           
-          <button class="btn btn-ghost btn-sm" @click="showArtisanCommands = true" title="Run Artisan Commands">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" 
-              stroke="currentColor" class="w-5 h-5">
-              <path stroke-linecap="round" stroke-linejoin="round" 
-                d="M6.75 7.5l3 2.25-3 2.25m4.5 0h3m-9 8.25h13.5A2.25 2.25 0 0021 18V6a2.25 2.25 0 00-2.25-2.25H5.25A2.25 2.25 0 003 6v12a2.25 2.25 0 002.25 2.25z" />
+          <button class="btn btn-ghost btn-sm" title="Run Artisan Commands" @click="showArtisanCommands = true">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke-width="1.5" 
+              stroke="currentColor"
+              class="w-5 h-5"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round" 
+                d="M6.75 7.5l3 2.25-3 2.25m4.5 0h3m-9 8.25h13.5A2.25 2.25 0 0021 18V6a2.25 2.25 0 00-2.25-2.25H5.25A2.25 2.25 0 003 6v12a2.25 2.25 0 002.25 2.25z"
+              />
             </svg>
           </button>
         </div>
@@ -83,17 +158,35 @@
         <!-- System Actions Section -->
         <div class="flex">
           <button class="btn btn-ghost btn-sm">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" 
-              stroke="currentColor" class="w-5 h-5">
-              <path stroke-linecap="round" stroke-linejoin="round" 
-                d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke-width="1.5" 
+              stroke="currentColor"
+              class="w-5 h-5"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round" 
+                d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99"
+              />
             </svg>
           </button>
           <button class="btn btn-ghost btn-sm" @click="showSettings = true">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" 
-              stroke="currentColor" class="w-5 h-5">
-              <path stroke-linecap="round" stroke-linejoin="round" 
-                d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.324.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 011.37.49l1.296 2.247a1.125 1.125 0 01-.26 1.431l-1.003.827c-.293.24-.438.613-.431.992a6.759 6.759 0 010 .255c-.007.378.138.75.43.99l1.005.828c.424.35.534.954.26 1.43l-1.298 2.247a1.125 1.125 0 01-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.57 6.57 0 01-.22.128c-.331.183-.581.495-.644.869l-.213 1.28c-.09.543-.56.941-1.11.941h-2.594c-.55 0-1.02-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 01-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 01-1.369-.49l-1.297-2.247a1.125 1.125 0 01.26-1.431l1.004-.827c.292-.24.437-.613.43-.992a6.932 6.932 0 010-.255c.007-.378-.138-.75-.43-.99l-1.004-.828a1.125 1.125 0 01-.26-1.43l1.297-2.247a1.125 1.125 0 011.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.087.22-.128.332-.183.582-.495.644-.869l.214-1.281z" />
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke-width="1.5" 
+              stroke="currentColor"
+              class="w-5 h-5"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round" 
+                d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.324.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 011.37.49l1.296 2.247a1.125 1.125 0 01-.26 1.431l-1.003.827c-.293.24-.438.613-.431.992a6.759 6.759 0 010 .255c-.007.378.138.75.43.99l1.005.828c.424.35.534.954.26 1.43l-1.298 2.247a1.125 1.125 0 01-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.57 6.57 0 01-.22.128c-.331.183-.581.495-.644.869l-.213 1.28c-.09.543-.56.941-1.11.941h-2.594c-.55 0-1.02-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 01-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 01-1.369-.49l-1.297-2.247a1.125 1.125 0 01.26-1.431l1.004-.827c.292-.24.437-.613.43-.992a6.932 6.932 0 010-.255c.007-.378-.138-.75-.43-.99l-1.004-.828a1.125 1.125 0 01-.26-1.43l1.297-2.247a1.125 1.125 0 011.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.087.22-.128.332-.183.582-.495.644-.869l.214-1.281z"
+              />
               <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
             </svg>
           </button>
@@ -104,26 +197,42 @@
     <div v-if="openTabs.length > 0" class="tabs-container border-b border-neutral bg-base-300">
       <button 
         v-if="hasScrollLeft" 
-        @click="scrollLeft" 
-        class="tab-scroll-button tab-scroll-left">
-        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" 
-          stroke="currentColor" class="w-4 h-4">
+        class="tab-scroll-button tab-scroll-left" 
+        @click="scrollLeft"
+      >
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke-width="1.5" 
+          stroke="currentColor"
+          class="w-4 h-4"
+        >
           <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
         </svg>
       </button>
       
-      <div class="tabs-scroll" ref="tabsScrollRef" @scroll="checkScrollPosition">
-        <div v-for="tab in openTabs" :key="tab.id" 
+      <div ref="tabsScrollRef" class="tabs-scroll" @scroll="checkScrollPosition">
+        <div
+          v-for="tab in openTabs"
+          :key="tab.id" 
           :class="['tab', { 'active': tab.id === activeTabId }]"
-          @click="activateTab(tab.id)"
           draggable="true"
+          @click="activateTab(tab.id)"
           @dragstart="handleDragStart($event, tab.id)"
           @dragover.prevent
-          @drop="handleDrop($event, tab.id)">
+          @drop="handleDrop($event, tab.id)"
+        >
           <span class="tab-title">{{ tab.title }}</span>
           <button class="close-icon" @click.stop="closeTab(tab.id)">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" 
-              stroke="currentColor" class="w-4 h-4">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke-width="1.5" 
+              stroke="currentColor"
+              class="w-4 h-4"
+            >
               <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
             </svg>
           </button>
@@ -132,10 +241,17 @@
       
       <button 
         v-if="hasScrollRight" 
-        @click="scrollRight" 
-        class="tab-scroll-button tab-scroll-right">
-        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" 
-          stroke="currentColor" class="w-4 h-4">
+        class="tab-scroll-button tab-scroll-right" 
+        @click="scrollRight"
+      >
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke-width="1.5" 
+          stroke="currentColor"
+          class="w-4 h-4"
+        >
           <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
         </svg>
       </button>
@@ -143,21 +259,30 @@
 
     <div class="flex flex-1 overflow-hidden">
       <TablesSidebar 
-        :connectionId="connectionId"
-        :activeTabName="activeTab?.tableName"
-        :sidebarWidth="sidebarWidth"
+        :connection-id="connectionId"
+        :active-tab-name="activeTab?.tableName"
+        :sidebar-width="sidebarWidth"
         @resize-start="startResize"
         @table-open="openTable"
-        @update:sidebarWidth="sidebarWidth = $event"
+        @update:sidebar-width="sidebarWidth = $event"
       />
 
       <div class="flex-1 bg-base-100 overflow-hidden">
         <div v-if="!activeTab" class="flex items-center justify-center h-full text-gray-500">
           <div class="text-center">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" 
-              stroke="currentColor" class="w-12 h-12 mx-auto mb-4 text-gray-400">
-              <path stroke-linecap="round" stroke-linejoin="round" 
-                d="M3.375 19.5h17.25m-17.25 0a1.125 1.125 0 01-1.125-1.125M3.375 19.5h7.5c.621 0 1.125-.504 1.125-1.125m-9.75 0V5.625m0 12.75v-1.5c0-.621.504-1.125 1.125-1.125m18.375 2.625V5.625m0 12.75c0 .621-.504 1.125-1.125 1.125m1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125m0 3.75h-7.5A1.125 1.125 0 0112 18.375m9.75-12.75c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125m19.5 0v1.5c0 .621-.504 1.125-1.125 1.125M2.25 5.625v1.5c0 .621.504 1.125 1.125 1.125m0 0h17.25m-17.25 0h7.5c.621 0 1.125.504 1.125 1.125M3.375 8.25c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125m1.125-3.75H3.375m0 0h1.125m0 0h7.5c.621 0 1.125.504 1.125 1.125M3.375 8.25h7.5c.621 0 1.125.504 1.125 1.125m-9.75 0v1.5m0-1.5h18.75m0 1.5c0 .621-.504 1.125-1.125 1.125m1.125-1.125v-1.5m0 0h-1.5m-16.5-3.75v-1.5m0 0c0-.621.504-1.125 1.125-1.125h15.75c.621 0 1.125.504 1.125 1.125v1.5m-16.5 0h16.5m-16.5 0h1.5m-1.5 0h-1.5m-12 3.75H15m-12.75 0h1.5m-1.5 0H1.5m3.75 0h16.5" />
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke-width="1.5" 
+              stroke="currentColor"
+              class="w-12 h-12 mx-auto mb-4 text-gray-400"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round" 
+                d="M3.375 19.5h17.25m-17.25 0a1.125 1.125 0 01-1.125-1.125M3.375 19.5h7.5c.621 0 1.125-.504 1.125-1.125m-9.75 0V5.625m0 12.75v-1.5c0-.621.504-1.125 1.125-1.125m18.375 2.625V5.625m0 12.75c0 .621-.504 1.125-1.125 1.125m1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125m0 3.75h-7.5A1.125 1.125 0 0112 18.375m9.75-12.75c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125m19.5 0v1.5c0 .621-.504 1.125-1.125 1.125M2.25 5.625v1.5c0 .621.504 1.125 1.125 1.125m0 0h17.25m-17.25 0h7.5c.621 0 1.125.504 1.125 1.125M3.375 8.25c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125m1.125-3.75H3.375m0 0h1.125m0 0h7.5c.621 0 1.125.504 1.125 1.125M3.375 8.25h7.5c.621 0 1.125.504 1.125 1.125m-9.75 0v1.5m0-1.5h18.75m0 1.5c0 .621-.504 1.125-1.125 1.125m1.125-1.125v-1.5m0 0h-1.5m-16.5-3.75v-1.5m0 0c0-.621.504-1.125 1.125-1.125h15.75c.621 0 1.125.504 1.125 1.125v1.5m-16.5 0h16.5m-16.5 0h1.5m-1.5 0h-1.5m-12 3.75H15m-12.75 0h1.5m-1.5 0H1.5m3.75 0h16.5"
+              />
             </svg>
             <p>Select a table</p>
           </div>
@@ -165,11 +290,11 @@
         
         <keep-alive>
           <component 
-            v-if="activeTab"
             :is="TableContentComponent"
+            v-if="activeTab"
             :key="activeTab.id"
-            :connectionId="activeTab.connectionId" 
-            :tableName="activeTab.tableName"
+            :connection-id="activeTab.connectionId" 
+            :table-name="activeTab.tableName"
             :filter="activeTab.filter || ''"
             @update-tab-data="handleUpdateTabData"
             @open-tab="handleOpenTab"
@@ -189,30 +314,50 @@
 
   <div class="modal" :class="{ 'modal-open': connectionError }">
     <div class="modal-box bg-base-300">
-      <h3 class="font-bold text-lg">Connection Error</h3>
-      <p class="py-4">{{ connectionErrorMessage }}</p>
+      <h3 class="font-bold text-lg">
+        Connection Error
+      </h3>
+      <p class="py-4">
+        {{ connectionErrorMessage }}
+      </p>
       <div class="modal-action">
-        <button class="btn btn-primary" @click="goBack">Back to Home</button>
+        <button class="btn btn-primary" @click="goBack">
+          Back to Home
+        </button>
       </div>
     </div>
   </div>
 
   <div class="modal" :class="{ 'modal-open': showConnectionInfo }">
     <div class="modal-box bg-base-300">
-      <h3 class="font-bold text-lg">Connection Details</h3>
+      <h3 class="font-bold text-lg">
+        Connection Details
+      </h3>
       <div class="py-4">
         <div v-if="connection" class="space-y-2">
           <p><span class="font-semibold">Name:</span> {{ connection.name }}</p>
           <p><span class="font-semibold">Type:</span> {{ connection.type }}</p>
-          <p v-if="connection.host"><span class="font-semibold">Host:</span> {{ connection.host }}</p>
-          <p v-if="connection.port"><span class="font-semibold">Port:</span> {{ connection.port }}</p>
-          <p v-if="connection.database"><span class="font-semibold">Database:</span> {{ connection.database }}</p>
-          <p v-if="connection.username"><span class="font-semibold">Username:</span> {{ connection.username }}</p>
-          <p v-if="connection.path"><span class="font-semibold">Path:</span> {{ connection.path }}</p>
+          <p v-if="connection.host">
+            <span class="font-semibold">Host:</span> {{ connection.host }}
+          </p>
+          <p v-if="connection.port">
+            <span class="font-semibold">Port:</span> {{ connection.port }}
+          </p>
+          <p v-if="connection.database">
+            <span class="font-semibold">Database:</span> {{ connection.database }}
+          </p>
+          <p v-if="connection.username">
+            <span class="font-semibold">Username:</span> {{ connection.username }}
+          </p>
+          <p v-if="connection.path">
+            <span class="font-semibold">Path:</span> {{ connection.path }}
+          </p>
         </div>
       </div>
       <div class="modal-action">
-        <button class="btn btn-primary" @click="showConnectionInfo = false">Close</button>
+        <button class="btn btn-primary" @click="showConnectionInfo = false">
+          Close
+        </button>
       </div>
     </div>
   </div>
@@ -244,21 +389,32 @@
   <!-- Tables Models JSON Modal -->
   <div v-if="showTablesModelsModal" class="modal modal-open">
     <div class="modal-box w-11/12 max-w-5xl max-h-[90vh]">
-      <h3 class="font-bold text-lg mb-4">All Tables Models Data</h3>
+      <h3 class="font-bold text-lg mb-4">
+        All Tables Models Data
+      </h3>
       <div class="mockup-code bg-neutral mb-4 h-[60vh] overflow-auto">
         <pre><code>{{ allTablesModelsJson }}</code></pre>
       </div>
       <div class="modal-action">
         <button class="btn btn-sm btn-primary" @click="copyAllTablesJsonToClipboard">
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4 mr-1">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke-width="1.5"
+            stroke="currentColor"
+            class="w-4 h-4 mr-1"
+          >
             <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125h-9.75a1.125 1.125 0 0 1-1.125-1.125V7.875c0-.621.504-1.125 1.125-1.125H6.75a9.06 9.06 0 0 1 1.5.124m7.5 10.376h3.375c.621 0 1.125-.504 1.125-1.125V11.25c0-4.46-3.243-8.161-7.5-8.876a9.06 9.06 0 0 0-1.5-.124H9.375c-.621 0-1.125.504-1.125 1.125v3.5m7.5 10.375H9.375a1.125 1.125 0 0 1-1.125-1.125v-9.25m12 6.625v-1.875a3.375 3.375 0 0 0-3.375-3.375h-1.5a1.125 1.125 0 0 1-1.125-1.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H9.75" />
           </svg>
           Copy to Clipboard
         </button>
-        <button class="btn" @click="showTablesModelsModal = false">Close</button>
+        <button class="btn" @click="showTablesModelsModal = false">
+          Close
+        </button>
       </div>
     </div>
-    <div class="modal-backdrop" @click="showTablesModelsModal = false"></div>
+    <div class="modal-backdrop" @click="showTablesModelsModal = false" />
   </div>
   
   <!-- Settings Modal -->
@@ -281,21 +437,33 @@
   <!-- Database Switcher Modal -->
   <div class="modal" :class="{ 'modal-open': showDatabaseSwitcher }">
     <div class="modal-box bg-base-300 w-96">
-      <h3 class="font-bold text-lg mb-4">Switch Database</h3>
+      <h3 class="font-bold text-lg mb-4">
+        Switch Database
+      </h3>
       <div v-if="loadingDatabases" class="flex justify-center py-4">
-        <div class="loading loading-spinner"></div>
+        <div class="loading loading-spinner" />
       </div>
       <div v-else-if="availableDatabases.length === 0" class="text-center py-4">
         No databases found
       </div>
       <div v-else class="max-h-60 overflow-y-auto">
         <ul class="menu bg-base-200 rounded-box">
-          <li v-for="db in availableDatabases" :key="db" 
-              :class="{ 'bg-primary bg-opacity-20': db === connection?.database }">
-            <a @click="switchDatabase(db)" class="flex items-center justify-between">
+          <li
+            v-for="db in availableDatabases"
+            :key="db" 
+            :class="{ 'bg-primary bg-opacity-20': db === connection?.database }"
+          >
+            <a class="flex items-center justify-between" @click="switchDatabase(db)">
               {{ db }}
-              <svg v-if="db === connection?.database" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" 
-                stroke="currentColor" class="w-4 h-4">
+              <svg
+                v-if="db === connection?.database"
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke-width="1.5" 
+                stroke="currentColor"
+                class="w-4 h-4"
+              >
                 <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" />
               </svg>
             </a>
@@ -303,7 +471,9 @@
         </ul>
       </div>
       <div class="modal-action">
-        <button class="btn" @click="showDatabaseSwitcher = false">Close</button>
+        <button class="btn" @click="showDatabaseSwitcher = false">
+          Close
+        </button>
       </div>
     </div>
   </div>
@@ -364,7 +534,7 @@ const openTabs = computed(() => tabsStore.openTabs);
 const activeTabId = computed(() => tabsStore.activeTabId);
 const activeTab = computed(() => tabsStore.activeTab);
 
-function openTable(table, filter) {
+function openTable (table, filter) {
   try {
     tabsStore.addTab({
       connectionId: connectionId.value,
@@ -380,18 +550,18 @@ function openTable(table, filter) {
   }
 }
 
-function activateTab(tabId) {
+function activateTab (tabId) {
   tabsStore.activateTab(tabId);
   nextTick(() => {
     scrollToActiveTab();
   });
 }
 
-function closeTab(tabId) {
+function closeTab (tabId) {
   tabsStore.removeTab(tabId);
 }
 
-function handleUpdateTabData(tabName, data) {
+function handleUpdateTabData (tabName, data) {
   const tab = openTabs.value.find(t => t.tableName === tabName);
   if (tab) {
     tabsStore.updateTabData(tab.id, data);
@@ -410,34 +580,34 @@ window.getAllTablesModelsJson = async () => {
   return await databaseStore.getAllTablesModelsJson(connectionId.value);
 }
 
-function goBack() {
+function goBack () {
   router.push('/');
 }
 
-function startResize(e) {
+function startResize (e) {
   isResizing.value = true;
   document.addEventListener('mousemove', onResize);
   document.addEventListener('mouseup', stopResize);
 }
 
-function onResize(e) {
+function onResize (e) {
   if (isResizing.value) {
     sidebarWidth.value = Math.max(200, Math.min(500, e.clientX));
   }
 }
 
-function stopResize() {
+function stopResize () {
   isResizing.value = false;
   document.removeEventListener('mousemove', onResize);
   document.removeEventListener('mouseup', stopResize);
 }
 
-function handleDragStart(event, tabId) {
+function handleDragStart (event, tabId) {
   draggingTabId.value = tabId;
   event.dataTransfer.effectAllowed = 'move';
 }
 
-function handleDrop(event, targetTabId) {
+function handleDrop (event, targetTabId) {
   if (draggingTabId.value === null) return;
   
   const draggedTabIndex = openTabs.value.findIndex(tab => tab.id === draggingTabId.value);
@@ -455,7 +625,7 @@ function handleDrop(event, targetTabId) {
   draggingTabId.value = null;
 }
 
-function scrollToActiveTab() {
+function scrollToActiveTab () {
   if (!tabsScrollRef.value) return;
   
   const activeTabElement = tabsScrollRef.value.querySelector('.tab.active');
@@ -483,7 +653,7 @@ function scrollToActiveTab() {
   checkScrollPosition();
 }
 
-function checkScrollPosition() {
+function checkScrollPosition () {
   if (!tabsScrollRef.value) return;
   
   const container = tabsScrollRef.value;
@@ -491,7 +661,7 @@ function checkScrollPosition() {
   hasScrollRight.value = container.scrollLeft < (container.scrollWidth - container.clientWidth);
 }
 
-function scrollLeft() {
+function scrollLeft () {
   if (!tabsScrollRef.value) return;
   
   const container = tabsScrollRef.value;
@@ -502,7 +672,7 @@ function scrollLeft() {
   });
 }
 
-function scrollRight() {
+function scrollRight () {
   if (!tabsScrollRef.value) return;
   
   const container = tabsScrollRef.value;
@@ -525,7 +695,7 @@ watch(() => openTabs.value.length, () => {
   });
 });
 
-async function testConnection() {
+async function testConnection () {
   if (!connection.value) {
     connectionError.value = true;
     connectionErrorMessage.value = 'Connection not found';
@@ -592,7 +762,7 @@ onMounted(async () => {
   }
 });
 
-function getConnectionColor(type) {
+function getConnectionColor (type) {
   switch (type) {
     case 'mysql':
       return 'bg-orange-500';
@@ -607,7 +777,7 @@ function getConnectionColor(type) {
   }
 }
 
-function handleGotoTable(tableName) {
+function handleGotoTable (tableName) {
   const tableData = databaseStore.tablesList.find(t => t.name === tableName);
   if (tableData) {
     openTable(tableData);
@@ -616,11 +786,11 @@ function handleGotoTable(tableName) {
   }
 }
 
-function handleSelectProject() {
+function handleSelectProject () {
   selectProjectPath();
 }
 
-async function selectProjectPath() {
+async function selectProjectPath () {
   try {
     const result = await window.api.selectDirectory();
     if (result.canceled) return;
@@ -644,7 +814,7 @@ async function selectProjectPath() {
   }
 }
 
-async function copyAllTablesJsonToClipboard() {
+async function copyAllTablesJsonToClipboard () {
   try {
     await navigator.clipboard.writeText(allTablesModelsJson.value);
     showAlert('JSON copied to clipboard', 'success');
@@ -669,16 +839,16 @@ watch(showTablesModelsModal, async (isOpen) => {
   }
 });
 
-function openSqlEditor() {
+function openSqlEditor () {
   router.push(`/sql-editor/${connectionId.value}`);
 }
 
-function openDatabaseSwitcher() {
+function openDatabaseSwitcher () {
   showDatabaseSwitcher.value = true;
   loadAvailableDatabases();
 }
 
-async function loadAvailableDatabases() {
+async function loadAvailableDatabases () {
   if (!connection.value || connection.value.type !== 'mysql') {
     availableDatabases.value = [];
     return;
@@ -708,7 +878,7 @@ async function loadAvailableDatabases() {
   }
 }
 
-async function switchDatabase(databaseName) {
+async function switchDatabase (databaseName) {
   if (!connection.value || databaseName === connection.value.database) {
     showDatabaseSwitcher.value = false;
     return;
@@ -743,7 +913,7 @@ async function switchDatabase(databaseName) {
 }
 
 // Função para abrir uma nova aba a partir de um clique em chave estrangeira
-function handleOpenTab(tabData) {
+function handleOpenTab (tabData) {
   try {
     console.log("Abrindo nova aba com dados:", tabData);
     
@@ -792,7 +962,7 @@ function handleOpenTab(tabData) {
 }
 
 // Function to handle database switcher request from child component
-function handleDatabaseSwitcherFromChild(connectionId) {
+function handleDatabaseSwitcherFromChild (connectionId) {
   openDatabaseSwitcher();
 }
 </script>

@@ -13,7 +13,7 @@ export const useSettingsStore = defineStore('settings', () => {
   
   const isLoading = ref(true);
 
-  async function loadSettings() {
+  async function loadSettings () {
     isLoading.value = true;
     
     try {
@@ -40,7 +40,7 @@ export const useSettingsStore = defineStore('settings', () => {
     }
   }
 
-  async function saveSettings() {
+  async function saveSettings () {
     try {
       if (window.api) {
         // Create a clean serializable copy of the settings object
@@ -52,7 +52,7 @@ export const useSettingsStore = defineStore('settings', () => {
     }
   }
 
-  async function updateSettings(newSettings) {
+  async function updateSettings (newSettings) {
     settings.value = { ...settings.value, ...newSettings };
     await saveSettings();
   }

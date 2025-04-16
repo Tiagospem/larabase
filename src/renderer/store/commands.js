@@ -8,7 +8,7 @@ export const useCommandsStore = defineStore('commands', () => {
   const showCommandOutput = ref(false);
   const activeListenerChannel = ref(null);
   
-  async function runArtisanCommand(config) {
+  async function runArtisanCommand (config) {
     isLoading.value = true;
     
     try {
@@ -91,15 +91,15 @@ export const useCommandsStore = defineStore('commands', () => {
     }
   }
   
-  function clearCommandHistory() {
+  function clearCommandHistory () {
     commandHistory.value = [];
   }
   
-  function toggleCommandOutput() {
+  function toggleCommandOutput () {
     showCommandOutput.value = !showCommandOutput.value;
   }
   
-  function closeCommandOutput() {
+  function closeCommandOutput () {
     showCommandOutput.value = false;
     // Also clean up any active listeners
     if (activeListenerChannel.value) {
@@ -108,7 +108,7 @@ export const useCommandsStore = defineStore('commands', () => {
     }
   }
   
-  function openCommandOutput() {
+  function openCommandOutput () {
     showCommandOutput.value = true;
   }
   

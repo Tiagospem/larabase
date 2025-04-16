@@ -2,33 +2,55 @@
   <div v-if="showCommandOutput" class="command-output-panel">
     <div class="command-output-header">
       <div class="flex items-center">
-        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" 
-          stroke="currentColor" class="w-5 h-5 mr-2">
-          <path stroke-linecap="round" stroke-linejoin="round" 
-            d="M6.75 7.5l3 2.25-3 2.25m4.5 0h3m-9 8.25h13.5A2.25 2.25 0 0021 18V6a2.25 2.25 0 00-2.25-2.25H5.25A2.25 2.25 0 003 6v12a2.25 2.25 0 002.25 2.25z" />
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke-width="1.5" 
+          stroke="currentColor"
+          class="w-5 h-5 mr-2"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round" 
+            d="M6.75 7.5l3 2.25-3 2.25m4.5 0h3m-9 8.25h13.5A2.25 2.25 0 0021 18V6a2.25 2.25 0 00-2.25-2.25H5.25A2.25 2.25 0 003 6v12a2.25 2.25 0 002.25 2.25z"
+          />
         </svg>
         <span class="font-mono text-sm">{{ command }}</span>
         <div v-if="!commandResult?.isComplete" class="ml-2">
-          <span class="loading loading-spinner loading-xs"></span>
+          <span class="loading loading-spinner loading-xs" />
         </div>
       </div>
       <div class="flex">
-        <button @click="toggleHeight" class="btn btn-xs btn-ghost" :title="isExpanded ? 'Collapse' : 'Expand'">
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" 
-            stroke="currentColor" class="w-4 h-4" :class="{ 'transform rotate-180': !isExpanded }">
+        <button class="btn btn-xs btn-ghost" :title="isExpanded ? 'Collapse' : 'Expand'" @click="toggleHeight">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke-width="1.5" 
+            stroke="currentColor"
+            class="w-4 h-4"
+            :class="{ 'transform rotate-180': !isExpanded }"
+          >
             <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 15.75l7.5-7.5 7.5 7.5" />
           </svg>
         </button>
-        <button @click="clearOutput" class="btn btn-xs btn-ghost" title="Clear output">
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
-            stroke="currentColor" class="w-4 h-4">
+        <button class="btn btn-xs btn-ghost" title="Clear output" @click="clearOutput">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke-width="1.5"
+            stroke="currentColor"
+            class="w-4 h-4"
+          >
             <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
           </svg>
         </button>
       </div>
     </div>
     <div class="command-output-content" :class="{ 'expanded': isExpanded }">
-      <div ref="outputContainer" v-if="commandResult" class="mockup-code bg-neutral h-full overflow-auto">
+      <div v-if="commandResult" ref="outputContainer" class="mockup-code bg-neutral h-full overflow-auto">
         <pre class="whitespace-pre-wrap" :class="{ 'text-green-400': commandResult.success, 'text-red-400': !commandResult.success }"><code>{{ sanitizedOutput }}</code></pre>
       </div>
       <div v-else class="flex items-center justify-center h-full text-gray-500">
@@ -69,11 +91,11 @@ const sanitizedOutput = computed(() => {
     .replace(/\u001b/g, ''); // Remove any remaining escape characters
 });
 
-function toggleHeight() {
+function toggleHeight () {
   isExpanded.value = !isExpanded.value;
 }
 
-function clearOutput() {
+function clearOutput () {
   commandsStore.closeCommandOutput();
 }
 
@@ -91,7 +113,7 @@ watch(() => sanitizedOutput.value, () => {
 }, { immediate: true });
 
 // Function to scroll to bottom of output
-function scrollToBottom() {
+function scrollToBottom () {
   if (outputContainer.value) {
     outputContainer.value.scrollTop = outputContainer.value.scrollHeight;
   }

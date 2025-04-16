@@ -2,17 +2,28 @@
   <div class="modal" :class="{ 'modal-open': isOpen }" @transitionend="onModalFullyOpen">
     <div class="modal-box max-w-4xl bg-base-300">
       <div class="flex justify-between items-center mb-4">
-        <h3 class="font-bold text-lg">{{ hasRelationships ? 'Database Schema Diagram' : 'Database Relationship Explorer' }}</h3>
+        <h3 class="font-bold text-lg">
+          {{ hasRelationships ? 'Database Schema Diagram' : 'Database Relationship Explorer' }}
+        </h3>
         <div class="flex gap-2">
           <div class="badge" :class="hasRelationships ? 'badge-success' : 'badge-warning'">
             {{ hasRelationships ? `${relationships.length} Relations Found` : 'No Relations' }}
           </div>
           
           <button class="btn btn-sm btn-ghost" @click="onRefreshClick">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" 
-              stroke="currentColor" class="w-4 h-4">
-              <path stroke-linecap="round" stroke-linejoin="round" 
-                d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke-width="1.5" 
+              stroke="currentColor"
+              class="w-4 h-4"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round" 
+                d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99"
+              />
             </svg>
           </button>
         </div>
@@ -20,33 +31,53 @@
 
       <!-- Loading indicator -->
       <div v-if="loading" class="flex justify-center items-center py-8">
-        <div class="animate-spin rounded-full h-12 w-12 border-4 border-primary border-t-transparent"></div>
+        <div class="animate-spin rounded-full h-12 w-12 border-4 border-primary border-t-transparent" />
         <span class="ml-3 text-sm">Analyzing database schema...</span>
       </div>
 
       <!-- No relationships found -->
       <div v-else-if="!loading && !hasRelationships" class="alert alert-warning mb-4">
-        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" class="stroke-current shrink-0 w-6 h-6">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          fill="none"
+          viewBox="0 0 24 24"
+          class="stroke-current shrink-0 w-6 h-6"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+          />
         </svg>
         <span>No relationships found between tables. The database schema might not have defined foreign key constraints.</span>
       </div>
 
       <!-- Diagram visualization area -->
-      <div v-else class="diagram-container bg-base-200 rounded-lg p-4" ref="diagramContainer">
+      <div v-else ref="diagramContainer" class="diagram-container bg-base-200 rounded-lg p-4">
         <div class="diagram-controls mb-2 flex justify-between">
           <div>
-            <button class="btn btn-xs" @click="zoomIn">Zoom In</button>
-            <button class="btn btn-xs ml-1" @click="zoomOut">Zoom Out</button>
-            <button class="btn btn-xs ml-1" @click="resetZoom">Reset</button>
+            <button class="btn btn-xs" @click="zoomIn">
+              Zoom In
+            </button>
+            <button class="btn btn-xs ml-1" @click="zoomOut">
+              Zoom Out
+            </button>
+            <button class="btn btn-xs ml-1" @click="resetZoom">
+              Reset
+            </button>
           </div>
           <select v-model="focusTable" class="select select-xs select-bordered">
-            <option value="">Show All Tables</option>
-            <option v-for="table in tablesList" :key="table" :value="table">{{ table }}</option>
+            <option value="">
+              Show All Tables
+            </option>
+            <option v-for="table in tablesList" :key="table" :value="table">
+              {{ table }}
+            </option>
           </select>
         </div>
         
-        <div class="diagram-svg-container" ref="svgContainer">
+        <div ref="svgContainer" class="diagram-svg-container">
           <!-- SVG diagram will be rendered here -->
         </div>
         
@@ -70,7 +101,9 @@
       </div>
 
       <div class="modal-action">
-        <button class="btn btn-primary" @click="close">Close</button>
+        <button class="btn btn-primary" @click="close">
+          Close
+        </button>
       </div>
     </div>
   </div>
@@ -112,11 +145,11 @@ const panPosition = ref({ x: 0, y: 0 });
 const isPanning = ref(false);
 const lastMousePosition = ref({ x: 0, y: 0 });
 
-function close() {
+function close () {
   emit('close');
 }
 
-async function loadD3() {
+async function loadD3 () {
   if (!window.d3) {
     // If D3 is not available in the window object, create a script element to load it
     return new Promise((resolve, reject) => {
@@ -130,7 +163,7 @@ async function loadD3() {
   return window.d3;
 }
 
-async function refreshDiagram() {
+async function refreshDiagram () {
   if (!props.connectionId) return;
   
   try {
@@ -171,7 +204,7 @@ async function refreshDiagram() {
   }
 }
 
-function renderDiagram() {
+function renderDiagram () {
   if (!d3 || !svgContainer.value) return;
   
   // Clear previous diagram
@@ -441,7 +474,7 @@ function renderDiagram() {
     .attr('y', d => (d.source.y + d.target.y) / 2);
   
   // Panning event handlers
-  function startPan(event) {
+  function startPan (event) {
     if (event.button === 0) { // only left mouse button
       isPanning.value = true;
       lastMousePosition.value = { x: event.clientX, y: event.clientY };
@@ -449,7 +482,7 @@ function renderDiagram() {
     }
   }
   
-  function pan(event) {
+  function pan (event) {
     if (isPanning.value) {
       const dx = event.clientX - lastMousePosition.value.x;
       const dy = event.clientY - lastMousePosition.value.y;
@@ -464,41 +497,41 @@ function renderDiagram() {
     }
   }
   
-  function endPan() {
+  function endPan () {
     isPanning.value = false;
     svg.style('cursor', 'move');
   }
   
   // Drag functions
-  function dragstarted(event) {
+  function dragstarted (event) {
     if (!event.active) simulation.alphaTarget(0.3).restart();
     event.subject.fx = event.subject.x;
     event.subject.fy = event.subject.y;
   }
   
-  function dragged(event) {
+  function dragged (event) {
     event.subject.fx = event.x;
     event.subject.fy = event.y;
   }
   
-  function dragended(event) {
+  function dragended (event) {
     if (!event.active) simulation.alphaTarget(0);
     event.subject.fx = null;
     event.subject.fy = null;
   }
 }
 
-function zoomIn() {
+function zoomIn () {
   zoomLevel.value += 0.1;
   renderDiagram();
 }
 
-function zoomOut() {
+function zoomOut () {
   zoomLevel.value = Math.max(0.1, zoomLevel.value - 0.1);
   renderDiagram();
 }
 
-function resetZoom() {
+function resetZoom () {
   zoomLevel.value = 1;
   panPosition.value = { x: 0, y: 0 };
   renderDiagram();
@@ -561,7 +594,7 @@ onMounted(() => {
 });
 
 // Add event listeners for mouse wheel zoom in the SVG container
-function setupWheelZoom() {
+function setupWheelZoom () {
   if (!svgContainer.value) return;
   
   // Remove any existing listeners first
@@ -572,7 +605,7 @@ function setupWheelZoom() {
 }
 
 // Handle mouse wheel events for zooming
-function handleWheel(event) {
+function handleWheel (event) {
   event.preventDefault();
   
   // Determine zoom direction
@@ -590,7 +623,7 @@ function handleWheel(event) {
 }
 
 // Add the wheel zoom setup to the onModalFullyOpen function
-function onModalFullyOpen() {
+function onModalFullyOpen () {
   if (relationships.value.length > 0 && svgContainer.value) {
     console.log('Modal fully opened, rendering diagram');
     renderDiagram();
@@ -599,7 +632,7 @@ function onModalFullyOpen() {
 }
 
 // Also set up wheel zoom when the diagram is refreshed
-async function onRefreshClick() {
+async function onRefreshClick () {
   loading.value = true;
   await refreshDiagram();
   nextTick(() => {

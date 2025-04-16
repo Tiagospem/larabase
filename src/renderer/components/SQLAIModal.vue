@@ -1,7 +1,9 @@
 <template>
   <div class="modal modal-open z-30">
     <div class="modal-box w-11/12 max-w-3xl bg-base-300">
-      <h3 class="font-bold text-lg mb-4">SQL-to-Eloquent Converter</h3>
+      <h3 class="font-bold text-lg mb-4">
+        SQL-to-Eloquent Converter
+      </h3>
       
       <!-- User Input Section -->
       <div class="form-control mb-4">
@@ -13,12 +15,12 @@
           class="textarea textarea-bordered h-32 text-white font-mono"
           placeholder="Example: Show all podcast episodes with their series"
           :disabled="isLoading"
-        ></textarea>
+        />
       </div>
       
       <!-- Response Section -->
       <div v-if="isLoading" class="flex justify-center items-center my-4 py-8">
-        <div class="loading loading-spinner text-primary"></div>
+        <div class="loading loading-spinner text-primary" />
         <span class="ml-3">Generating your SQL/Eloquent code...</span>
       </div>
       
@@ -27,13 +29,22 @@
         <div class="card bg-neutral shadow-md">
           <div class="card-body">
             <div class="flex justify-between items-center mb-2">
-              <h3 class="card-title text-md">SQL Code</h3>
+              <h3 class="card-title text-md">
+                SQL Code
+              </h3>
               <button 
                 class="btn btn-xs btn-ghost" 
-                @click="copySQLToClipboard"
                 title="Copy to clipboard"
+                @click="copySQLToClipboard"
               >
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke-width="1.5"
+                  stroke="currentColor"
+                  class="w-4 h-4"
+                >
                   <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125h-9.75a1.125 1.125 0 0 1-1.125-1.125V7.875c0-.621.504-1.125 1.125-1.125H6.75a9.06 9.06 0 0 1 1.5.124m7.5 10.376h3.375c.621 0 1.125-.504 1.125-1.125V11.25c0-4.46-3.243-8.161-7.5-8.876a9.06 9.06 0 0 0-1.5-.124H9.375c-.621 0-1.125.504-1.125 1.125v3.5m7.5 10.375H9.375a1.125 1.125 0 0 1-1.125-1.125v-9.25m12 6.625v-1.875a3.375 3.375 0 0 0-3.375-3.375h-1.5a1.125 1.125 0 0 1-1.125-1.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H9.75" />
                 </svg>
               </button>
@@ -54,13 +65,22 @@
         <div class="card bg-neutral shadow-md">
           <div class="card-body">
             <div class="flex justify-between items-center mb-2">
-              <h3 class="card-title text-md">Eloquent Equivalent</h3>
+              <h3 class="card-title text-md">
+                Eloquent Equivalent
+              </h3>
               <button 
                 class="btn btn-xs btn-ghost" 
-                @click="copyEloquentToClipboard"
                 title="Copy to clipboard"
+                @click="copyEloquentToClipboard"
               >
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke-width="1.5"
+                  stroke="currentColor"
+                  class="w-4 h-4"
+                >
                   <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125h-9.75a1.125 1.125 0 0 1-1.125-1.125V7.875c0-.621.504-1.125 1.125-1.125H6.75a9.06 9.06 0 0 1 1.5.124m7.5 10.376h3.375c.621 0 1.125-.504 1.125-1.125V11.25c0-4.46-3.243-8.161-7.5-8.876a9.06 9.06 0 0 0-1.5-.124H9.375c-.621 0-1.125.504-1.125 1.125v3.5m7.5 10.375H9.375a1.125 1.125 0 0 1-1.125-1.125v-9.25m12 6.625v-1.875a3.375 3.375 0 0 0-3.375-3.375h-1.5a1.125 1.125 0 0 1-1.125-1.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H9.75" />
                 </svg>
               </button>
@@ -75,16 +95,18 @@
       <div class="modal-action mt-6">
         <button 
           class="btn btn-primary" 
-          @click="generateCode" 
-          :disabled="isLoading || !userQuery.trim()"
+          :disabled="isLoading || !userQuery.trim()" 
+          @click="generateCode"
         >
-          <span v-if="isLoading" class="loading loading-spinner loading-xs mr-2"></span>
+          <span v-if="isLoading" class="loading loading-spinner loading-xs mr-2" />
           Generate
         </button>
-        <button class="btn" @click="close">Close</button>
+        <button class="btn" @click="close">
+          Close
+        </button>
       </div>
     </div>
-    <div class="modal-backdrop" @click="close"></div>
+    <div class="modal-backdrop" @click="close" />
   </div>
 </template>
 
@@ -158,7 +180,7 @@ const optimizedDatabaseStructure = computed(() => {
   }
 });
 
-async function generateCode() {
+async function generateCode () {
   if (!userQuery.value.trim()) {
     showAlert('Please enter a query first', 'warning');
     return;
@@ -310,7 +332,7 @@ Request: ${userQuery.value}` }
   }
 }
 
-async function copySQLToClipboard() {
+async function copySQLToClipboard () {
   try {
     await navigator.clipboard.writeText(sqlCode.value);
     showAlert('SQL code copied to clipboard', 'success');
@@ -319,7 +341,7 @@ async function copySQLToClipboard() {
   }
 }
 
-async function copyEloquentToClipboard() {
+async function copyEloquentToClipboard () {
   try {
     await navigator.clipboard.writeText(eloquentCode.value);
     showAlert('Eloquent code copied to clipboard', 'success');
@@ -328,16 +350,16 @@ async function copyEloquentToClipboard() {
   }
 }
 
-function applyToEditor() {
+function applyToEditor () {
   emit('apply-sql', sqlCode.value);
 }
 
-function close() {
+function close () {
   emit('close');
 }
 
 // Helper function to clean up Eloquent code
-function cleanEloquentCode(code) {
+function cleanEloquentCode (code) {
   // Remove PHP tags if present
   let cleanCode = code.replace(/^<\?php\s*/i, '').replace(/\s*\?>$/i, '');
   

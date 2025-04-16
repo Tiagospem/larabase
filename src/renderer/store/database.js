@@ -127,7 +127,7 @@ export const useDatabaseStore = defineStore('database', () => {
     ]
   };
 
-  async function loadTables(connectionId) {
+  async function loadTables (connectionId) {
     isLoading.value = true;
     try {
       const connection = usedConnectionsStore().getConnection(connectionId);
@@ -175,7 +175,7 @@ export const useDatabaseStore = defineStore('database', () => {
   }
 
   // Function to load models for tables
-  async function loadModelsForTables(connectionId, projectPath) {
+  async function loadModelsForTables (connectionId, projectPath) {
     try {
       if (!projectPath) {
         console.log("No project path specified for loading models");
@@ -198,7 +198,7 @@ export const useDatabaseStore = defineStore('database', () => {
   }
 
   // Function to get model for a table
-  function getModelForTable(connectionId, tableName) {
+  function getModelForTable (connectionId, tableName) {
     if (!tableModels.value[connectionId]) {
       return null;
     }
@@ -207,7 +207,7 @@ export const useDatabaseStore = defineStore('database', () => {
   }
 
   // Function to expose table and model information for AI integration
-  function getTableModelJson(connectionId, tableName) {
+  function getTableModelJson (connectionId, tableName) {
     const model = getModelForTable(connectionId, tableName);
     const connection = usedConnectionsStore().getConnection(connectionId);
     
@@ -225,7 +225,7 @@ export const useDatabaseStore = defineStore('database', () => {
   }
 
   // Function to get JSON data for all tables with their models
-  async function getAllTablesModelsJson(connectionId) {
+  async function getAllTablesModelsJson (connectionId) {
     const connection = usedConnectionsStore().getConnection(connectionId);
     const result = {
       connectionName: connection?.name || 'Unknown',
@@ -288,7 +288,7 @@ export const useDatabaseStore = defineStore('database', () => {
     return JSON.stringify(result, null, 2);
   }
 
-  async function getTableRecordCount(connectionId, tableName) {
+  async function getTableRecordCount (connectionId, tableName) {
     try {
       // Check if we already have the count cached
       const cacheKey = `${connectionId}:${tableName}`;
@@ -338,7 +338,7 @@ export const useDatabaseStore = defineStore('database', () => {
     }
   }
 
-  async function loadTableData(connectionId, tableName, limit = 100, page = 1) {
+  async function loadTableData (connectionId, tableName, limit = 100, page = 1) {
     try {
       const connection = usedConnectionsStore().getConnection(connectionId);
       
@@ -427,7 +427,7 @@ export const useDatabaseStore = defineStore('database', () => {
   }
 
   // New functions for tab functionality
-  async function getTableStructure(connectionId, tableName, force = false) {
+  async function getTableStructure (connectionId, tableName, force = false) {
     const cacheKey = `${connectionId}:${tableName}:structure`;
     if (!force && tableStructures.value[cacheKey]) {
       return tableStructures.value[cacheKey];
@@ -689,7 +689,7 @@ export const useDatabaseStore = defineStore('database', () => {
     }
   }
 
-  async function getTableIndexes(connectionId, tableName, force = false) {
+  async function getTableIndexes (connectionId, tableName, force = false) {
     const cacheKey = `${connectionId}:${tableName}:indexes`;
     if (!force && tableIndexes.value[cacheKey]) {
       return tableIndexes.value[cacheKey];
@@ -770,7 +770,7 @@ export const useDatabaseStore = defineStore('database', () => {
     }
   }
 
-  async function getTableForeignKeys(connectionId, tableName, force = false) {
+  async function getTableForeignKeys (connectionId, tableName, force = false) {
     const cacheKey = `${connectionId}:${tableName}:foreignKeys`;
     if (!force && tableForeignKeys.value[cacheKey]) {
       return tableForeignKeys.value[cacheKey];
@@ -895,7 +895,7 @@ export const useDatabaseStore = defineStore('database', () => {
     }
   }
 
-  async function getTableMigrations(connectionId, tableName, force = false) {
+  async function getTableMigrations (connectionId, tableName, force = false) {
     const cacheKey = `${connectionId}:${tableName}:migrations`;
     if (!force && tableMigrations.value[cacheKey]) {
       return tableMigrations.value[cacheKey];
@@ -937,7 +937,7 @@ export const useDatabaseStore = defineStore('database', () => {
   }
 
   // Limpar o cache de uma tabela específica
-  function clearTableCache(cacheKey) {
+  function clearTableCache (cacheKey) {
     if (cacheKey) {
       // Clear specific cache entry
       delete tableRecords.value[cacheKey];
@@ -949,13 +949,13 @@ export const useDatabaseStore = defineStore('database', () => {
   }
   
   // New function to clear all record counts when switching databases
-  function clearTableRecordCounts() {
+  function clearTableRecordCounts () {
     // Clear the counts but keep the table list
     tableRecords.value = {};
   }
 
   // Function to update a record in the database
-  async function updateRecord(connectionId, tableName, record) {
+  async function updateRecord (connectionId, tableName, record) {
     const connection = usedConnectionsStore().getConnection(connectionId);
     
     if (!connection) {
@@ -1041,7 +1041,7 @@ export const useDatabaseStore = defineStore('database', () => {
   }
 
   // Function to delete records from a table
-  async function deleteRecords(connectionId, tableName, ids) {
+  async function deleteRecords (connectionId, tableName, ids) {
     const connection = usedConnectionsStore().getConnection(connectionId);
     
     if (!connection) {
@@ -1088,7 +1088,7 @@ export const useDatabaseStore = defineStore('database', () => {
   }
   
   // Function to truncate a table
-  async function truncateTable(connectionId, tableName) {
+  async function truncateTable (connectionId, tableName) {
     const connection = usedConnectionsStore().getConnection(connectionId);
     
     if (!connection) {
@@ -1123,7 +1123,7 @@ export const useDatabaseStore = defineStore('database', () => {
   }
 
   // Adicionar função para carregar dados filtrados do banco de dados
-  async function loadFilteredTableData(connectionId, tableName, filterClause, limit = 100, page = 1) {
+  async function loadFilteredTableData (connectionId, tableName, filterClause, limit = 100, page = 1) {
     try {
       const connection = usedConnectionsStore().getConnection(connectionId);
       
@@ -1232,7 +1232,7 @@ export const useDatabaseStore = defineStore('database', () => {
   }
 
   // Função auxiliar para converter filtro SQL para JavaScript (simplificada)
-  function convertFilterToJs(filter) {
+  function convertFilterToJs (filter) {
     if (!filter) return 'true';
     
     // Remover 'WHERE' se existir

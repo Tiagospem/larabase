@@ -12,7 +12,7 @@ let mainWindow;
 
 const originalCreateConnection = mysql.createConnection;
 
-function setupGlobalMonitoring() {
+function setupGlobalMonitoring () {
   mysql.createConnection = async function (...args) {
     // Chama a função original para criar a conexão
     const connection = await originalCreateConnection.apply(this, args);
@@ -52,7 +52,7 @@ if (process.env.NODE_ENV === 'development') {
   }
 }
 
-async function createWindow() {
+async function createWindow () {
   mainWindow = new BrowserWindow({
     width: 1200,
     height: 800,
@@ -89,7 +89,7 @@ async function createWindow() {
 }
 
 // Add system diagnostics function to get information about Docker availability
-async function getSystemDiagnostics() {
+async function getSystemDiagnostics () {
   const diagnostics = {
     platform: process.platform,
     nodeVersion: process.version,
@@ -172,7 +172,7 @@ async function getSystemDiagnostics() {
 }
 
 // Implement OS-specific Docker check
-function checkDockerByOS() {
+function checkDockerByOS () {
   console.log(`Checking Docker specifically for: ${process.platform}`);
   
   try {
@@ -559,7 +559,7 @@ ipcMain.handle('read-env-file', async (event, projectPath) => {
 });
 
 // Função para verificar se Docker CLI está disponível
-function isDockerCliAvailable() {
+function isDockerCliAvailable () {
   try {
     // First approach: direct Docker CLI check with enhanced options
     try {
@@ -621,7 +621,7 @@ function isDockerCliAvailable() {
 }
 
 // Função para detectar container MySQL usando a porta especificada
-function detectDockerMysql(port) {
+function detectDockerMysql (port) {
   const result = {
     dockerAvailable: false,
     isDocker: false,
@@ -1690,7 +1690,7 @@ ipcMain.handle('clear-all-project-logs', async (event, config) => {
 const dbMonitoringConnections = new Map();
 const dbActivityConnections = new Map();  // Nova estrutura para conexões de monitoramento via triggers
 
-function setupMonitoring(connection, monitoredTables) {
+function setupMonitoring (connection, monitoredTables) {
   if (!connection) return false;
 
   // Verificar se a conexão já foi modificada para evitar sobreposição
@@ -1709,7 +1709,7 @@ function setupMonitoring(connection, monitoredTables) {
 }
 
 // Nova função para monitorar o banco por meio de polling do process list
-async function startProcessListPolling(connection) {
+async function startProcessListPolling (connection) {
   if (!connection || !connection._config) {
     console.error('[MONITOR] Invalid connection for process list polling');
     return false;
@@ -2174,7 +2174,7 @@ ipcMain.handle('start-db-monitoring', async (event, connectionId) => {
 });
 
 // Função para iniciar polling de atividades
-function startActivityPolling(connectionId, connection, activityLogTable, lastId) {
+function startActivityPolling (connectionId, connection, activityLogTable, lastId) {
   console.log(`Starting activity polling for connection ${connectionId}, last ID: ${lastId}`);
   
   // Armazenar o último ID processado
@@ -2786,7 +2786,7 @@ ipcMain.handle('get-database-relationships', async (event, config) => {
   let connection;
   try {
     // Helper function to get connection details
-    function getConnectionDetails(connectionId) {
+    function getConnectionDetails (connectionId) {
       console.log(`Getting connection details for diagram, ID: ${connectionId}`);
       const connections = store.get('connections') || [];
       return connections.find(conn => conn.id === connectionId);
@@ -3585,7 +3585,7 @@ ipcMain.handle('get-migration-status', async (event, config) => {
 });
 
 // Função auxiliar para extrair valores do arquivo .env
-function extractEnvValue(content, key) {
+function extractEnvValue (content, key) {
   const regex = new RegExp(`^${key}=(.*)$`, 'm');
   const match = content.match(regex);
   if (match && match[1]) {
@@ -4193,7 +4193,7 @@ ipcMain.handle('restore-database', async (event, config) => {
 });
 
 // Function to handle the database restoration process
-async function startDatabaseRestoration(event, connection, config, channelId, customSendProgress = null) {
+async function startDatabaseRestoration (event, connection, config, channelId, customSendProgress = null) {
   const sendProgress = (data) => {
     // Log progress updates for debugging
     console.log(`Restoration progress: ${data.progress}% - ${data.status}`);
@@ -4401,7 +4401,7 @@ async function startDatabaseRestoration(event, connection, config, channelId, cu
   }
 }
 
-async function restoreDatabase(event, config) {
+async function restoreDatabase (event, config) {
   console.log('Starting database restoration process');
   const sender = event.sender;
   
@@ -4534,7 +4534,7 @@ async function restoreDatabase(event, config) {
 }
 
 // Function to check if database has content after restoration
-async function validateDatabaseHasContent(connection) {
+async function validateDatabaseHasContent (connection) {
   try {
     if (!connection || !connection.host || !connection.database) {
       return { hasContent: false, error: 'Invalid connection' };
@@ -4581,7 +4581,7 @@ async function validateDatabaseHasContent(connection) {
  * @param {Object} config - The configuration object containing restoration settings
  * @returns {string} - The command to execute for docker restoration
  */
-function buildDockerRestoreCommand(config) {
+function buildDockerRestoreCommand (config) {
   if (!config || !config.connection) {
     console.error('Invalid config or missing connection in buildDockerRestoreCommand:', config);
     throw new Error('Missing connection configuration for Docker restore command');
@@ -4671,7 +4671,7 @@ function buildDockerRestoreCommand(config) {
  * @param {Object} config - The configuration object containing restoration settings
  * @returns {string} - The command to execute for local restoration
  */
-function buildLocalRestoreCommand(config) {
+function buildLocalRestoreCommand (config) {
   if (!config || !config.connection) {
     console.error('Invalid config or missing connection in buildLocalRestoreCommand:', config);
     throw new Error('Missing connection configuration for local restore command');
@@ -4749,7 +4749,7 @@ function buildLocalRestoreCommand(config) {
 }
 
 // Execute the restore command and process output with better progress monitoring
-async function executeRestoreCommand(commandObj, sqlFilePath, progress) {
+async function executeRestoreCommand (commandObj, sqlFilePath, progress) {
   console.log(`Executing restore command with object:`, JSON.stringify(commandObj));
   
   try {
@@ -4840,7 +4840,7 @@ async function executeRestoreCommand(commandObj, sqlFilePath, progress) {
 }
 
 // Function to filter out ignored tables from SQL dump
-async function filterSqlDump(inputFile, outputFile, ignoredTables, isGzipped, sendProgress) {
+async function filterSqlDump (inputFile, outputFile, ignoredTables, isGzipped, sendProgress) {
   return new Promise((resolve, reject) => {
     try {
       if (!ignoredTables || ignoredTables.length === 0) {
@@ -5043,7 +5043,7 @@ ipcMain.handle('extract-tables-from-sql', async (event, filePath) => {
 });
 
 // Function to extract table names from SQL dump file
-async function extractTablesFromSqlFile(filePath, isGzipped, maxLinesToProcess = 50000) {
+async function extractTablesFromSqlFile (filePath, isGzipped, maxLinesToProcess = 50000) {
   return new Promise((resolve, reject) => {
     try {
       let inputStream;
@@ -5443,7 +5443,7 @@ ipcMain.handle('update-connection-database', async (event, connectionId, newData
 });
 
 // Function to validate a database connection
-async function validateDatabaseConnection(config) {
+async function validateDatabaseConnection (config) {
   try {
     console.log('Validating database connection:', config.database);
     

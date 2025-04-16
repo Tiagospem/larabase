@@ -3,19 +3,35 @@
     <div class="bg-base-200 p-2 border-b border-neutral flex items-center justify-between">
       <div class="flex items-center space-x-2">
         <button class="btn btn-sm btn-ghost" @click="loadTableData">
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" 
-            stroke="currentColor" class="w-5 h-5">
-            <path stroke-linecap="round" stroke-linejoin="round" 
-              d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke-width="1.5" 
+            stroke="currentColor"
+            class="w-5 h-5"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round" 
+              d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99"
+            />
           </svg>
           <span>Refresh</span>
         </button>
         <button 
           class="btn btn-sm btn-ghost text-error"
           :disabled="totalRecords === 0"
-          @click="confirmTruncateTable">
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" 
-            stroke="currentColor" class="w-5 h-5">
+          @click="confirmTruncateTable"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke-width="1.5" 
+            stroke="currentColor"
+            class="w-5 h-5"
+          >
             <path stroke-linecap="round" stroke-linejoin="round" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
           </svg>
           <span>Truncate</span>
@@ -23,9 +39,16 @@
         <button 
           class="btn btn-sm btn-ghost"
           :disabled="selectedRows.length === 0"
-          @click="deleteSelected">
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" 
-            stroke="currentColor" class="w-5 h-5">
+          @click="deleteSelected"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke-width="1.5" 
+            stroke="currentColor"
+            class="w-5 h-5"
+          >
             <path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
           </svg>
           <span>Delete{{ selectedRows.length > 0 ? ` (${selectedRows.length})` : '' }}</span>
@@ -36,118 +59,183 @@
         <div class="relative flex items-center space-x-2">
           <div class="input-group">
             <input 
+              v-model="filterTerm" 
               type="text" 
               placeholder="Filter..." 
-              class="input input-sm input-bordered bg-base-300 w-64" 
-              v-model="filterTerm"
-              @keyup.enter="applyFilter" />
+              class="input input-sm input-bordered bg-base-300 w-64"
+              @keyup.enter="applyFilter"
+            />
             <button 
               class="btn btn-sm" 
               :class="{ 'bg-base-300 border-base-300': !activeFilter && !filterTerm, 'bg-error border-error text-white': activeFilter || filterTerm }"
-              @click="toggleAdvancedFilter">
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4">
+              @click="toggleAdvancedFilter"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke-width="1.5"
+                stroke="currentColor"
+                class="w-4 h-4"
+              >
                 <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 6h9.75M10.5 6a1.5 1.5 0 1 1-3 0m3 0a1.5 1.5 0 1 0-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m-9.75 0h9.75" />
               </svg>
             </button>
           </div>
           <button v-if="filterTerm || activeFilter" class="btn btn-sm btn-error" @click="clearFilters">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke-width="1.5"
+              stroke="currentColor"
+              class="w-4 h-4"
+            >
               <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
             </svg>
           </button>
         </div>
-        <select class="select select-sm select-bordered bg-base-300 w-32" v-model="rowsPerPage">
-          <option value="10">10 rows</option>
-          <option value="25">25 rows</option>
-          <option value="50">50 rows</option>
-          <option value="100">100 rows</option>
+        <select v-model="rowsPerPage" class="select select-sm select-bordered bg-base-300 w-32">
+          <option value="10">
+            10 rows
+          </option>
+          <option value="25">
+            25 rows
+          </option>
+          <option value="50">
+            50 rows
+          </option>
+          <option value="100">
+            100 rows
+          </option>
         </select>
       </div>
     </div>
 
     <div class="flex-1 overflow-auto">
       <div v-if="isLoading" class="flex items-center justify-center h-full">
-        <span class="loading loading-spinner loading-lg"></span>
+        <span class="loading loading-spinner loading-lg" />
       </div>
       
       <div v-else-if="loadError" class="flex items-center justify-center h-full text-error">
         <div class="text-center">
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" 
-            stroke="currentColor" class="w-12 h-12 mx-auto mb-4">
-            <path stroke-linecap="round" stroke-linejoin="round" 
-              d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke-width="1.5" 
+            stroke="currentColor"
+            class="w-12 h-12 mx-auto mb-4"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round" 
+              d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"
+            />
           </svg>
           <p>{{ loadError }}</p>
-          <button class="btn btn-sm btn-primary mt-4" @click="loadTableData">Try again</button>
+          <button class="btn btn-sm btn-primary mt-4" @click="loadTableData">
+            Try again
+          </button>
         </div>
       </div>
       
       <div v-else-if="(filterTerm || activeFilter) && filteredData.length === 0" class="flex items-center justify-center h-full text-gray-500">
         <div class="text-center">
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" 
-            stroke="currentColor" class="w-12 h-12 mx-auto mb-4 text-gray-400">
-            <path stroke-linecap="round" stroke-linejoin="round" 
-              d="M10.5 6h9.75M10.5 6a1.5 1.5 0 1 1-3 0m3 0a1.5 1.5 0 1 0-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m-9.75 0h9.75" />
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke-width="1.5" 
+            stroke="currentColor"
+            class="w-12 h-12 mx-auto mb-4 text-gray-400"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round" 
+              d="M10.5 6h9.75M10.5 6a1.5 1.5 0 1 1-3 0m3 0a1.5 1.5 0 1 0-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m-9.75 0h9.75"
+            />
           </svg>
           <p>No records match your filter</p>
           <div class="flex justify-center space-x-2 mt-4">
-            <button class="btn btn-sm btn-error" @click="clearFilters">Clear Filters</button>
-            <button class="btn btn-sm btn-primary" @click="loadTableData">Reload Data</button>
+            <button class="btn btn-sm btn-error" @click="clearFilters">
+              Clear Filters
+            </button>
+            <button class="btn btn-sm btn-primary" @click="loadTableData">
+              Reload Data
+            </button>
           </div>
         </div>
       </div>
       
-      <div v-else-if="tableData.length > 0" 
-           ref="tableContainer" 
-           @click="handleOutsideClick"
-           tabindex="0"
-           @keydown.prevent="handleTableKeyDown"
-           class="h-full overflow-auto relative pb-3">
+      <div
+        v-else-if="tableData.length > 0" 
+        ref="tableContainer" 
+        tabindex="0"
+        class="h-full overflow-auto relative pb-3"
+        @click="handleOutsideClick"
+        @keydown.prevent="handleTableKeyDown"
+      >
         <div class="overflow-x-auto">
           <table class="table table-sm w-full table-fixed min-w-full">
             <thead class="bg-base-300 sticky top-0 z-10">
               <tr class="text-xs select-none">
-                <th v-for="(column, index) in columns" 
-                    :key="column" 
-                    class="px-4 py-2 border-r border-neutral last:border-r-0 relative whitespace-nowrap"
-                    :class="{ 'bg-base-300': !expandedColumns.includes(column), 'bg-base-200': expandedColumns.includes(column) }"
-                    :style="{ width: columnWidths[column] || defaultColumnWidth(column), maxWidth: expandedColumns.includes(column) ? 'none' : (columnWidths[column] || defaultColumnWidth(column)) }">
+                <th
+                  v-for="(column, index) in columns" 
+                  :key="column" 
+                  class="px-4 py-2 border-r border-neutral last:border-r-0 relative whitespace-nowrap"
+                  :class="{ 'bg-base-300': !expandedColumns.includes(column), 'bg-base-200': expandedColumns.includes(column) }"
+                  :style="{ width: columnWidths[column] || defaultColumnWidth(column), maxWidth: expandedColumns.includes(column) ? 'none' : (columnWidths[column] || defaultColumnWidth(column)) }"
+                >
                   <div class="flex items-center justify-between">
                     <span class="truncate">{{ column }}</span>
                     <span v-if="expandedColumns.includes(column)" class="text-primary text-xs ml-1">
-                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4 inline-block">
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        viewBox="0 0 20 20"
+                        fill="currentColor"
+                        class="w-4 h-4 inline-block"
+                      >
                         <path fill-rule="evenodd" d="M3 4a1 1 0 011-1h4a1 1 0 010 2H6.414l2.293 2.293a1 1 0 01-1.414 1.414L5 6.414V8a1 1 0 01-2 0V4zm9 1a1 1 0 010-2h4a1 1 0 011 1v4a1 1 0 01-2 0V6.414l-2.293 2.293a1 1 0 11-1.414-1.414L13.586 5H12zm-9 7a1 1 0 012 0v1.586l2.293-2.293a1 1 0 011.414 1.414L6.414 15H8a1 1 0 010 2H4a1 1 0 01-1-1v-4zm13-1a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 010-2h1.586l-2.293-2.293a1 1 0 011.414-1.414L15 13.586V12a1 1 0 011-1z" clip-rule="evenodd" />
                       </svg>
                     </span>
                   </div>
                   <!-- Enhanced resize handle with visual indicator -->
-                  <div v-if="index < columns.length - 1"
-                       class="absolute right-0 top-0 h-full w-2 cursor-col-resize group"
-                       @mousedown.stop="startColumnResize($event, column)"
-                       @dblclick.stop="toggleColumnExpansion(column)" 
-                       title="Double-click to expand/collapse column">
-                    <div class="absolute right-0 top-0 w-[1px] h-full"
-                         :class="expandedColumns.includes(column) ? 'expanded-resize-handle' : 'bg-transparent group-hover:bg-primary group-hover:w-[2px] transition-all'"></div>
+                  <div
+                    v-if="index < columns.length - 1"
+                    class="absolute right-0 top-0 h-full w-2 cursor-col-resize group"
+                    title="Double-click to expand/collapse column"
+                    @mousedown.stop="startColumnResize($event, column)" 
+                    @dblclick.stop="toggleColumnExpansion(column)"
+                  >
+                    <div
+                      class="absolute right-0 top-0 w-[1px] h-full"
+                      :class="expandedColumns.includes(column) ? 'expanded-resize-handle' : 'bg-transparent group-hover:bg-primary group-hover:w-[2px] transition-all'"
+                    />
                   </div>
                 </th>
               </tr>
             </thead>
 
             <tbody @dblclick.stop.prevent>
-              <tr v-for="(row, rowIndex) in paginatedData" 
-                  :key="rowIndex"
-                  :class="getRowClasses(rowIndex)"
-                  @click.stop="handleRowClick($event, rowIndex)"
-                  @dblclick.stop="handleRowDoubleClick(row)"
-                  @mousedown.stop="handleMouseDown($event, rowIndex)"
-                  @mouseenter.stop="handleMouseEnter(rowIndex)"
-                  class="border-b border-neutral hover:bg-base-200 cursor-pointer">
-                <td v-for="column in columns" 
-                    :key="`${rowIndex}-${column}`" 
-                    class="px-4 py-2 border-r border-neutral last:border-r-0 truncate whitespace-nowrap overflow-hidden"
-                    :class="{ 'expanded': expandedColumns.includes(column) }"
-                    :style="{ width: columnWidths[column] || defaultColumnWidth(column), maxWidth: expandedColumns.includes(column) ? 'none' : (columnWidths[column] || defaultColumnWidth(column)) }"
-                    @dblclick.stop="openEditModal(row)">
+              <tr
+                v-for="(row, rowIndex) in paginatedData" 
+                :key="rowIndex"
+                :class="getRowClasses(rowIndex)"
+                class="border-b border-neutral hover:bg-base-200 cursor-pointer"
+                @click.stop="handleRowClick($event, rowIndex)"
+                @dblclick.stop="handleRowDoubleClick(row)"
+                @mousedown.stop="handleMouseDown($event, rowIndex)"
+                @mouseenter.stop="handleMouseEnter(rowIndex)"
+              >
+                <td
+                  v-for="column in columns" 
+                  :key="`${rowIndex}-${column}`" 
+                  class="px-4 py-2 border-r border-neutral last:border-r-0 truncate whitespace-nowrap overflow-hidden"
+                  :class="{ 'expanded': expandedColumns.includes(column) }"
+                  :style="{ width: columnWidths[column] || defaultColumnWidth(column), maxWidth: expandedColumns.includes(column) ? 'none' : (columnWidths[column] || defaultColumnWidth(column)) }"
+                  @dblclick.stop="openEditModal(row)"
+                >
                   <div class="flex items-center justify-between w-full">
                     <!-- Conteúdo da célula -->
                     <span :class="{'text-gray-500 italic': row[column] === null && isForeignKeyColumn(column)}">
@@ -158,9 +246,17 @@
                     <button 
                       v-if="isForeignKeyColumn(column) && row[column] !== null" 
                       class="ml-1 text-white hover:text-primary-focus transition-colors cursor-pointer flex-shrink-0"
+                      title="Navegar para registro relacionado"
                       @click.stop="navigateToForeignKey(column, row[column])"
-                      title="Navegar para registro relacionado">
-                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4">
+                    >
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke-width="1.5"
+                        stroke="currentColor"
+                        class="w-4 h-4"
+                      >
                         <path stroke-linecap="round" stroke-linejoin="round" d="M13.19 8.688a4.5 4.5 0 011.242 7.244l-4.5 4.5a4.5 4.5 0 01-6.364-6.364l1.757-1.757m13.35-.622l1.757-1.757a4.5 4.5 0 00-6.364-6.364l-4.5 4.5a4.5 4.5 0 001.242 7.244" />
                       </svg>
                     </button>
@@ -169,8 +265,16 @@
                     <span 
                       v-else-if="isForeignKeyColumn(column) && row[column] === null" 
                       class="ml-1 text-gray-500 flex-shrink-0"
-                      title="Relação nula">
-                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4">
+                      title="Relação nula"
+                    >
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke-width="1.5"
+                        stroke="currentColor"
+                        class="w-4 h-4"
+                      >
                         <path stroke-linecap="round" stroke-linejoin="round" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
                       </svg>
                     </span>
@@ -184,13 +288,24 @@
       
       <div v-else class="flex items-center justify-center h-full text-gray-500">
         <div class="text-center">
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" 
-            stroke="currentColor" class="w-12 h-12 mx-auto mb-4 text-gray-400">
-            <path stroke-linecap="round" stroke-linejoin="round" 
-              d="M20.25 6.375c0 2.278-3.694 4.125-8.25 4.125S3.75 8.653 3.75 6.375m16.5 0c0-2.278-3.694-4.125-8.25-4.125S3.75 4.097 3.75 6.375m16.5 0v11.25c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125V6.375m16.5 0v3.75m-16.5-3.75v3.75m16.5 0v3.75C20.25 16.153 16.556 18 12 18s-8.25-1.847-8.25-4.125v-3.75m16.5 0c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125" />
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke-width="1.5" 
+            stroke="currentColor"
+            class="w-12 h-12 mx-auto mb-4 text-gray-400"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round" 
+              d="M20.25 6.375c0 2.278-3.694 4.125-8.25 4.125S3.75 8.653 3.75 6.375m16.5 0c0-2.278-3.694-4.125-8.25-4.125S3.75 4.097 3.75 6.375m16.5 0v11.25c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125V6.375m16.5 0v3.75m-16.5-3.75v3.75m16.5 0v3.75C20.25 16.153 16.556 18 12 18s-8.25-1.847-8.25-4.125v-3.75m16.5 0c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125"
+            />
           </svg>
           <p>Records not found</p>
-          <button class="btn btn-sm btn-primary mt-4" @click="loadTableData">Reload</button>
+          <button class="btn btn-sm btn-primary mt-4" @click="loadTableData">
+            Reload
+          </button>
         </div>
       </div>
     </div>
@@ -203,10 +318,19 @@
         </span>
         <div class="ml-4 flex space-x-2">
           <button class="btn btn-ghost btn-xs">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" 
-              stroke="currentColor" class="w-4 h-4">
-              <path stroke-linecap="round" stroke-linejoin="round" 
-                d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke-width="1.5" 
+              stroke="currentColor"
+              class="w-4 h-4"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round" 
+                d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3"
+              />
             </svg>
             Export
           </button>
@@ -218,20 +342,34 @@
           <button 
             class="join-item btn btn-xs" 
             :class="{ 'btn-disabled': currentPage === 1 }"
+            :disabled="currentPage === 1"
             @click="goToFirstPage"
-            :disabled="currentPage === 1">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" 
-              stroke="currentColor" class="w-4 h-4">
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke-width="1.5" 
+              stroke="currentColor"
+              class="w-4 h-4"
+            >
               <path stroke-linecap="round" stroke-linejoin="round" d="M18.75 19.5l-7.5-7.5 7.5-7.5m-6 15L5.25 12l7.5-7.5" />
             </svg>
           </button>
           <button 
             class="join-item btn btn-xs" 
             :class="{ 'btn-disabled': currentPage === 1 }"
+            :disabled="currentPage === 1"
             @click="prevPage"
-            :disabled="currentPage === 1">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" 
-              stroke="currentColor" class="w-4 h-4">
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke-width="1.5" 
+              stroke="currentColor"
+              class="w-4 h-4"
+            >
               <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
             </svg>
           </button>
@@ -245,20 +383,34 @@
           <button 
             class="join-item btn btn-xs" 
             :class="{ 'btn-disabled': currentPage === totalPages }"
+            :disabled="currentPage === totalPages"
             @click="nextPage"
-            :disabled="currentPage === totalPages">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" 
-              stroke="currentColor" class="w-4 h-4">
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke-width="1.5" 
+              stroke="currentColor"
+              class="w-4 h-4"
+            >
               <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
             </svg>
           </button>
           <button 
             class="join-item btn btn-xs" 
             :class="{ 'btn-disabled': currentPage === totalPages }"
+            :disabled="currentPage === totalPages"
             @click="goToLastPage"
-            :disabled="currentPage === totalPages">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" 
-              stroke="currentColor" class="w-4 h-4">
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke-width="1.5" 
+              stroke="currentColor"
+              class="w-4 h-4"
+            >
               <path stroke-linecap="round" stroke-linejoin="round" d="M11.25 4.5l7.5 7.5-7.5 7.5m-6-15l7.5 7.5-7.5 7.5" />
             </svg>
           </button>
@@ -267,26 +419,38 @@
         <div class="flex items-center space-x-2">
           <span class="text-gray-400 hidden sm:inline-block">Rows per page:</span>
           <select 
-            class="select select-xs select-bordered bg-base-300 w-16" 
-            v-model="rowsPerPage"
-            @change="currentPage = 1">
-            <option value="10">10</option>
-            <option value="25">25</option>
-            <option value="50">50</option>
-            <option value="100">100</option>
+            v-model="rowsPerPage" 
+            class="select select-xs select-bordered bg-base-300 w-16"
+            @change="currentPage = 1"
+          >
+            <option value="10">
+              10
+            </option>
+            <option value="25">
+              25
+            </option>
+            <option value="50">
+              50
+            </option>
+            <option value="100">
+              100
+            </option>
           </select>
         </div>
         
         <div class="hidden md:flex items-center space-x-2">
           <span class="text-gray-400">Go to page:</span>
           <input 
+            v-model="pageInput" 
             type="number" 
             min="1" 
             :max="totalPages" 
-            v-model="pageInput" 
+            class="input input-xs input-bordered bg-base-300 w-14"
             @keyup.enter="goToPage"
-            class="input input-xs input-bordered bg-base-300 w-14" />
-          <button class="btn btn-xs btn-ghost" @click="goToPage">Go</button>
+          />
+          <button class="btn btn-xs btn-ghost" @click="goToPage">
+            Go
+          </button>
         </div>
       </div>
     </div>
@@ -296,8 +460,19 @@
         <h3 class="font-bold text-lg mb-4 flex justify-between items-center">
           Edit Record
           <button class="btn btn-sm btn-circle" @click="closeEditModal">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              class="h-6 w-6"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M6 18L18 6M6 6l12 12"
+              />
             </svg>
           </button>
         </h3>
@@ -316,45 +491,60 @@
               v-if="isLongTextField(column)" 
               v-model="editingRecord[column]" 
               class="textarea textarea-bordered h-24"
-              :placeholder="column"></textarea>
+              :placeholder="column"
+            />
               
             <input 
               v-else-if="isDateField(column)" 
-              type="datetime-local" 
               v-model="editingRecord[column]" 
+              type="datetime-local" 
               class="input input-bordered w-full"
-              :max="'9999-12-31T23:59'" />
+              :max="'9999-12-31T23:59'"
+            />
               
             <input 
               v-else-if="isNumberField(column)" 
-              type="number" 
               v-model.number="editingRecord[column]" 
+              type="number" 
               class="input input-bordered w-full" 
-              step="any" />
+              step="any"
+            />
               
             <select 
               v-else-if="isBooleanField(column)" 
               v-model="editingRecord[column]" 
-              class="select select-bordered w-full">
-              <option :value="true">True</option>
-              <option :value="false">False</option>
-              <option v-if="editingRecord[column] === null" :value="null">NULL</option>
+              class="select select-bordered w-full"
+            >
+              <option :value="true">
+                True
+              </option>
+              <option :value="false">
+                False
+              </option>
+              <option v-if="editingRecord[column] === null" :value="null">
+                NULL
+              </option>
             </select>
               
             <input 
               v-else 
-              type="text" 
               v-model="editingRecord[column]" 
-              class="input input-bordered w-full" />
+              type="text" 
+              class="input input-bordered w-full"
+            />
           </div>
         </div>
         
         <div class="modal-action">
-          <button class="btn btn-error" @click="closeEditModal">Cancel</button>
-          <button class="btn btn-primary" @click="saveRecord">Save Changes</button>
+          <button class="btn btn-error" @click="closeEditModal">
+            Cancel
+          </button>
+          <button class="btn btn-primary" @click="saveRecord">
+            Save Changes
+          </button>
         </div>
       </div>
-      <div class="modal-backdrop" @click="closeEditModal"></div>
+      <div class="modal-backdrop" @click="closeEditModal" />
     </div>
 
     <div class="modal" :class="{ 'modal-open': showFilterModal }">
@@ -362,8 +552,19 @@
         <h3 class="font-bold text-lg mb-4 flex justify-between items-center">
           Advanced Filter
           <button class="btn btn-sm btn-circle" @click="showFilterModal = false">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              class="h-6 w-6"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M6 18L18 6M6 6l12 12"
+              />
             </svg>
           </button>
         </h3>
@@ -376,7 +577,8 @@
             <textarea 
               v-model="advancedFilterTerm" 
               class="textarea textarea-bordered h-32 font-mono"
-              placeholder="id = 1"></textarea>
+              placeholder="id = 1"
+            />
             <label class="label">
               <span class="label-text-alt text-xs">
                 Examples: 
@@ -389,24 +591,30 @@
           </div>
           
           <div class="mt-2 text-xs">
-            <p class="mb-2">Available columns:</p>
+            <p class="mb-2">
+              Available columns:
+            </p>
             <div class="flex flex-wrap gap-1 mb-4">
               <span 
                 v-for="column in columns" 
                 :key="column" 
                 class="badge badge-primary cursor-pointer"
-                @click="insertColumnName(column)">
+                @click="insertColumnName(column)"
+              >
                 {{ column }}
               </span>
             </div>
             
-            <p class="mb-2">Common operators:</p>
+            <p class="mb-2">
+              Common operators:
+            </p>
             <div class="flex flex-wrap gap-1">
               <span 
                 v-for="op in ['=', '!=', '>', '<', '>=', '<=', 'LIKE', 'IN', 'IS NULL', 'IS NOT NULL', 'BETWEEN', 'AND', 'OR']" 
                 :key="op" 
                 class="badge badge-secondary cursor-pointer"
-                @click="insertOperator(op)">
+                @click="insertOperator(op)"
+              >
                 {{ op }}
               </span>
             </div>
@@ -415,43 +623,63 @@
         
         <div class="form-control mb-4">
           <label class="label cursor-pointer justify-start">
-            <input type="checkbox" class="checkbox checkbox-primary" v-model="persistFilter" />
+            <input v-model="persistFilter" type="checkbox" class="checkbox checkbox-primary" />
             <span class="label-text ml-2">Persist filter (remember after reload)</span>
           </label>
         </div>
         
         <div class="modal-action">
-          <button class="btn btn-error" @click="cancelAdvancedFilter">Cancel</button>
-          <button class="btn btn-primary" @click="applyAdvancedFilter">Apply Filter</button>
+          <button class="btn btn-error" @click="cancelAdvancedFilter">
+            Cancel
+          </button>
+          <button class="btn btn-primary" @click="applyAdvancedFilter">
+            Apply Filter
+          </button>
         </div>
       </div>
-      <div class="modal-backdrop" @click="showFilterModal = false"></div>
+      <div class="modal-backdrop" @click="showFilterModal = false" />
     </div>
     
     <!-- Confirm truncate modal -->
     <div class="modal" :class="{ 'modal-open': showTruncateConfirm }">
       <div class="modal-box">
-        <h3 class="font-bold text-lg text-error">⚠️ Truncate Table</h3>
-        <p class="py-4">Are you sure you want to truncate the <strong>{{ tableName }}</strong> table? This will delete ALL records and cannot be undone.</p>
+        <h3 class="font-bold text-lg text-error">
+          ⚠️ Truncate Table
+        </h3>
+        <p class="py-4">
+          Are you sure you want to truncate the <strong>{{ tableName }}</strong> table? This will delete ALL records and cannot be undone.
+        </p>
         <div class="modal-action">
-          <button class="btn" @click="showTruncateConfirm = false">Cancel</button>
-          <button class="btn btn-error" @click="truncateTable">Truncate Table</button>
+          <button class="btn" @click="showTruncateConfirm = false">
+            Cancel
+          </button>
+          <button class="btn btn-error" @click="truncateTable">
+            Truncate Table
+          </button>
         </div>
       </div>
-      <div class="modal-backdrop" @click="showTruncateConfirm = false"></div>
+      <div class="modal-backdrop" @click="showTruncateConfirm = false" />
     </div>
     
     <!-- Confirm delete modal -->
     <div class="modal" :class="{ 'modal-open': showDeleteConfirm }">
       <div class="modal-box">
-        <h3 class="font-bold text-lg text-error">Delete Records</h3>
-        <p class="py-4">Are you sure you want to delete {{ selectedRows.length }} record(s)? This action cannot be undone.</p>
+        <h3 class="font-bold text-lg text-error">
+          Delete Records
+        </h3>
+        <p class="py-4">
+          Are you sure you want to delete {{ selectedRows.length }} record(s)? This action cannot be undone.
+        </p>
         <div class="modal-action">
-          <button class="btn" @click="showDeleteConfirm = false">Cancel</button>
-          <button class="btn btn-error" @click="confirmDelete">Delete</button>
+          <button class="btn" @click="showDeleteConfirm = false">
+            Cancel
+          </button>
+          <button class="btn btn-error" @click="confirmDelete">
+            Delete
+          </button>
         </div>
       </div>
-      <div class="modal-backdrop" @click="showDeleteConfirm = false"></div>
+      <div class="modal-backdrop" @click="showDeleteConfirm = false" />
     </div>
   </div>
 </template>
@@ -594,7 +822,7 @@ const totalRecords = computed(() => {
   return totalRecordsCount.value;
 });
 
-function formatCellValue(value) {
+function formatCellValue (value) {
   if (value === null || value === undefined) return '';
   
   if (typeof value === 'object' && value instanceof Date) {
@@ -628,7 +856,7 @@ function formatCellValue(value) {
   return String(value);
 }
 
-function defaultColumnWidth(column) {
+function defaultColumnWidth (column) {
   if (/^id$/i.test(column)) return '80px';
   if (/^(created_at|updated_at|deleted_at)$/i.test(column)) return '150px';
   if (/(email|mail)$/i.test(column)) return '180px';
@@ -644,7 +872,7 @@ function defaultColumnWidth(column) {
   return '150px';
 }
 
-function analyzeColumns() {
+function analyzeColumns () {
   if (tableData.value.length === 0 || columns.value.length === 0) return;
   
   columns.value.forEach(column => {
@@ -662,7 +890,7 @@ function analyzeColumns() {
   });
 }
 
-async function loadTableData() {
+async function loadTableData () {
   isLoading.value = true;
   loadError.value = null;
   selectedRows.value = [];
@@ -714,7 +942,7 @@ async function loadTableData() {
   }
 }
 
-function startColumnResize(event, column) {
+function startColumnResize (event, column) {
   event.preventDefault();
   event.stopPropagation();
   resizingColumn.value = column;
@@ -736,7 +964,7 @@ function startColumnResize(event, column) {
   document.addEventListener('mouseup', stopColumnResize);
 }
 
-function handleColumnResize(event) {
+function handleColumnResize (event) {
   if (!resizingColumn.value) return;
   
   const column = resizingColumn.value;
@@ -744,13 +972,13 @@ function handleColumnResize(event) {
   columnWidths.value[column] = `${width}px`;
 }
 
-function stopColumnResize(event) {
+function stopColumnResize (event) {
   document.removeEventListener('mousemove', handleColumnResize);
   document.removeEventListener('mouseup', stopColumnResize);
   resizingColumn.value = null;
 }
 
-function getRowClasses(rowIndex) {
+function getRowClasses (rowIndex) {
   const isSelected = selectedRows.value.includes(rowIndex);
   return {
     'selected-row': isSelected,
@@ -758,7 +986,7 @@ function getRowClasses(rowIndex) {
   };
 }
 
-function handleRowClick(event, rowIndex) {
+function handleRowClick (event, rowIndex) {
   // Sempre pare a propagação do evento para evitar bugs
   if (event) {
     event.preventDefault();
@@ -818,11 +1046,11 @@ function handleRowClick(event, rowIndex) {
   }
 }
 
-function selectAll() {
+function selectAll () {
   selectedRows.value = paginatedData.value.map((_, index) => index);
 }
 
-function handleTableKeyDown(e) {
+function handleTableKeyDown (e) {
   if ((e.ctrlKey || e.metaKey) && e.key === 'a') {
     e.preventDefault();
     selectAll();
@@ -832,14 +1060,14 @@ function handleTableKeyDown(e) {
   }
 }
 
-function handleOutsideClick(event) {
+function handleOutsideClick (event) {
   if (event.target === tableContainer.value || event.target.closest('thead')) {
     selectedRows.value = [];
     lastSelectedId.value = null;
   }
 }
 
-function toggleColumnExpansion(column) {
+function toggleColumnExpansion (column) {
   const index = expandedColumns.value.indexOf(column);
   
   if (index !== -1) {
@@ -851,8 +1079,8 @@ function toggleColumnExpansion(column) {
   }
 }
 
-function deleteSelected() {
-  if (selectedRows.length === 0) return;
+function deleteSelected () {
+  if (selectedRows.value.length === 0) return;
   
   // Get the IDs of the selected rows - send only the IDs as primitives
   deletingIds.value = selectedRows.value.map(index => {
@@ -866,7 +1094,7 @@ function deleteSelected() {
   showDeleteConfirm.value = true;
 }
 
-async function confirmDelete() {
+async function confirmDelete () {
   showDeleteConfirm.value = false;
   
   try {
@@ -896,11 +1124,11 @@ async function confirmDelete() {
   }
 }
 
-function confirmTruncateTable() {
+function confirmTruncateTable () {
   showTruncateConfirm.value = true;
 }
 
-async function truncateTable() {
+async function truncateTable () {
   showTruncateConfirm.value = false;
   
   try {
@@ -934,35 +1162,35 @@ const handleKeyUp = (e) => {
   ctrlKeyPressed.value = e.ctrlKey || e.metaKey;
 };
 
-function prevPage() {
+function prevPage () {
   if (currentPage.value > 1) {
     currentPage.value--;
     scrollToTop();
   }
 }
 
-function nextPage() {
+function nextPage () {
   if (currentPage.value < totalPages.value) {
     currentPage.value++;
     scrollToTop();
   }
 }
 
-function goToFirstPage() {
+function goToFirstPage () {
   if (currentPage.value !== 1) {
     currentPage.value = 1;
     scrollToTop();
   }
 }
 
-function goToLastPage() {
+function goToLastPage () {
   if (currentPage.value !== totalPages.value) {
     currentPage.value = totalPages.value;
     scrollToTop();
   }
 }
 
-function goToPage() {
+function goToPage () {
   const page = parseInt(pageInput.value);
   if (!isNaN(page) && page >= 1 && page <= totalPages.value && page !== currentPage.value) {
     currentPage.value = page;
@@ -972,7 +1200,7 @@ function goToPage() {
   }
 }
 
-function scrollToTop() {
+function scrollToTop () {
   if (tableContainer.value) {
     tableContainer.value.scrollTop = 0;
   }
@@ -990,7 +1218,7 @@ watch(() => currentPage.value, (newPage, oldPage) => {
   }
 });
 
-function openEditModal(row) {
+function openEditModal (row) {
   // Create a deep copy of the row to edit
   originalRecord.value = { ...row };
   
@@ -1025,13 +1253,13 @@ function openEditModal(row) {
   showEditModal.value = true;
 }
 
-function closeEditModal() {
+function closeEditModal () {
   showEditModal.value = false;
   editingRecord.value = null;
   originalRecord.value = null;
 }
 
-async function saveRecord() {
+async function saveRecord () {
   if (!editingRecord.value) {
     showAlert('No record to save', 'error');
     return;
@@ -1104,7 +1332,7 @@ async function saveRecord() {
   }
 }
 
-function getEditableColumns() {
+function getEditableColumns () {
   if (!editingRecord.value) return [];
   return Object.keys(editingRecord.value).filter(column => {
     // Skip columns that shouldn't be edited directly
@@ -1112,18 +1340,18 @@ function getEditableColumns() {
   });
 }
 
-function isLongTextField(column) {
+function isLongTextField (column) {
   return /(description|content|text|body|comment|note|message|summary|details|html|json|xml)$/i.test(column) ||
          (editingRecord.value && 
           typeof editingRecord.value[column] === 'string' && 
           editingRecord.value[column]?.length > 100);
 }
 
-function isDateField(column) {
+function isDateField (column) {
   return /(date|time|at$|created_at|updated_at|deleted_at)/i.test(column);
 }
 
-function isNumberField(column) {
+function isNumberField (column) {
   if (!editingRecord.value) return false;
   const value = editingRecord.value[column];
   return typeof value === 'number' || 
@@ -1131,14 +1359,14 @@ function isNumberField(column) {
          /(amount|price|cost|total|sum|count|number|qty|quantity|height|width|depth|size|order|position)/i.test(column);
 }
 
-function isBooleanField(column) {
+function isBooleanField (column) {
   if (!editingRecord.value) return false;
   const value = editingRecord.value[column];
   return typeof value === 'boolean' || 
          /(active|enabled|visible|published|featured|is_|has_)/i.test(column);
 }
 
-function getFieldTypeLabel(column) {
+function getFieldTypeLabel (column) {
   if (!editingRecord.value) return 'Unknown';
   
   const value = editingRecord.value[column];
@@ -1157,7 +1385,7 @@ function getFieldTypeLabel(column) {
          typeof value;
 }
 
-function handleRowDoubleClick(row) {
+function handleRowDoubleClick (row) {
   // Prevent any selection on double click
   // Find the row index
   const rowIndex = paginatedData.value.findIndex(r => r === row);
@@ -1172,7 +1400,7 @@ function handleRowDoubleClick(row) {
   openEditModal(row);
 }
 
-function handleMouseDown(event, rowIndex) {
+function handleMouseDown (event, rowIndex) {
   // Para clicar com Ctrl/Shift, deixar o onClick cuidar disso
   if (ctrlKeyPressed.value || shiftKeyPressed.value) {
     return;
@@ -1189,7 +1417,7 @@ function handleMouseDown(event, rowIndex) {
   window.addEventListener('mouseup', handleMouseUp, { once: true });
 }
 
-function handleMouseEnter(rowIndex) {
+function handleMouseEnter (rowIndex) {
   // Se não estamos arrastando ou não temos ponto de início, não fazer nada
   if (!isDragging.value || selectionStartId.value === null) {
     return;
@@ -1207,7 +1435,7 @@ function handleMouseEnter(rowIndex) {
   selectedRows.value = rangeIds;
 }
 
-function handleMouseUp(event) {
+function handleMouseUp (event) {
   // Se não estava arrastando, é um clique simples - deixe o handleRowClick tratar
   if (!isDragging.value || !selectionStartId.value) {
     isDragging.value = false;
@@ -1277,19 +1505,19 @@ onUnmounted(() => {
   document.removeEventListener('mouseup', stopColumnResize);
 });
 
-function toggleAdvancedFilter() {
+function toggleAdvancedFilter () {
   originalFilterTerm.value = advancedFilterTerm.value;
   showFilterModal.value = true;
 }
 
-function applyFilter() {
+function applyFilter () {
   // Reiniciar para a página 1 ao aplicar um filtro
   currentPage.value = 1;
   // A propriedade computada filteredData já aplica o filtro automaticamente
 }
 
 // Melhorar a função applyAdvancedFilter para aplicar filtros no servidor
-async function applyAdvancedFilter() {
+async function applyAdvancedFilter () {
   // Atualizar o filtro ativo
   activeFilter.value = advancedFilterTerm.value;
   
@@ -1323,12 +1551,12 @@ async function applyAdvancedFilter() {
   }
 }
 
-function cancelAdvancedFilter() {
+function cancelAdvancedFilter () {
   advancedFilterTerm.value = originalFilterTerm.value;
   showFilterModal.value = false;
 }
 
-function clearFilters() {
+function clearFilters () {
   const hadActiveFilter = activeFilter.value || filterTerm.value;
   
   filterTerm.value = '';
@@ -1350,15 +1578,15 @@ function clearFilters() {
   }
 }
 
-function insertColumnName(column) {
+function insertColumnName (column) {
   advancedFilterTerm.value += column + ' ';
 }
 
-function insertOperator(op) {
+function insertOperator (op) {
   advancedFilterTerm.value += ' ' + op + ' ';
 }
 
-function applySqlFilter(data, filter) {
+function applySqlFilter (data, filter) {
   if (!filter || !data || data.length === 0) return data;
   
   // Limpar o filtro
@@ -1412,7 +1640,7 @@ function applySqlFilter(data, filter) {
 }
 
 // Corrigir a função convertFilterToJs para lidar corretamente com filtros de ID
-function convertFilterToJs(filter) {
+function convertFilterToJs (filter) {
   if (!filter) return 'true';
   
   try {
@@ -1553,7 +1781,7 @@ function convertFilterToJs(filter) {
 }
 
 // Melhorar a função para determinar quando usar filtro no servidor
-function shouldUseServerFilter(filter) {
+function shouldUseServerFilter (filter) {
   if (!filter) return false;
   
   // Clean the filter
@@ -1595,7 +1823,7 @@ function shouldUseServerFilter(filter) {
 }
 
 // Function to load filtered data directly from server
-async function loadFilteredData() {
+async function loadFilteredData () {
   if (!activeFilter.value) {
     // If there's no active filter, load normally
     return loadTableData();
@@ -1666,7 +1894,7 @@ async function loadFilteredData() {
 }
 
 // Improve the function for foreign key navigation
-async function navigateToForeignKey(column, value) {
+async function navigateToForeignKey (column, value) {
   if (value === null || value === undefined) {
     showAlert("Null or undefined value. Unable to navigate to the related record.", "error");
     return;
@@ -1744,7 +1972,7 @@ async function navigateToForeignKey(column, value) {
 // Adicionar a função para verificar se uma coluna é chave estrangeira
 const foreignKeyColumns = ref([]);
 
-async function loadForeignKeyInfo() {
+async function loadForeignKeyInfo () {
   try {
     const structure = await databaseStore.getTableStructure(props.connectionId, props.tableName);
     if (structure && Array.isArray(structure)) {
@@ -1757,12 +1985,12 @@ async function loadForeignKeyInfo() {
   }
 }
 
-function isForeignKeyColumn(column) {
+function isForeignKeyColumn (column) {
   return foreignKeyColumns.value.includes(column);
 }
 
 // Adicionar a função para definir exemplos de filtro
-function setExampleFilter(example) {
+function setExampleFilter (example) {
   advancedFilterTerm.value = example;
   // Aplicar o filtro imediatamente se for clicado em um exemplo
   applyAdvancedFilter();

@@ -18,7 +18,7 @@
     </div>
 
     <keep-alive>
-      <component :is="currentTabComponent" v-bind="currentTabProps"></component>
+      <component :is="currentTabComponent" v-bind="currentTabProps" />
     </keep-alive>
   </div>
 </template>
@@ -102,7 +102,7 @@ const currentTabProps = computed(() => {
   return baseProps;
 });
 
-function switchContentTab(tabId) {
+function switchContentTab (tabId) {
   activeContentTab.value = tabId;
 
   emit('update-tab-data', props.tableName, {
@@ -110,7 +110,7 @@ function switchContentTab(tabId) {
   });
 }
 
-function handleTabData(tabId, data) {
+function handleTabData (tabId, data) {
   tabsLoaded.value[tabId] = true;
 
   if (tabId === 'data') {

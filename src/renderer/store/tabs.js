@@ -5,7 +5,7 @@ export const useTabsStore = defineStore('tabs', () => {
   const openTabs = ref([]);
   const activeTabId = ref(null);
 
-  async function addTab(tableData) {
+  async function addTab (tableData) {
     // Verificar se deve buscar pela combinação tabela+filtro
     const isFiltered = tableData.filter && tableData.filter.trim() !== '';
     
@@ -63,7 +63,7 @@ export const useTabsStore = defineStore('tabs', () => {
     return newTab;
   }
 
-  async function removeTab(tabId) {
+  async function removeTab (tabId) {
     const index = openTabs.value.findIndex(tab => tab.id === tabId);
 
     if (index !== -1) {
@@ -79,7 +79,7 @@ export const useTabsStore = defineStore('tabs', () => {
     }
   }
 
-  async function updateTabData(tabId, data) {
+  async function updateTabData (tabId, data) {
     const tab = openTabs.value.find(tab => tab.id === tabId);
     if (tab) {
       tab.data = data;
@@ -88,18 +88,18 @@ export const useTabsStore = defineStore('tabs', () => {
     }
   }
 
-  function activateTab(tabId) {
+  function activateTab (tabId) {
     if (openTabs.value.some(tab => tab.id === tabId)) {
       activeTabId.value = tabId;
     }
   }
 
-  async function reorderTabs(newTabsOrder) {
+  async function reorderTabs (newTabsOrder) {
     openTabs.value = newTabsOrder;
     await saveOpenTabs();
   }
 
-  async function saveOpenTabs() {
+  async function saveOpenTabs () {
     try {
       if (window.api) {
         const simplifiedTabs = openTabs.value.map(tab => ({
@@ -137,7 +137,7 @@ export const useTabsStore = defineStore('tabs', () => {
     }
   }
 
-  async function loadSavedTabs() {
+  async function loadSavedTabs () {
     try {
       if (window.api) {
         const savedTabs = await window.api.getOpenTabs();
@@ -159,14 +159,14 @@ export const useTabsStore = defineStore('tabs', () => {
     }
   }
 
-  async function closeAllTabs() {
+  async function closeAllTabs () {
     openTabs.value = [];
     activeTabId.value = null;
     await saveOpenTabs();
   }
 
   // Close all tabs for a specific connection
-  async function closeTabsByConnectionId(connectionId) {
+  async function closeTabsByConnectionId (connectionId) {
     if (!connectionId) return;
     
     const initialTabsCount = openTabs.value.length;

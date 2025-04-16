@@ -9,8 +9,12 @@
           alt="Larabase"
           class="h-32 w-32 mb-2"
         />
-        <h1 class="text-3xl font-bold text-white">Larabase</h1>
-        <p class="text-sm text-white">Version 1.0.0</p>
+        <h1 class="text-3xl font-bold text-white">
+          Larabase
+        </h1>
+        <p class="text-sm text-white">
+          Version 1.0.0
+        </p>
       </div>
 
       <button
@@ -37,13 +41,15 @@
 
     <div class="w-2/3 flex flex-col">
       <div class="flex-1 overflow-auto p-6">
-        <h2 class="text-xl font-bold mb-4 text-white">Your Connections</h2>
+        <h2 class="text-xl font-bold mb-4 text-white">
+          Your Connections
+        </h2>
 
         <div
           v-if="isLoading"
           class="flex justify-center items-center h-[calc(100vh-150px)]"
         >
-          <span class="loading loading-spinner loading-lg"></span>
+          <span class="loading loading-spinner loading-lg" />
         </div>
 
         <div
@@ -64,7 +70,9 @@
               d="M20.25 6.375c0 2.278-3.694 4.125-8.25 4.125S3.75 8.653 3.75 6.375m16.5 0c0-2.278-3.694-4.125-8.25-4.125S3.75 4.097 3.75 6.375m16.5 0v11.25c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125V6.375m16.5 0v3.75m-16.5-3.75v3.75m16.5 0v3.75C20.25 16.153 16.556 18 12 18s-8.25-1.847-8.25-4.125v-3.75m16.5 0c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125"
             />
           </svg>
-          <p class="text-xl font-medium text-gray-400">No connections found</p>
+          <p class="text-xl font-medium text-gray-400">
+            No connections found
+          </p>
           <p class="text-gray-500 mt-3">
             Create a new connection to get started
           </p>
@@ -89,9 +97,7 @@
                 <div class="flex-1">
                   <h2 class="card-title text-base">
                     {{ connection.name }}
-                    <span class="text-xs text-green-500 ml-1"
-                      >{{ connection.status }}</span
-                    >
+                    <span class="text-xs text-green-500 ml-1">{{ connection.status }}</span>
                   </h2>
                   <p class="text-xs text-gray-400">
                     {{ connection.host || connection.path }}
@@ -122,8 +128,8 @@
                   </button>
                   <button
                     class="btn btn-sm btn-ghost text-green-500"
-                    @click.stop="restoreDatabase(connection)"
                     title="Restore Database"
+                    @click.stop="restoreDatabase(connection)"
                   >
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
@@ -198,8 +204,8 @@
           </label>
           <div class="flex gap-2">
             <input
-              type="text"
               v-model="newConnection.projectPath"
+              type="text"
               placeholder="Select Laravel project directory"
               class="input input-bordered w-full"
               :readonly="true"
@@ -208,7 +214,7 @@
               Browse
             </button>
           </div>
-          <label class="label" v-if="projectPathError">
+          <label v-if="projectPathError" class="label">
             <span class="label-text-alt text-error">{{
               projectPathError
             }}</span>
@@ -223,8 +229,8 @@
           <label class="label cursor-pointer">
             <span class="label-text">Using Laravel Sail?</span>
             <input
-              type="checkbox"
               v-model="newConnection.usingSail"
+              type="checkbox"
               class="toggle toggle-primary"
             />
           </label>
@@ -240,8 +246,8 @@
             dockerInfo.isDocker
               ? 'alert-success'
               : !dockerInfo.isDocker && dockerInfo.dockerAvailable
-              ? 'alert-warning'
-              : 'alert-info',
+                ? 'alert-warning'
+                : 'alert-info',
           ]"
         >
           <div>
@@ -285,14 +291,13 @@
                 stroke-linejoin="round"
                 stroke-width="2"
                 d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-              ></path>
+              />
             </svg>
             <div>
               <span class="font-medium">Docker Detection:</span>
               <p>{{ dockerInfo.message }}</p>
               <p v-if="dockerInfo.isDocker" class="text-sm mt-1">
-                <span class="font-medium">Container: </span
-                >{{ dockerInfo.dockerContainerName }}
+                <span class="font-medium">Container: </span>{{ dockerInfo.dockerContainerName }}
               </p>
               <p class="text-sm mt-1">
                 <span v-if="dockerInfo.isDocker">
@@ -312,7 +317,9 @@
           </div>
         </div>
 
-        <div class="divider">Database Connection</div>
+        <div class="divider">
+          Database Connection
+        </div>
 
         <div class="grid grid-cols-2 gap-4">
           <div class="form-control w-full">
@@ -320,8 +327,8 @@
               <span class="label-text">Connection Name</span>
             </label>
             <input
-              type="text"
               v-model="newConnection.name"
+              type="text"
               placeholder="My Project"
               class="input input-bordered w-full"
               required
@@ -333,16 +340,16 @@
               <span class="label-text">Database Type</span>
             </label>
             <select
-              class="select select-bordered w-full"
               v-model="newConnection.type"
+              class="select select-bordered w-full"
               disabled
             >
-              <option value="mysql">MySQL</option>
+              <option value="mysql">
+                MySQL
+              </option>
             </select>
             <label class="label">
-              <span class="label-text-alt"
-                >Only MySQL is supported at the moment</span
-              >
+              <span class="label-text-alt">Only MySQL is supported at the moment</span>
             </label>
           </div>
 
@@ -351,8 +358,8 @@
               <span class="label-text">Host</span>
             </label>
             <input
-              type="text"
               v-model="newConnection.host"
+              type="text"
               placeholder="localhost"
               class="input input-bordered w-full"
               required
@@ -364,8 +371,8 @@
               <span class="label-text">Port</span>
             </label>
             <input
-              type="text"
               v-model="newConnection.port"
+              type="text"
               placeholder="3306"
               class="input input-bordered w-full"
               required
@@ -377,8 +384,8 @@
               <span class="label-text">Database</span>
             </label>
             <input
-              type="text"
               v-model="newConnection.database"
+              type="text"
               placeholder="mydatabase"
               class="input input-bordered w-full"
               required
@@ -390,8 +397,8 @@
               <span class="label-text">Username</span>
             </label>
             <input
-              type="text"
               v-model="newConnection.username"
+              type="text"
               placeholder="root"
               class="input input-bordered w-full"
               required
@@ -403,15 +410,17 @@
               <span class="label-text">Password</span>
             </label>
             <input
-              type="password"
               v-model="newConnection.password"
+              type="password"
               placeholder="password"
               class="input input-bordered w-full"
             />
           </div>
         </div>
 
-        <div class="divider">Redis Connection (Optional)</div>
+        <div class="divider">
+          Redis Connection (Optional)
+        </div>
 
         <div class="grid grid-cols-2 gap-4">
           <div class="form-control w-full">
@@ -419,8 +428,8 @@
               <span class="label-text">Redis Host</span>
             </label>
             <input
-              type="text"
               v-model="newConnection.redisHost"
+              type="text"
               placeholder="127.0.0.1"
               class="input input-bordered w-full"
             />
@@ -431,8 +440,8 @@
               <span class="label-text">Redis Port</span>
             </label>
             <input
-              type="text"
               v-model="newConnection.redisPort"
+              type="text"
               placeholder="6379"
               class="input input-bordered w-full"
             />
@@ -443,8 +452,8 @@
               <span class="label-text">Redis Password</span>
             </label>
             <input
-              type="password"
               v-model="newConnection.redisPassword"
+              type="password"
               placeholder="Leave empty if none"
               class="input input-bordered w-full"
             />
@@ -452,21 +461,23 @@
         </div>
 
         <div class="modal-action">
-          <button class="btn" @click="isCreateModalOpen = false">Cancel</button>
+          <button class="btn" @click="isCreateModalOpen = false">
+            Cancel
+          </button>
           <button
             class="btn btn-primary"
-            @click="saveNewConnection"
             :disabled="isLoading || !newConnection.projectPath"
+            @click="saveNewConnection"
           >
             <span
               v-if="isSaving"
               class="loading loading-spinner loading-xs mr-2"
-            ></span>
+            />
             {{ isEditMode ? "Update Connection" : "Save Connection" }}
           </button>
         </div>
       </div>
-      <div class="modal-backdrop" @click="isCreateModalOpen = false"></div>
+      <div class="modal-backdrop" @click="isCreateModalOpen = false" />
     </div>
 
     <div class="modal" :class="{ 'modal-open': isRestoreModalOpen }">
@@ -481,25 +492,25 @@
           </label>
           <div class="flex gap-2">
             <input
-              type="text"
               v-model="restoreConfig.filePath"
+              type="text"
               placeholder="Select SQL dump file"
               class="input input-bordered w-full"
               :readonly="true"
             />
             <button
               class="btn btn-primary"
-              @click="selectDumpFile"
               :disabled="isProcessingSql || isRestoring"
+              @click="selectDumpFile"
             >
               <span
                 v-if="isProcessingSql"
                 class="loading loading-spinner loading-xs mr-2"
-              ></span>
+              />
               Browse
             </button>
           </div>
-          <label class="label" v-if="restoreFileError">
+          <label v-if="restoreFileError" class="label">
             <span class="label-text-alt text-error">{{
               restoreFileError
             }}</span>
@@ -513,9 +524,11 @@
           v-if="isProcessingSql"
           class="my-4 flex items-center gap-2 text-info bg-base-300 p-3 rounded-md"
         >
-          <span class="loading loading-spinner loading-sm"></span>
+          <span class="loading loading-spinner loading-sm" />
           <div>
-            <p class="text-sm font-medium">{{ restoreStatus }}</p>
+            <p class="text-sm font-medium">
+              {{ restoreStatus }}
+            </p>
             <p class="text-xs mt-1">
               Please wait until the SQL file analysis is complete
             </p>
@@ -534,65 +547,59 @@
             <div
               class="bg-primary h-2 rounded-md"
               :style="{ width: restoreProgress + '%' }"
-            ></div>
+            />
           </div>
-          <p class="text-sm">{{ restoreStatus }}</p>
+          <p class="text-sm">
+            {{ restoreStatus }}
+          </p>
         </div>
 
         <div class="form-control w-full mb-4">
           <label class="label cursor-pointer justify-start">
             <input
-              type="checkbox"
               v-model="overwriteCurrentDb"
+              type="checkbox"
               class="checkbox checkbox-sm mr-2"
               :disabled="isRestoring || isProcessingSql"
             />
-            <span class="label-text"
-              >Restore to current database ({{
-                restoreConfig.connection?.database
-              }})</span
-            >
+            <span class="label-text">Restore to current database ({{
+              restoreConfig.connection?.database
+            }})</span>
           </label>
           <p class="text-xs text-gray-500 mt-1">
             The backup will overwrite your current database
           </p>
         </div>
 
-        <div class="form-control w-full mb-4" v-if="!overwriteCurrentDb">
+        <div v-if="!overwriteCurrentDb" class="form-control w-full mb-4">
           <label class="label">
             <span class="label-text">Target Database Name</span>
           </label>
           <input
-            type="text"
             v-model="restoreConfig.database"
+            type="text"
             placeholder="Enter target database name"
             class="input input-bordered w-full"
             :disabled="isRestoring || isProcessingSql"
           />
           <label class="label">
-            <span class="label-text-alt"
-              >The backup will be restored to this new database</span
-            >
+            <span class="label-text-alt">The backup will be restored to this new database</span>
           </label>
         </div>
 
-        <div class="form-control w-full mb-4" v-if="!overwriteCurrentDb">
+        <div v-if="!overwriteCurrentDb" class="form-control w-full mb-4">
           <label class="label cursor-pointer justify-start">
             <input
-              type="checkbox"
               v-model="restoreConfig.setAsDefault"
+              type="checkbox"
               class="checkbox checkbox-sm mr-2"
               :disabled="isRestoring || isProcessingSql"
             />
-            <span class="label-text"
-              >Set as default database for this connection</span
-            >
+            <span class="label-text">Set as default database for this connection</span>
           </label>
           <label class="label">
-            <span class="label-text-alt"
-              >If enabled, this database will be set as the default for future
-              connections</span
-            >
+            <span class="label-text-alt">If enabled, this database will be set as the default for future
+              connections</span>
           </label>
         </div>
 
@@ -606,8 +613,8 @@
 
           <div class="mb-2">
             <input
-              type="text"
               v-model="tableSearchQuery"
+              type="text"
               placeholder="Search tables..."
               class="input input-bordered w-full input-sm"
               :disabled="isRestoring || isProcessingSql"
@@ -628,8 +635,8 @@
                 :class="{ 'opacity-50': isRestoring || isProcessingSql }"
               >
                 <input
-                  type="checkbox"
                   v-model="restoreConfig.ignoredTables"
+                  type="checkbox"
                   :value="table.name"
                   class="checkbox checkbox-sm"
                   :disabled="isRestoring || isProcessingSql"
@@ -654,23 +661,26 @@
             </div>
           </div>
           <label class="label">
-            <span class="label-text-alt"
-              >Select tables to ignore during restore</span
-            >
+            <span class="label-text-alt">Select tables to ignore during restore</span>
           </label>
         </div>
 
         <div class="modal-action">
-          <button class="btn" @click="closeRestoreModal">Cancel</button>
-          <button class="btn btn-primary" @click="startRestore" 
-            :disabled="isRestoring || isProcessingSql || !restoreConfig.filePath">
-            <span v-if="isRestoring" class="loading loading-spinner loading-xs mr-2"></span>
-            <span v-else-if="isProcessingSql" class="loading loading-spinner loading-xs mr-2"></span>
+          <button class="btn" @click="closeRestoreModal">
+            Cancel
+          </button>
+          <button
+            class="btn btn-primary"
+            :disabled="isRestoring || isProcessingSql || !restoreConfig.filePath" 
+            @click="startRestore"
+          >
+            <span v-if="isRestoring" class="loading loading-spinner loading-xs mr-2" />
+            <span v-else-if="isProcessingSql" class="loading loading-spinner loading-xs mr-2" />
             Restore Database
           </button>
         </div>
       </div>
-      <div class="modal-backdrop"></div>
+      <div class="modal-backdrop" />
     </div>
   </div>
 </template>
@@ -759,7 +769,7 @@ onMounted(async () => {
   }
 });
 
-function openCreateConnectionModal() {
+function openCreateConnectionModal () {
   isEditMode.value = false;
   editConnectionId.value = null;
   newConnection.value = {
@@ -785,7 +795,7 @@ function openCreateConnectionModal() {
   isCreateModalOpen.value = true;
 }
 
-function editConnection(connection) {
+function editConnection (connection) {
   isEditMode.value = true;
   editConnectionId.value = connection.id;
 
@@ -811,7 +821,7 @@ function editConnection(connection) {
   isCreateModalOpen.value = true;
 }
 
-async function selectProjectDirectory() {
+async function selectProjectDirectory () {
   try {
     const result = await window.api.selectDirectory();
 
@@ -912,7 +922,7 @@ async function selectProjectDirectory() {
   }
 }
 
-async function saveNewConnection() {
+async function saveNewConnection () {
   try {
     // Verificar se o caminho do projeto está preenchido
     if (!newConnection.value.projectPath) {
@@ -1008,7 +1018,7 @@ async function saveNewConnection() {
   }
 }
 
-async function removeConnection(connectionId) {
+async function removeConnection (connectionId) {
   if (
     confirm(
       "Are you sure you want to delete this connection? All related data will be lost."
@@ -1038,11 +1048,11 @@ async function removeConnection(connectionId) {
   }
 }
 
-function openConnection(connectionId) {
+function openConnection (connectionId) {
   router.push(`/database/${connectionId}`);
 }
 
-function getConnectionColor(type) {
+function getConnectionColor (type) {
   switch (type) {
     case "mysql":
       return "bg-orange-500";
@@ -1058,7 +1068,7 @@ function getConnectionColor(type) {
 }
 
 // Function to open restore modal
-function restoreDatabase(connection) {
+function restoreDatabase (connection) {
   restoreConfig.value = {
     connection: connection,
     filePath: "",
@@ -1080,7 +1090,7 @@ function restoreDatabase(connection) {
 }
 
 // Function to select SQL dump file
-async function selectDumpFile() {
+async function selectDumpFile () {
   try {
     const result = await window.api.selectSqlDumpFile();
 
@@ -1150,7 +1160,7 @@ async function selectDumpFile() {
 }
 
 // Function to start the restore process
-async function startRestore() {
+async function startRestore () {
   if (!restoreConfig.value.filePath || !restoreConfig.value.connection) {
     showAlert("Please select a SQL dump file", "error");
     return;
@@ -1258,7 +1268,7 @@ async function startRestore() {
 }
 
 // Helper function to update the connection's database name
-async function updateConnectionDatabase(connectionId, newDatabase) {
+async function updateConnectionDatabase (connectionId, newDatabase) {
   try {
     const result = await window.api.updateConnectionDatabase(
       connectionId,
@@ -1279,7 +1289,7 @@ async function updateConnectionDatabase(connectionId, newDatabase) {
 }
 
 // Function to close modal and kill any running process
-function closeRestoreModal() {
+function closeRestoreModal () {
   if (isRestoring.value) {
     // Always confirm when canceling an active restoration
     if (confirm('Are you sure you want to cancel the database restoration?')) {
@@ -1303,7 +1313,7 @@ function closeRestoreModal() {
 }
 
 // Function to get CSS class based on table size
-function getTableSizeClass(size) {
+function getTableSizeClass (size) {
   switch (size) {
     case "empty":
       return "bg-gray-500 text-white";

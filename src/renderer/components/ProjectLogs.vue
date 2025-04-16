@@ -2,19 +2,40 @@
   <div class="modal" :class="{ 'modal-open': isOpen }">
     <div class="modal-box max-w-4xl bg-base-300">
       <div class="flex justify-between items-center mb-4">
-        <h3 class="font-bold text-lg">Project Logs</h3>
+        <h3 class="font-bold text-lg">
+          Project Logs
+        </h3>
         <div class="flex gap-2">
-          <button class="btn btn-sm" @click="refreshLogs" v-if="props.projectPath">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
+          <button v-if="props.projectPath" class="btn btn-sm" @click="refreshLogs">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke-width="1.5"
+              stroke="currentColor"
+              class="w-5 h-5"
+            >
               <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
             </svg>
           </button>
-          <button class="btn btn-sm" @click="openLogFile" v-if="props.projectPath" title="Open log file in editor">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-4">
+          <button
+            v-if="props.projectPath"
+            class="btn btn-sm"
+            title="Open log file in editor"
+            @click="openLogFile"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke-width="1.5"
+              stroke="currentColor"
+              class="size-4"
+            >
               <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 6H5.25A2.25 2.25 0 0 0 3 8.25v10.5A2.25 2.25 0 0 0 5.25 21h10.5A2.25 2.25 0 0 0 18 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" />
             </svg>
           </button>
-          <button class="btn btn-sm btn-primary" @click="confirmDeleteAllLogs" v-if="props.projectPath && logs.length > 0">
+          <button v-if="props.projectPath && logs.length > 0" class="btn btn-sm btn-primary" @click="confirmDeleteAllLogs">
             Clear All
           </button>
         </div>
@@ -22,25 +43,45 @@
       
       <!-- Project Path Missing Message -->
       <div v-if="!props.projectPath" class="py-8 text-center">
-        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" 
-          stroke="currentColor" class="w-12 h-12 mx-auto mb-4 text-gray-400">
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke-width="1.5" 
+          stroke="currentColor"
+          class="w-12 h-12 mx-auto mb-4 text-gray-400"
+        >
           <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
         </svg>
-        <p class="text-lg font-semibold mb-2">No Laravel Project Path Set</p>
-        <p class="text-gray-400 mb-4">To view logs, you need to set a Laravel project path for this connection.</p>
-        <button @click="selectProject" class="btn btn-primary">
+        <p class="text-lg font-semibold mb-2">
+          No Laravel Project Path Set
+        </p>
+        <p class="text-gray-400 mb-4">
+          To view logs, you need to set a Laravel project path for this connection.
+        </p>
+        <button class="btn btn-primary" @click="selectProject">
           Select Laravel Project
         </button>
       </div>
 
       <!-- Debugging Info when file exists but no logs parsed -->
       <div v-else-if="props.projectPath && logs.length === 0" class="py-8 text-center">
-        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
-          stroke="currentColor" class="w-12 h-12 mx-auto mb-4 text-gray-400">
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke-width="1.5"
+          stroke="currentColor"
+          class="w-12 h-12 mx-auto mb-4 text-gray-400"
+        >
           <path stroke-linecap="round" stroke-linejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z" />
         </svg>
-        <p class="text-lg font-semibold mb-2">No Logs Found</p>
-        <p class="text-gray-400 mb-4">The log file might exist, but no parsable logs were found.</p>
+        <p class="text-lg font-semibold mb-2">
+          No Logs Found
+        </p>
+        <p class="text-gray-400 mb-4">
+          The log file might exist, but no parsable logs were found.
+        </p>
       </div>
       
       <!-- Log Content when project path is available and logs exist -->
@@ -48,13 +89,28 @@
         <!-- Log filters -->
         <div class="flex mb-4 gap-2">
           <select v-model="logTypeFilter" class="select select-sm select-bordered">
-            <option value="all">All Log Types</option>
-            <option value="info">Info</option>
-            <option value="warning">Warning</option>
-            <option value="error">Error</option>
-            <option value="debug">Debug</option>
+            <option value="all">
+              All Log Types
+            </option>
+            <option value="info">
+              Info
+            </option>
+            <option value="warning">
+              Warning
+            </option>
+            <option value="error">
+              Error
+            </option>
+            <option value="debug">
+              Debug
+            </option>
           </select>
-          <input v-model="searchQuery" type="text" placeholder="Search logs..." class="input input-sm input-bordered flex-1" />
+          <input
+            v-model="searchQuery"
+            type="text"
+            placeholder="Search logs..."
+            class="input input-sm input-bordered flex-1"
+          />
         </div>
 
         <!-- Logs table -->
@@ -62,24 +118,41 @@
           <table class="table table-xs w-full">
             <thead>
               <tr>
-                <th class="w-28">Timestamp</th>
-                <th class="w-24">Type</th>
+                <th class="w-28">
+                  Timestamp
+                </th>
+                <th class="w-24">
+                  Type
+                </th>
                 <th>Message</th>
-                <th class="w-28 text-right">Actions</th>
+                <th class="w-28 text-right">
+                  Actions
+                </th>
               </tr>
             </thead>
             <tbody>
               <tr v-for="(log, index) in filteredLogs" :key="index" class="hover:bg-base-200">
-                <td class="text-xs">{{ formatTimestamp(log.timestamp) }}</td>
+                <td class="text-xs">
+                  {{ formatTimestamp(log.timestamp) }}
+                </td>
                 <td>
                   <span class="badge" :class="getLogTypeBadgeClass(log.type)">
                     {{ log.type }}
                   </span>
                 </td>
-                <td class="truncate max-w-md" :title="log.message">{{ log.message }}</td>
+                <td class="truncate max-w-md" :title="log.message">
+                  {{ log.message }}
+                </td>
                 <td class="text-right">
-                  <button @click="viewLogDetails(log)" class="btn btn-xs btn-ghost">
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
+                  <button class="btn btn-xs btn-ghost" @click="viewLogDetails(log)">
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke-width="1.5"
+                      stroke="currentColor"
+                      class="w-5 h-5"
+                    >
                       <path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" />
                       <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                     </svg>
@@ -97,7 +170,9 @@
       </div>
 
       <div class="modal-action">
-        <button class="btn btn-primary" @click="close">Close</button>
+        <button class="btn btn-primary" @click="close">
+          Close
+        </button>
       </div>
     </div>
   </div>
@@ -112,20 +187,28 @@
         </span>
       </h3>
       <div v-if="selectedLog" class="py-4">
-        <p class="text-sm mb-2"><span class="font-semibold">Timestamp:</span> {{ formatTimestamp(selectedLog.timestamp, true) }}</p>
-        <p class="text-sm mb-2"><span class="font-semibold">File:</span> {{ selectedLog.file }}</p>
+        <p class="text-sm mb-2">
+          <span class="font-semibold">Timestamp:</span> {{ formatTimestamp(selectedLog.timestamp, true) }}
+        </p>
+        <p class="text-sm mb-2">
+          <span class="font-semibold">File:</span> {{ selectedLog.file }}
+        </p>
         <div class="bg-base-200 p-3 rounded-lg overflow-auto max-h-80 whitespace-pre-wrap font-mono text-sm">
           {{ selectedLog.message }}
         </div>
         <div v-if="selectedLog.stack" class="mt-4">
-          <p class="font-semibold mb-1">Stack Trace:</p>
+          <p class="font-semibold mb-1">
+            Stack Trace:
+          </p>
           <div class="bg-base-200 p-3 rounded-lg overflow-auto max-h-80 whitespace-pre-wrap font-mono text-xs">
             {{ selectedLog.stack }}
           </div>
         </div>
       </div>
       <div class="modal-action">
-        <button class="btn btn-primary" @click="showLogDetails = false">Close</button>
+        <button class="btn btn-primary" @click="showLogDetails = false">
+          Close
+        </button>
       </div>
     </div>
   </div>
@@ -133,11 +216,19 @@
   <!-- Confirm delete modal -->
   <div class="modal" :class="{ 'modal-open': showDeleteConfirm }">
     <div class="modal-box bg-base-300">
-      <h3 class="font-bold text-lg">Confirm Action</h3>
-      <p class="py-4">Are you sure you want to delete all logs? This action cannot be undone.</p>
+      <h3 class="font-bold text-lg">
+        Confirm Action
+      </h3>
+      <p class="py-4">
+        Are you sure you want to delete all logs? This action cannot be undone.
+      </p>
       <div class="modal-action">
-        <button class="btn btn-error" @click="deleteAllLogs">Delete All</button>
-        <button class="btn" @click="showDeleteConfirm = false">Cancel</button>
+        <button class="btn btn-error" @click="deleteAllLogs">
+          Delete All
+        </button>
+        <button class="btn" @click="showDeleteConfirm = false">
+          Cancel
+        </button>
       </div>
     </div>
   </div>
@@ -192,7 +283,7 @@ const filteredLogs = computed(() => {
   return filtered.sort((a, b) => b.timestamp - a.timestamp);
 });
 
-function formatTimestamp(timestamp, detailed = false) {
+function formatTimestamp (timestamp, detailed = false) {
   const date = new Date(timestamp);
   if (detailed) {
     return date.toLocaleString();
@@ -200,7 +291,7 @@ function formatTimestamp(timestamp, detailed = false) {
   return date.toLocaleTimeString();
 }
 
-function getLogTypeBadgeClass(type) {
+function getLogTypeBadgeClass (type) {
   switch (type.toLowerCase()) {
     case 'error':
       return 'badge-error';
@@ -215,16 +306,16 @@ function getLogTypeBadgeClass(type) {
   }
 }
 
-function viewLogDetails(log) {
+function viewLogDetails (log) {
   selectedLog.value = log;
   showLogDetails.value = true;
 }
 
-function confirmDeleteAllLogs() {
+function confirmDeleteAllLogs () {
   showDeleteConfirm.value = true;
 }
 
-async function deleteAllLogs() {
+async function deleteAllLogs () {
   try {
     if (!props.projectPath) return;
     
@@ -244,11 +335,11 @@ async function deleteAllLogs() {
   }
 }
 
-function selectProject() {
+function selectProject () {
   emit('select-project');
 }
 
-async function openLogFile() {
+async function openLogFile () {
   try {
     if (!props.projectPath) return;
     
@@ -268,7 +359,7 @@ async function openLogFile() {
   }
 }
 
-async function refreshLogs() {
+async function refreshLogs () {
   try {
     if (!props.projectPath) {
       logs.value = [];
@@ -286,7 +377,7 @@ async function refreshLogs() {
   }
 }
 
-function close() {
+function close () {
   emit('close');
 }
 

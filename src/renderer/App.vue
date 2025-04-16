@@ -1,10 +1,11 @@
 <template>
   <div class="min-h-screen bg-app-bg text-white" data-theme="dark">
-    <router-view></router-view>
+    <router-view />
     <app-alert 
       :type="alertType" 
       :message="alertMessage" 
-      @close="clearAlert" />
+      @close="clearAlert"
+    />
   </div>
 </template>
 
@@ -15,12 +16,12 @@ import AppAlert from './components/AppAlert.vue';
 const alertMessage = ref('');
 const alertType = ref('info');
 
-function showAlert(message, type = 'info') {
+function showAlert (message, type = 'info') {
   alertMessage.value = message;
   alertType.value = type;
 }
 
-function clearAlert() {
+function clearAlert () {
   alertMessage.value = '';
 }
 
