@@ -782,7 +782,4 @@ onMounted(() => {
 });
 </script>
 
-<style scoped>
-/* Podemos remover todos os estilos relacionados ao highlight.js e à numeração de linhas,
-   pois agora estão centralizados no componente PhpViewer */
-</style>
+<style scoped></style>

@@ -13,7 +13,6 @@ import php from 'highlight.js/lib/languages/php';
 import json from 'highlight.js/lib/languages/json';
 import 'highlight.js/styles/atom-one-dark.css';
 
-// Register languages
 hljs.registerLanguage('php', php);
 hljs.registerLanguage('json', json);
 
@@ -25,7 +24,7 @@ const props = defineProps({
   language: {
     type: String,
     default: 'php',
-    validator: (value) => ['php', 'json'].includes(value)
+    validator: value => ['php', 'json'].includes(value)
   },
   height: {
     type: String,
@@ -47,7 +46,7 @@ function highlightCode() {
       // Add line numbers to the highlighted code
       const lines = highlighted.split('\n');
       let processedCode = '';
-      
+
       lines.forEach((line, index) => {
         const lineNumber = index + 1;
         const lineNumberPadded = String(lineNumber).padStart(3, ' ');
@@ -64,18 +63,15 @@ function highlightCode() {
     if (props.code) {
       const lines = props.code.split('\n');
       let processedCode = '';
-      
+
       lines.forEach((line, index) => {
         const lineNumber = index + 1;
         const lineNumberPadded = String(lineNumber).padStart(3, ' ');
         // Escape HTML entities
-        const escapedLine = line
-          .replace(/&/g, '&amp;')
-          .replace(/</g, '&lt;')
-          .replace(/>/g, '&gt;');
+        const escapedLine = line.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
         processedCode += `<span class="line-number">${lineNumberPadded}</span>${escapedLine}\n`;
       });
-      
+
       highlightedCode.value = processedCode;
     } else {
       highlightedCode.value = '';
@@ -145,7 +141,6 @@ watch(() => props.code, highlightCode, { immediate: true });
   background-color: rgba(42, 42, 46, 0.8);
 }
 
-/* Code styling */
 :deep(pre) {
   margin: 0;
   font-family: Consolas, Monaco, 'Andale Mono', monospace;
@@ -156,4 +151,4 @@ watch(() => props.code, highlightCode, { immediate: true });
   font-family: Consolas, Monaco, 'Andale Mono', monospace;
   white-space: pre;
 }
-</style> 
+</style>

@@ -316,8 +316,8 @@ const modelFound = computed(() => {
 const formattedJson = computed(() => {
   try {
     if (!modelJson.value) return '';
-    
-    return typeof modelJson.value === 'string' 
+
+    return typeof modelJson.value === 'string'
       ? JSON.stringify(JSON.parse(modelJson.value), null, 2)
       : JSON.stringify(modelJson.value, null, 2);
   } catch (error) {
@@ -326,7 +326,6 @@ const formattedJson = computed(() => {
   }
 });
 
-// Methods
 async function loadModel() {
   isLoading.value = true;
 
@@ -336,21 +335,16 @@ async function loadModel() {
       return;
     }
 
-    // Check if we need to load models first
     await databaseStore.loadModelsForTables(props.connectionId, connection.value.projectPath);
 
-    // Get the model for this table
     model.value = databaseStore.getModelForTable(props.connectionId, props.tableName);
 
-    // Generate model JSON
     modelJson.value = databaseStore.getTableModelJson(props.connectionId, props.tableName);
 
-    // Load model content if found
     if (model.value && model.value.path) {
       await loadModelContent(model.value.path);
     }
 
-    // Notify parent component
     props.onLoad({
       modelFound: model.value !== null
     });
@@ -442,7 +436,4 @@ onMounted(() => {
 });
 </script>
 
-<style scoped>
-/* Podemos remover todos os estilos relacionados ao highlight.js e à numeração de linhas,
-   pois agora estão centralizados no componente PhpViewer */
-</style>
+<style scoped></style>
