@@ -1,5 +1,5 @@
 <template>
-  <div class="modal" :class="{ 'modal-open': show }">
+  <div class="modal z-50" :class="{ 'modal-open': show }">
     <div class="modal-box max-w-4xl">
       <h3 class="font-bold text-lg mb-4 flex justify-between items-center">
         Data Preview
@@ -21,10 +21,29 @@
         </button>
       </h3>
 
+      <!-- Feedback para cópia de texto -->
+      <div 
+        v-if="copyFeedback" 
+        class="fixed top-4 right-4 bg-primary text-white py-2 px-4 rounded-md shadow-lg z-50 transition-opacity"
+      >
+        {{ copyFeedback }}
+      </div>
+
       <div v-if="record" class="overflow-y-auto max-h-[60vh] divide-y divide-base-300">
         <div v-for="column in columns" :key="column" class="py-3">
           <div class="flex items-start mb-2">
-            <div class="font-medium text-sm w-1/4 truncate">{{ column }}</div>
+            <div class="flex items-center gap-2 w-1/4">
+              <button 
+                class="btn btn-xs btn-ghost" 
+                title="Copy to clipboard"
+                @click="copyToClipboard(record[column])"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125h-9.75a1.125 1.125 0 01-1.125-1.125V7.875c0-.621.504-1.125 1.125-1.125H6.75a9.06 9.06 0 011.5.124m7.5 10.376h3.375c.621 0 1.125-.504 1.125-1.125V11.25c0-4.46-3.243-8.161-7.5-8.876a9.06 9.06 0 00-1.5-.124H9.375c-.621 0-1.125.504-1.125 1.125v3.5m7.5 10.375H9.375a1.125 1.125 0 01-1.125-1.125v-9.25m12 6.625v-1.875a3.375 3.375 0 00-3.375-3.375h-1.5a1.125 1.125 0 01-1.125-1.125v-1.5a3.375 3.375 0 00-3.375-3.375H9.75" />
+                </svg>
+              </button>
+              <span class="font-medium text-sm truncate">{{ column }}</span>
+            </div>
             <div class="w-3/4">
               <!-- Null/undefined values -->
               <div
@@ -63,7 +82,11 @@
                 <div class="text-sm" :class="{ 'line-clamp-5': !expandedFields[column] }">
                   {{ record[column] }}
                 </div>
-                <button class="btn btn-xs mt-1" @click="toggleFieldExpansion(column)">
+                <button 
+                  v-if="shouldShowExpandButton(record[column])" 
+                  class="btn btn-xs mt-1" 
+                  @click="toggleFieldExpansion(column)"
+                >
                   {{ expandedFields[column] ? 'Show less' : 'Show more' }}
                 </button>
               </div>
@@ -124,6 +147,7 @@ const props = defineProps({
 defineEmits(['close']);
 
 const expandedFields = ref({});
+const copyFeedback = ref('');
 
 function formatPreviewValue(value) {
   if (typeof value === 'object') {
@@ -154,7 +178,19 @@ function isArray(value) {
 }
 
 function isLongText(value) {
-  return typeof value === 'string' && value.length > 100;
+  if (typeof value !== 'string') return false;
+  
+  // Critérios mais precisos para determinar se um texto é longo
+  const hasMultipleLines = (value.match(/\n/g) || []).length > 2;
+  const isVeryLong = value.length > 200;
+  
+  // Verificação se o texto tem muitas palavras ou vai além das linhas visíveis
+  const lineCount = value.split('\n').length;
+  const wordCount = value.split(/\s+/).length;
+  const averageCharsPerLine = 80;
+  const estimatedLines = Math.max(lineCount, Math.ceil(value.length / averageCharsPerLine));
+  
+  return isVeryLong || hasMultipleLines || estimatedLines > 5 || wordCount > 50;
 }
 
 function isDateField(column) {
@@ -197,6 +233,54 @@ function formatJson(value) {
   }
 }
 
+function copyToClipboard(value) {
+  let textToCopy = '';
+  
+  if (value === null || value === undefined) {
+    textToCopy = '';
+  } else if (typeof value === 'object') {
+    textToCopy = JSON.stringify(value, null, 2);
+  } else if (typeof value === 'boolean') {
+    textToCopy = value ? 'true' : 'false';
+  } else {
+    textToCopy = String(value);
+  }
+  
+  navigator.clipboard.writeText(textToCopy)
+    .then(() => {
+      // Mostrar mensagem de sucesso
+      copyFeedback.value = 'Copied!';
+      
+      // Limpar a mensagem após 2 segundos
+      setTimeout(() => {
+        copyFeedback.value = '';
+      }, 2000);
+    })
+    .catch(err => {
+      console.error('Error copying text:', err);
+      copyFeedback.value = 'Error!';
+      setTimeout(() => {
+        copyFeedback.value = '';
+      }, 2000);
+    });
+}
+
+function shouldShowExpandButton(value) {
+  if (typeof value !== 'string') return false;
+  
+  // Verificações para determinar se o texto precisa de um botão de expandir
+  const hasMultipleLines = (value.match(/\n/g) || []).length > 3;
+  const isVeryLong = value.length > 250;
+  
+  // Verificação adicional se o texto realmente vai além das 5 linhas exibidas
+  const lineCount = value.split('\n').length;
+  const wordCount = value.split(/\s+/).length;
+  const averageCharsPerLine = 80; // Estimativa média de caracteres por linha
+  const estimatedLines = Math.max(lineCount, Math.ceil(value.length / averageCharsPerLine));
+  
+  return isVeryLong || hasMultipleLines || estimatedLines > 5;
+}
+
 watch(
   () => props.record,
   () => {
@@ -212,5 +296,9 @@ watch(
   -webkit-line-clamp: 5;
   -webkit-box-orient: vertical;
   overflow: hidden;
+}
+
+.transition-opacity {
+  transition: opacity 0.3s ease-in-out;
 }
 </style>
