@@ -56,6 +56,7 @@
                   />
                 </svg>
                 <span class="hidden sm:inline">Live</span>
+                <span v-if="updateCounter > 0" class="badge badge-sm badge-accent">{{ updateCounter }}</span>
               </div>
             </button>
             <div
@@ -89,6 +90,13 @@
                     />
                   </label>
                 </div>
+                <button 
+                  v-if="updateCounter > 0"
+                  class="btn btn-xs btn-ghost mt-2 w-full"
+                  @click="clearUpdateCounter"
+                >
+                  Clear counter ({{ updateCounter }})
+                </button>
               </div>
             </div>
           </div>
@@ -1691,6 +1699,9 @@ onMounted(() => {
 
   window.addEventListener('keydown', handleKeyDown);
   window.addEventListener('keyup', handleKeyUp);
+  
+  window.addEventListener('focus', () => { windowInFocus.value = true; });
+  window.addEventListener('blur', () => { windowInFocus.value = false; });
 });
 
 onUnmounted(() => {
@@ -1701,6 +1712,9 @@ onUnmounted(() => {
   document.removeEventListener('mouseup', stopColumnResize);
 
   stopLiveUpdates();
+  
+  window.removeEventListener('focus', () => { windowInFocus.value = true; });
+  window.removeEventListener('blur', () => { windowInFocus.value = false; });
 });
 
 function toggleAdvancedFilter() {
@@ -2220,6 +2234,8 @@ const updatedRows = ref([]);
 const highlightChanges = ref(true);
 const loadStartTime = ref(0);
 const isLiveUpdating = ref(false);
+const updateCounter = ref(0);
+const windowInFocus = ref(true);
 
 function updateLiveDelay() {
   liveUpdateDelay.value = liveUpdateDelaySeconds.value * 1000;
@@ -2247,6 +2263,7 @@ function toggleLiveTable() {
   }
 
   if (isLiveTableActive.value) {
+    clearUpdateCounter();
     startLiveUpdates();
     showAlert(
       `Live table updates activated for ${props.tableName} - refreshing every ${liveUpdateDelaySeconds.value}s`,
@@ -2254,6 +2271,7 @@ function toggleLiveTable() {
     );
   } else {
     stopLiveUpdates();
+    clearUpdateCounter();
     showAlert('Live table updates stopped', 'info');
   }
 }
@@ -2305,6 +2323,8 @@ function detectChangedRows() {
 
   if (!previousDataSnapshot.value.length) return;
 
+  let changesDetected = 0;
+
   paginatedData.value.forEach((currentRow, index) => {
     const previousRow = previousDataSnapshot.value.find(row => {
       if (row.id !== undefined && currentRow.id !== undefined) {
@@ -2315,8 +2335,15 @@ function detectChangedRows() {
 
     if (!previousRow || JSON.stringify(currentRow) !== JSON.stringify(previousRow)) {
       updatedRows.value.push(index);
+      changesDetected++;
     }
   });
+
+  // Only count updates when window is not in focus
+  if (changesDetected > 0 && !windowInFocus.value) {
+    updateCounter.value += changesDetected;
+    updateAppIcon(updateCounter.value);
+  }
 
   if (updatedRows.value.length > 0) {
     setTimeout(() => {
@@ -2353,6 +2380,18 @@ function closePreviewModal() {
   setTimeout(() => {
     previewingRecord.value = null;
   }, 300);
+}
+
+function clearUpdateCounter() {
+  updateCounter.value = 0;
+  updateAppIcon(0);
+}
+
+function updateAppIcon(count) {
+  // Use the correct API to update favicon badge if supported
+  if (window.api && window.api.setAppBadge) {
+    window.api.setAppBadge(count);
+  }
 }
 </script>
 

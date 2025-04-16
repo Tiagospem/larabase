@@ -5506,3 +5506,20 @@ ipcMain.handle('truncateTable', async (event, config) => {
     };
   }
 });
+
+// Add app badge handler
+ipcMain.handle('set-app-badge', async (_, count) => {
+  try {
+    // For macOS and some Linux distributions
+    if (process.platform === 'darwin' || process.platform === 'linux') {
+      app.setBadgeCount(count || 0);
+    }
+    // For Windows with electron-windows-badge or similar
+    // This would need a separate package and implementation
+    
+    return { success: true };
+  } catch (error) {
+    console.error('Error setting app badge:', error);
+    return { success: false, error: error.message };
+  }
+});

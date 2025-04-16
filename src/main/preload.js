@@ -205,7 +205,10 @@ try {
     updateConnectionDatabase: (connectionId, newDatabase) =>
       safeIpcRenderer.invoke('update-connection-database', connectionId, newDatabase),
 
-    getFileStats: filePath => ipcRenderer.invoke('get-file-stats', filePath)
+    getFileStats: filePath => ipcRenderer.invoke('get-file-stats', filePath),
+    
+    // App badge functionality
+    setAppBadge: count => safeIpcRenderer.invoke('set-app-badge', count)
   });
 } catch (error) {
   console.error(error);
