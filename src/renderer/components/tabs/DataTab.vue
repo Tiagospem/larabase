@@ -56,12 +56,14 @@
                   />
                 </svg>
                 <span class="hidden sm:inline">Live</span>
-                <span v-if="updateCounter > 0" class="badge badge-sm badge-accent">{{ updateCounter }}</span>
+                <span v-if="updateCounter > 0" class="badge badge-sm badge-accent">{{
+                  updateCounter
+                }}</span>
               </div>
             </button>
             <div
               tabindex="0"
-              class="dropdown-content z-[1] menu p-2 shadow bg-base-200 rounded-box w-52"
+              class="dropdown-content z-[40] menu p-2 shadow bg-base-200 rounded-box w-52"
             >
               <div class="p-2">
                 <div class="form-control">
@@ -90,7 +92,7 @@
                     />
                   </label>
                 </div>
-                <button 
+                <button
                   v-if="updateCounter > 0"
                   class="btn btn-xs btn-ghost mt-2 w-full"
                   @click="clearUpdateCounter"
@@ -621,7 +623,7 @@
       </div>
     </div>
 
-    <div class="modal" :class="{ 'modal-open': showEditModal }">
+    <div class="modal z-50" :class="{ 'modal-open': showEditModal }">
       <div class="modal-box max-w-4xl">
         <h3 class="font-bold text-lg mb-4 flex justify-between items-center">
           Edit Record
@@ -703,7 +705,7 @@
       <div class="modal-backdrop" @click="closeEditModal" />
     </div>
 
-    <div class="modal" :class="{ 'modal-open': showFilterModal }">
+    <div class="modal z-50" :class="{ 'modal-open': showFilterModal }">
       <div class="modal-box max-w-3xl">
         <h3 class="font-bold text-lg mb-4 flex justify-between items-center">
           Advanced Filter
@@ -817,7 +819,7 @@
     </div>
 
     <!-- Confirm truncate modal -->
-    <div class="modal" :class="{ 'modal-open': showTruncateConfirm }">
+    <div class="modal z-50" :class="{ 'modal-open': showTruncateConfirm }">
       <div class="modal-box">
         <h3 class="font-bold text-lg text-error">⚠️ Truncate Table</h3>
         <p class="py-4">
@@ -833,7 +835,7 @@
     </div>
 
     <!-- Confirm delete modal -->
-    <div class="modal" :class="{ 'modal-open': showDeleteConfirm }">
+    <div class="modal z-50" :class="{ 'modal-open': showDeleteConfirm }">
       <div class="modal-box">
         <h3 class="font-bold text-lg text-error">Delete Records</h3>
         <p class="py-4">
@@ -1699,9 +1701,13 @@ onMounted(() => {
 
   window.addEventListener('keydown', handleKeyDown);
   window.addEventListener('keyup', handleKeyUp);
-  
-  window.addEventListener('focus', () => { windowInFocus.value = true; });
-  window.addEventListener('blur', () => { windowInFocus.value = false; });
+
+  window.addEventListener('focus', () => {
+    windowInFocus.value = true;
+  });
+  window.addEventListener('blur', () => {
+    windowInFocus.value = false;
+  });
 });
 
 onUnmounted(() => {
@@ -1712,9 +1718,13 @@ onUnmounted(() => {
   document.removeEventListener('mouseup', stopColumnResize);
 
   stopLiveUpdates();
-  
-  window.removeEventListener('focus', () => { windowInFocus.value = true; });
-  window.removeEventListener('blur', () => { windowInFocus.value = false; });
+
+  window.removeEventListener('focus', () => {
+    windowInFocus.value = true;
+  });
+  window.removeEventListener('blur', () => {
+    windowInFocus.value = false;
+  });
 });
 
 function toggleAdvancedFilter() {
@@ -2339,7 +2349,6 @@ function detectChangedRows() {
     }
   });
 
-  // Only count updates when window is not in focus
   if (changesDetected > 0 && !windowInFocus.value) {
     updateCounter.value += changesDetected;
     updateAppIcon(updateCounter.value);
@@ -2388,7 +2397,6 @@ function clearUpdateCounter() {
 }
 
 function updateAppIcon(count) {
-  // Use the correct API to update favicon badge if supported
   if (window.api && window.api.setAppBadge) {
     window.api.setAppBadge(count);
   }
