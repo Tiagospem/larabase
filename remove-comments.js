@@ -1,11 +1,6 @@
-import fs from 'fs';
-import path from 'path';
-import strip from 'strip-comments';
-import { fileURLToPath } from 'url';
-
-// Get current directory
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+const fs = require('fs');
+const path = require('path');
+const strip = require('strip-comments');
 
 // Configuration - file types to process
 const fileExtensions = ['.js', '.jsx', '.ts', '.tsx', '.css', '.scss', '.html', '.vue'];

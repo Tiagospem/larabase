@@ -543,11 +543,11 @@ async function loadFactoryContent (filePath) {
       factoryContent.value = result.content;
     } else {
       console.error('Error loading factory content:', result.message);
-      factoryContent.value = '
+      factoryContent.value = 'Error loading factory content: ' + result.message;
     }
   } catch (error) {
     console.error('Error reading factory file:', error);
-    factoryContent.value = '// Unable to load factory content';
+    factoryContent.value = 'Unable to load factory content';
   }
 }
 
