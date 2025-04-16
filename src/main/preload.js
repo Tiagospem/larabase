@@ -13,6 +13,14 @@ const safeIpcRenderer = {
 try {
   contextBridge.exposeInMainWorld('api', {
     selectSqlDumpFile: () => safeIpcRenderer.invoke('select-sql-dump-file'),
+    cancelDatabaseRestore: connectionId =>
+      safeIpcRenderer.invoke('cancel-database-restore', connectionId),
+    getFileStats: filePath => ipcRenderer.invoke('get-file-stats', filePath),
+    extractTablesFromSql: filePath => safeIpcRenderer.invoke('extract-tables-from-sql', filePath),
+    updateConnectionDatabase: (connectionId, newDatabase) =>
+      safeIpcRenderer.invoke('update-connection-database', connectionId, newDatabase),
+    simpleDatabaseRestore: config =>
+      safeIpcRenderer.invoke('simple-database-restore-unified', config),
 
     getConnections: () => safeIpcRenderer.invoke('get-connections'),
     saveConnections: connections => safeIpcRenderer.invoke('save-connections', connections),
@@ -174,7 +182,6 @@ try {
         ipcRenderer.removeAllListeners(channelId);
       }
     },
-    extractTablesFromSql: filePath => safeIpcRenderer.invoke('extract-tables-from-sql', filePath),
     send: (channel, data) => {
       if (typeof channel !== 'string') return;
 
@@ -184,13 +191,6 @@ try {
         ipcRenderer.send(channel, data);
       }
     },
-    simpleDatabaseRestore: config =>
-      safeIpcRenderer.invoke('simple-database-restore-unified', config),
-    cancelDatabaseRestore: connectionId =>
-      safeIpcRenderer.invoke('cancel-database-restore', connectionId),
-    updateConnectionDatabase: (connectionId, newDatabase) =>
-      safeIpcRenderer.invoke('update-connection-database', connectionId, newDatabase),
-    getFileStats: filePath => ipcRenderer.invoke('get-file-stats', filePath),
     setAppBadge: count => safeIpcRenderer.invoke('set-app-badge', count)
   });
 } catch (error) {

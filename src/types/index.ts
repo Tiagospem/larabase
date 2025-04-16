@@ -7,7 +7,6 @@ export interface ApiResponse<T> {
   error?: string;
 }
 
-// Example of a database connection type
 export interface DbConnection {
   id: string;
   name: string;
@@ -27,5 +26,3 @@ export interface DbConnection {
     passphrase?: string;
   };
 }
-
-// You can add more type definitions as you convert more of the codebase 

@@ -334,6 +334,9 @@ async function startRestore() {
     return;
   }
 
+  let hasErrors = false;
+  let errorMessage = '';
+
   try {
     isRestoring.value = true;
     restoreStatus.value = 'Starting database restoration...';
@@ -347,6 +350,7 @@ async function startRestore() {
     updateStatus('Preparing restoration...', 20);
 
     let targetDatabase;
+
     if (overwriteCurrentDb.value) {
       targetDatabase = restoreConfig.value.connection.database;
     } else {
@@ -362,6 +366,7 @@ async function startRestore() {
     };
 
     await new Promise(resolve => setTimeout(resolve, 300));
+
     updateStatus('Analyzing database configuration...', 30);
 
     let timeoutIds = [];
@@ -390,7 +395,9 @@ async function startRestore() {
 
     if (result.success) {
       updateStatus('Database restored successfully!', 100);
+
       showAlert('Database restored successfully', 'success');
+
       isRestoring.value = false;
       isRestoreModalOpen.value = false;
 
@@ -402,14 +409,21 @@ async function startRestore() {
         await updateConnectionDatabase(restoreConfig.value.connection.id, targetDatabase);
       }
     } else {
-      throw new Error(result.message || 'Unknown error during restoration');
+      hasErrors = true;
+      errorMessage = result.message || 'Unknown error during restoration';
     }
   } catch (error) {
     console.error('Error restoring database:', error);
+
     restoreStatus.value = `Error: ${error.message}`;
     restoreProgress.value = 0;
     isRestoring.value = false;
+
     showAlert(`Error restoring database: ${error.message}`, 'error');
+  }
+
+  if (hasErrors) {
+    throw new Error(errorMessage);
   }
 }
 
