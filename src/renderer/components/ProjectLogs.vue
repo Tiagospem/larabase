@@ -185,29 +185,33 @@
         </span>
       </h3>
       <div v-if="selectedLog" class="py-4">
-        <p class="text-sm mb-2">
-          <span class="font-semibold">Timestamp:</span>
-          {{ formatTimestamp(selectedLog.timestamp, true) }}
-        </p>
-        <p class="text-sm mb-2"><span class="font-semibold">File:</span> {{ selectedLog.file }}</p>
-        <div
-          class="bg-base-200 p-3 rounded-lg overflow-auto max-h-80 whitespace-pre-wrap font-mono text-sm"
-        >
-          {{ selectedLog.message }}
-        </div>
-        <div v-if="selectedLog.stack" class="mt-4">
-          <p class="font-semibold mb-1">Stack Trace:</p>
+        <!-- Log details section - collapsible -->
+        <div v-if="!hideLogDetails || !analysisResult" class="mb-4">
+          <div class="flex justify-between items-center mb-2">
+            <p class="text-sm">
+              <span class="font-semibold">Timestamp:</span>
+              {{ formatTimestamp(selectedLog.timestamp, true) }}
+            </p>
+            <p class="text-sm"><span class="font-semibold">File:</span> {{ selectedLog.file }}</p>
+          </div>
           <div
-            class="bg-base-200 p-3 rounded-lg overflow-auto max-h-80 whitespace-pre-wrap font-mono text-xs"
+            class="bg-base-200 p-3 rounded-lg overflow-auto max-h-80 whitespace-pre-wrap font-mono text-sm"
           >
-            {{ selectedLog.stack }}
+            {{ selectedLog.message }}
+          </div>
+          <div v-if="selectedLog.stack" class="mt-4">
+            <p class="font-semibold mb-1">Stack Trace:</p>
+            <div
+              class="bg-base-200 p-3 rounded-lg overflow-auto max-h-80 whitespace-pre-wrap font-mono text-xs"
+            >
+              {{ selectedLog.stack }}
+            </div>
           </div>
         </div>
         
         <!-- Add AI Analysis button and result section -->
-        <div class="mt-4 flex justify-between items-center" v-if="hasOpenAIConfig && !isAnalyzing">
+        <div class="mt-4 flex justify-between items-center" v-if="hasOpenAIConfig && !isAnalyzing && !analysisResult">
           <button 
-            v-if="!analysisResult" 
             class="btn btn-accent btn-sm" 
             @click="performLogAnalysis"
           >
@@ -236,7 +240,15 @@
         
         <div v-if="analysisResult" class="mt-4">
           <div class="flex justify-between items-center mb-2">
-            <h4 class="font-semibold">AI Analysis</h4>
+            <h4 class="font-semibold flex items-center gap-2">
+              AI Analysis
+              <button 
+                class="btn btn-xs btn-outline"
+                @click="toggleLogDetails"
+              >
+                {{ hideLogDetails ? 'Show Log' : 'Hide Log' }}
+              </button>
+            </h4>
             <button
               class="btn btn-xs btn-ghost"
               title="Copy to clipboard"
@@ -267,6 +279,7 @@
         <button class="btn btn-primary" @click="showLogDetails = false">Close</button>
       </div>
     </div>
+    <div class="modal-backdrop" @click="showLogDetails = false" />
   </div>
 
   <!-- Confirm delete modal -->
@@ -328,6 +341,7 @@ const showDeleteConfirm = ref(false);
 // New refs for AI analysis
 const isAnalyzing = ref(false);
 const analysisResult = ref('');
+const hideLogDetails = ref(false);
 const hasOpenAIConfig = computed(() => {
   return settingsStore.isAIConfigured;
 });
@@ -375,6 +389,7 @@ function getLogTypeBadgeClass(type) {
 function viewLogDetails(log) {
   selectedLog.value = log;
   analysisResult.value = '';
+  hideLogDetails.value = false;
   showLogDetails.value = true;
 }
 
@@ -468,6 +483,7 @@ async function performLogAnalysis() {
     
     const result = await analyzeLogWithAI(selectedLog.value);
     analysisResult.value = result;
+    hideLogDetails.value = true; // Auto-hide log details when analysis is ready
   } catch (error) {
     console.error('Error analyzing log with AI:', error);
     showAlert(`Failed to analyze log: ${error.message}`, 'error');
@@ -484,6 +500,11 @@ async function copyAnalysisToClipboard() {
   } catch (error) {
     showAlert('Failed to copy to clipboard', 'error');
   }
+}
+
+// Function to toggle log details visibility
+function toggleLogDetails() {
+  hideLogDetails.value = !hideLogDetails.value;
 }
 
 watch(
@@ -517,5 +538,38 @@ onMounted(async () => {
 .modal-box {
   width: 90%;
   max-width: 900px;
+}
+
+/* Animação de transição para mostrar/ocultar log */
+.mb-4 {
+  transition: all 0.3s ease;
+}
+
+/* Melhorar legibilidade da análise */
+.prose-invert h1,
+.prose-invert h2,
+.prose-invert h3 {
+  margin-top: 1em;
+  margin-bottom: 0.5em;
+  font-weight: 600;
+}
+
+.prose-invert ul,
+.prose-invert ol {
+  padding-left: 1.5em;
+  margin-bottom: 1em;
+}
+
+.prose-invert code {
+  background-color: rgba(0, 0, 0, 0.2);
+  padding: 0.2em 0.4em;
+  border-radius: 0.2em;
+}
+
+.prose-invert pre {
+  margin: 1em 0;
+  padding: 1em;
+  background-color: rgba(0, 0, 0, 0.3);
+  border-radius: 0.5em;
 }
 </style>
