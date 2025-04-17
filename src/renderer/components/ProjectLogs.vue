@@ -242,6 +242,7 @@
           <div class="flex justify-between items-center mb-2">
             <h4 class="font-semibold flex items-center gap-2">
               AI Analysis
+              <span v-if="loadedFromCache" class="badge badge-sm badge-accent">Cached</span>
               <button 
                 class="btn btn-xs btn-outline"
                 @click="toggleLogDetails"
@@ -249,26 +250,38 @@
                 {{ hideLogDetails ? 'Show Log' : 'Hide Log' }}
               </button>
             </h4>
-            <button
-              class="btn btn-xs btn-ghost"
-              title="Copy to clipboard"
-              @click="copyAnalysisToClipboard"
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke-width="1.5"
-                stroke="currentColor"
-                class="w-4 h-4"
+            <div class="flex gap-2">
+              <button 
+                v-if="loadedFromCache" 
+                class="btn btn-xs btn-ghost" 
+                title="Refresh analysis"
+                @click="performLogAnalysis"
               >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125h-9.75a1.125 1.125 0 0 1-1.125-1.125V7.875c0-.621.504-1.125 1.125-1.125H6.75a9.06 9.06 0 0 1 1.5.124m7.5 10.376h3.375c.621 0 1.125-.504 1.125-1.125V11.25c0-4.46-3.243-8.161-7.5-8.876a9.06 9.06 0 0 0-1.5-.124H9.375c-.621 0-1.125.504-1.125 1.125v3.5m7.5 10.375H9.375a1.125 1.125 0 0 1-1.125-1.125v-9.25m12 6.625v-1.875a3.375 3.375 0 0 0-3.375-3.375h-1.5a1.125 1.125 0 0 1-1.125-1.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H9.75"
-                />
-              </svg>
-            </button>
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
+                </svg>
+              </button>
+              <button
+                class="btn btn-xs btn-ghost"
+                title="Copy to clipboard"
+                @click="copyAnalysisToClipboard"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke-width="1.5"
+                  stroke="currentColor"
+                  class="w-4 h-4"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125h-9.75a1.125 1.125 0 0 1-1.125-1.125V7.875c0-.621.504-1.125 1.125-1.125H6.75a9.06 9.06 0 0 1 1.5.124m7.5 10.376h3.375c.621 0 1.125-.504 1.125-1.125V11.25c0-4.46-3.243-8.161-7.5-8.876a9.06 9.06 0 0 0-1.5-.124H9.375c-.621 0-1.125.504-1.125 1.125v3.5m7.5 10.375H9.375a1.125 1.125 0 0 1-1.125-1.125v-9.25m12 6.625v-1.875a3.375 3.375 0 0 0-3.375-3.375h-1.5a1.125 1.125 0 0 1-1.125-1.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H9.75"
+                  />
+                </svg>
+              </button>
+            </div>
           </div>
           <div class="bg-base-200 p-4 rounded-lg overflow-auto max-h-96 prose prose-sm prose-invert">
             <div v-html="markdownToHtml(analysisResult)"></div>
@@ -342,9 +355,53 @@ const showDeleteConfirm = ref(false);
 const isAnalyzing = ref(false);
 const analysisResult = ref('');
 const hideLogDetails = ref(false);
+const loadedFromCache = ref(false);
 const hasOpenAIConfig = computed(() => {
   return settingsStore.isAIConfigured;
 });
+
+// Cache de análises para evitar múltiplas chamadas à API
+const analysisCache = ref({});
+
+// Carregar análises do localStorage
+function loadAnalysisCache() {
+  try {
+    console.log('Loading analysis cache for connection ID:', props.connectionId);
+    const cacheKey = `analysis_cache_${props.connectionId}`;
+    const savedCache = localStorage.getItem(cacheKey);
+    
+    if (savedCache) {
+      try {
+        const parsedCache = JSON.parse(savedCache);
+        console.log('Loaded analysis cache from localStorage:', Object.keys(parsedCache).length, 'entries');
+        console.log('Cache contents sample:', Object.keys(parsedCache).slice(0, 3));
+        analysisCache.value = parsedCache;
+      } catch (parseError) {
+        console.error('Error parsing analysis cache:', parseError);
+        analysisCache.value = {};
+      }
+    } else {
+      console.log('No cache found with key:', cacheKey);
+      analysisCache.value = {};
+    }
+  } catch (error) {
+    console.error('Error loading analysis cache:', error);
+    // Em caso de erro, iniciar com um cache vazio
+    analysisCache.value = {};
+  }
+}
+
+// Salvar análises no localStorage
+function saveAnalysisCache() {
+  try {
+    const cacheKey = `analysis_cache_${props.connectionId}`;
+    const cacheJson = JSON.stringify(analysisCache.value);
+    localStorage.setItem(cacheKey, cacheJson);
+    console.log('Saved analysis cache with key:', cacheKey, 'entries:', Object.keys(analysisCache.value).length);
+  } catch (error) {
+    console.error('Error saving analysis cache:', error);
+  }
+}
 
 const filteredLogs = computed(() => {
   let filtered = [...logs.value];
@@ -388,9 +445,51 @@ function getLogTypeBadgeClass(type) {
 
 function viewLogDetails(log) {
   selectedLog.value = log;
-  analysisResult.value = '';
-  hideLogDetails.value = false;
+  
+  // Debug para entender a estrutura do log
+  console.log('Log being viewed:', {
+    id: log.id,
+    timestamp: log.timestamp,
+    type: log.type,
+    file: log.file,
+    hasStack: !!log.stack
+  });
+  
+  // Criar uma chave estável para o cache - combinar timestamp, tipo e parte da mensagem
+  const stableId = createStableLogId(log);
+  
+  // Verificar se já existe uma análise em cache para este log
+  if (analysisCache.value[stableId]) {
+    console.log('Analysis found in cache for log ID:', stableId);
+    analysisResult.value = analysisCache.value[stableId];
+    hideLogDetails.value = true; // Auto-hide log details if analysis exists
+    loadedFromCache.value = true; // Indica que a análise foi carregada do cache
+  } else {
+    console.log('No analysis in cache for log ID:', stableId);
+    analysisResult.value = '';
+    hideLogDetails.value = false; // Show log details if no analysis
+    loadedFromCache.value = false;
+  }
+  
   showLogDetails.value = true;
+}
+
+// Função para criar um ID estável para o log (para uso como chave de cache)
+function createStableLogId(log) {
+  // Combinamos timestamp, tipo e um hash parcial da mensagem para criar um ID único e estável
+  const messageHash = hashString(log.message).substring(0, 10);
+  return `${log.timestamp}_${log.type}_${messageHash}`;
+}
+
+// Função simples de hash para mensagens
+function hashString(str) {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    const char = str.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash; // Conversão para inteiro de 32 bits
+  }
+  return Math.abs(hash).toString(16); // Retornar como string hexadecimal
 }
 
 function confirmDeleteAllLogs() {
@@ -405,6 +504,9 @@ async function deleteAllLogs() {
 
     if (result.success) {
       logs.value = [];
+      // Limpar o cache de análises quando todos os logs forem apagados
+      analysisCache.value = {};
+      saveAnalysisCache();
       showDeleteConfirm.value = false;
       showAlert(`Cleared ${result.clearedFiles || 'all'} log files`, 'success');
     } else {
@@ -448,15 +550,51 @@ async function refreshLogs() {
     const response = await window.api.getProjectLogs({ projectPath: props.projectPath });
     console.log('Got logs response:', response);
     logs.value = response || [];
+    
+    // Limpar análises obsoletas - manter apenas para logs existentes
+    cleanupObsoleteAnalyses();
   } catch (error) {
     console.error('Failed to load logs:', error);
     logs.value = [];
   }
 }
 
+// Função para limpar análises obsoletas
+function cleanupObsoleteAnalyses() {
+  if (Object.keys(analysisCache.value).length === 0 || logs.value.length === 0) {
+    return;
+  }
+  
+  // Criar um conjunto de IDs estáveis de logs existentes
+  const logStableIds = new Set(logs.value.map(log => createStableLogId(log)));
+  
+  // Extrair IDs do cache
+  const cachedIds = Object.keys(analysisCache.value);
+  console.log(`Checking ${cachedIds.length} cached analyses against ${logStableIds.size} logs`);
+  
+  // Filtrar o cache para manter apenas análises de logs existentes
+  const obsoleteIds = cachedIds.filter(id => !logStableIds.has(id));
+  
+  if (obsoleteIds.length > 0) {
+    console.log(`Removing ${obsoleteIds.length} obsolete analyses from cache:`, obsoleteIds);
+    
+    // Remover análises obsoletas
+    obsoleteIds.forEach(id => {
+      delete analysisCache.value[id];
+    });
+    
+    // Salvar o cache atualizado
+    saveAnalysisCache();
+  } else {
+    console.log('No obsolete analyses found in cache');
+  }
+}
+
 function close() {
   // Reset analysis results when closing
   analysisResult.value = '';
+  hideLogDetails.value = false;
+  loadedFromCache.value = false;
   emit('close');
 }
 
@@ -472,6 +610,7 @@ async function performLogAnalysis() {
   
   isAnalyzing.value = true;
   analysisResult.value = '';
+  loadedFromCache.value = false; // Reset cache indicator
   
   try {
     await settingsStore.loadSettings();
@@ -483,6 +622,15 @@ async function performLogAnalysis() {
     
     const result = await analyzeLogWithAI(selectedLog.value);
     analysisResult.value = result;
+    
+    // Salvar a análise no cache usando a chave estável
+    if (selectedLog.value) {
+      const stableId = createStableLogId(selectedLog.value);
+      console.log('Saving analysis to cache with stable ID:', stableId);
+      analysisCache.value[stableId] = result;
+      saveAnalysisCache();
+    }
+    
     hideLogDetails.value = true; // Auto-hide log details when analysis is ready
   } catch (error) {
     console.error('Error analyzing log with AI:', error);
@@ -527,6 +675,26 @@ watch(
 
 onMounted(async () => {
   await settingsStore.loadSettings();
+  
+  // Verificar se o localStorage está funcionando
+  try {
+    const testKey = 'larabase_storage_test';
+    localStorage.setItem(testKey, 'test');
+    const testValue = localStorage.getItem(testKey);
+    localStorage.removeItem(testKey);
+    
+    if (testValue === 'test') {
+      console.log('localStorage is working correctly');
+    } else {
+      console.error('localStorage test failed: set value not retrieved');
+      showAlert('Warning: Browser storage is not working properly. Analysis cache may not persist.', 'warning');
+    }
+  } catch (storageError) {
+    console.error('localStorage test error:', storageError);
+    showAlert('Warning: Browser storage is not available. Analysis cache will not persist.', 'warning');
+  }
+  
+  loadAnalysisCache();
   
   if (props.projectPath) {
     refreshLogs();
