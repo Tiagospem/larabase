@@ -26,8 +26,8 @@ try {
     validateLaravelProject: projectPath =>
       safeIpcRenderer.invoke('validate-laravel-project', projectPath),
     readEnvFile: projectPath => safeIpcRenderer.invoke('read-env-file', projectPath),
-
     getConnections: () => safeIpcRenderer.invoke('get-connections'),
+
     saveConnections: connections => safeIpcRenderer.invoke('save-connections', connections),
     getOpenTabs: () => safeIpcRenderer.invoke('get-open-tabs'),
     saveOpenTabs: tabs => safeIpcRenderer.invoke('save-open-tabs', tabs),

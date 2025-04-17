@@ -275,15 +275,6 @@ app.on('window-all-closed', () => {
   }
 });
 
-ipcMain.handle('get-connections', () => {
-  try {
-    return store.get('connections') || [];
-  } catch (error) {
-    console.error('Error retrieving connections:', error);
-    return [];
-  }
-});
-
 ipcMain.handle('save-connections', (event, connections) => {
   try {
     store.set('connections', connections);
