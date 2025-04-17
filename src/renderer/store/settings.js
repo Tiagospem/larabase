@@ -10,7 +10,7 @@ export const useSettingsStore = defineStore('settings', () => {
     },
     gemini: {
       apiKey: '',
-      model: 'gemini-2.0-flash'  // Make sure this is consistent with the v1beta API
+      model: 'gemini-2.0-flash' // Make sure this is consistent with the v1beta API
     },
     language: 'en',
     devMode: false
@@ -31,14 +31,14 @@ export const useSettingsStore = defineStore('settings', () => {
             if (!savedSettings.aiProvider) {
               savedSettings.aiProvider = 'openai';
             }
-            
+
             if (!savedSettings.gemini) {
               savedSettings.gemini = {
                 apiKey: '',
                 model: 'gemini-2.0-flash'
               };
             }
-            
+
             settings.value = savedSettings;
           }
         } catch (err) {
@@ -87,7 +87,7 @@ export const useSettingsStore = defineStore('settings', () => {
       return option ? option.label : code;
     };
   });
-  
+
   // Check if AI provider is configured
   const isAIConfigured = computed(() => {
     const provider = settings.value.aiProvider;

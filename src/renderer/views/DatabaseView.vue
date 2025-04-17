@@ -261,60 +261,7 @@
       </div>
     </header>
 
-    <div v-if="openTabs.length > 0" class="tabs-container border-b border-neutral bg-base-300">
-      <button v-if="hasScrollLeft" class="tab-scroll-button tab-scroll-left" @click="scrollLeft">
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke-width="1.5"
-          stroke="currentColor"
-          class="w-4 h-4"
-        >
-          <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
-        </svg>
-      </button>
-
-      <div ref="tabsScrollRef" class="tabs-scroll" @scroll="checkScrollPosition">
-        <div
-          v-for="tab in openTabs"
-          :key="tab.id"
-          :class="['tab', { active: tab.id === activeTabId }]"
-          draggable="true"
-          @click="activateTab(tab.id)"
-          @dragstart="handleDragStart($event, tab.id)"
-          @dragover.prevent
-          @drop="handleDrop($event, tab.id)"
-        >
-          <span class="tab-title">{{ tab.title }}</span>
-          <button class="close-icon" @click.stop="closeTab(tab.id)">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke-width="1.5"
-              stroke="currentColor"
-              class="w-4 h-4"
-            >
-              <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
-        </div>
-      </div>
-
-      <button v-if="hasScrollRight" class="tab-scroll-button tab-scroll-right" @click="scrollRight">
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke-width="1.5"
-          stroke="currentColor"
-          class="w-4 h-4"
-        >
-          <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
-        </svg>
-      </button>
-    </div>
+    <MainTabs ref="mainTabsRef" />
 
     <div class="flex flex-1 overflow-hidden">
       <TablesSidebar
@@ -356,8 +303,8 @@
             :connection-id="activeTab.connectionId"
             :table-name="activeTab.tableName"
             :filter="activeTab.filter || ''"
-            @update-tab-data="handleUpdateTabData"
-            @open-tab="handleOpenTab"
+            @update-tab-data="mainTabsRef.handleUpdateTabData"
+            @open-tab="mainTabsRef.handleOpenTab"
             @open-database-switcher="handleDatabaseSwitcherFromChild"
           />
         </keep-alive>
@@ -538,6 +485,7 @@ import DatabaseDiagram from '../components/DatabaseDiagram.vue';
 import Settings from '../components/Settings.vue';
 import ArtisanCommands from '../components/ArtisanCommands.vue';
 import CommandOutput from '../components/CommandOutput.vue';
+import MainTabs from '../components/database/MainTabs.vue';
 
 const TableContentComponent = markRaw(TableContent);
 
@@ -551,6 +499,7 @@ const connectionsStore = useConnectionsStore();
 const databaseStore = useDatabaseStore();
 const tabsStore = useTabsStore();
 
+const mainTabsRef = ref(null);
 const sidebarWidth = ref(240);
 const initialSidebarLoaded = ref(false);
 const isResizing = ref(false);
@@ -560,10 +509,6 @@ const showConnectionInfo = ref(false);
 const showProjectLogs = ref(false);
 const showLiveUpdates = ref(false);
 const showDatabaseDiagram = ref(false);
-const draggingTabId = ref(null);
-const tabsScrollRef = ref(null);
-const hasScrollLeft = ref(false);
-const hasScrollRight = ref(false);
 const showTablesModelsModal = ref(false);
 const allTablesModelsJson = ref('');
 const showSettings = ref(false);
@@ -576,8 +521,6 @@ const connection = computed(() => {
   return connectionsStore.getConnection(connectionId.value);
 });
 
-const openTabs = computed(() => tabsStore.openTabs);
-const activeTabId = computed(() => tabsStore.activeTabId);
 const activeTab = computed(() => tabsStore.activeTab);
 
 function openTable(table, filter) {
@@ -589,35 +532,10 @@ function openTable(table, filter) {
       filter: filter || ''
     });
     nextTick(() => {
-      scrollToActiveTab();
+      mainTabsRef.value.scrollToActiveTab();
     });
   } catch (error) {
     console.error(error);
-  }
-}
-
-function activateTab(tabId) {
-  tabsStore.activateTab(tabId);
-  
-  // Trigger a refresh event to update UI components in the tab
-  nextTick(() => {
-    // Using custom event to notify all components about tab activation
-    window.dispatchEvent(new CustomEvent('tab-activated', { 
-      detail: { tabId }
-    }));
-    
-    scrollToActiveTab();
-  });
-}
-
-function closeTab(tabId) {
-  tabsStore.removeTab(tabId);
-}
-
-function handleUpdateTabData(tabName, data) {
-  const tab = openTabs.value.find(t => t.tableName === tabName);
-  if (tab) {
-    tabsStore.updateTabData(tab.id, data);
   }
 }
 
@@ -658,97 +576,11 @@ function stopResize() {
   localStorage.setItem('sidebarWidth', sidebarWidth.value.toString());
 }
 
-function handleDragStart(event, tabId) {
-  draggingTabId.value = tabId;
-  event.dataTransfer.effectAllowed = 'move';
-}
-
-function handleDrop(event, targetTabId) {
-  if (draggingTabId.value === null) return;
-
-  const draggedTabIndex = openTabs.value.findIndex(tab => tab.id === draggingTabId.value);
-  const targetTabIndex = openTabs.value.findIndex(tab => tab.id === targetTabId);
-
-  if (draggedTabIndex === -1 || targetTabIndex === -1) return;
-
-  const tabs = [...openTabs.value];
-  const [removed] = tabs.splice(draggedTabIndex, 1);
-  tabs.splice(targetTabIndex, 0, removed);
-
-  tabsStore.reorderTabs(tabs);
-  draggingTabId.value = null;
-}
-
-function scrollToActiveTab() {
-  if (!tabsScrollRef.value) return;
-
-  const activeTabElement = tabsScrollRef.value.querySelector('.tab.active');
-  if (!activeTabElement) return;
-
-  const scrollContainer = tabsScrollRef.value;
-  const containerWidth = scrollContainer.offsetWidth;
-  const tabLeft = activeTabElement.offsetLeft;
-  const tabWidth = activeTabElement.offsetWidth;
-
-  if (tabLeft + tabWidth > scrollContainer.scrollLeft + containerWidth) {
-    scrollContainer.scrollTo({
-      left: tabLeft + tabWidth - containerWidth + 20,
-      behavior: 'smooth'
-    });
-  } else if (tabLeft < scrollContainer.scrollLeft) {
-    scrollContainer.scrollTo({
-      left: tabLeft - 20,
-      behavior: 'smooth'
-    });
-  }
-
-  checkScrollPosition();
-}
-
-function checkScrollPosition() {
-  if (!tabsScrollRef.value) return;
-
-  const container = tabsScrollRef.value;
-  hasScrollLeft.value = container.scrollLeft > 0;
-  hasScrollRight.value = container.scrollLeft < container.scrollWidth - container.clientWidth;
-}
-
-function scrollLeft() {
-  if (!tabsScrollRef.value) return;
-
-  const container = tabsScrollRef.value;
-  const scrollAmount = Math.min(container.clientWidth * 0.75, 300);
-  container.scrollBy({
-    left: -scrollAmount,
-    behavior: 'smooth'
-  });
-}
-
-function scrollRight() {
-  if (!tabsScrollRef.value) return;
-
-  const container = tabsScrollRef.value;
-  const scrollAmount = Math.min(container.clientWidth * 0.75, 300);
-  container.scrollBy({
-    left: scrollAmount,
-    behavior: 'smooth'
-  });
-}
-
 watch(
   () => tabsStore.activeTabId,
   () => {
     nextTick(() => {
-      scrollToActiveTab();
-    });
-  }
-);
-
-watch(
-  () => openTabs.value.length,
-  () => {
-    nextTick(() => {
-      checkScrollPosition();
+      mainTabsRef.value.scrollToActiveTab();
     });
   }
 );
@@ -813,11 +645,11 @@ onMounted(async () => {
     // Já carregamos o sidebar width no onBeforeMount
     // então não precisamos fazer novamente aqui
 
-    window.addEventListener('resize', checkScrollPosition);
+    window.addEventListener('resize', mainTabsRef.value.checkScrollPosition);
 
     await nextTick(() => {
-      scrollToActiveTab();
-      checkScrollPosition();
+      mainTabsRef.value.scrollToActiveTab();
+      mainTabsRef.value.checkScrollPosition();
     });
 
     document.querySelector('.flex.flex-col.h-full')?.focus();
@@ -955,7 +787,7 @@ async function switchDatabase(databaseName) {
 
     showDatabaseSwitcher.value = false;
 
-    tabsStore.closeAllTabs();
+    await tabsStore.closeAllTabs();
 
     await databaseStore.loadTables(connectionId.value);
 
@@ -967,51 +799,6 @@ async function switchDatabase(databaseName) {
   } catch (error) {
     console.error('Error switching database:', error);
     showAlert(`Failed to switch database: ${error.message}`, 'error');
-  }
-}
-
-function handleOpenTab(tabData) {
-  try {
-    console.log('Abrindo nova aba com dados:', tabData);
-
-    if (!tabData.data || !tabData.data.connectionId || !tabData.data.tableName) {
-      console.error('Dados da aba incompletos:', tabData);
-      showAlert('Dados insuficientes para abrir nova aba', 'error');
-      return;
-    }
-
-    const targetTable = databaseStore.tablesList.find(t => t.name === tabData.data.tableName);
-
-    if (!targetTable) {
-      console.error('Target table not found:', tabData.data.tableName);
-      showAlert(`Table "${tabData.data.tableName}" not found`, 'error');
-      return;
-    }
-
-    const filter = tabData.data.filter || '';
-
-    console.log('Filtro a ser aplicado na nova aba:', filter);
-
-    // Criar objeto de aba completo
-    const newTab = {
-      id: tabData.id || `data-${tabData.data.connectionId}-${tabData.data.tableName}-${Date.now()}`,
-      title: tabData.title || tabData.data.tableName,
-      type: 'data',
-      connectionId: tabData.data.connectionId,
-      tableName: tabData.data.tableName,
-      filter: filter,
-      columnCount: targetTable.columnCount || 0
-    };
-
-    console.log('Adicionando nova aba:', newTab);
-    tabsStore.addTab(newTab);
-
-    nextTick(() => {
-      scrollToActiveTab();
-    });
-  } catch (error) {
-    console.error('Erro ao abrir aba:', error);
-    showAlert(`Falha ao abrir nova aba: ${error.message}`, 'error');
   }
 }
 
@@ -1027,109 +814,3 @@ function loadSidebarWidth() {
   initialSidebarLoaded.value = true;
 }
 </script>
-
-<style scoped>
-.tabs-container {
-  position: relative;
-  width: 100%;
-  height: 40px;
-  overflow: hidden;
-  display: flex;
-}
-
-.tabs-scroll {
-  display: flex;
-  overflow-x: auto;
-  height: 100%;
-  scrollbar-width: none;
-  -ms-overflow-style: none;
-  flex: 1;
-}
-
-.tabs-scroll::-webkit-scrollbar {
-  display: none;
-}
-
-.tab {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  height: 100%;
-  min-width: 150px;
-  max-width: 150px;
-  padding: 0 10px;
-  border-right: 1px solid rgb(24, 24, 27);
-  background-color: rgb(24, 24, 27);
-  cursor: pointer;
-  user-select: none;
-  transition: background-color 0.2s;
-}
-
-.tab.active {
-  background-color: rgba(255, 255, 255, 0.1);
-  color: white;
-}
-
-.tab-title {
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  flex: 1;
-}
-
-.close-icon {
-  opacity: 0.7;
-  width: 20px;
-  height: 20px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 50%;
-  margin-left: 6px;
-  flex-shrink: 0;
-}
-
-.tab:hover {
-  background-color: rgba(255, 255, 255, 0.1);
-}
-
-.tab:hover .close-icon {
-  opacity: 1;
-}
-
-.close-icon:hover {
-  background-color: rgba(255, 255, 255, 0.1);
-}
-
-.tab-scroll-button {
-  width: 28px;
-  height: 100%;
-  background-color: rgba(255, 255, 255, 0.1);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  color: #bbb;
-  flex-shrink: 0;
-  transition: background-color 0.2s;
-  z-index: 1;
-}
-
-.tab-scroll-button:hover {
-  background-color: rgb(24, 24, 27);
-  color: white;
-}
-
-.tab-scroll-left {
-  border-right: 1px solid rgb(24, 24, 27);
-}
-
-.tab-scroll-right {
-  border-left: 1px solid rgb(24, 24, 27);
-}
-
-/* Adicionar estilo para prevenir flickering durante o carregamento */
-[v-cloak] {
-  display: none;
-}
-</style>

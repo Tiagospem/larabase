@@ -1643,7 +1643,7 @@ function handleMouseUp(event) {
 // Handle localStorage changes from other tabs/windows
 function handleStorageChange(event) {
   if (!event.key) return;
-  
+
   // Check if our specific live table setting was changed from another window
   const ourKey = `liveTable.enabled.${props.connectionId}.${props.tableName}`;
   if (event.key === ourKey) {
@@ -1657,12 +1657,14 @@ function handleStorageChange(event) {
       }
     }
   }
-  
+
   // Check if another table was activated
-  if (event.key.startsWith('liveTable.enabled.') && 
-      event.key !== ourKey && 
-      event.newValue === 'true' &&
-      isLiveTableActive.value) {
+  if (
+    event.key.startsWith('liveTable.enabled.') &&
+    event.key !== ourKey &&
+    event.newValue === 'true' &&
+    isLiveTableActive.value
+  ) {
     // Another table was activated, deactivate this one
     isLiveTableActive.value = false;
     stopLiveUpdates();
@@ -1683,12 +1685,14 @@ onMounted(() => {
       // Get current state from localStorage
       const liveTableKey = `liveTable.enabled.${props.connectionId}.${props.tableName}`;
       const storedState = localStorage.getItem(liveTableKey) === 'true';
-      
+
       // Update UI state if it doesn't match localStorage
       if (isLiveTableActive.value !== storedState) {
-        console.log(`Forcing Live Table button update: ${isLiveTableActive.value} -> ${storedState}`);
+        console.log(
+          `Forcing Live Table button update: ${isLiveTableActive.value} -> ${storedState}`
+        );
         isLiveTableActive.value = storedState;
-        
+
         // Start or stop updates as needed
         if (isLiveTableActive.value && !liveTableInterval.value) {
           startLiveUpdates();
@@ -1702,29 +1706,33 @@ onMounted(() => {
   };
 
   // Listen for tab activation events
-  const handleTabActivation = (event) => {
+  const handleTabActivation = event => {
     // Refresh state immediately and again after a short delay to ensure UI is updated
     refreshLiveTableState();
     setTimeout(refreshLiveTableState, 100);
   };
-  
+
   window.addEventListener('tab-activated', handleTabActivation);
 
   try {
     // Check for table-specific Live Table state first
-    const tableSpecificLiveEnabled = localStorage.getItem(`liveTable.enabled.${props.connectionId}.${props.tableName}`);
-    
+    const tableSpecificLiveEnabled = localStorage.getItem(
+      `liveTable.enabled.${props.connectionId}.${props.tableName}`
+    );
+
     // Check if any other table has Live Table active
     let otherTableLiveActive = false;
     const allKeys = Object.keys(localStorage);
     allKeys.forEach(key => {
-      if (key.startsWith('liveTable.enabled.') && 
-          key !== `liveTable.enabled.${props.connectionId}.${props.tableName}` &&
-          localStorage.getItem(key) === 'true') {
+      if (
+        key.startsWith('liveTable.enabled.') &&
+        key !== `liveTable.enabled.${props.connectionId}.${props.tableName}` &&
+        localStorage.getItem(key) === 'true'
+      ) {
         otherTableLiveActive = true;
       }
     });
-    
+
     // Only activate if this table has it enabled AND no other table has it active
     if (tableSpecificLiveEnabled === 'true' && !otherTableLiveActive) {
       isLiveTableActive.value = true;
@@ -1813,7 +1821,7 @@ onUnmounted(() => {
   window.removeEventListener('mouseup', handleMouseUp);
   document.removeEventListener('mousemove', handleColumnResize);
   document.removeEventListener('mouseup', stopColumnResize);
-  
+
   // Remove event listeners
   window.removeEventListener('tab-activated', handleTabActivation);
   window.removeEventListener('storage', handleStorageChange);
@@ -2375,21 +2383,22 @@ function deactivateAllOtherLiveTables() {
     // Get all localStorage keys
     const allKeys = Object.keys(localStorage);
     const currentLiveTableKey = `liveTable.enabled.${props.connectionId}.${props.tableName}`;
-    
+
     // Collect all active live table keys
-    const activeLiveTableKeys = allKeys.filter(key => 
-      key.startsWith('liveTable.enabled.') && 
-      key !== currentLiveTableKey &&
-      localStorage.getItem(key) === 'true'
+    const activeLiveTableKeys = allKeys.filter(
+      key =>
+        key.startsWith('liveTable.enabled.') &&
+        key !== currentLiveTableKey &&
+        localStorage.getItem(key) === 'true'
     );
-    
+
     // Deactivate all other live tables
     if (activeLiveTableKeys.length > 0) {
       console.log(`Deactivating ${activeLiveTableKeys.length} other live tables`);
       activeLiveTableKeys.forEach(key => {
         localStorage.setItem(key, 'false');
       });
-      
+
       // Notify about deactivated tables (if debugging)
       // console.log('Deactivated tables:', activeLiveTableKeys);
     }
@@ -2426,11 +2435,11 @@ function startLiveUpdates() {
 
   // Update UI state
   isLiveTableActive.value = true;
-  
+
   // Update localStorage to match
   try {
     localStorage.setItem(`liveTable.enabled.${props.connectionId}.${props.tableName}`, 'true');
-    
+
     // Deactivate all other live tables
     deactivateAllOtherLiveTables();
   } catch (e) {
@@ -2514,10 +2523,10 @@ function stopLiveUpdates(updateLocalStorage = false) {
     clearInterval(liveTableInterval.value);
     liveTableInterval.value = null;
   }
-  
+
   // Update UI state
   isLiveTableActive.value = false;
-  
+
   // Optionally update localStorage to match our state
   if (updateLocalStorage) {
     try {
@@ -2568,7 +2577,7 @@ watch(
   ([newTableName, newConnectionId], [oldTableName, oldConnectionId]) => {
     if (newTableName !== oldTableName || newConnectionId !== oldConnectionId) {
       console.log(`Tab changed: ${oldTableName || 'none'} -> ${newTableName}`);
-      
+
       // First, let's handle the old tab we're switching from
       if (oldTableName && oldConnectionId) {
         const oldLiveTableKey = `liveTable.enabled.${oldConnectionId}.${oldTableName}`;
@@ -2579,18 +2588,18 @@ watch(
           console.error('Error deactivating previous tab live table:', e);
         }
       }
-      
+
       // Always stop current live updates
       if (isLiveTableActive.value) {
         stopLiveUpdates();
         isLiveTableActive.value = false;
       }
-      
+
       // Check if the new tab should have live table enabled
       try {
         const newLiveTableKey = `liveTable.enabled.${newConnectionId}.${newTableName}`;
         const isLiveEnabled = localStorage.getItem(newLiveTableKey) === 'true';
-        
+
         // Clean up any inconsistent state
         // 1. Get all live table keys and ensure only one (at most) is active
         const activeLiveTableKeys = [];
@@ -2600,19 +2609,22 @@ watch(
             activeLiveTableKeys.push(key);
           }
         }
-        
+
         // 2. If multiple keys are active, deactivate all except the current one (if it should be active)
-        if (activeLiveTableKeys.length > 1 || (activeLiveTableKeys.length === 1 && !isLiveEnabled)) {
+        if (
+          activeLiveTableKeys.length > 1 ||
+          (activeLiveTableKeys.length === 1 && !isLiveEnabled)
+        ) {
           activeLiveTableKeys.forEach(key => {
             if (key !== newLiveTableKey || !isLiveEnabled) {
               localStorage.setItem(key, 'false');
             }
           });
         }
-        
+
         // Set the current tab's Live Table state
         isLiveTableActive.value = isLiveEnabled;
-        
+
         // Start live updates if needed
         if (isLiveTableActive.value) {
           startLiveUpdates();

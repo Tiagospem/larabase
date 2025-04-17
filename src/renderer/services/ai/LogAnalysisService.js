@@ -7,7 +7,7 @@ import { useSettingsStore } from '@/store/settings';
  */
 export async function analyzeLogWithAI(logData) {
   const settingsStore = useSettingsStore();
-  
+
   // Check if AI provider is configured
   if (settingsStore.settings.aiProvider === 'openai') {
     if (!settingsStore.settings.openai.apiKey) {
@@ -32,17 +32,18 @@ export async function analyzeLogWithAI(logData) {
  */
 async function analyzeWithOpenAI(logData, settingsStore) {
   const language = settingsStore.settings.language || 'en';
-  
+
   // Format the stack trace for better readability
-  const formattedStack = logData.stack 
-    ? logData.stack.split('\n').slice(0, 15).join('\n') + (logData.stack.split('\n').length > 15 ? '\n...' : '') 
+  const formattedStack = logData.stack
+    ? logData.stack.split('\n').slice(0, 15).join('\n') +
+      (logData.stack.split('\n').length > 15 ? '\n...' : '')
     : 'Not available';
-  
+
   // Prepare messages for OpenAI API
   const messages = [
     { role: 'system', content: getLogAnalysisPrompt() },
-    { 
-      role: 'user', 
+    {
+      role: 'user',
       content: `Please analyze this Laravel log:
       
 Type: ${logData.type}
@@ -59,7 +60,7 @@ Provide an analysis explaining what happened, possible causes, and suggestions f
 Please reply in ${language === 'pt' ? 'Portuguese' : language === 'es' ? 'Spanish' : 'English'}.`
     }
   ];
-  
+
   try {
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -74,17 +75,16 @@ Please reply in ${language === 'pt' ? 'Portuguese' : language === 'es' ? 'Spanis
         max_tokens: 800
       })
     });
-    
+
     if (!response.ok) {
       const errorData = await response.json();
       throw new Error(errorData.error?.message || 'Error calling OpenAI API');
     }
-    
+
     const data = await response.json();
     const content = data.choices[0]?.message?.content || 'No analysis could be generated';
-    
+
     return content;
-    
   } catch (error) {
     console.error('Error analyzing log with OpenAI:', error);
     throw error;
@@ -99,12 +99,13 @@ Please reply in ${language === 'pt' ? 'Portuguese' : language === 'es' ? 'Spanis
  */
 async function analyzeWithGemini(logData, settingsStore) {
   const language = settingsStore.settings.language || 'en';
-  
+
   // Format the stack trace for better readability
-  const formattedStack = logData.stack 
-    ? logData.stack.split('\n').slice(0, 15).join('\n') + (logData.stack.split('\n').length > 15 ? '\n...' : '') 
+  const formattedStack = logData.stack
+    ? logData.stack.split('\n').slice(0, 15).join('\n') +
+      (logData.stack.split('\n').length > 15 ? '\n...' : '')
     : 'Not available';
-  
+
   // Prepare messages for Gemini API
   const prompt = `${getLogAnalysisPrompt()}
 
@@ -122,39 +123,40 @@ ${formattedStack}
 
 Provide an analysis explaining what happened, possible causes, and suggestions for resolution.
 Please reply in ${language === 'pt' ? 'Portuguese' : language === 'es' ? 'Spanish' : 'English'}.`;
-  
+
   try {
     // Updated Gemini API endpoint format
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${settingsStore.settings.gemini.model}:generateContent?key=${settingsStore.settings.gemini.apiKey}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        contents: [
-          { 
-            parts: [
-              { text: prompt }
-            ]
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${settingsStore.settings.gemini.model}:generateContent?key=${settingsStore.settings.gemini.apiKey}`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          contents: [
+            {
+              parts: [{ text: prompt }]
+            }
+          ],
+          generationConfig: {
+            temperature: 0.3,
+            maxOutputTokens: 800
           }
-        ],
-        generationConfig: {
-          temperature: 0.3,
-          maxOutputTokens: 800
-        }
-      })
-    });
-    
+        })
+      }
+    );
+
     if (!response.ok) {
       const errorData = await response.json();
       throw new Error(errorData.error?.message || 'Error calling Gemini API');
     }
-    
+
     const data = await response.json();
-    const content = data.candidates?.[0]?.content?.parts?.[0]?.text || 'No analysis could be generated';
-    
+    const content =
+      data.candidates?.[0]?.content?.parts?.[0]?.text || 'No analysis could be generated';
+
     return content;
-    
   } catch (error) {
     console.error('Error analyzing log with Gemini:', error);
     throw error;
@@ -202,4 +204,4 @@ Structure your response with these sections:
    Ways to prevent this error in the future
 
 Keep your analysis concise but thorough. Include relevant Laravel or PHP concepts when they help explain the issue.`;
-} 
+}

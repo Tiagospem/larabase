@@ -69,7 +69,7 @@ export const useTabsStore = defineStore('tabs', () => {
     if (index !== -1) {
       // Get the tab info before removing it
       const tabToRemove = openTabs.value[index];
-      
+
       // Deactivate Live Table for this tab
       if (tabToRemove.connectionId && tabToRemove.tableName) {
         try {
@@ -107,7 +107,7 @@ export const useTabsStore = defineStore('tabs', () => {
       // Get current active tab and new tab to activate
       const currentActiveTab = openTabs.value.find(tab => tab.id === activeTabId.value);
       const newActiveTab = openTabs.value.find(tab => tab.id === tabId);
-      
+
       if (currentActiveTab && currentActiveTab.id !== tabId) {
         // Deactivate Live Table for the tab we're switching from
         if (currentActiveTab.connectionId && currentActiveTab.tableName) {
@@ -115,16 +115,16 @@ export const useTabsStore = defineStore('tabs', () => {
             // Check if current tab has Live Table active
             const currentLiveKey = `liveTable.enabled.${currentActiveTab.connectionId}.${currentActiveTab.tableName}`;
             const currentLiveEnabled = localStorage.getItem(currentLiveKey) === 'true';
-            
+
             if (currentLiveEnabled) {
               // Deactivate the current tab's Live Table
               localStorage.setItem(currentLiveKey, 'false');
-              
+
               // Also check if the new tab has Live Table active to avoid conflicts
               if (newActiveTab && newActiveTab.connectionId && newActiveTab.tableName) {
                 const newLiveKey = `liveTable.enabled.${newActiveTab.connectionId}.${newActiveTab.tableName}`;
                 const newLiveEnabled = localStorage.getItem(newLiveKey) === 'true';
-                
+
                 // If both have Live Table active, prioritize the one we're switching to
                 if (newLiveEnabled) {
                   localStorage.setItem(currentLiveKey, 'false');
@@ -136,7 +136,7 @@ export const useTabsStore = defineStore('tabs', () => {
           }
         }
       }
-      
+
       activeTabId.value = tabId;
     }
   }
@@ -221,7 +221,7 @@ export const useTabsStore = defineStore('tabs', () => {
         console.error('Error deactivating live table during all tabs removal:', e);
       }
     });
-    
+
     openTabs.value = [];
     activeTabId.value = null;
     await saveOpenTabs();
@@ -231,7 +231,7 @@ export const useTabsStore = defineStore('tabs', () => {
     if (!connectionId) return;
 
     const initialTabsCount = openTabs.value.length;
-    
+
     // Deactivate Live Table for all tabs belonging to this connection
     const tabsToClose = openTabs.value.filter(tab => tab.connectionId === connectionId);
     tabsToClose.forEach(tab => {
@@ -244,7 +244,7 @@ export const useTabsStore = defineStore('tabs', () => {
         console.error('Error deactivating live table during connection tabs removal:', e);
       }
     });
-    
+
     openTabs.value = openTabs.value.filter(tab => tab.connectionId !== connectionId);
 
     if (initialTabsCount > openTabs.value.length) {

@@ -8,7 +8,7 @@
         <div class="card bg-neutral shadow-md">
           <div class="card-body space-y-4">
             <h3 class="card-title text-md">AI Provider</h3>
-            
+
             <div class="form-control">
               <label class="label">
                 <span class="label-text">Select AI Provider</span>
@@ -50,7 +50,7 @@
             </div>
           </div>
         </div>
-        
+
         <!-- Gemini Settings -->
         <div v-if="settingsData.aiProvider === 'gemini'" class="card bg-neutral shadow-md">
           <div class="card-body space-y-4">
@@ -208,7 +208,7 @@ const isDevelopment = computed(() => process.env.NODE_ENV === 'development');
 
 onMounted(async () => {
   await settingsStore.loadSettings();
-  
+
   // Initialize gemini settings if they don't exist
   if (!settingsStore.settings.gemini) {
     settingsStore.settings.gemini = {
@@ -216,12 +216,12 @@ onMounted(async () => {
       model: 'gemini-pro'
     };
   }
-  
+
   // Initialize aiProvider if it doesn't exist
   if (!settingsStore.settings.aiProvider) {
     settingsStore.settings.aiProvider = 'openai';
   }
-  
+
   Object.assign(settingsData.value, settingsStore.settings);
 });
 

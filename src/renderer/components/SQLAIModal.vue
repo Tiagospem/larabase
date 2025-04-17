@@ -277,14 +277,14 @@ Important notes:
 Request: ${userQuery.value}`;
 
     let content;
-    
+
     if (settingsStore.settings.aiProvider === 'openai') {
       // Call OpenAI API
       const messages = [
         { role: 'system', content: systemPrompt },
         { role: 'user', content: userContent }
       ];
-      
+
       const response = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
         headers: {
@@ -311,32 +311,33 @@ Request: ${userQuery.value}`;
       const prompt = `${systemPrompt}
       
 ${userContent}`;
-      
-      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${settingsStore.settings.gemini.model}:generateContent?key=${settingsStore.settings.gemini.apiKey}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          contents: [
-            { 
-              parts: [
-                { text: prompt }
-              ]
+
+      const response = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${settingsStore.settings.gemini.model}:generateContent?key=${settingsStore.settings.gemini.apiKey}`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            contents: [
+              {
+                parts: [{ text: prompt }]
+              }
+            ],
+            generationConfig: {
+              temperature: 0.2,
+              maxOutputTokens: 1000
             }
-          ],
-          generationConfig: {
-            temperature: 0.2,
-            maxOutputTokens: 1000
-          }
-        })
-      });
-      
+          })
+        }
+      );
+
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.error?.message || 'Error calling Gemini API');
       }
-      
+
       const data = await response.json();
       content = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
     } else {

@@ -305,7 +305,7 @@ ipcMain.handle('get-settings', () => {
         },
         gemini: {
           apiKey: '',
-          model: 'gemini-2.0-flash'  // Ensure this matches the v1beta API endpoint
+          model: 'gemini-2.0-flash' // Ensure this matches the v1beta API endpoint
         },
         language: 'en'
       }
@@ -315,7 +315,7 @@ ipcMain.handle('get-settings', () => {
     return {
       aiProvider: 'openai',
       openai: { apiKey: '', model: 'gpt-3.5-turbo' },
-      gemini: { apiKey: '', model: 'gemini-2.0-flash' },  // Ensure this matches the v1beta API endpoint
+      gemini: { apiKey: '', model: 'gemini-2.0-flash' }, // Ensure this matches the v1beta API endpoint
       language: 'en'
     };
   }
