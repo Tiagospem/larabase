@@ -1,9 +1,9 @@
 <template>
   <div
-    class="w-64 bg-sidebar border-r border-gray-800 flex flex-col"
+    class="w-64 bg-neutral-800 border-r border-neutral flex flex-col"
     :style="{ width: sidebarWidth + 'px' }"
   >
-    <div class="p-3 border-b border-gray-800">
+    <div class="p-3 border-b border-neutral">
       <div class="relative mb-2">
         <input
           v-model="searchTerm"
@@ -32,29 +32,22 @@
         <div class="flex items-center gap-1">
           <button
             class="btn btn-xs btn-ghost tooltip tooltip-left"
-            data-tip="Sort by name"
-            :class="{ 'text-primary': sortBy === 'name' }"
+            v-tooltip.right="'Sort by name'"
+            :class="{ 'text-primary bg-neutral': sortBy === 'name' }"
             @click="setSortBy('name')"
           >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke-width="1.5"
-              stroke="currentColor"
-              class="w-4 h-4"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                d="M3 4.5h14.25M3 9h9.75M3 13.5h9.75m4.5-4.5v12m0 0-3.75-3.75M17.25 21 21 17.25"
-              />
+            <svg fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" class="size-4">
+              <g id="SVGRepo_bgCarrier" stroke-width="0"></g>
+              <g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g>
+              <g id="SVGRepo_iconCarrier">
+                <path d="M19.707 14.707A1 1 0 0 0 19 13h-7v2h4.586l-4.293 4.293A1 1 0 0 0 13 21h7v-2h-4.586l4.293-4.293zM7 3.99H5v12H2l4 4 4-4H7zM17 3h-2c-.417 0-.79.259-.937.649l-2.75 7.333h2.137L14.193 9h3.613l.743 1.981h2.137l-2.75-7.333A1 1 0 0 0 17 3zm-2.057 4 .75-2h.613l.75 2h-2.113z"></path>
+              </g>
             </svg>
           </button>
           <button
             class="btn btn-xs btn-ghost tooltip tooltip-left"
-            data-tip="Sort by records"
-            :class="{ 'text-primary': sortBy === 'records' }"
+            v-tooltip.right="'Sort by records'"
+            :class="{ 'text-primary bg-neutral': sortBy === 'records' }"
             @click="setSortBy('records')"
           >
             <svg
@@ -74,7 +67,7 @@
           </button>
           <button
             class="btn btn-xs btn-ghost tooltip tooltip-left"
-            data-tip="Toggle sort order"
+            v-tooltip.right="'Toggle sort order'"
             @click="toggleSortOrder"
           >
             <svg
@@ -105,7 +98,6 @@
     </div>
 
     <div class="overflow-y-auto flex-1">
-      <!-- Skeleton loading state -->
       <div v-if="isLoading || isLoadingCounts || !allTablesLoaded" class="p-2">
         <div
           v-for="i in 10"
@@ -118,7 +110,6 @@
         </div>
       </div>
 
-      <!-- Actual data -->
       <ul v-else class="menu menu-sm">
         <li v-for="table in sortedTables" :key="table.name" class="hover:bg-base-300">
           <a :class="{ 'bg-base-300': isTableActive(table.name) }" @click="openTable(table)">
@@ -178,11 +169,20 @@ const props = defineProps({
 const emit = defineEmits(['resize-start', 'table-open', 'update:sidebarWidth']);
 
 const databaseStore = useDatabaseStore();
+
+/**
+ * @type {import('vue').Ref<string>}
+ */
 const searchTerm = ref('');
+
 const sortBy = ref(localStorage.getItem('tableSort') || 'name');
 const sortOrder = ref(localStorage.getItem('tableSortOrder') || 'asc');
 const isLoadingCounts = ref(false);
 const allTablesLoaded = ref(false);
+
+/**
+ * @type {import('vue').Ref<number|null>}
+ */
 const loadingTimer = ref(null);
 
 const isLoading = computed(() => databaseStore.isLoading);
