@@ -734,6 +734,9 @@ async function testConnection() {
 onMounted(async () => {
   try {
     await tabsStore.loadSavedTabs();
+    
+    // Ensure connections are loaded before trying to access them
+    await connectionsStore.loadConnections();
 
     if (!connection.value) {
       connectionError.value = true;
