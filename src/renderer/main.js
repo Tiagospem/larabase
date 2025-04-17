@@ -3,6 +3,7 @@ import { createPinia } from 'pinia';
 import { createRouter, createWebHashHistory } from 'vue-router';
 import App from './App.vue';
 import './style.css';
+import tooltip from './directives/tooltip';
 
 import Home from './views/Home.vue';
 import DatabaseView from './views/DatabaseView.vue';
@@ -24,4 +25,5 @@ const pinia = createPinia();
 const app = createApp(App);
 app.use(router);
 app.use(pinia);
+app.use(tooltip);
 app.mount('#app');
