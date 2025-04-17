@@ -7,8 +7,6 @@ const { validateDatabaseConnection } = require('./connections');
 
 function selectSqlDumpFileHandler() {
   ipcMain.handle('select-sql-dump-file', async () => {
-    console.log('select-sql-dump-file');
-
     try {
       const mainWindow = getMainWindow();
 
@@ -27,7 +25,7 @@ function selectSqlDumpFileHandler() {
 
 function cancelDatabaseRestoreHandler() {
   ipcMain.handle('cancel-database-restore', async () => {
-    console.log('cancel-database-restore');
+    console.log('cancel-database-restore, needs to be implemented');
   });
 }
 
@@ -256,7 +254,14 @@ function simpleDatabaseRestoreHandler(store) {
         console.log(`Gzipped file: ${isGzipped ? 'Yes' : 'No'}`);
         console.log(`Ignored tables: ${restoreConfig.ignoredTables.length}`);
 
-        await restoreDatabase({ sender }, restoreConfig);
+        const restore = await restoreDatabase({ sender }, restoreConfig);
+
+        if (!restore.success) {
+          return {
+            success: false,
+            message: restore.error || 'Failed to restore database'
+          };
+        }
 
         if (config.setAsDefault && targetDatabase !== connection.database) {
           const updatedConnections = store.get('connections') || [];
@@ -541,7 +546,7 @@ function _buildDockerRestoreCommand(config) {
   command += buildCredentialFlags(connection);
   command += ' --binary-mode=1 --force';
   command += buildInitCommand(database);
-  command += ` ${database}`;
+  //command += ` ${database}`;
 
   return command;
 }
@@ -562,7 +567,7 @@ function _buildLocalRestoreCommand(config) {
   command += buildCredentialFlags(connection);
   command += ' --binary-mode=1 --force';
   command += buildInitCommand(database);
-  command += ` ${database}`;
+  //command += ` ${database}`;
 
   return command;
 }
@@ -679,12 +684,14 @@ async function restoreDatabase(event, config) {
 
   try {
     const result = await _validateDatabaseHasContent(config.connection);
+
     if (result.hasContent) {
       sendProgress(
         'completed',
         100,
         `Database restored successfully with ${result.tableCount} tables`
       );
+
       return { success: true, tables: result.tableCount };
     } else {
       const warnMsg = 'Database restoration seemed to succeed, but no tables were found';
