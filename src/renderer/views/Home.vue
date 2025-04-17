@@ -64,46 +64,72 @@
             class="card bg-base-200 shadow-xl transition-colors border border-neutral hover:border-gray-500"
           >
             <div class="card-body py-4 px-5">
-              <div class="flex items-center space-x-4">
+              <div class="flex flex-col sm:flex-row items-start sm:items-center gap-4">
                 <div
-                  class="w-10 h-10 rounded-full flex items-center justify-center"
+                  class="w-10 h-10 rounded-full flex items-center justify-center shrink-0"
                   :class="getConnectionColor(connection.type)"
                 >
                   <span class="text-white font-bold">{{ connection.icon }}</span>
                 </div>
-                <div class="flex-1">
-                  <h2 class="card-title text-base">
+                <div class="flex-1 min-w-0">
+                  <h2 class="card-title text-base overflow-hidden whitespace-nowrap text-ellipsis">
                     {{ connection.name }}
                     <span class="text-xs text-green-500 ml-1">{{ connection.status }}</span>
                   </h2>
-                  <p class="text-xs text-gray-400">
+                  <p class="text-xs text-gray-400 overflow-hidden whitespace-nowrap text-ellipsis">
                     {{ connection.host || connection.path }}
                   </p>
-                  <p class="text-xs font-medium text-white mt-1">
+                  <p
+                    class="text-xs font-medium text-white mt-1 overflow-hidden whitespace-nowrap text-ellipsis"
+                  >
                     {{ connection.database }}
                   </p>
                 </div>
-                <div class="flex gap-2">
+                <div class="flex gap-2 self-end sm:self-center mt-2 sm:mt-0">
                   <button
                     class="btn btn-sm btn-ghost text-white"
                     @click.stop="editConnection(connection)"
+                    v-tooltip.bottom="'Edit connection'"
                   >
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-4">
-                      <path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10" />
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke-width="1.5"
+                      stroke="currentColor"
+                      class="size-4"
+                    >
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10"
+                      />
                     </svg>
                   </button>
                   <button
                     class="btn btn-sm btn-ghost text-white"
-                    title="Restore Database"
                     @click.stop="restoreDump(connection)"
+                    v-tooltip.bottom="'Restore database'"
                   >
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-4">
-                      <path stroke-linecap="round" stroke-linejoin="round" d="M20.25 6.375c0 2.278-3.694 4.125-8.25 4.125S3.75 8.653 3.75 6.375m16.5 0c0-2.278-3.694-4.125-8.25-4.125S3.75 4.097 3.75 6.375m16.5 0v11.25c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125V6.375m16.5 0v3.75m-16.5-3.75v3.75m16.5 0v3.75C20.25 16.153 16.556 18 12 18s-8.25-1.847-8.25-4.125v-3.75m16.5 0c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125" />
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke-width="1.5"
+                      stroke="currentColor"
+                      class="size-4"
+                    >
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        d="M20.25 6.375c0 2.278-3.694 4.125-8.25 4.125S3.75 8.653 3.75 6.375m16.5 0c0-2.278-3.694-4.125-8.25-4.125S3.75 4.097 3.75 6.375m16.5 0v11.25c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125V6.375m16.5 0v3.75m-16.5-3.75v3.75m16.5 0v3.75C20.25 16.153 16.556 18 12 18s-8.25-1.847-8.25-4.125v-3.75m16.5 0c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125"
+                      />
                     </svg>
                   </button>
                   <button
                     class="btn btn-sm btn-ghost text-white"
                     @click.stop="removeConnection(connection.id)"
+                    v-tooltip.bottom="'Remove connection'"
                   >
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
@@ -120,19 +146,23 @@
                       />
                     </svg>
                   </button>
-                  <button class="btn btn-sm btn-ghost" @click.stop="openConnection(connection.id)">
+                  <button
+                    class="btn btn-sm btn-ghost"
+                    @click.stop="openConnection(connection.id)"
+                    v-tooltip.bottom="'Open connection'"
+                  >
                     <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke-width="1.5"
-                        stroke="currentColor"
-                        class="w-4 h-4"
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke-width="1.5"
+                      stroke="currentColor"
+                      class="w-4 h-4"
                     >
                       <path
-                          stroke-linecap="round"
-                          stroke-linejoin="round"
-                          d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3"
                       />
                     </svg>
                   </button>
@@ -211,3 +241,54 @@ function getConnectionColor(type) {
   }
 }
 </script>
+
+<style scoped>
+.tooltip {
+  position: relative;
+  display: inline-block;
+}
+
+.tooltip::before {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: 125%;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: rgba(0, 0, 0, 0.8);
+  color: white;
+  text-align: center;
+  padding: 5px 10px;
+  border-radius: 6px;
+  width: max-content;
+  max-width: 200px;
+  font-size: 12px;
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.2s ease;
+  z-index: 10;
+  pointer-events: none;
+}
+
+.tooltip::after {
+  content: '';
+  position: absolute;
+  bottom: 125%;
+  left: 50%;
+  margin-bottom: -5px;
+  margin-left: -5px;
+  border-width: 5px;
+  border-style: solid;
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.2s ease;
+  border-color: rgba(0, 0, 0, 0.8) transparent transparent transparent;
+  z-index: 10;
+  pointer-events: none;
+}
+
+.tooltip:hover::before,
+.tooltip:hover::after {
+  opacity: 1;
+  visibility: visible;
+}
+</style>
