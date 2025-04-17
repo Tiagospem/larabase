@@ -604,6 +604,9 @@ function stopResize() {
   isResizing.value = false;
   document.removeEventListener('mousemove', onResize);
   document.removeEventListener('mouseup', stopResize);
+  
+  // Salvar o tamanho do sidebar no localStorage
+  localStorage.setItem('sidebarWidth', sidebarWidth.value.toString());
 }
 
 function handleDragStart(event, tabId) {
@@ -753,6 +756,12 @@ onMounted(async () => {
     await databaseStore.loadTables(connectionId.value);
 
     databaseStore.clearTableRecordCounts();
+
+    // Recuperar o tamanho do sidebar do localStorage
+    const savedSidebarWidth = localStorage.getItem('sidebarWidth');
+    if (savedSidebarWidth) {
+      sidebarWidth.value = parseInt(savedSidebarWidth, 10);
+    }
 
     window.addEventListener('resize', checkScrollPosition);
 
