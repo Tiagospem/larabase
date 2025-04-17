@@ -101,8 +101,20 @@ function updateConnectionDatabaseHandler(store) {
   });
 }
 
+function getConnectionsHandler(store) {
+  ipcMain.handle('get-connections', () => {
+    try {
+      return store.get('connections') || [];
+    } catch (error) {
+      console.error('Error retrieving connections:', error);
+      return [];
+    }
+  });
+}
+
 function registerConnectionHandlers(store) {
   updateConnectionDatabaseHandler(store);
+  getConnectionsHandler(store);
   testMysqlConnectionHandler();
 }
 
