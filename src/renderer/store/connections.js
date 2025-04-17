@@ -14,6 +14,12 @@ export const useConnectionsStore = defineStore('connections', () => {
           const savedConnections = await window.api.getConnections();
 
           if (savedConnections && Array.isArray(savedConnections) && savedConnections.length > 0) {
+            for (const connection of savedConnections) {
+              const check = await window.api.testMySQLConnection(connection);
+
+              connection.isValid = check.success;
+            }
+
             connections.value = savedConnections;
           } else {
             connections.value = [];
