@@ -4,6 +4,7 @@
     tabindex="0"
     @keydown.ctrl.k.prevent="openDatabaseSwitcher"
     @keydown.meta.k.prevent="openDatabaseSwitcher"
+    v-cloak
   >
     <header class="bg-neutral px-4 py-2 border-b border-neutral flex items-center justify-between">
       <div class="flex items-center">
@@ -284,6 +285,7 @@
         @resize-start="startResize"
         @table-open="openTable"
         @update:sidebar-width="sidebarWidth = $event"
+        :style="{ width: `${sidebarWidth}px` }"
       />
 
       <div class="flex-1 bg-base-100 overflow-hidden">
@@ -484,7 +486,7 @@
 </template>
 
 <script setup>
-import { computed, inject, onMounted, ref, markRaw, nextTick, watch } from 'vue';
+import { computed, inject, onMounted, ref, markRaw, nextTick, watch, onBeforeMount } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useConnectionsStore } from '@/store/connections';
 import { useDatabaseStore } from '@/store/database';
@@ -511,6 +513,7 @@ const databaseStore = useDatabaseStore();
 const tabsStore = useTabsStore();
 
 const sidebarWidth = ref(240);
+const initialSidebarLoaded = ref(false);
 const isResizing = ref(false);
 const connectionError = ref(false);
 const connectionErrorMessage = ref('');
@@ -734,6 +737,10 @@ async function testConnection() {
   }
 }
 
+onBeforeMount(() => {
+  loadSidebarWidth();
+});
+
 onMounted(async () => {
   try {
     await tabsStore.loadSavedTabs();
@@ -757,11 +764,8 @@ onMounted(async () => {
 
     databaseStore.clearTableRecordCounts();
 
-    // Recuperar o tamanho do sidebar do localStorage
-    const savedSidebarWidth = localStorage.getItem('sidebarWidth');
-    if (savedSidebarWidth) {
-      sidebarWidth.value = parseInt(savedSidebarWidth, 10);
-    }
+    // Já carregamos o sidebar width no onBeforeMount
+    // então não precisamos fazer novamente aqui
 
     window.addEventListener('resize', checkScrollPosition);
 
@@ -968,6 +972,14 @@ function handleOpenTab(tabData) {
 function handleDatabaseSwitcherFromChild(connectionId) {
   openDatabaseSwitcher();
 }
+
+function loadSidebarWidth() {
+  const savedSidebarWidth = localStorage.getItem('sidebarWidth');
+  if (savedSidebarWidth) {
+    sidebarWidth.value = parseInt(savedSidebarWidth, 10);
+  }
+  initialSidebarLoaded.value = true;
+}
 </script>
 
 <style scoped>
@@ -1068,5 +1080,10 @@ function handleDatabaseSwitcherFromChild(connectionId) {
 
 .tab-scroll-right {
   border-left: 1px solid rgb(24, 24, 27);
+}
+
+/* Adicionar estilo para prevenir flickering durante o carregamento */
+[v-cloak] {
+  display: none;
 }
 </style>
