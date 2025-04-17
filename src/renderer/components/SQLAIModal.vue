@@ -186,8 +186,8 @@ async function generateCode() {
     return;
   }
 
-  if (!settingsStore.settings.openai.apiKey) {
-    showAlert('OpenAI API key is not configured. Please set it in the Settings.', 'error');
+  if (!settingsStore.isAIConfigured) {
+    showAlert('AI API key is not configured. Please set it in the Settings.', 'error');
     return;
   }
 
@@ -195,7 +195,6 @@ async function generateCode() {
 
   try {
     const language = settingsStore.settings.language || 'en';
-
     const systemPrompt = `
 You are a SQL-to-Eloquent converter for Laravel applications.
 Your task is to convert raw SQL queries to their equivalent Laravel Eloquent Query Builder syntax.
@@ -261,11 +260,7 @@ Use the database structure info provided to ensure correct table names, column n
 All responses must be in ${language === 'en' ? 'English' : language === 'pt' ? 'Portuguese' : 'Spanish'}.
 Be precise and generate production-ready code.`;
 
-    const messages = [
-      { role: 'system', content: systemPrompt },
-      {
-        role: 'user',
-        content: `Database Structure:
+    const userContent = `Database Structure:
 ${optimizedDatabaseStructure.value}
 
 For my request, please convert the resulting SQL query directly to Eloquent syntax.
@@ -279,31 +274,74 @@ Important notes:
 - The model name is typically the singular form of the table name in PascalCase
 - If the tables have a foreign key relationship, prefer using Eloquent relationships
 
-Request: ${userQuery.value}`
+Request: ${userQuery.value}`;
+
+    let content;
+    
+    if (settingsStore.settings.aiProvider === 'openai') {
+      // Call OpenAI API
+      const messages = [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: userContent }
+      ];
+      
+      const response = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${settingsStore.settings.openai.apiKey}`
+        },
+        body: JSON.stringify({
+          model: settingsStore.settings.openai.model || 'gpt-3.5-turbo',
+          messages: messages,
+          temperature: 0.2,
+          max_tokens: 1000
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error?.message || 'Error calling OpenAI API');
       }
-    ];
 
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${settingsStore.settings.openai.apiKey}`
-      },
-      body: JSON.stringify({
-        model: settingsStore.settings.openai.model || 'gpt-3.5-turbo',
-        messages: messages,
-        temperature: 0.2,
-        max_tokens: 1000
-      })
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.error?.message || 'Error calling OpenAI API');
+      const data = await response.json();
+      content = data.choices[0]?.message?.content || '';
+    } else if (settingsStore.settings.aiProvider === 'gemini') {
+      // Call Gemini API
+      const prompt = `${systemPrompt}
+      
+${userContent}`;
+      
+      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${settingsStore.settings.gemini.model}:generateContent?key=${settingsStore.settings.gemini.apiKey}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          contents: [
+            { 
+              parts: [
+                { text: prompt }
+              ]
+            }
+          ],
+          generationConfig: {
+            temperature: 0.2,
+            maxOutputTokens: 1000
+          }
+        })
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error?.message || 'Error calling Gemini API');
+      }
+      
+      const data = await response.json();
+      content = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    } else {
+      throw new Error('No AI provider selected');
     }
-
-    const data = await response.json();
-    const content = data.choices[0]?.message?.content || '';
 
     // Parse the response to extract SQL and Eloquent parts
     const sqlMatch = content.match(/<sql>([\s\S]*?)<\/sql>/);

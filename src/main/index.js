@@ -298,9 +298,14 @@ ipcMain.handle('get-settings', () => {
   try {
     return (
       store.get('settings') || {
+        aiProvider: 'openai',
         openai: {
           apiKey: '',
           model: 'gpt-3.5-turbo'
+        },
+        gemini: {
+          apiKey: '',
+          model: 'gemini-pro'  // Ensure this matches the v1beta API endpoint
         },
         language: 'en'
       }
@@ -308,7 +313,9 @@ ipcMain.handle('get-settings', () => {
   } catch (error) {
     console.error('Error retrieving settings:', error);
     return {
+      aiProvider: 'openai',
       openai: { apiKey: '', model: 'gpt-3.5-turbo' },
+      gemini: { apiKey: '', model: 'gemini-pro' },  // Ensure this matches the v1beta API endpoint
       language: 'en'
     };
   }

@@ -4,8 +4,25 @@
       <h3 class="font-bold text-lg mb-4">Settings</h3>
 
       <div class="space-y-4">
-        <!-- OpenAI Settings -->
+        <!-- AI Provider Selection -->
         <div class="card bg-neutral shadow-md">
+          <div class="card-body space-y-4">
+            <h3 class="card-title text-md">AI Provider</h3>
+            
+            <div class="form-control">
+              <label class="label">
+                <span class="label-text">Select AI Provider</span>
+              </label>
+              <select v-model="settingsData.aiProvider" class="select select-bordered w-full">
+                <option value="openai">OpenAI</option>
+                <option value="gemini">Google Gemini</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- OpenAI Settings -->
+        <div v-if="settingsData.aiProvider === 'openai'" class="card bg-neutral shadow-md">
           <div class="card-body space-y-4">
             <h3 class="card-title text-md">OpenAI API</h3>
 
@@ -29,6 +46,36 @@
                 <option value="gpt-3.5-turbo">GPT-3.5 Turbo</option>
                 <option value="gpt-4">GPT-4</option>
                 <option value="gpt-4-turbo">GPT-4 Turbo</option>
+              </select>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Gemini Settings -->
+        <div v-if="settingsData.aiProvider === 'gemini'" class="card bg-neutral shadow-md">
+          <div class="card-body space-y-4">
+            <h3 class="card-title text-md">Google Gemini API</h3>
+
+            <div class="form-control">
+              <label class="label">
+                <span class="label-text">API Key</span>
+              </label>
+              <input
+                v-model="settingsData.gemini.apiKey"
+                type="password"
+                placeholder="Enter your Google Gemini API key"
+                class="input input-bordered w-full"
+              />
+            </div>
+
+            <div class="form-control">
+              <label class="label">
+                <span class="label-text">AI Model</span>
+              </label>
+              <select v-model="settingsData.gemini.model" class="select select-bordered w-full">
+                <option value="gemini-pro">Gemini Pro</option>
+                <option value="gemini-1.5-pro">Gemini 1.5 Pro</option>
+                <option value="gemini-1.5-flash">Gemini 1.5 Flash</option>
               </select>
             </div>
           </div>
@@ -142,9 +189,14 @@ const connectionsStore = useConnectionsStore();
 const tabsStore = useTabsStore();
 
 const settingsData = ref({
+  aiProvider: 'openai', // Default to OpenAI
   openai: {
     apiKey: '',
     model: 'gpt-3.5-turbo'
+  },
+  gemini: {
+    apiKey: '',
+    model: 'gemini-pro'
   },
   language: 'en',
   devMode: false
@@ -156,6 +208,20 @@ const isDevelopment = computed(() => process.env.NODE_ENV === 'development');
 
 onMounted(async () => {
   await settingsStore.loadSettings();
+  
+  // Initialize gemini settings if they don't exist
+  if (!settingsStore.settings.gemini) {
+    settingsStore.settings.gemini = {
+      apiKey: '',
+      model: 'gemini-pro'
+    };
+  }
+  
+  // Initialize aiProvider if it doesn't exist
+  if (!settingsStore.settings.aiProvider) {
+    settingsStore.settings.aiProvider = 'openai';
+  }
+  
   Object.assign(settingsData.value, settingsStore.settings);
 });
 

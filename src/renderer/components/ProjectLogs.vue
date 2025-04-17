@@ -203,6 +203,65 @@
             {{ selectedLog.stack }}
           </div>
         </div>
+        
+        <!-- Add AI Analysis button and result section -->
+        <div class="mt-4 flex justify-between items-center" v-if="hasOpenAIConfig && !isAnalyzing">
+          <button 
+            v-if="!analysisResult" 
+            class="btn btn-accent btn-sm" 
+            @click="performLogAnalysis"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke-width="1.5"
+              stroke="currentColor"
+              class="w-4 h-4 mr-1"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09Z"
+              />
+            </svg>
+            Analyze with AI
+          </button>
+        </div>
+        
+        <div v-if="isAnalyzing" class="flex justify-center items-center mt-4 py-4">
+          <div class="loading loading-spinner text-primary" />
+          <span class="ml-3">Analyzing log with AI...</span>
+        </div>
+        
+        <div v-if="analysisResult" class="mt-4">
+          <div class="flex justify-between items-center mb-2">
+            <h4 class="font-semibold">AI Analysis</h4>
+            <button
+              class="btn btn-xs btn-ghost"
+              title="Copy to clipboard"
+              @click="copyAnalysisToClipboard"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke-width="1.5"
+                stroke="currentColor"
+                class="w-4 h-4"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125h-9.75a1.125 1.125 0 0 1-1.125-1.125V7.875c0-.621.504-1.125 1.125-1.125H6.75a9.06 9.06 0 0 1 1.5.124m7.5 10.376h3.375c.621 0 1.125-.504 1.125-1.125V11.25c0-4.46-3.243-8.161-7.5-8.876a9.06 9.06 0 0 0-1.5-.124H9.375c-.621 0-1.125.504-1.125 1.125v3.5m7.5 10.375H9.375a1.125 1.125 0 0 1-1.125-1.125v-9.25m12 6.625v-1.875a3.375 3.375 0 0 0-3.375-3.375h-1.5a1.125 1.125 0 0 1-1.125-1.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H9.75"
+                />
+              </svg>
+            </button>
+          </div>
+          <div class="bg-base-200 p-4 rounded-lg overflow-auto max-h-96 prose prose-sm prose-invert">
+            <div v-html="markdownToHtml(analysisResult)"></div>
+          </div>
+        </div>
       </div>
       <div class="modal-action">
         <button class="btn btn-primary" @click="showLogDetails = false">Close</button>
@@ -225,6 +284,20 @@
 
 <script setup>
 import { ref, computed, onMounted, watch, inject } from 'vue';
+import { useSettingsStore } from '@/store/settings';
+import { analyzeLogWithAI } from '@/services/ai/LogAnalysisService';
+import { marked } from 'marked';
+
+// Configure marked for security
+marked.setOptions({
+  renderer: new marked.Renderer(),
+  gfm: true,
+  breaks: true,
+  sanitize: true, // Sanitize HTML input
+  smartLists: true,
+  smartypants: false,
+  xhtml: false
+});
 
 const props = defineProps({
   isOpen: {
@@ -243,6 +316,7 @@ const props = defineProps({
 
 const emit = defineEmits(['close', 'select-project']);
 const showAlert = inject('showAlert');
+const settingsStore = useSettingsStore();
 
 const logs = ref([]);
 const searchQuery = ref('');
@@ -250,6 +324,13 @@ const logTypeFilter = ref('all');
 const showLogDetails = ref(false);
 const selectedLog = ref(null);
 const showDeleteConfirm = ref(false);
+
+// New refs for AI analysis
+const isAnalyzing = ref(false);
+const analysisResult = ref('');
+const hasOpenAIConfig = computed(() => {
+  return settingsStore.isAIConfigured;
+});
 
 const filteredLogs = computed(() => {
   let filtered = [...logs.value];
@@ -293,6 +374,7 @@ function getLogTypeBadgeClass(type) {
 
 function viewLogDetails(log) {
   selectedLog.value = log;
+  analysisResult.value = '';
   showLogDetails.value = true;
 }
 
@@ -358,7 +440,50 @@ async function refreshLogs() {
 }
 
 function close() {
+  // Reset analysis results when closing
+  analysisResult.value = '';
   emit('close');
+}
+
+// Function to convert markdown to HTML
+function markdownToHtml(markdown) {
+  if (!markdown) return '';
+  return marked.parse(markdown);
+}
+
+// Function to analyze the log with AI
+async function performLogAnalysis() {
+  if (!selectedLog.value) return;
+  
+  isAnalyzing.value = true;
+  analysisResult.value = '';
+  
+  try {
+    await settingsStore.loadSettings();
+    
+    if (!settingsStore.settings.openai.apiKey) {
+      showAlert('OpenAI API key is not configured. Please set it in the Settings.', 'error');
+      return;
+    }
+    
+    const result = await analyzeLogWithAI(selectedLog.value);
+    analysisResult.value = result;
+  } catch (error) {
+    console.error('Error analyzing log with AI:', error);
+    showAlert(`Failed to analyze log: ${error.message}`, 'error');
+  } finally {
+    isAnalyzing.value = false;
+  }
+}
+
+// Function to copy analysis to clipboard
+async function copyAnalysisToClipboard() {
+  try {
+    await navigator.clipboard.writeText(analysisResult.value);
+    showAlert('Analysis copied to clipboard', 'success');
+  } catch (error) {
+    showAlert('Failed to copy to clipboard', 'error');
+  }
 }
 
 watch(
@@ -379,7 +504,9 @@ watch(
   }
 );
 
-onMounted(() => {
+onMounted(async () => {
+  await settingsStore.loadSettings();
+  
   if (props.projectPath) {
     refreshLogs();
   }

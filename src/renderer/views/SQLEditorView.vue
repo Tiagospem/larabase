@@ -272,7 +272,7 @@ const connection = computed(() => {
 
 // Check if OpenAI API key is configured
 const hasOpenAIConfig = computed(() => {
-  return !!settingsStore.settings.openai.apiKey;
+  return settingsStore.isAIConfigured;
 });
 
 onMounted(async () => {

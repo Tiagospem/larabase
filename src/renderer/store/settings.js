@@ -3,9 +3,14 @@ import { ref, computed, onMounted } from 'vue';
 
 export const useSettingsStore = defineStore('settings', () => {
   const settings = ref({
+    aiProvider: 'openai', // Default to OpenAI
     openai: {
       apiKey: '',
       model: 'gpt-3.5-turbo'
+    },
+    gemini: {
+      apiKey: '',
+      model: 'gemini-pro'  // Make sure this is consistent with the v1beta API
     },
     language: 'en',
     devMode: false
@@ -22,6 +27,18 @@ export const useSettingsStore = defineStore('settings', () => {
           const savedSettings = await window.api.getSettings();
 
           if (savedSettings) {
+            // Initialize new settings properties if they don't exist
+            if (!savedSettings.aiProvider) {
+              savedSettings.aiProvider = 'openai';
+            }
+            
+            if (!savedSettings.gemini) {
+              savedSettings.gemini = {
+                apiKey: '',
+                model: 'gemini-pro'
+              };
+            }
+            
             settings.value = savedSettings;
           }
         } catch (err) {
@@ -70,6 +87,17 @@ export const useSettingsStore = defineStore('settings', () => {
       return option ? option.label : code;
     };
   });
+  
+  // Check if AI provider is configured
+  const isAIConfigured = computed(() => {
+    const provider = settings.value.aiProvider;
+    if (provider === 'openai') {
+      return !!settings.value.openai.apiKey;
+    } else if (provider === 'gemini') {
+      return !!settings.value.gemini.apiKey;
+    }
+    return false;
+  });
 
   onMounted(async () => {
     await loadSettings();
@@ -82,6 +110,7 @@ export const useSettingsStore = defineStore('settings', () => {
     saveSettings,
     updateSettings,
     languageOptions,
-    getLanguageLabel
+    getLanguageLabel,
+    isAIConfigured
   };
 });
