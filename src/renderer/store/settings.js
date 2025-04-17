@@ -10,7 +10,7 @@ export const useSettingsStore = defineStore('settings', () => {
     },
     gemini: {
       apiKey: '',
-      model: 'gemini-pro'  // Make sure this is consistent with the v1beta API
+      model: 'gemini-2.0-flash'  // Make sure this is consistent with the v1beta API
     },
     language: 'en',
     devMode: false
@@ -35,7 +35,7 @@ export const useSettingsStore = defineStore('settings', () => {
             if (!savedSettings.gemini) {
               savedSettings.gemini = {
                 apiKey: '',
-                model: 'gemini-pro'
+                model: 'gemini-2.0-flash'
               };
             }
             

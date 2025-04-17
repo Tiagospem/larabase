@@ -73,9 +73,9 @@
                 <span class="label-text">AI Model</span>
               </label>
               <select v-model="settingsData.gemini.model" class="select select-bordered w-full">
-                <option value="gemini-pro">Gemini Pro</option>
-                <option value="gemini-1.5-pro">Gemini 1.5 Pro</option>
-                <option value="gemini-1.5-flash">Gemini 1.5 Flash</option>
+                <option value="gemini-2.5-pro-preview-03-25">Gemini 2.5 Pro (Preview)</option>
+                <option value="gemini-2.0-flash">Gemini 2.0 Flash</option>
+                <option value="gemini-2.0-flash-lite">Gemini 2.0 Flash-Lite</option>
               </select>
             </div>
           </div>
