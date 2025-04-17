@@ -4,6 +4,10 @@ const path = require('path');
 let mainWindow;
 
 async function createWindow() {
+  const isDev = process.env.NODE_ENV === 'development';
+
+  const shouldOpenDevTools = false;
+
   mainWindow = new BrowserWindow({
     width: 1200,
     height: 800,
@@ -13,19 +17,21 @@ async function createWindow() {
       nodeIntegration: false,
       contextIsolation: true,
       preload: path.join(__dirname, '../preload.js'),
-      devTools: true
+      devTools: isDev
     },
     icon: path.join(__dirname, '../../renderer/assets/icons/png/512x512.png')
   });
 
-  const isDev = process.env.NODE_ENV === 'development';
-
   if (isDev) {
     await mainWindow.loadURL('http://localhost:5173');
-    mainWindow.webContents.openDevTools();
+
+    if(shouldOpenDevTools) {
+      mainWindow.webContents.openDevTools();
+    }
 
     mainWindow.webContents.on('did-fail-load', (event, errorCode, errorDescription) => {
       console.error('Failed to load URL', errorCode, errorDescription);
+
       setTimeout(() => {
         mainWindow.loadURL('http://localhost:5173');
       }, 1000);
