@@ -74,7 +74,10 @@
                 <div class="flex-1 min-w-0">
                   <h2 class="card-title text-base overflow-hidden whitespace-nowrap text-ellipsis">
                     {{ connection.name }}
-                    <span class="text-xs text-green-500 ml-1">{{ connection.status }}</span>
+                    <span v-if="connection.isValid" class="text-xs text-green-500 ml-1">{{
+                      connection.status
+                    }}</span>
+                    <span v-else class="text-xs text-red-500 ml-1">Invalid</span>
                   </h2>
                   <p class="text-xs text-gray-400 overflow-hidden whitespace-nowrap text-ellipsis">
                     {{ connection.host || connection.path }}
@@ -147,6 +150,7 @@
                     </svg>
                   </button>
                   <button
+                    :disabled="!connection.isValid"
                     class="btn btn-sm btn-ghost"
                     @click.stop="openConnection(connection.id)"
                     v-tooltip.bottom="'Open connection'"
@@ -241,54 +245,3 @@ function getConnectionColor(type) {
   }
 }
 </script>
-
-<style scoped>
-.tooltip {
-  position: relative;
-  display: inline-block;
-}
-
-.tooltip::before {
-  content: attr(data-tooltip);
-  position: absolute;
-  bottom: 125%;
-  left: 50%;
-  transform: translateX(-50%);
-  background-color: rgba(0, 0, 0, 0.8);
-  color: white;
-  text-align: center;
-  padding: 5px 10px;
-  border-radius: 6px;
-  width: max-content;
-  max-width: 200px;
-  font-size: 12px;
-  opacity: 0;
-  visibility: hidden;
-  transition: all 0.2s ease;
-  z-index: 10;
-  pointer-events: none;
-}
-
-.tooltip::after {
-  content: '';
-  position: absolute;
-  bottom: 125%;
-  left: 50%;
-  margin-bottom: -5px;
-  margin-left: -5px;
-  border-width: 5px;
-  border-style: solid;
-  opacity: 0;
-  visibility: hidden;
-  transition: all 0.2s ease;
-  border-color: rgba(0, 0, 0, 0.8) transparent transparent transparent;
-  z-index: 10;
-  pointer-events: none;
-}
-
-.tooltip:hover::before,
-.tooltip:hover::after {
-  opacity: 1;
-  visibility: visible;
-}
-</style>
