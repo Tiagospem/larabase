@@ -177,7 +177,7 @@ import { useRouter } from 'vue-router';
 import { useConnectionsStore } from '@/store/connections';
 
 import RestoreDatabase from '@/components/home/RestoreDatabase.vue';
-import ManageConnection from "@/components/home/ManageConnection.vue";
+import ManageConnection from '@/components/home/ManageConnection.vue';
 
 const router = useRouter();
 const connectionsStore = useConnectionsStore();

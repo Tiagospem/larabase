@@ -25,7 +25,7 @@ async function createWindow() {
   if (isDev) {
     await mainWindow.loadURL('http://localhost:5173');
 
-    if(shouldOpenDevTools) {
+    if (shouldOpenDevTools) {
       mainWindow.webContents.openDevTools();
     }
 

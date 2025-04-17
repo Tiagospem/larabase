@@ -11,11 +11,11 @@
         </label>
         <div class="flex gap-2">
           <input
-              v-model="newConnection.projectPath"
-              type="text"
-              placeholder="Select Laravel project directory"
-              class="input input-bordered w-full"
-              :readonly="true"
+            v-model="newConnection.projectPath"
+            type="text"
+            placeholder="Select Laravel project directory"
+            class="input input-bordered w-full"
+            :readonly="true"
           />
           <button class="btn btn-primary" @click="selectProjectDirectory">Browse</button>
         </div>
@@ -30,69 +30,63 @@
       <div class="form-control w-full mb-4">
         <label class="label cursor-pointer">
           <span class="label-text">Using Laravel Sail?</span>
-          <input
-              v-model="newConnection.usingSail"
-              type="checkbox"
-              class="toggle toggle-primary"
-          />
+          <input v-model="newConnection.usingSail" type="checkbox" class="toggle toggle-primary" />
         </label>
-        <p class="text-xs text-gray-500 mt-1">
-          Enable if your project uses Laravel Sail (Docker)
-        </p>
+        <p class="text-xs text-gray-500 mt-1">Enable if your project uses Laravel Sail (Docker)</p>
       </div>
 
       <div
-          v-if="dockerInfo"
-          :class="[
-            'alert mb-4',
-            dockerInfo.isDocker
-              ? 'alert-success'
-              : !dockerInfo.isDocker && dockerInfo.dockerAvailable
-                ? 'alert-warning'
-                : 'alert-info'
-          ]"
+        v-if="dockerInfo"
+        :class="[
+          'alert mb-4',
+          dockerInfo.isDocker
+            ? 'alert-success'
+            : !dockerInfo.isDocker && dockerInfo.dockerAvailable
+              ? 'alert-warning'
+              : 'alert-info'
+        ]"
       >
         <div>
           <svg
-              v-if="dockerInfo.isDocker"
-              xmlns="http://www.w3.org/2000/svg"
-              class="stroke-current shrink-0 h-6 w-6"
-              fill="none"
-              viewBox="0 0 24 24"
+            v-if="dockerInfo.isDocker"
+            xmlns="http://www.w3.org/2000/svg"
+            class="stroke-current shrink-0 h-6 w-6"
+            fill="none"
+            viewBox="0 0 24 24"
           >
             <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
             />
           </svg>
           <svg
-              v-else-if="dockerInfo.dockerAvailable"
-              xmlns="http://www.w3.org/2000/svg"
-              class="stroke-current shrink-0 h-6 w-6"
-              fill="none"
-              viewBox="0 0 24 24"
+            v-else-if="dockerInfo.dockerAvailable"
+            xmlns="http://www.w3.org/2000/svg"
+            class="stroke-current shrink-0 h-6 w-6"
+            fill="none"
+            viewBox="0 0 24 24"
           >
             <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
             />
           </svg>
           <svg
-              v-else
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 24 24"
-              class="stroke-current shrink-0 w-6 h-6"
+            v-else
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+            class="stroke-current shrink-0 w-6 h-6"
           >
             <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
             />
           </svg>
           <div>
@@ -102,14 +96,14 @@
               <span class="font-medium">Container: </span>{{ dockerInfo.dockerContainerName }}
             </p>
             <p class="text-sm mt-1">
-                <span v-if="dockerInfo.isDocker">
-                  The system detected a MySQL Docker container. Configuration has been automatically
-                  adjusted.
-                </span>
+              <span v-if="dockerInfo.isDocker">
+                The system detected a MySQL Docker container. Configuration has been automatically
+                adjusted.
+              </span>
               <span v-else-if="dockerInfo.dockerAvailable">
-                  Docker is available, but no MySQL container was found running on port
-                  {{ newConnection.value.port }}. A local connection will be used.
-                </span>
+                Docker is available, but no MySQL container was found running on port
+                {{ newConnection.value.port }}. A local connection will be used.
+              </span>
               <span v-else> Docker was not detected. A local connection will be used. </span>
             </p>
           </div>
@@ -124,11 +118,11 @@
             <span class="label-text">Connection Name</span>
           </label>
           <input
-              v-model="newConnection.name"
-              type="text"
-              placeholder="My Project"
-              class="input input-bordered w-full"
-              required
+            v-model="newConnection.name"
+            type="text"
+            placeholder="My Project"
+            class="input input-bordered w-full"
+            required
           />
         </div>
 
@@ -149,11 +143,11 @@
             <span class="label-text">Host</span>
           </label>
           <input
-              v-model="newConnection.host"
-              type="text"
-              placeholder="localhost"
-              class="input input-bordered w-full"
-              required
+            v-model="newConnection.host"
+            type="text"
+            placeholder="localhost"
+            class="input input-bordered w-full"
+            required
           />
         </div>
 
@@ -162,11 +156,11 @@
             <span class="label-text">Port</span>
           </label>
           <input
-              v-model="newConnection.port"
-              type="text"
-              placeholder="3306"
-              class="input input-bordered w-full"
-              required
+            v-model="newConnection.port"
+            type="text"
+            placeholder="3306"
+            class="input input-bordered w-full"
+            required
           />
         </div>
 
@@ -175,11 +169,11 @@
             <span class="label-text">Database</span>
           </label>
           <input
-              v-model="newConnection.database"
-              type="text"
-              placeholder="mydatabase"
-              class="input input-bordered w-full"
-              required
+            v-model="newConnection.database"
+            type="text"
+            placeholder="mydatabase"
+            class="input input-bordered w-full"
+            required
           />
         </div>
 
@@ -188,11 +182,11 @@
             <span class="label-text">Username</span>
           </label>
           <input
-              v-model="newConnection.username"
-              type="text"
-              placeholder="root"
-              class="input input-bordered w-full"
-              required
+            v-model="newConnection.username"
+            type="text"
+            placeholder="root"
+            class="input input-bordered w-full"
+            required
           />
         </div>
 
@@ -201,10 +195,10 @@
             <span class="label-text">Password</span>
           </label>
           <input
-              v-model="newConnection.password"
-              type="password"
-              placeholder="password"
-              class="input input-bordered w-full"
+            v-model="newConnection.password"
+            type="password"
+            placeholder="password"
+            class="input input-bordered w-full"
           />
         </div>
       </div>
@@ -217,10 +211,10 @@
             <span class="label-text">Redis Host</span>
           </label>
           <input
-              v-model="newConnection.redisHost"
-              type="text"
-              placeholder="127.0.0.1"
-              class="input input-bordered w-full"
+            v-model="newConnection.redisHost"
+            type="text"
+            placeholder="127.0.0.1"
+            class="input input-bordered w-full"
           />
         </div>
 
@@ -229,10 +223,10 @@
             <span class="label-text">Redis Port</span>
           </label>
           <input
-              v-model="newConnection.redisPort"
-              type="text"
-              placeholder="6379"
-              class="input input-bordered w-full"
+            v-model="newConnection.redisPort"
+            type="text"
+            placeholder="6379"
+            class="input input-bordered w-full"
           />
         </div>
 
@@ -241,10 +235,10 @@
             <span class="label-text">Redis Password</span>
           </label>
           <input
-              v-model="newConnection.redisPassword"
-              type="password"
-              placeholder="Leave empty if none"
-              class="input input-bordered w-full"
+            v-model="newConnection.redisPassword"
+            type="password"
+            placeholder="Leave empty if none"
+            class="input input-bordered w-full"
           />
         </div>
       </div>
@@ -252,9 +246,9 @@
       <div class="modal-action">
         <button class="btn" @click="isCreateModalOpen = false">Cancel</button>
         <button
-            class="btn btn-primary"
-            :disabled="isLoading || !newConnection.projectPath"
-            @click="saveNewConnection"
+          class="btn btn-primary"
+          :disabled="isLoading || !newConnection.projectPath"
+          @click="saveNewConnection"
         >
           <span v-if="isSaving" class="loading loading-spinner loading-xs mr-2" />
           {{ isEditMode ? 'Update Connection' : 'Save Connection' }}
@@ -266,10 +260,10 @@
 </template>
 
 <script setup>
-import {inject, ref} from "vue";
-import {v4 as uuidv4} from "uuid";
-import {useConnectionsStore} from "@/store/connections";
-import {useTabsStore} from "@/store/tabs";
+import { inject, ref } from 'vue';
+import { v4 as uuid } from 'uuid';
+import { useConnectionsStore } from '@/store/connections';
+import { useTabsStore } from '@/store/tabs';
 
 const connectionsStore = useConnectionsStore();
 const tabsStore = useTabsStore();
@@ -280,7 +274,7 @@ const props = defineProps({
   isLoading: {
     type: Boolean,
     default: false
-  },
+  }
 });
 
 const isLoading = ref(props.isLoading.value);
@@ -315,20 +309,20 @@ async function saveNewConnection() {
     }
 
     if (
-        !newConnection.value.name ||
-        !newConnection.value.host ||
-        !newConnection.value.database ||
-        !newConnection.value.username
+      !newConnection.value.name ||
+      !newConnection.value.host ||
+      !newConnection.value.database ||
+      !newConnection.value.username
     ) {
       showAlert('Please fill all required fields', 'error');
       return;
     }
 
     const exists = connectionsStore.connections.some(
-        conn =>
-            (conn.projectPath === newConnection.value.projectPath ||
-                conn.name === newConnection.value.name) &&
-            conn.id !== editConnectionId.value
+      conn =>
+        (conn.projectPath === newConnection.value.projectPath ||
+          conn.name === newConnection.value.name) &&
+        conn.id !== editConnectionId.value
     );
 
     if (exists) {
@@ -356,7 +350,7 @@ async function saveNewConnection() {
     showAlert('Connection successful! Saving configuration...', 'success');
 
     const connectionData = {
-      id: isEditMode.value ? editConnectionId.value : uuidv4(),
+      id: isEditMode.value ? editConnectionId.value : uuid(),
       name: newConnection.value.name,
       type: newConnection.value.type,
       icon: newConnection.value.type.charAt(0).toUpperCase(),
@@ -435,7 +429,7 @@ async function selectProjectDirectory() {
 
     if (!isLaravelProject) {
       projectPathError.value =
-          'The selected directory does not appear to be a valid Laravel project';
+        'The selected directory does not appear to be a valid Laravel project';
       return;
     }
 
@@ -478,15 +472,13 @@ async function selectProjectDirectory() {
         newConnection.value.redisPassword = envConfig.REDIS_PASSWORD || '';
       }
 
-      // Definir o estado do Docker baseado na informação retornada
       if (envConfig.dockerInfo) {
         dockerInfo.value = envConfig.dockerInfo;
         newConnection.value.usingSail = envConfig.dockerInfo.isDocker;
 
-        // Se for Docker, atualiza o host para o padrão do Docker
         if (envConfig.dockerInfo.isDocker) {
           newConnection.value.host =
-              envConfig.DB_HOST === 'localhost' ? 'host.docker.internal' : envConfig.DB_HOST;
+            envConfig.DB_HOST === 'localhost' ? 'host.docker.internal' : envConfig.DB_HOST;
         }
       }
     }
@@ -540,9 +532,5 @@ function openCreateConnectionModal() {
   isCreateModalOpen.value = true;
 }
 
-defineExpose({ editConnection, removeConnection, openCreateConnectionModal })
+defineExpose({ editConnection, removeConnection, openCreateConnectionModal });
 </script>
-
-<style scoped>
-
-</style>

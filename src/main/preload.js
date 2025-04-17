@@ -21,16 +21,16 @@ try {
       safeIpcRenderer.invoke('update-connection-database', connectionId, newDatabase),
     simpleDatabaseRestore: config =>
       safeIpcRenderer.invoke('simple-database-restore-unified', config),
+    testMySQLConnection: config => safeIpcRenderer.invoke('test-mysql-connection', config),
+    selectDirectory: () => safeIpcRenderer.invoke('select-directory'),
+    validateLaravelProject: projectPath =>
+      safeIpcRenderer.invoke('validate-laravel-project', projectPath),
+    readEnvFile: projectPath => safeIpcRenderer.invoke('read-env-file', projectPath),
 
     getConnections: () => safeIpcRenderer.invoke('get-connections'),
     saveConnections: connections => safeIpcRenderer.invoke('save-connections', connections),
     getOpenTabs: () => safeIpcRenderer.invoke('get-open-tabs'),
     saveOpenTabs: tabs => safeIpcRenderer.invoke('save-open-tabs', tabs),
-    selectDirectory: () => safeIpcRenderer.invoke('select-directory'),
-    validateLaravelProject: projectPath =>
-      safeIpcRenderer.invoke('validate-laravel-project', projectPath),
-    readEnvFile: projectPath => safeIpcRenderer.invoke('read-env-file', projectPath),
-    testMySQLConnection: config => safeIpcRenderer.invoke('test-mysql-connection', config),
     listTables: config => safeIpcRenderer.invoke('list-tables', config),
     listDatabases: config => safeIpcRenderer.invoke('list-databases', config),
     getTableRecordCount: config => safeIpcRenderer.invoke('getTableRecordCount', config),

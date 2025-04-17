@@ -340,7 +340,6 @@ function buildCredentialFlags({ user, password, host, port }) {
 }
 
 function buildInitCommand(database) {
-  // cuidado com escaping das crases
   return ` --init-command="CREATE DATABASE IF NOT EXISTS \\\`${database}\\\`; USE \\\`${database}\\\`;"`;
 }
 
