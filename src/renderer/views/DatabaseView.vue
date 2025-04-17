@@ -598,7 +598,14 @@ function openTable(table, filter) {
 
 function activateTab(tabId) {
   tabsStore.activateTab(tabId);
+  
+  // Trigger a refresh event to update UI components in the tab
   nextTick(() => {
+    // Using custom event to notify all components about tab activation
+    window.dispatchEvent(new CustomEvent('tab-activated', { 
+      detail: { tabId }
+    }));
+    
     scrollToActiveTab();
   });
 }

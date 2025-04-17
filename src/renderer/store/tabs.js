@@ -67,6 +67,19 @@ export const useTabsStore = defineStore('tabs', () => {
     const index = openTabs.value.findIndex(tab => tab.id === tabId);
 
     if (index !== -1) {
+      // Get the tab info before removing it
+      const tabToRemove = openTabs.value[index];
+      
+      // Deactivate Live Table for this tab
+      if (tabToRemove.connectionId && tabToRemove.tableName) {
+        try {
+          const liveTableKey = `liveTable.enabled.${tabToRemove.connectionId}.${tabToRemove.tableName}`;
+          localStorage.setItem(liveTableKey, 'false');
+        } catch (e) {
+          console.error('Error deactivating live table during tab removal:', e);
+        }
+      }
+
       openTabs.value.splice(index, 1);
 
       if (activeTabId.value === tabId) {
@@ -91,6 +104,39 @@ export const useTabsStore = defineStore('tabs', () => {
 
   function activateTab(tabId) {
     if (openTabs.value.some(tab => tab.id === tabId)) {
+      // Get current active tab and new tab to activate
+      const currentActiveTab = openTabs.value.find(tab => tab.id === activeTabId.value);
+      const newActiveTab = openTabs.value.find(tab => tab.id === tabId);
+      
+      if (currentActiveTab && currentActiveTab.id !== tabId) {
+        // Deactivate Live Table for the tab we're switching from
+        if (currentActiveTab.connectionId && currentActiveTab.tableName) {
+          try {
+            // Check if current tab has Live Table active
+            const currentLiveKey = `liveTable.enabled.${currentActiveTab.connectionId}.${currentActiveTab.tableName}`;
+            const currentLiveEnabled = localStorage.getItem(currentLiveKey) === 'true';
+            
+            if (currentLiveEnabled) {
+              // Deactivate the current tab's Live Table
+              localStorage.setItem(currentLiveKey, 'false');
+              
+              // Also check if the new tab has Live Table active to avoid conflicts
+              if (newActiveTab && newActiveTab.connectionId && newActiveTab.tableName) {
+                const newLiveKey = `liveTable.enabled.${newActiveTab.connectionId}.${newActiveTab.tableName}`;
+                const newLiveEnabled = localStorage.getItem(newLiveKey) === 'true';
+                
+                // If both have Live Table active, prioritize the one we're switching to
+                if (newLiveEnabled) {
+                  localStorage.setItem(currentLiveKey, 'false');
+                }
+              }
+            }
+          } catch (e) {
+            console.error('Error handling Live Table state during tab activation:', e);
+          }
+        }
+      }
+      
       activeTabId.value = tabId;
     }
   }
@@ -164,6 +210,18 @@ export const useTabsStore = defineStore('tabs', () => {
   }
 
   async function closeAllTabs() {
+    // Deactivate Live Table for all tabs
+    openTabs.value.forEach(tab => {
+      try {
+        if (tab.connectionId && tab.tableName) {
+          const liveTableKey = `liveTable.enabled.${tab.connectionId}.${tab.tableName}`;
+          localStorage.setItem(liveTableKey, 'false');
+        }
+      } catch (e) {
+        console.error('Error deactivating live table during all tabs removal:', e);
+      }
+    });
+    
     openTabs.value = [];
     activeTabId.value = null;
     await saveOpenTabs();
@@ -173,6 +231,20 @@ export const useTabsStore = defineStore('tabs', () => {
     if (!connectionId) return;
 
     const initialTabsCount = openTabs.value.length;
+    
+    // Deactivate Live Table for all tabs belonging to this connection
+    const tabsToClose = openTabs.value.filter(tab => tab.connectionId === connectionId);
+    tabsToClose.forEach(tab => {
+      try {
+        if (tab.tableName) {
+          const liveTableKey = `liveTable.enabled.${connectionId}.${tab.tableName}`;
+          localStorage.setItem(liveTableKey, 'false');
+        }
+      } catch (e) {
+        console.error('Error deactivating live table during connection tabs removal:', e);
+      }
+    });
+    
     openTabs.value = openTabs.value.filter(tab => tab.connectionId !== connectionId);
 
     if (initialTabsCount > openTabs.value.length) {

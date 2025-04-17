@@ -1640,6 +1640,36 @@ function handleMouseUp(event) {
   selectionStartId.value = null;
 }
 
+// Handle localStorage changes from other tabs/windows
+function handleStorageChange(event) {
+  if (!event.key) return;
+  
+  // Check if our specific live table setting was changed from another window
+  const ourKey = `liveTable.enabled.${props.connectionId}.${props.tableName}`;
+  if (event.key === ourKey) {
+    const newValue = event.newValue === 'true';
+    if (newValue !== isLiveTableActive.value) {
+      isLiveTableActive.value = newValue;
+      if (newValue) {
+        startLiveUpdates();
+      } else {
+        stopLiveUpdates();
+      }
+    }
+  }
+  
+  // Check if another table was activated
+  if (event.key.startsWith('liveTable.enabled.') && 
+      event.key !== ourKey && 
+      event.newValue === 'true' &&
+      isLiveTableActive.value) {
+    // Another table was activated, deactivate this one
+    isLiveTableActive.value = false;
+    stopLiveUpdates();
+    localStorage.setItem(ourKey, 'false');
+  }
+}
+
 onMounted(() => {
   if (props.initialFilter) {
     console.log('Configurando filtro inicial:', props.initialFilter);
@@ -1647,10 +1677,64 @@ onMounted(() => {
     activeFilter.value = props.initialFilter;
   }
 
+  // Function to force refresh the Live Table button state
+  const refreshLiveTableState = () => {
+    try {
+      // Get current state from localStorage
+      const liveTableKey = `liveTable.enabled.${props.connectionId}.${props.tableName}`;
+      const storedState = localStorage.getItem(liveTableKey) === 'true';
+      
+      // Update UI state if it doesn't match localStorage
+      if (isLiveTableActive.value !== storedState) {
+        console.log(`Forcing Live Table button update: ${isLiveTableActive.value} -> ${storedState}`);
+        isLiveTableActive.value = storedState;
+        
+        // Start or stop updates as needed
+        if (isLiveTableActive.value && !liveTableInterval.value) {
+          startLiveUpdates();
+        } else if (!isLiveTableActive.value && liveTableInterval.value) {
+          stopLiveUpdates();
+        }
+      }
+    } catch (e) {
+      console.error('Error refreshing Live Table state:', e);
+    }
+  };
+
+  // Listen for tab activation events
+  const handleTabActivation = (event) => {
+    // Refresh state immediately and again after a short delay to ensure UI is updated
+    refreshLiveTableState();
+    setTimeout(refreshLiveTableState, 100);
+  };
+  
+  window.addEventListener('tab-activated', handleTabActivation);
+
   try {
-    const savedLiveEnabled = localStorage.getItem('liveTable.enabled');
-    if (savedLiveEnabled === 'true') {
+    // Check for table-specific Live Table state first
+    const tableSpecificLiveEnabled = localStorage.getItem(`liveTable.enabled.${props.connectionId}.${props.tableName}`);
+    
+    // Check if any other table has Live Table active
+    let otherTableLiveActive = false;
+    const allKeys = Object.keys(localStorage);
+    allKeys.forEach(key => {
+      if (key.startsWith('liveTable.enabled.') && 
+          key !== `liveTable.enabled.${props.connectionId}.${props.tableName}` &&
+          localStorage.getItem(key) === 'true') {
+        otherTableLiveActive = true;
+      }
+    });
+    
+    // Only activate if this table has it enabled AND no other table has it active
+    if (tableSpecificLiveEnabled === 'true' && !otherTableLiveActive) {
       isLiveTableActive.value = true;
+    } else {
+      // If another table has Live Table active, make sure this one is inactive
+      isLiveTableActive.value = false;
+      // Update localStorage to match current state
+      if (tableSpecificLiveEnabled === 'true') {
+        localStorage.setItem(`liveTable.enabled.${props.connectionId}.${props.tableName}`, 'false');
+      }
     }
 
     const savedLiveDelay = localStorage.getItem('liveTable.delay');
@@ -1672,6 +1756,12 @@ onMounted(() => {
   if (isLiveTableActive.value) {
     startLiveUpdates();
   }
+
+  // Initial refresh to ensure correct state
+  refreshLiveTableState();
+
+  // Add storage event listener to detect changes from other tabs/windows
+  window.addEventListener('storage', handleStorageChange);
 
   const urlParams = new URLSearchParams(window.location.search);
   const urlFilter = urlParams.get('filter');
@@ -1702,12 +1792,19 @@ onMounted(() => {
   window.addEventListener('keydown', handleKeyDown);
   window.addEventListener('keyup', handleKeyUp);
 
-  window.addEventListener('focus', () => {
+  // Also refresh when window receives focus
+  const handleWindowFocus = () => {
     windowInFocus.value = true;
-  });
-  window.addEventListener('blur', () => {
+    // Refresh the live table state when window gets focus
+    refreshLiveTableState();
+  };
+
+  const handleWindowBlur = () => {
     windowInFocus.value = false;
-  });
+  };
+
+  window.addEventListener('focus', handleWindowFocus);
+  window.addEventListener('blur', handleWindowBlur);
 });
 
 onUnmounted(() => {
@@ -1716,15 +1813,25 @@ onUnmounted(() => {
   window.removeEventListener('mouseup', handleMouseUp);
   document.removeEventListener('mousemove', handleColumnResize);
   document.removeEventListener('mouseup', stopColumnResize);
+  
+  // Remove event listeners
+  window.removeEventListener('tab-activated', handleTabActivation);
+  window.removeEventListener('storage', handleStorageChange);
 
-  stopLiveUpdates();
+  // Always stop live updates when component is unmounted
+  if (isLiveTableActive.value) {
+    // Also update localStorage to match our state
+    try {
+      localStorage.setItem(`liveTable.enabled.${props.connectionId}.${props.tableName}`, 'false');
+    } catch (e) {
+      console.error('Failed to update localStorage during component unmount', e);
+    }
+    isLiveTableActive.value = false;
+    stopLiveUpdates();
+  }
 
-  window.removeEventListener('focus', () => {
-    windowInFocus.value = true;
-  });
-  window.removeEventListener('blur', () => {
-    windowInFocus.value = false;
-  });
+  window.removeEventListener('focus', handleWindowFocus);
+  window.removeEventListener('blur', handleWindowBlur);
 });
 
 function toggleAdvancedFilter() {
@@ -2263,31 +2370,72 @@ function updateLiveDelay() {
   }
 }
 
-function toggleLiveTable() {
-  isLiveTableActive.value = !isLiveTableActive.value;
-
+function deactivateAllOtherLiveTables() {
   try {
-    localStorage.setItem('liveTable.enabled', isLiveTableActive.value ? 'true' : 'false');
-  } catch (e) {
-    console.error('Failed to save live table preference', e);
-  }
-
-  if (isLiveTableActive.value) {
-    clearUpdateCounter();
-    startLiveUpdates();
-    showAlert(
-      `Live table updates activated for ${props.tableName} - refreshing every ${liveUpdateDelaySeconds.value}s`,
-      'success'
+    // Get all localStorage keys
+    const allKeys = Object.keys(localStorage);
+    const currentLiveTableKey = `liveTable.enabled.${props.connectionId}.${props.tableName}`;
+    
+    // Collect all active live table keys
+    const activeLiveTableKeys = allKeys.filter(key => 
+      key.startsWith('liveTable.enabled.') && 
+      key !== currentLiveTableKey &&
+      localStorage.getItem(key) === 'true'
     );
-  } else {
-    stopLiveUpdates();
-    clearUpdateCounter();
-    showAlert('Live table updates stopped', 'info');
+    
+    // Deactivate all other live tables
+    if (activeLiveTableKeys.length > 0) {
+      console.log(`Deactivating ${activeLiveTableKeys.length} other live tables`);
+      activeLiveTableKeys.forEach(key => {
+        localStorage.setItem(key, 'false');
+      });
+      
+      // Notify about deactivated tables (if debugging)
+      // console.log('Deactivated tables:', activeLiveTableKeys);
+    }
+  } catch (e) {
+    console.error('Failed to deactivate other live tables', e);
+  }
+}
+
+function toggleLiveTable() {
+  try {
+    if (!isLiveTableActive.value) {
+      // If currently inactive, activate it
+      startLiveUpdates();
+      clearUpdateCounter();
+      showAlert(
+        `Live table updates activated for ${props.tableName} - refreshing every ${liveUpdateDelaySeconds.value}s`,
+        'success'
+      );
+    } else {
+      // If currently active, deactivate it
+      stopLiveUpdates(true);
+      clearUpdateCounter();
+      showAlert('Live table updates stopped', 'info');
+    }
+  } catch (e) {
+    console.error('Failed to toggle live table:', e);
+    showAlert('Failed to toggle live table updates', 'error');
   }
 }
 
 function startLiveUpdates() {
+  // First stop any existing updates
   stopLiveUpdates();
+
+  // Update UI state
+  isLiveTableActive.value = true;
+  
+  // Update localStorage to match
+  try {
+    localStorage.setItem(`liveTable.enabled.${props.connectionId}.${props.tableName}`, 'true');
+    
+    // Deactivate all other live tables
+    deactivateAllOtherLiveTables();
+  } catch (e) {
+    console.error('Failed to update localStorage during live table start', e);
+  }
 
   previousDataSnapshot.value = JSON.parse(JSON.stringify(tableData.value));
 
@@ -2361,10 +2509,22 @@ function detectChangedRows() {
   }
 }
 
-function stopLiveUpdates() {
+function stopLiveUpdates(updateLocalStorage = false) {
   if (liveTableInterval.value !== null) {
     clearInterval(liveTableInterval.value);
     liveTableInterval.value = null;
+  }
+  
+  // Update UI state
+  isLiveTableActive.value = false;
+  
+  // Optionally update localStorage to match our state
+  if (updateLocalStorage) {
+    try {
+      localStorage.setItem(`liveTable.enabled.${props.connectionId}.${props.tableName}`, 'false');
+    } catch (e) {
+      console.error('Failed to update localStorage during live table stop', e);
+    }
   }
 }
 
@@ -2401,6 +2561,69 @@ function updateAppIcon(count) {
     window.api.setAppBadge(count);
   }
 }
+
+// Watch for tab changes (when switching between tabs)
+watch(
+  [() => props.tableName, () => props.connectionId],
+  ([newTableName, newConnectionId], [oldTableName, oldConnectionId]) => {
+    if (newTableName !== oldTableName || newConnectionId !== oldConnectionId) {
+      console.log(`Tab changed: ${oldTableName || 'none'} -> ${newTableName}`);
+      
+      // First, let's handle the old tab we're switching from
+      if (oldTableName && oldConnectionId) {
+        const oldLiveTableKey = `liveTable.enabled.${oldConnectionId}.${oldTableName}`;
+        try {
+          // Always deactivate Live Table for the tab we're switching from
+          localStorage.setItem(oldLiveTableKey, 'false');
+        } catch (e) {
+          console.error('Error deactivating previous tab live table:', e);
+        }
+      }
+      
+      // Always stop current live updates
+      if (isLiveTableActive.value) {
+        stopLiveUpdates();
+        isLiveTableActive.value = false;
+      }
+      
+      // Check if the new tab should have live table enabled
+      try {
+        const newLiveTableKey = `liveTable.enabled.${newConnectionId}.${newTableName}`;
+        const isLiveEnabled = localStorage.getItem(newLiveTableKey) === 'true';
+        
+        // Clean up any inconsistent state
+        // 1. Get all live table keys and ensure only one (at most) is active
+        const activeLiveTableKeys = [];
+        const allKeys = Object.keys(localStorage);
+        for (const key of allKeys) {
+          if (key.startsWith('liveTable.enabled.') && localStorage.getItem(key) === 'true') {
+            activeLiveTableKeys.push(key);
+          }
+        }
+        
+        // 2. If multiple keys are active, deactivate all except the current one (if it should be active)
+        if (activeLiveTableKeys.length > 1 || (activeLiveTableKeys.length === 1 && !isLiveEnabled)) {
+          activeLiveTableKeys.forEach(key => {
+            if (key !== newLiveTableKey || !isLiveEnabled) {
+              localStorage.setItem(key, 'false');
+            }
+          });
+        }
+        
+        // Set the current tab's Live Table state
+        isLiveTableActive.value = isLiveEnabled;
+        
+        // Start live updates if needed
+        if (isLiveTableActive.value) {
+          startLiveUpdates();
+        }
+      } catch (e) {
+        console.error('Error updating live table state during tab switch:', e);
+        isLiveTableActive.value = false;
+      }
+    }
+  }
+);
 </script>
 
 <style scoped>
