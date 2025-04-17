@@ -423,7 +423,11 @@ async function startRestore() {
   }
 
   if (hasErrors) {
-    throw new Error(errorMessage);
+    restoreStatus.value = `Error: ${errorMessage}`;
+    restoreProgress.value = 0;
+    isRestoring.value = false;
+
+    showAlert(`Error restoring database: ${errorMessage}`, 'error');
   }
 }
 
