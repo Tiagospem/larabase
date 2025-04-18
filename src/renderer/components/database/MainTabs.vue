@@ -60,6 +60,13 @@ import { computed, nextTick, ref, watch } from 'vue';
 import { useTabsStore } from '@/store/tabs';
 import { useDatabaseStore } from '@/store/database';
 
+const props = defineProps({
+  connectionId: {
+    type: String,
+    required: true
+  }
+});
+
 const tabsStore = useTabsStore();
 const databaseStore = useDatabaseStore();
 
@@ -236,6 +243,22 @@ function handleUpdateTabData(tabName, data) {
   }
 }
 
+function openTable(table, filter) {
+  try {
+    tabsStore.addTab({
+      connectionId: props.connectionId,
+      tableName: table.name,
+      columnCount: table.columnCount,
+      filter: filter || ''
+    });
+    nextTick(() => {
+      scrollToActiveTab();
+    });
+  } catch (error) {
+    console.error(error);
+  }
+}
+
 watch(
   () => openTabs.value.length,
   () => {
@@ -245,7 +268,22 @@ watch(
   }
 );
 
-defineExpose({ scrollToActiveTab, checkScrollPosition, handleOpenTab, handleUpdateTabData });
+watch(
+  () => tabsStore.activeTabId,
+  () => {
+    nextTick(() => {
+      scrollToActiveTab();
+    });
+  }
+);
+
+defineExpose({
+  scrollToActiveTab,
+  checkScrollPosition,
+  handleOpenTab,
+  handleUpdateTabData,
+  openTable
+});
 </script>
 
 <style scoped>

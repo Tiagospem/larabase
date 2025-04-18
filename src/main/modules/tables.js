@@ -8,8 +8,7 @@ const _LIST_TABLES_SQL = `
   GROUP BY table_name
   ORDER BY table_name
 `;
-const _COLUMN_SQL =
-  `
+const _COLUMN_SQL = `
   SELECT
     COLUMN_NAME   AS name,
     COLUMN_TYPE   AS type,
@@ -27,8 +26,7 @@ const _FK_SQL = `
   FROM information_schema.KEY_COLUMN_USAGE
   WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ? AND REFERENCED_TABLE_NAME IS NOT NULL
 `;
-const _OUTGOING_SQL =
-  `
+const _OUTGOING_SQL = `
   SELECT
     k.CONSTRAINT_NAME        AS name,
     k.COLUMN_NAME            AS \`column\`,
@@ -42,8 +40,7 @@ const _OUTGOING_SQL =
    AND k.CONSTRAINT_SCHEMA = rc.CONSTRAINT_SCHEMA
   WHERE k.TABLE_SCHEMA = ? AND k.TABLE_NAME = ? AND k.REFERENCED_TABLE_NAME IS NOT NULL
 `;
-const _INCOMING_SQL =
-  `
+const _INCOMING_SQL = `
   SELECT
     k.CONSTRAINT_NAME        AS name,
     k.TABLE_NAME             AS \`table\`,
@@ -75,6 +72,18 @@ const _HAS_FK_USAGE_SQL = `
   WHERE REFERENCED_TABLE_NAME = ? AND REFERENCED_TABLE_SCHEMA = ?
   LIMIT 1
 `;
+
+function _applySortingAndPagination(baseSql, connection, config) {
+  let sql = baseSql;
+  if (config.sortColumn) {
+    const sortCol = connection.escapeId(config.sortColumn);
+    const dir = config.sortDirection === 'desc' ? 'DESC' : 'ASC';
+    sql += ` ORDER BY ${sortCol} ${dir}`;
+  }
+  sql += ` LIMIT ? OFFSET ?`;
+  return sql;
+}
+
 async function _getDbConnection({ store, dbMonitoringConnections }, config) {
   if (
     store &&
@@ -351,251 +360,140 @@ function registerTableHandlers(store, dbMonitoringConnections) {
     }
   });
 
-  ipcMain.handle('getTableData', async (_e, config = {}) => {
-    console.log("getTableData handler in tables.js called with sorting params:", {
-      sortColumn: config.sortColumn,
-      sortDirection: config.sortDirection
-    });
-    
-    let connection;
-    let monitoredConnection = null;
+  ipcMain.handle('get-table-data', async (_e, config = {}) => {
+    const { error, connection, isMonitored } = await _getDbConnection(
+      { store, dbMonitoringConnections },
+      config
+    );
+    if (error) {
+      return { success: false, message: error, data: [], totalRecords: 0 };
+    }
 
     try {
-      if (
-        config.connectionId &&
-        (!config.host || !config.port || !config.username || !config.database)
-      ) {
-        console.log(`Getting connection details for table data, ID: ${config.connectionId}`);
-        const connections = store.get('connections') || [];
-        const connectionDetails = connections.find(conn => conn.id === config.connectionId);
-
-        if (!connectionDetails) {
-          return {
-            success: false,
-            message: 'Connection not found',
-            data: [],
-            totalRecords: 0
-          };
-        }
-
-        config.host = connectionDetails.host;
-        config.port = connectionDetails.port;
-        config.username = connectionDetails.username;
-        config.password = connectionDetails.password;
-        config.database = connectionDetails.database;
-      }
-
-      if (!config.host || !config.port || !config.username || !config.database || !config.tableName) {
-        return {
-          success: false,
-          message: 'Missing parameters',
-          data: [],
-          totalRecords: 0
-        };
-      }
-
-      let useMonitoredConnection = false;
-
-      if (config.connectionId) {
-        monitoredConnection = dbMonitoringConnections.get(config.connectionId);
-        if (monitoredConnection) {
-          console.log(`Using existing monitored connection for ${config.connectionId}`);
-          connection = monitoredConnection;
-          useMonitoredConnection = true;
-        }
-      }
-
-      if (!useMonitoredConnection) {
-        connection = await mysql.createConnection({
-          host: config.host,
-          port: config.port,
-          user: config.username,
-          password: config.password || '',
-          database: config.database,
-          connectTimeout: 10000
-        });
-      }
-
-      // Escapar nome da tabela para prevenir SQL injection
       const tableName = connection.escapeId(config.tableName);
-
-      // Configurações de paginação
       const page = config.page || 1;
-      const limit = parseInt(config.limit) || 100;
+      const limit = parseInt(config.limit, 10) || 100;
       const offset = (page - 1) * limit;
 
-      console.log(
-        `Fetching data from ${config.database}.${config.tableName} (page: ${page}, limit: ${limit}, offset: ${offset})`
+      const [countRows] = await connection.query(
+        `SELECT COUNT(*) AS totalRecords FROM ${tableName}`
       );
+      const totalRecords = countRows[0]?.totalRecords || 0;
 
-      // Primeiro, obter a contagem total de registros
-      const [countResult] = await connection.query(`SELECT COUNT(*) as total FROM ${tableName}`);
-      const totalRecords = countResult[0].total;
-
-      console.log(`Total records in ${config.tableName}: ${totalRecords}`);
-
-      // Build query with sorting if provided
-      let sql = `SELECT * FROM ${tableName}`;
-      
-      if (config.sortColumn) {
-        const sortColumn = connection.escapeId(config.sortColumn);
-        const sortDirection = config.sortDirection === 'desc' ? 'DESC' : 'ASC';
-        
-        sql += ` ORDER BY ${sortColumn} ${sortDirection}`;
-        console.log(`Sorting by ${config.sortColumn} ${sortDirection}`);
-      }
-      
-      sql += ` LIMIT ? OFFSET ?`;
-      
-      console.log(`Executing SQL: ${sql}`, [limit, offset]);
-      
-      // Obter os dados da página atual
+      const baseSql = `SELECT * FROM ${tableName}`;
+      const sql = _applySortingAndPagination(baseSql, connection, config);
       const [rows] = await connection.query(sql, [limit, offset]);
-
-      console.log(`Fetched ${rows?.length || 0} rows from ${config.tableName} for page ${page}`);
 
       return {
         success: true,
-        data: rows || [],
-        totalRecords: totalRecords,
-        page: page,
-        limit: limit
+        data: rows,
+        totalRecords,
+        page,
+        limit
       };
-    } catch (error) {
-      console.error('Error fetching table data:', error);
+    } catch (err) {
       return {
         success: false,
-        message: error.message || 'Failed to fetch table data',
+        message: err.message || 'Failed to fetch table data',
         data: [],
         totalRecords: 0
       };
     } finally {
-      if (connection && !monitoredConnection) {
-        try {
-          await connection.end();
-        } catch (err) {
-          console.error('Error closing MySQL connection:', err);
-        }
-      }
+      _closeConnection(connection, isMonitored);
     }
   });
 
-  ipcMain.handle('getFilteredTableData', async (_e, config = {}) => {
-    console.log("getFilteredTableData handler in tables.js called with sorting params:", {
-      sortColumn: config.sortColumn,
-      sortDirection: config.sortDirection
-    });
-    
-    let connection;
-    let monitoredConnection = null;
+  ipcMain.handle('get-filtered-table-data', async (_e, config = {}) => {
+    const { error, connection, isMonitored } = await _getDbConnection(
+      { store, dbMonitoringConnections },
+      config
+    );
+    if (error) {
+      return { success: false, message: error, data: [], totalRecords: 0 };
+    }
 
     try {
-      if (
-        !config.host ||
-        !config.port ||
-        !config.username ||
-        !config.database ||
-        !config.tableName ||
-        !config.filter
-      ) {
-        return {
-          success: false,
-          message: 'Missing required parameters',
-          data: [],
-          totalRecords: 0
-        };
-      }
-
-      if (config.connectionId) {
-        monitoredConnection = dbMonitoringConnections.get(config.connectionId);
-        if (monitoredConnection) {
-          console.log(
-            `Using existing monitored connection for filtered data: ${config.connectionId}`
-          );
-          connection = monitoredConnection;
-        }
-      }
-
-      if (!monitoredConnection) {
-        connection = await mysql.createConnection({
-          host: config.host,
-          port: config.port,
-          user: config.username,
-          password: config.password || '',
-          database: config.database,
-          connectTimeout: 10000
-        });
-      }
-
-      // Escapar nome da tabela para prevenir SQL injection
       const tableName = connection.escapeId(config.tableName);
-
-      // Limpar o filtro - remover 'WHERE' se estiver no início
-      let filterClause = config.filter.trim();
-      if (filterClause.toLowerCase().startsWith('where')) {
-        filterClause = filterClause.substring(5).trim();
+      let filter = (config.filter || '').trim();
+      if (filter.toLowerCase().startsWith('where')) {
+        filter = filter.slice(5).trim();
       }
 
       const page = config.page || 1;
-      const limit = parseInt(config.limit) || 100;
+      const limit = parseInt(config.limit, 10) || 100;
       const offset = (page - 1) * limit;
 
-      console.log(`Executing filtered query on ${config.database}.${config.tableName}`);
-      console.log(`Filter: ${filterClause}`);
-      console.log(`Page: ${page}, Limit: ${limit}, Offset: ${offset}`);
+      const [countRows] = await connection.query(
+        `SELECT COUNT(*) AS totalRecords FROM ${tableName} WHERE ${filter}`
+      );
+      const totalRecords = countRows[0]?.totalRecords || 0;
 
-      const countQuery = `SELECT COUNT(*) as total FROM ${tableName} WHERE ${filterClause}`;
-      console.log(`Count query: ${countQuery}`);
-
-      let totalRecords = 0;
-      try {
-        const [countResult] = await connection.query(countQuery);
-        totalRecords = countResult[0].total;
-        console.log(`Total records matching filter: ${totalRecords}`);
-      } catch (countError) {
-        console.error('Error executing count query:', countError);
-      }
-
-      // Build query with sorting if provided
-      let sql = `SELECT * FROM ${tableName} WHERE ${filterClause}`;
-      
-      if (config.sortColumn) {
-        const sortColumn = connection.escapeId(config.sortColumn);
-        const sortDirection = config.sortDirection === 'desc' ? 'DESC' : 'ASC';
-        
-        sql += ` ORDER BY ${sortColumn} ${sortDirection}`;
-        console.log(`Sorting by ${config.sortColumn} ${sortDirection}`);
-      }
-      
-      sql += ` LIMIT ? OFFSET ?`;
-      
-      console.log(`Executing SQL: ${sql}`, [limit, offset]);
-      
+      const baseSql = `SELECT * FROM ${tableName} WHERE ${filter}`;
+      const sql = _applySortingAndPagination(baseSql, connection, config);
       const [rows] = await connection.query(sql, [limit, offset]);
-
-      console.log(`Fetched ${rows?.length || 0} rows from filtered data`);
 
       return {
         success: true,
-        data: rows || [],
-        totalRecords: totalRecords,
-        page: page,
-        limit: limit
+        data: rows,
+        totalRecords,
+        page,
+        limit
       };
-    } catch (error) {
-      console.error('Error fetching filtered data:', error);
+    } catch (err) {
       return {
         success: false,
-        message: error.message || 'Failed to fetch filtered data',
+        message: err.message || 'Failed to fetch filtered table data',
         data: [],
         totalRecords: 0
       };
     } finally {
-      if (connection && !monitoredConnection) {
+      _closeConnection(connection, isMonitored);
+    }
+  });
+
+  ipcMain.handle('list-databases', async (_e, config = {}) => {
+    if (!config.host || !config.port || !config.username) {
+      return {
+        success: false,
+        message: 'Missing connection parameters',
+        databases: []
+      };
+    }
+
+    let conn;
+    try {
+      conn = await mysql.createConnection({
+        host: config.host,
+        port: config.port,
+        user: config.username,
+        password: config.password || '',
+        connectTimeout: 10000
+      });
+
+      const [rows] = await conn.query('SHOW DATABASES');
+      const databases = rows
+        .map(r => r.Database || r.database)
+        .filter(db => !['information_schema', 'performance_schema', 'mysql', 'sys'].includes(db));
+
+      return { success: true, databases };
+    } catch (err) {
+      let msg = err.message;
+      if (err.code === 'ER_ACCESS_DENIED_ERROR') {
+        msg = 'Access denied with the provided credentials';
+      } else if (err.code === 'ECONNREFUSED') {
+        msg = 'Connection refused - check host and port';
+      }
+      return {
+        success: false,
+        message: msg,
+        databases: []
+      };
+    } finally {
+      if (conn) {
         try {
-          await connection.end();
-        } catch (err) {
-          console.error('Error closing MySQL connection:', err);
+          await conn.end();
+        } catch (e) {
+          console.error('Error closing connection:', e);
         }
       }
     }

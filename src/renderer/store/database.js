@@ -54,14 +54,14 @@ export const useDatabaseStore = defineStore('database', () => {
   async function loadTableData(id, tableName, limit = 100, page = 1, sortOptions = {}) {
     try {
       const conn = _getConnection(id);
-      
-      console.log("loadTableData chamado com:", {
+
+      console.log('loadTableData chamado com:', {
         tableName,
         limit,
         page,
         sortOptions
       });
-      
+
       const payload = {
         ..._buildPayload(conn),
         tableName,
@@ -70,17 +70,17 @@ export const useDatabaseStore = defineStore('database', () => {
         sortColumn: sortOptions.sortColumn,
         sortDirection: sortOptions.sortDirection
       };
-      
-      console.log("Enviando para getTableData:", JSON.stringify(payload));
-      
+
+      console.log('Enviando para getTableData:', JSON.stringify(payload));
+
       const result = await window.api.getTableData(payload);
-      
-      console.log("Resultado de getTableData:", {
+
+      console.log('Resultado de getTableData:', {
         success: result.success,
         totalRecords: result.totalRecords,
         dataLength: result.data?.length
       });
-      
+
       if (result.success) {
         const key = `${id}:${tableName}`;
         _updateCache(key, result, page, limit);
@@ -88,23 +88,30 @@ export const useDatabaseStore = defineStore('database', () => {
       }
       return _EMPTY_RESULT(page, limit);
     } catch (error) {
-      console.error("Erro em loadTableData:", error);
+      console.error('Erro em loadTableData:', error);
       return _EMPTY_RESULT(page, limit);
     }
   }
 
-  async function loadFilteredTableData(id, tableName, filter, limit = 100, page = 1, sortOptions = {}) {
+  async function loadFilteredTableData(
+    id,
+    tableName,
+    filter,
+    limit = 100,
+    page = 1,
+    sortOptions = {}
+  ) {
     try {
       const conn = _getConnection(id);
-      
-      console.log("loadFilteredTableData chamado com:", {
+
+      console.log('loadFilteredTableData chamado com:', {
         tableName,
         filter,
         limit,
         page,
         sortOptions
       });
-      
+
       const payload = {
         ..._buildPayload(conn),
         tableName,
@@ -114,17 +121,17 @@ export const useDatabaseStore = defineStore('database', () => {
         sortColumn: sortOptions.sortColumn,
         sortDirection: sortOptions.sortDirection
       };
-      
-      console.log("Enviando para getFilteredTableData:", JSON.stringify(payload));
-      
+
+      console.log('Enviando para getFilteredTableData:', JSON.stringify(payload));
+
       const result = await window.api.getFilteredTableData(payload);
-      
-      console.log("Resultado de getFilteredTableData:", {
+
+      console.log('Resultado de getFilteredTableData:', {
         success: result.success,
         totalRecords: result.totalRecords,
         dataLength: result.data?.length
       });
-      
+
       if (result.success) {
         const key = `${id}:${tableName}:filtered`;
         _updateCache(key, result, page, limit, { filter });
@@ -132,7 +139,7 @@ export const useDatabaseStore = defineStore('database', () => {
       }
       return _EMPTY_RESULT(page, limit);
     } catch (error) {
-      console.error("Erro em loadFilteredTableData:", error);
+      console.error('Erro em loadFilteredTableData:', error);
       return _EMPTY_RESULT(page, limit);
     }
   }

@@ -36,13 +36,14 @@ try {
     updateRecord: config => safeIpcRenderer.invoke('update-table-record', config),
     deleteRecords: config => safeIpcRenderer.invoke('delete-table-records', config),
     truncateTable: config => safeIpcRenderer.invoke('truncate-table', config),
+    listDatabases: config => safeIpcRenderer.invoke('list-databases', config),
+    getTableData: config => safeIpcRenderer.invoke('get-table-data', config),
+    getFilteredTableData: config => safeIpcRenderer.invoke('get-filtered-table-data', config),
 
     saveConnections: connections => safeIpcRenderer.invoke('save-connections', connections),
     getOpenTabs: () => safeIpcRenderer.invoke('get-open-tabs'),
     saveOpenTabs: tabs => safeIpcRenderer.invoke('save-open-tabs', tabs),
-    listDatabases: config => safeIpcRenderer.invoke('list-databases', config),
-    getTableData: config => safeIpcRenderer.invoke('getTableData', config),
-    getFilteredTableData: config => safeIpcRenderer.invoke('getFilteredTableData', config),
+
     openFile: filePath => safeIpcRenderer.invoke('openFile', filePath),
     getDatabaseRelationships: connectionId =>
       safeIpcRenderer.invoke('get-database-relationships', { connectionId }),

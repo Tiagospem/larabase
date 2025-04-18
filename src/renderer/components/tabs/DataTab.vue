@@ -274,7 +274,10 @@
         @click="handleOutsideClick"
         @keydown.prevent="handleTableKeyDown"
       >
-        <div class="overflow-x-scroll overflow-y-auto flex-grow" style="max-height: calc(100% - 45px);">
+        <div
+          class="overflow-x-scroll overflow-y-auto flex-grow"
+          style="max-height: calc(100% - 45px)"
+        >
           <table class="table table-sm w-[150%] table-fixed min-w-full">
             <thead class="bg-base-300 sticky top-0 z-15">
               <tr class="text-xs select-none">
@@ -307,9 +310,13 @@
                           stroke-width="1.5"
                           stroke="currentColor"
                           class="w-4 h-4"
-                          :class="{'rotate-180': currentSortDirection === 'desc'}"
+                          :class="{ 'rotate-180': currentSortDirection === 'desc' }"
                         >
-                          <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 15.75l7.5-7.5 7.5 7.5" />
+                          <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            d="M4.5 15.75l7.5-7.5 7.5 7.5"
+                          />
                         </svg>
                       </span>
                     </div>
@@ -339,7 +346,10 @@
                 @mousedown.stop="handleMouseDown($event, rowIndex)"
                 @mouseenter.stop="handleMouseEnter(rowIndex)"
               >
-                <td class="w-10 px-1 border-r border-neutral text-center sticky left-0 z-10" :class="getRowBackgroundClass(rowIndex)">
+                <td
+                  class="w-10 px-1 border-r border-neutral text-center sticky left-0 z-10"
+                  :class="getRowBackgroundClass(rowIndex)"
+                >
                   <button
                     class="btn btn-xs btn-circle btn-ghost"
                     title="Preview data"
@@ -968,21 +978,21 @@ const filteredData = computed(() => {
     data = [...data].sort((a, b) => {
       const valA = a[currentSortColumn.value];
       const valB = b[currentSortColumn.value];
-      
+
       // Handle null values
       if (valA === null && valB === null) return 0;
       if (valA === null) return currentSortDirection.value === 'asc' ? -1 : 1;
       if (valB === null) return currentSortDirection.value === 'asc' ? 1 : -1;
-      
+
       // Compare based on type
       if (typeof valA === 'number' && typeof valB === 'number') {
         return currentSortDirection.value === 'asc' ? valA - valB : valB - valA;
       }
-      
+
       // Default string comparison
       const strA = String(valA).toLowerCase();
       const strB = String(valB).toLowerCase();
-      
+
       if (currentSortDirection.value === 'asc') {
         return strA.localeCompare(strB);
       } else {
@@ -1057,7 +1067,7 @@ function formatCellValue(value) {
 function defaultColumnWidth(column) {
   // Base width calculation using column name length
   const baseWidth = Math.max(120, column.length * 10);
-  
+
   // Special case handling for specific column types
   if (/^id$/i.test(column)) return `${Math.max(90, column.length * 12)}px`;
 
@@ -1083,7 +1093,7 @@ function analyzeColumns() {
 }
 
 async function loadTableData() {
-  console.log("loadTableData chamado com:", {
+  console.log('loadTableData chamado com:', {
     sortColumn: currentSortColumn.value,
     sortDirection: currentSortDirection.value
   });
@@ -1122,13 +1132,15 @@ async function loadTableData() {
     databaseStore.clearTableCache(cacheKey);
 
     // Adicionar parâmetros de ordenação
-    const sortParams = currentSortColumn.value ? {
-      sortColumn: currentSortColumn.value,
-      sortDirection: currentSortDirection.value
-    } : {};
+    const sortParams = currentSortColumn.value
+      ? {
+          sortColumn: currentSortColumn.value,
+          sortDirection: currentSortDirection.value
+        }
+      : {};
 
     // Verificar os parâmetros de ordenação
-    console.log("Enviando parâmetros de ordenação:", JSON.stringify(sortParams));
+    console.log('Enviando parâmetros de ordenação:', JSON.stringify(sortParams));
 
     const result = await databaseStore.loadTableData(
       props.connectionId,
@@ -1141,8 +1153,8 @@ async function loadTableData() {
     // Verificar os resultados
     console.log(`Resultados recebidos: ${result.data?.length || 0} registros`);
     if (result.data?.length > 1) {
-      console.log("Primeiro registro:", result.data[0]);
-      console.log("Último registro:", result.data[result.data.length - 1]);
+      console.log('Primeiro registro:', result.data[0]);
+      console.log('Último registro:', result.data[result.data.length - 1]);
     }
 
     if (!result.data || result.data.length === 0) {
@@ -1231,10 +1243,10 @@ function stopColumnResize(event) {
   document.removeEventListener('mousemove', handleColumnResize);
   document.removeEventListener('mouseup', stopColumnResize);
   resizingColumn.value = null;
-  
+
   // Set the recentlyResized flag
   recentlyResized.value = true;
-  
+
   // Clear the flag after a short delay
   setTimeout(() => {
     recentlyResized.value = false;
@@ -1242,8 +1254,13 @@ function stopColumnResize(event) {
 }
 
 function getRowClasses(rowIndex) {
-  const isSelected = selectedRows.value && selectedRows.value.includes && selectedRows.value.includes(rowIndex);
-  const isUpdated = highlightChanges.value && updatedRows.value && updatedRows.value.includes && updatedRows.value.includes(rowIndex);
+  const isSelected =
+    selectedRows.value && selectedRows.value.includes && selectedRows.value.includes(rowIndex);
+  const isUpdated =
+    highlightChanges.value &&
+    updatedRows.value &&
+    updatedRows.value.includes &&
+    updatedRows.value.includes(rowIndex);
 
   return {
     'selected-row': isSelected,
@@ -1256,11 +1273,16 @@ function getRowBackgroundClass(rowIndex) {
   if (selectedRows.value && selectedRows.value.includes && selectedRows.value.includes(rowIndex)) {
     return 'bg-[#ea4331] text-white';
   }
-  
-  if (highlightChanges.value && updatedRows.value && updatedRows.value.includes && updatedRows.value.includes(rowIndex)) {
+
+  if (
+    highlightChanges.value &&
+    updatedRows.value &&
+    updatedRows.value.includes &&
+    updatedRows.value.includes(rowIndex)
+  ) {
     return 'bg-[rgba(234,67,49,0.1)]';
   }
-  
+
   return 'bg-base-100';
 }
 
@@ -2232,10 +2254,12 @@ async function loadFilteredData() {
     }
 
     // Adicionar parâmetros de ordenação
-    const sortParams = currentSortColumn.value ? {
-      sortColumn: currentSortColumn.value,
-      sortDirection: currentSortDirection.value
-    } : {};
+    const sortParams = currentSortColumn.value
+      ? {
+          sortColumn: currentSortColumn.value,
+          sortDirection: currentSortDirection.value
+        }
+      : {};
 
     const result = await databaseStore.loadFilteredTableData(
       props.connectionId,
@@ -2705,7 +2729,7 @@ function handleSortClick(column) {
     console.log('Column resizing in progress or recently resized, sort operation ignored');
     return;
   }
-  
+
   // Se clicar na mesma coluna, inverter a direção
   if (currentSortColumn.value === column) {
     currentSortDirection.value = currentSortDirection.value === 'asc' ? 'desc' : 'asc';
@@ -2716,19 +2740,18 @@ function handleSortClick(column) {
   }
 
   console.log(`Ordenando por ${column} em ordem ${currentSortDirection.value}`);
-  
+
   // Resetar para a primeira página
   currentPage.value = 1;
-  
+
   // Aplicar filtro quando houver, senão recarregar os dados
   if (activeFilter.value) {
-    console.log("Aplicando ordenação com filtro ativo");
+    console.log('Aplicando ordenação com filtro ativo');
     loadFilteredTableData();
   } else {
-    console.log("Aplicando ordenação sem filtro");
+    console.log('Aplicando ordenação sem filtro');
     loadTableData();
   }
-
 }
 </script>
 
@@ -2821,7 +2844,7 @@ th:has(+ tr td.expanded) {
 }
 
 /* Restore all cell borders with direct color values */
-.table th, 
+.table th,
 .table td {
   border: 0.5px solid #333 !important;
 }
@@ -2831,29 +2854,28 @@ thead {
   z-index: 15 !important;
 }
 
-
 .table > thead.bg-base-300 > tr > th {
   border: 0.5px solid #000 !important;
 }
 
 /* Fix for hover effects on sticky columns - respecting selected rows */
 tbody tr:not(.selected-row):hover td.sticky,
-tbody tr:not(.selected-row):hover td[class*="sticky"],
+tbody tr:not(.selected-row):hover td[class*='sticky'],
 tbody tr:not(.selected-row).hover td.sticky,
-tbody tr:not(.selected-row).hover td[class*="sticky"] {
+tbody tr:not(.selected-row).hover td[class*='sticky'] {
   background-color: hsl(var(--b2)) !important; /* base-200 color in tailwind */
 }
 
 /* Also apply the hover background to the first data column - respecting selected rows */
-tbody tr:not(.selected-row):hover td[class*="left-10"],
-tbody tr:not(.selected-row).hover td[class*="left-10"] {
+tbody tr:not(.selected-row):hover td[class*='left-10'],
+tbody tr:not(.selected-row).hover td[class*='left-10'] {
   background-color: hsl(var(--b2)) !important;
 }
 
 /* Ensure selected rows' sticky columns maintain selection color on hover */
 tbody tr.selected-row:hover td.sticky,
-tbody tr.selected-row:hover td[class*="sticky"],
-tbody tr.selected-row:hover td[class*="left-10"] {
+tbody tr.selected-row:hover td[class*='sticky'],
+tbody tr.selected-row:hover td[class*='left-10'] {
   background-color: #ea4331 !important;
   color: white !important;
 }
