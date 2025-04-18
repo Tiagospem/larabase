@@ -1,72 +1,72 @@
 # Larabase
 
-Larabase é um clone do TablePlus, um gerenciador de banco de dados com interface gráfica. Este projeto foi desenvolvido com Electron.js, Vue.js, Pinia, Composition API e DaisyUI.
+<div align="center">
+  <img src="./src/renderer/assets/icons/png/512x512.png" alt="Larabase Logo" width="200" />
+</div>
 
-![Larabase Logo](./src/renderer/assets/larabase-logo.png)
+Larabase is a MySQL GUI manager designed specifically for Laravel developers. It's a TablePlus clone built with Electron.js, Vue.js, Pinia, Composition API, and DaisyUI.
 
-## Requisitos
+## Features
+
+- Dark-themed interface similar to TablePlus
+- Connection management
+- Database table browsing and visualization
+- Table search functionality
+- Tab-based navigation system
+- Resizable sidebar
+- Data filtering capabilities
+- State persistence between application reloads
+
+## Requirements
 
 - Node.js 16+
-- npm ou yarn
+- npm or yarn
 
-## Instalação
+## Installation
 
-Clone o repositório e instale as dependências:
+Clone the repository and install dependencies:
 
 ```bash
-git clone <url-do-repositorio>
+git clone https://github.com/yourusername/larabase.git
 cd larabase
 npm install
 ```
 
-## Desenvolvimento
+## Development
 
-Para executar em modo de desenvolvimento:
+Run in development mode:
 
 ```bash
 npm run dev
 ```
 
-Isso iniciará o servidor de desenvolvimento Vite e o Electron.
+This will start the Vite development server and launch Electron.
 
-## Construção
+## Building
 
-Para construir o aplicativo:
+Build the application:
 
 ```bash
 npm run build
 ```
 
-## Funcionalidades Implementadas
+## Project Structure
 
-- Interface similar ao TablePlus com tema escuro
-- Gerenciamento de conexões (mock)
-- Visualização das tabelas de banco de dados
-- Pesquisa de tabelas
-- Sistema de abas para navegação entre tabelas
-- Redimensionamento da barra lateral
-- Filtro de dados nas tabelas
-- Persistência do estado entre recarregamentos
+- `src/main`: Electron code (main process)
+- `src/renderer`: Vue.js code (renderer process)
+  - `views`: Application pages
+  - `components`: Reusable components
+  - `store`: Pinia stores
+  - `assets`: Static resources
 
-## Notas de Implementação
+## Roadmap
 
-### Estrutura de Diretórios
+- Implementation of real backend functionality for database connections
+- SQL query execution features
+- Support for additional database types
+- Data editing capabilities
+- Interface for creating and editing tables
 
-- `src/main`: Código do Electron (processo principal)
-- `src/renderer`: Código do Vue.js (processo de renderização)
-  - `views`: Páginas da aplicação
-  - `components`: Componentes reutilizáveis
-  - `store`: Stores do Pinia
-  - `assets`: Recursos estáticos
-
-### Próximos Passos de Desenvolvimento
-
-- Implementação da funcionalidade de backend real para conexão com bancos de dados
-- Adição de recursos para execução de consultas SQL
-- Suporte a mais tipos de bancos de dados
-- Funcionalidades de edição de dados
-- Interface para criação e edição de tabelas
-
-## Licença
+## License
 
 MIT
