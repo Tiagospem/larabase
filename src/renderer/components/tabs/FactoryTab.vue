@@ -23,7 +23,7 @@
         <button
           v-if="factoryFound"
           class="btn btn-sm btn-primary"
-          @click="showGenerateDataModal = true"
+          @click="openGenerateDataModal"
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -213,7 +213,7 @@
                   <path
                     stroke-linecap="round"
                     stroke-linejoin="round"
-                    d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25"
+                    d="M13.5 6H5.25A2.25 2.25 0 0 0 3 8.25v10.5A2.25 2.25 0 0 0 5.25 21h10.5A2.25 2.25 0 0 0 18 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25"
                   />
                 </svg>
                 Open File
@@ -234,13 +234,16 @@
 
     <!-- Factory Data Generation Modal -->
     <div v-if="showGenerateDataModal" class="modal modal-open">
-      <div class="modal-box bg-base-100 max-w-md">
+      <div class="modal-box bg-base-100 max-w-xl">
         <h3 class="font-bold text-lg mb-3 text-center">Generate Factory Data</h3>
 
         <p class="text-center mb-4">Create test records for {{ tableName }}</p>
 
-        <div class="bg-primary bg-opacity-10 p-4 rounded-lg mb-5">
-          <p class="font-medium mb-2">Number of records:</p>
+        <!-- Input de número de registros - sempre visível -->
+        <div class="bg-primary bg-opacity-10 p-4 rounded-lg mb-4">
+          <div class="flex justify-between items-center mb-3">
+            <p class="font-medium">Number of records:</p>
+          </div>
 
           <div class="form-control">
             <input
@@ -256,6 +259,178 @@
                 >Please enter a number between 1 and 1000</span
               >
             </label>
+          </div>
+        </div>
+
+        <div class="tabs tabs-boxed mb-4">
+          <a 
+            class="tab relative" 
+            :class="{ 'tab-active': activeTab === 'relationships' }"
+            @click="activeTab = 'relationships'"
+          >
+            Relationships
+            <span v-if="selectedRelation && relatedModelId" class="badge badge-xs badge-primary absolute -top-1 -right-1"></span>
+          </a>
+          <a 
+            class="tab relative" 
+            :class="{ 'tab-active': activeTab === 'attributes' }"
+            @click="activeTab = 'attributes'"
+          >
+            Attributes
+            <span 
+              v-if="customAttributes.filter(a => a.field && a.value).length > 0" 
+              class="badge badge-xs badge-primary absolute -top-1 -right-1"
+            >{{ customAttributes.filter(a => a.field && a.value).length }}</span>
+          </a>
+        </div>
+
+        <!-- Tab: Relationships -->
+        <div v-if="activeTab === 'relationships'" class="bg-primary bg-opacity-10 p-4 rounded-lg mb-5">
+          <div class="flex justify-between items-center mb-3">
+            <p class="font-medium">Assign to specific model:</p>
+            <div v-if="selectedRelation && relatedModelId" class="badge badge-primary badge-sm gap-1">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-3 h-3">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M13.19 8.688a4.5 4.5 0 011.242 7.244l-4.5 4.5a4.5 4.5 0 01-6.364-6.364l1.757-1.757m13.35-.622l1.757-1.757a4.5 4.5 0 00-6.364-6.364l-4.5 4.5a4.5 4.5 0 001.242 7.244" />
+              </svg>
+              {{ selectedRelation }} #{{ relatedModelId }}
+            </div>
+          </div>
+
+          <div class="form-control mb-4">
+            <select v-model="selectedRelation" class="select select-bordered w-full">
+              <option value="">No relationship (create standalone)</option>
+              <option v-for="rel in availableRelations" :key="rel.model" :value="rel.model">
+                {{ rel.model }} ({{ rel.table }})
+              </option>
+            </select>
+          </div>
+
+          <div v-if="selectedRelation" class="form-control mb-4">
+            <label class="label">
+              <span class="label-text">Select ID from {{ selectedRelation }}</span>
+            </label>
+            <div class="flex gap-2">
+              <input 
+                v-model="relatedModelId" 
+                type="number" 
+                min="1" 
+                placeholder="Enter ID"
+                class="input input-bordered w-full" 
+              />
+              <button 
+                class="btn btn-square btn-outline"
+                title="Browse records"
+                @click="toggleRelatedRecords"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          <div v-if="isLoadingRelatedRecords" class="flex justify-center my-2">
+            <span class="loading loading-spinner loading-sm"></span>
+          </div>
+
+          <div v-if="showRelatedRecords && relatedRecords.length > 0" class="overflow-x-auto">
+            <div class="flex justify-between items-center mb-2">
+              <span class="text-sm font-medium">Selected records</span>
+              <button 
+                class="btn btn-xs btn-ghost" 
+                @click="showRelatedRecords = false"
+                title="Close"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <table class="table table-xs table-zebra">
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Preview</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="record in relatedRecords" :key="record.id" :class="{'bg-primary bg-opacity-10': record.id == relatedModelId}">
+                  <td>{{ record.id }}</td>
+                  <td class="font-mono text-xs truncate max-w-[200px]">
+                    {{ formatRecordPreview(record) }}
+                  </td>
+                  <td>
+                    <button 
+                      class="btn btn-xs" 
+                      :class="record.id == relatedModelId ? 'btn-primary' : 'btn-ghost'"
+                      @click="selectRelatedRecord(record.id)"
+                    >
+                      {{ record.id == relatedModelId ? 'Selected' : 'Select' }}
+                    </button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        
+        <!-- Tab: Attributes -->
+        <div v-if="activeTab === 'attributes'" class="bg-primary bg-opacity-10 p-4 rounded-lg mb-5">
+          <div class="flex justify-between items-center mb-3">
+            <p class="font-medium">Customize attributes:</p>
+            <div v-if="customAttributes.filter(a => a.field && a.value).length > 0" class="badge badge-primary badge-sm gap-1">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-3 h-3">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M9.568 3H5.25A2.25 2.25 0 003 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581c.699.699 1.78.872 2.607.33a18.095 18.095 0 005.223-5.223c.542-.827.369-1.908-.33-2.607L11.16 3.66A2.25 2.25 0 009.568 3z" />
+              </svg>
+              {{ customAttributes.filter(a => a.field && a.value).length }} Fields
+            </div>
+          </div>
+          
+          <div v-if="isLoadingTableColumns" class="flex justify-center my-4">
+            <span class="loading loading-spinner loading-md"></span>
+          </div>
+
+          <div v-else-if="tableColumns.length === 0" class="alert alert-info shadow-lg mb-4">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" class="stroke-current flex-shrink-0 w-6 h-6"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+            <span>No table columns found. Please refresh the factory data.</span>
+          </div>
+          
+          <div v-else>
+            <div class="mb-4">
+              <button class="btn btn-sm btn-outline" @click="addCustomAttribute">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4 mr-1">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                </svg>
+                Add Attribute
+              </button>
+            </div>
+
+            <div v-for="(attr, index) in customAttributes" :key="index" class="mb-2 flex gap-2">
+              <select 
+                v-model="attr.field" 
+                class="select select-bordered select-sm w-1/3"
+              >
+                <option value="" disabled>Select field</option>
+                <option v-for="col in tableColumns" :key="col.name" :value="col.name" :disabled="isColumnSelected(col.name, index)">
+                  {{ col.name }}
+                </option>
+              </select>
+              <input 
+                v-model="attr.value" 
+                type="text" 
+                :placeholder="getPlaceholderForField(attr.field)" 
+                class="input input-bordered input-sm flex-grow"
+              />
+              <button 
+                class="btn btn-sm btn-square btn-error" 
+                @click="removeCustomAttribute(index)"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
           </div>
         </div>
 
@@ -304,6 +479,11 @@ const props = defineProps({
   onLoad: {
     type: Function,
     required: true
+  },
+  onOpenTab: {
+    type: Function,
+    required: false,
+    default: () => {}
   }
 });
 
@@ -315,6 +495,18 @@ const factoryContent = ref('');
 const showGenerateDataModal = ref(false);
 const isGenerating = ref(false);
 const recordCount = ref(10);
+const activeTab = ref('relationships');
+const selectedRelation = ref('');
+const relatedModelId = ref('');
+const relatedRecords = ref([]);
+const isLoadingRelatedRecords = ref(false);
+const customAttributes = ref([]);
+const availableRelations = ref([]);
+
+// Adicionar estas variáveis:
+const tableColumns = ref([]);
+const isLoadingTableColumns = ref(false);
+const showRelatedRecords = ref(false);
 
 const databaseStore = useDatabaseStore();
 const connectionsStore = useConnectionsStore();
@@ -575,6 +767,151 @@ async function openFileInEditor(filePath) {
   }
 }
 
+async function loadTableColumns() {
+  if (!connection.value || !props.tableName) return;
+  
+  isLoadingTableColumns.value = true;
+  
+  try {
+    // Obter a estrutura da tabela
+    const columns = await databaseStore.getTableStructure(
+      props.connectionId,
+      props.tableName
+    );
+    
+    // Filtrar colunas, remover as que não queremos personalizar
+    tableColumns.value = columns.filter(col => {
+      // Ignorar colunas que normalmente não queremos personalizar em factories
+      return !['id', 'created_at', 'updated_at', 'deleted_at'].includes(col.name);
+    });
+    
+    console.log("Table columns loaded:", tableColumns.value);
+  } catch (error) {
+    console.error("Error loading table columns:", error);
+    showAlert("Failed to load table structure", "error");
+    tableColumns.value = [];
+  } finally {
+    isLoadingTableColumns.value = false;
+  }
+}
+
+function isColumnSelected(columnName, currentIndex) {
+  // Verificar se a coluna já está selecionada em outro atributo
+  return customAttributes.value.some((attr, index) => 
+    index !== currentIndex && attr.field === columnName
+  );
+}
+
+function getPlaceholderForField(fieldName) {
+  if (!fieldName) return "Value";
+  
+  // Encontrar o tipo da coluna
+  const column = tableColumns.value.find(col => col.name === fieldName);
+  if (!column) return "Value";
+  
+  // Baseado no tipo, retornar um placeholder adequado
+  const type = column.type?.toLowerCase() || '';
+  
+  if (type.includes('varchar') || type.includes('text') || type.includes('char')) {
+    return "Text value";
+  } else if (type.includes('int') || type.includes('float') || type.includes('double') || type.includes('decimal')) {
+    return "Numeric value";
+  } else if (type.includes('date')) {
+    return "YYYY-MM-DD";
+  } else if (type.includes('datetime') || type.includes('timestamp')) {
+    return "YYYY-MM-DD HH:MM:SS";
+  } else if (type.includes('boolean') || type.includes('tinyint(1)')) {
+    return "true/false";
+  } else if (type.includes('json')) {
+    return "JSON value";
+  }
+  
+  return "Value";
+}
+
+function formatRecordPreview(record) {
+  if (!record) return '';
+  
+  // Cria um objeto simplificado com no máximo as três primeiras propriedades
+  const preview = {};
+  const keys = Object.keys(record).slice(0, 3);
+  
+  keys.forEach(key => {
+    if (typeof record[key] === 'string') {
+      // Limita o tamanho das strings
+      preview[key] = record[key].length > 20 
+        ? record[key].substring(0, 20) + '...' 
+        : record[key];
+    } else {
+      preview[key] = record[key];
+    }
+  });
+  
+  return JSON.stringify(preview);
+}
+
+function toggleRelatedRecords() {
+  if (showRelatedRecords.value && relatedRecords.value.length > 0) {
+    // Se já estiver mostrando, esconde
+    showRelatedRecords.value = false;
+  } else {
+    // Se não estiver mostrando, carrega e mostra
+    fetchRelatedRecords();
+  }
+}
+
+function selectRelatedRecord(id) {
+  relatedModelId.value = id;
+  showRelatedRecords.value = false; // Esconde a lista após selecionar
+}
+
+async function fetchRelatedRecords() {
+  if (!selectedRelation.value) return;
+  
+  isLoadingRelatedRecords.value = true;
+  relatedRecords.value = [];
+  
+  try {
+    // Encontrar a tabela correspondente ao modelo selecionado
+    const relationTable = availableRelations.value.find(r => r.model === selectedRelation.value)?.table;
+    
+    if (!relationTable) {
+      throw new Error("Related table not found");
+    }
+    
+    // Obter os primeiros 10 registros da tabela relacionada
+    const result = await databaseStore.loadTableData(
+      props.connectionId,
+      relationTable,
+      10, // Limitado a 10 registros para performance
+      1
+    );
+    
+    if (result && result.data) {
+      relatedRecords.value = result.data;
+      showRelatedRecords.value = true; // Mostrar a lista após carregar
+    } else {
+      throw new Error("No records found");
+    }
+  } catch (error) {
+    console.error("Error fetching related records:", error);
+    showAlert(`Failed to fetch records: ${error.message}`, "error");
+  } finally {
+    isLoadingRelatedRecords.value = false;
+  }
+}
+
+function addCustomAttribute() {
+  customAttributes.value.push({
+    field: '',
+    value: ''
+  });
+}
+
+function removeCustomAttribute(index) {
+  customAttributes.value.splice(index, 1);
+}
+
 function generateCommandPreview() {
   const model = databaseStore.getModelForTable(props.connectionId, props.tableName);
   if (!model || !factory.value) return 'No model or factory found';
@@ -583,9 +920,39 @@ function generateCommandPreview() {
   const count = recordCount.value || 10;
   const usingSail = !!connection.value?.usingSail;
 
-  const escapedModelName = modelName.replace(/\\/g, '\\\\');
-
-  return `${usingSail ? 'sail' : 'php'} artisan tinker --execute="${escapedModelName}::factory(${count})->create();"`;
+  // Construir o comando base
+  let factoryChain = `${modelName}::factory(${count})`;
+  
+  // Adicionar atributos personalizados
+  const validAttributes = customAttributes.value.filter(attr => attr.field && attr.value !== '');
+  if (validAttributes.length > 0) {
+    const attributesArray = validAttributes.map(attr => {
+      // Tenta converter para número ou booleano quando possível
+      let value = attr.value;
+      
+      if (value === 'true') value = true;
+      else if (value === 'false') value = false;
+      else if (!isNaN(parseFloat(value)) && isFinite(value)) value = parseFloat(value);
+      else value = `'${value}'`; // String com aspas simples
+      
+      return `'${attr.field}' => ${value}`;
+    });
+    
+    factoryChain += `->state([${attributesArray.join(', ')}])`;
+  }
+  
+  // Adicionar relacionamento
+  if (selectedRelation.value && relatedModelId.value) {
+    // Converte o nome do modelo para snake_case e adiciona _id
+    const foreignKey = selectedRelation.value.replace(/([a-z])([A-Z])/g, '$1_$2').toLowerCase() + '_id';
+    factoryChain += `->state(['${foreignKey}' => ${relatedModelId.value}])`;
+  }
+  
+  // Finalizar o comando
+  factoryChain += `->create();`;
+  
+  const escapedFactoryChain = factoryChain.replace(/\\/g, '\\\\');
+  return `${usingSail ? 'sail' : 'php'} artisan tinker --execute="${escapedFactoryChain}"`;
 }
 
 async function showDatabaseMismatchDialog(projectDb, connectionDb) {
@@ -657,6 +1024,25 @@ async function showDatabaseMismatchDialog(projectDb, connectionDb) {
   });
 }
 
+function openGenerateDataModal() {
+  // Resetar valores
+  activeTab.value = 'relationships';
+  customAttributes.value = [];
+  selectedRelation.value = '';
+  relatedModelId.value = '';
+  relatedRecords.value = [];
+  showRelatedRecords.value = false;
+  
+  // Carregar relações disponíveis
+  loadAvailableRelations();
+  
+  // Carregar colunas da tabela
+  loadTableColumns();
+  
+  // Mostrar o modal
+  showGenerateDataModal.value = true;
+}
+
 async function generateFactoryData() {
   isGenerating.value = true;
   showGenerateDataModal.value = false;
@@ -709,9 +1095,40 @@ async function generateFactoryData() {
       }
     }
 
+    // Construir a parte Factory do comando
+    let factoryChain = `${modelName}::factory(${count})`;
+    
+    // Adicionar atributos personalizados
+    const validAttributes = customAttributes.value.filter(attr => attr.field && attr.value !== '');
+    if (validAttributes.length > 0) {
+      const attributesArray = validAttributes.map(attr => {
+        // Tenta converter para número ou booleano quando possível
+        let value = attr.value;
+        
+        if (value === 'true') value = true;
+        else if (value === 'false') value = false;
+        else if (!isNaN(parseFloat(value)) && isFinite(value)) value = parseFloat(value);
+        else value = `'${value}'`; // String com aspas simples
+        
+        return `'${attr.field}' => ${value}`;
+      });
+      
+      factoryChain += `->state([${attributesArray.join(', ')}])`;
+    }
+    
+    // Adicionar relacionamento
+    if (selectedRelation.value && relatedModelId.value) {
+      // Converte o nome do modelo para snake_case e adiciona _id
+      const foreignKey = selectedRelation.value.replace(/([a-z])([A-Z])/g, '$1_$2').toLowerCase() + '_id';
+      factoryChain += `->state(['${foreignKey}' => ${relatedModelId.value}])`;
+    }
+    
+    // Finalizar o comando
+    factoryChain += `->create()`;
+
     const usingSail = !!connection.value.usingSail;
 
-    const tinkerCommand = `tinker --execute="${modelName}::factory(${count})->create();"`;
+    const tinkerCommand = `tinker --execute="${factoryChain};"`;
 
     commandsStore.openCommandOutput();
 
@@ -719,11 +1136,16 @@ async function generateFactoryData() {
       projectPath: projectPath,
       command: tinkerCommand,
       useSail: usingSail,
-      displayCommand: `Factory Data: ${usingSail ? 'sail' : 'php'} artisan tinker --execute="${modelName}::factory(${count})->create();"`
+      displayCommand: `${usingSail ? 'sail' : 'php'} artisan ${tinkerCommand}`
     });
 
     if (commandResult && commandResult.success) {
       showAlert(`Generating ${count} records for ${props.tableName} table`, 'success');
+
+      // Abrir a tabela de dados para mostrar os registros criados
+      setTimeout(() => {
+        openDataTab();
+      }, 1000);
 
       recordCount.value = 10;
     } else {
@@ -774,6 +1196,58 @@ async function refreshData() {
   } catch (error) {
     console.error('Error refreshing data:', error);
     showAlert('Failed to refresh factory data', 'error');
+  }
+}
+
+function openDataTab() {
+  try {
+    const newTab = {
+      id: `data-${props.connectionId}-${props.tableName}-${Date.now()}`,
+      title: props.tableName,
+      type: 'data',
+      data: {
+        connectionId: props.connectionId,
+        tableName: props.tableName
+      },
+      icon: 'table'
+    };
+
+    props.onOpenTab(newTab);
+  } catch (error) {
+    console.error('Error opening data tab:', error);
+  }
+}
+
+async function loadAvailableRelations() {
+  try {
+    // Limpa as relações existentes
+    availableRelations.value = [];
+    
+    if (!connection.value?.projectPath) return;
+    
+    // Carrega todos os modelos disponíveis
+    await databaseStore.loadModelsForTables(props.connectionId, connection.value.projectPath);
+    
+    // Obtém uma lista de tabelas no banco de dados
+    const tables = await databaseStore.loadTables(props.connectionId);
+    
+    // Para cada tabela, verifica se há um modelo correspondente
+    for (const table of databaseStore.tablesList) {
+      if (table.name !== props.tableName) {
+        const model = databaseStore.getModelForTable(props.connectionId, table.name);
+        if (model) {
+          availableRelations.value.push({
+            table: table.name,
+            model: model.name
+          });
+        }
+      }
+    }
+    
+    console.log("Available relations:", availableRelations.value);
+  } catch (error) {
+    console.error("Error loading available relations:", error);
+    showAlert("Failed to load available relations", "error");
   }
 }
 
