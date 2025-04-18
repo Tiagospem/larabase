@@ -270,12 +270,12 @@
         v-else-if="tableData.length > 0"
         ref="tableContainer"
         tabindex="0"
-        class="h-full relative"
+        class="h-full relative flex flex-col"
         @click="handleOutsideClick"
         @keydown.prevent="handleTableKeyDown"
       >
-        <div class="overflow-auto h-full pb-3 two-axis-scrollable">
-          <table class="table table-sm w-full table-fixed min-w-full">
+        <div class="overflow-x-scroll overflow-y-auto flex-grow" style="max-height: calc(100% - 56px);">
+          <table class="table table-sm w-[150%] table-fixed min-w-full">
             <thead class="bg-base-300 sticky top-0 z-15">
               <tr class="text-xs select-none">
                 <th class="w-10 px-2 py-2 border-r border-neutral bg-base-300 sticky left-0 z-10">
