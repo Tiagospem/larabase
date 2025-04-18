@@ -51,43 +51,88 @@ export const useDatabaseStore = defineStore('database', () => {
 
   const _sanitize = ids => ids.map(id => (id && typeof id === 'object' ? String(id) : id));
 
-  async function loadTableData(id, tableName, limit = 100, page = 1) {
+  async function loadTableData(id, tableName, limit = 100, page = 1, sortOptions = {}) {
     try {
       const conn = _getConnection(id);
-      const result = await window.api.getTableData({
+      
+      console.log("loadTableData chamado com:", {
+        tableName,
+        limit,
+        page,
+        sortOptions
+      });
+      
+      const payload = {
         ..._buildPayload(conn),
         tableName,
         limit,
-        page
+        page,
+        sortColumn: sortOptions.sortColumn,
+        sortDirection: sortOptions.sortDirection
+      };
+      
+      console.log("Enviando para getTableData:", JSON.stringify(payload));
+      
+      const result = await window.api.getTableData(payload);
+      
+      console.log("Resultado de getTableData:", {
+        success: result.success,
+        totalRecords: result.totalRecords,
+        dataLength: result.data?.length
       });
+      
       if (result.success) {
         const key = `${id}:${tableName}`;
         _updateCache(key, result, page, limit);
         return { data: result.data || [], totalRecords: result.totalRecords || 0, page, limit };
       }
       return _EMPTY_RESULT(page, limit);
-    } catch {
+    } catch (error) {
+      console.error("Erro em loadTableData:", error);
       return _EMPTY_RESULT(page, limit);
     }
   }
 
-  async function loadFilteredTableData(id, tableName, filter, limit = 100, page = 1) {
+  async function loadFilteredTableData(id, tableName, filter, limit = 100, page = 1, sortOptions = {}) {
     try {
       const conn = _getConnection(id);
-      const result = await window.api.getFilteredTableData({
+      
+      console.log("loadFilteredTableData chamado com:", {
+        tableName,
+        filter,
+        limit,
+        page,
+        sortOptions
+      });
+      
+      const payload = {
         ..._buildPayload(conn),
         tableName,
         filter,
         limit,
-        page
+        page,
+        sortColumn: sortOptions.sortColumn,
+        sortDirection: sortOptions.sortDirection
+      };
+      
+      console.log("Enviando para getFilteredTableData:", JSON.stringify(payload));
+      
+      const result = await window.api.getFilteredTableData(payload);
+      
+      console.log("Resultado de getFilteredTableData:", {
+        success: result.success,
+        totalRecords: result.totalRecords,
+        dataLength: result.data?.length
       });
+      
       if (result.success) {
         const key = `${id}:${tableName}:filtered`;
         _updateCache(key, result, page, limit, { filter });
         return { data: result.data || [], totalRecords: result.totalRecords || 0, page, limit };
       }
       return _EMPTY_RESULT(page, limit);
-    } catch {
+    } catch (error) {
+      console.error("Erro em loadFilteredTableData:", error);
       return _EMPTY_RESULT(page, limit);
     }
   }

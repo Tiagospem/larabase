@@ -284,7 +284,7 @@
                 <th
                   v-for="(column, index) in columns"
                   :key="column"
-                  class="px-4 py-2 border-r border-neutral last:border-r-0 relative whitespace-nowrap top-0"
+                  class="px-4 py-2 border-r border-neutral last:border-r-0 relative whitespace-nowrap top-0 cursor-pointer"
                   :class="{
                     'bg-base-300': !expandedColumns.includes(column),
                     'bg-base-200': expandedColumns.includes(column),
@@ -296,23 +296,40 @@
                       ? 'none'
                       : columnWidths[column] || defaultColumnWidth(column)
                   }"
+                  @click="handleSortClick(column)"
                 >
                   <div class="flex items-center justify-between">
                     <span class="truncate">{{ column }}</span>
-                    <span v-if="expandedColumns.includes(column)" class="text-primary text-xs ml-1">
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        viewBox="0 0 20 20"
-                        fill="currentColor"
-                        class="w-4 h-4 inline-block"
-                      >
-                        <path
-                          fill-rule="evenodd"
-                          d="M3 4a1 1 0 011-1h4a1 1 0 010 2H6.414l2.293 2.293a1 1 0 01-1.414 1.414L5 6.414V8a1 1 0 01-2 0V4zm9 1a1 1 0 010-2h4a1 1 0 011 1v4a1 1 0 01-2 0V6.414l-2.293 2.293a1 1 0 11-1.414-1.414L13.586 5H12zm-9 7a1 1 0 012 0v1.586l2.293-2.293a1 1 0 011.414 1.414L6.414 15H8a1 1 0 010 2H4a1 1 0 01-1-1v-4zm13-1a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 010-2h1.586l-2.293-2.293a1 1 0 011.414-1.414L15 13.586V12a1 1 0 011-1z"
-                          clip-rule="evenodd"
-                        />
-                      </svg>
-                    </span>
+                    <div class="flex items-center">
+                      <!-- Sort indicator -->
+                      <span v-if="currentSortColumn === column" class="ml-1">
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke-width="1.5"
+                          stroke="currentColor"
+                          class="w-4 h-4"
+                          :class="{'rotate-180': currentSortDirection === 'desc'}"
+                        >
+                          <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 15.75l7.5-7.5 7.5 7.5" />
+                        </svg>
+                      </span>
+                      <span v-if="expandedColumns.includes(column)" class="text-primary text-xs ml-1">
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          viewBox="0 0 20 20"
+                          fill="currentColor"
+                          class="w-4 h-4 inline-block"
+                        >
+                          <path
+                            fill-rule="evenodd"
+                            d="M3 4a1 1 0 011-1h4a1 1 0 010 2H6.414l2.293 2.293a1 1 0 01-1.414 1.414L5 6.414V8a1 1 0 01-2 0V4zm9 1a1 1 0 010-2h4a1 1 0 011 1v4a1 1 0 01-2 0V6.414l-2.293 2.293a1 1 0 11-1.414-1.414L13.586 5H12zm-9 7a1 1 0 012 0v1.586l2.293-2.293a1 1 0 011.414 1.414L6.414 15H8a1 1 0 010 2H4a1 1 0 01-1-1v-4zm13-1a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 010-2h1.586l-2.293-2.293a1 1 0 011.414-1.414L15 13.586V12a1 1 0 011-1z"
+                            clip-rule="evenodd"
+                          />
+                        </svg>
+                      </span>
+                    </div>
                   </div>
                   <!-- Enhanced resize handle with visual indicator -->
                   <div
@@ -974,6 +991,34 @@ const filteredData = computed(() => {
     });
   }
 
+  // Apply sorting if there's a sort column and local filtering/sorting is active
+  if (currentSortColumn.value && (activeFilter.value || filterTerm.value)) {
+    data = [...data].sort((a, b) => {
+      const valA = a[currentSortColumn.value];
+      const valB = b[currentSortColumn.value];
+      
+      // Handle null values
+      if (valA === null && valB === null) return 0;
+      if (valA === null) return currentSortDirection.value === 'asc' ? -1 : 1;
+      if (valB === null) return currentSortDirection.value === 'asc' ? 1 : -1;
+      
+      // Compare based on type
+      if (typeof valA === 'number' && typeof valB === 'number') {
+        return currentSortDirection.value === 'asc' ? valA - valB : valB - valA;
+      }
+      
+      // Default string comparison
+      const strA = String(valA).toLowerCase();
+      const strB = String(valB).toLowerCase();
+      
+      if (currentSortDirection.value === 'asc') {
+        return strA.localeCompare(strB);
+      } else {
+        return strB.localeCompare(strA);
+      }
+    });
+  }
+
   return data;
 });
 
@@ -1066,6 +1111,11 @@ function analyzeColumns() {
 }
 
 async function loadTableData() {
+  console.log("loadTableData chamado com:", {
+    sortColumn: currentSortColumn.value,
+    sortDirection: currentSortDirection.value
+  });
+
   const wasLoading = isLoading.value;
 
   if (!isLiveUpdating.value) {
@@ -1100,12 +1150,29 @@ async function loadTableData() {
     const cacheKey = `${props.connectionId}:${props.tableName}`;
     databaseStore.clearTableCache(cacheKey);
 
+    // Adicionar parâmetros de ordenação
+    const sortParams = currentSortColumn.value ? {
+      sortColumn: currentSortColumn.value,
+      sortDirection: currentSortDirection.value
+    } : {};
+
+    // Verificar os parâmetros de ordenação
+    console.log("Enviando parâmetros de ordenação:", JSON.stringify(sortParams));
+
     const result = await databaseStore.loadTableData(
       props.connectionId,
       props.tableName,
       rowsPerPage.value,
-      currentPage.value
+      currentPage.value,
+      sortParams
     );
+
+    // Verificar os resultados
+    console.log(`Resultados recebidos: ${result.data?.length || 0} registros`);
+    if (result.data?.length > 1) {
+      console.log("Primeiro registro:", result.data[0]);
+      console.log("Último registro:", result.data[result.data.length - 1]);
+    }
 
     if (!result.data || result.data.length === 0) {
       showAlert('No data found for this page', 'warning');
@@ -2197,12 +2264,19 @@ async function loadFilteredData() {
       console.log(`Searching for record with ID: ${idValue}`);
     }
 
+    // Adicionar parâmetros de ordenação
+    const sortParams = currentSortColumn.value ? {
+      sortColumn: currentSortColumn.value,
+      sortDirection: currentSortDirection.value
+    } : {};
+
     const result = await databaseStore.loadFilteredTableData(
       props.connectionId,
       props.tableName,
       activeFilter.value,
       rowsPerPage.value,
-      currentPage.value
+      currentPage.value,
+      sortParams
     );
 
     console.log(
@@ -2652,6 +2726,39 @@ watch(
     }
   }
 );
+
+// 1. Adicionar estado de ordenação nas refs
+const currentSortColumn = ref(null);
+const currentSortDirection = ref('asc'); // 'asc' ou 'desc'
+
+// 3. Adicionar função de ordenação
+function handleSortClick(column) {
+  // Se clicar na mesma coluna, inverter a direção
+  if (currentSortColumn.value === column) {
+    currentSortDirection.value = currentSortDirection.value === 'asc' ? 'desc' : 'asc';
+  } else {
+    // Nova coluna, resetar para ascendente
+    currentSortColumn.value = column;
+    currentSortDirection.value = 'asc';
+  }
+
+  console.log(`Ordenando por ${column} em ordem ${currentSortDirection.value}`);
+  
+  // Resetar para a primeira página
+  currentPage.value = 1;
+  
+  // Aplicar filtro quando houver, senão recarregar os dados
+  if (activeFilter.value) {
+    console.log("Aplicando ordenação com filtro ativo");
+    loadFilteredTableData();
+  } else {
+    console.log("Aplicando ordenação sem filtro");
+    loadTableData();
+  }
+  
+  // Mostrar alerta sobre a ordenação
+  showAlert(`Ordenando por ${column} em ordem ${currentSortDirection.value === 'asc' ? 'crescente' : 'decrescente'}`, 'info');
+}
 </script>
 
 <style scoped>
