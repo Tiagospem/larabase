@@ -286,15 +286,12 @@
                   :key="column"
                   class="px-4 py-2 border-r border-neutral last:border-r-0 relative whitespace-nowrap top-0 cursor-pointer"
                   :class="{
-                    'bg-base-300': !expandedColumns.includes(column),
-                    'bg-base-200': expandedColumns.includes(column),
+                    'bg-base-300': true,
                     'sticky left-10 z-10': index === 0
                   }"
                   :style="{
                     width: columnWidths[column] || defaultColumnWidth(column),
-                    maxWidth: expandedColumns.includes(column)
-                      ? 'none'
-                      : columnWidths[column] || defaultColumnWidth(column)
+                    maxWidth: columnWidths[column] || defaultColumnWidth(column)
                   }"
                   @click.stop="handleSortClick(column)"
                 >
@@ -315,37 +312,16 @@
                           <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 15.75l7.5-7.5 7.5 7.5" />
                         </svg>
                       </span>
-                      <span v-if="expandedColumns.includes(column)" class="text-primary text-xs ml-1">
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          viewBox="0 0 20 20"
-                          fill="currentColor"
-                          class="w-4 h-4 inline-block"
-                        >
-                          <path
-                            fill-rule="evenodd"
-                            d="M3 4a1 1 0 011-1h4a1 1 0 010 2H6.414l2.293 2.293a1 1 0 01-1.414 1.414L5 6.414V8a1 1 0 01-2 0V4zm9 1a1 1 0 010-2h4a1 1 0 011 1v4a1 1 0 01-2 0V6.414l-2.293 2.293a1 1 0 11-1.414-1.414L13.586 5H12zm-9 7a1 1 0 012 0v1.586l2.293-2.293a1 1 0 011.414 1.414L6.414 15H8a1 1 0 010 2H4a1 1 0 01-1-1v-4zm13-1a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 010-2h1.586l-2.293-2.293a1 1 0 011.414-1.414L15 13.586V12a1 1 0 011-1z"
-                            clip-rule="evenodd"
-                          />
-                        </svg>
-                      </span>
                     </div>
                   </div>
                   <!-- Enhanced resize handle with visual indicator -->
                   <div
                     v-if="index < columns.length - 1"
                     class="absolute right-0 top-0 h-full w-2 cursor-col-resize group"
-                    title="Double-click to expand/collapse column"
                     @mousedown.stop="startColumnResize($event, column)"
-                    @dblclick.stop="toggleColumnExpansion(column)"
                   >
                     <div
-                      class="absolute right-0 top-0 w-[1px] h-full"
-                      :class="
-                        expandedColumns.includes(column)
-                          ? 'expanded-resize-handle'
-                          : 'bg-transparent group-hover:bg-primary group-hover:w-[2px] transition-all'
-                      "
+                      class="absolute right-0 top-0 w-[1px] h-full bg-transparent group-hover:bg-primary group-hover:w-[2px] transition-all"
                     />
                   </div>
                 </th>
@@ -395,15 +371,12 @@
                   :key="`${rowIndex}-${column}`"
                   class="px-4 py-2 border-r border-neutral last:border-r-0 truncate whitespace-nowrap overflow-hidden"
                   :class="[
-                    { expanded: expandedColumns.includes(column) },
                     colIndex === 0 ? `sticky left-10 z-10` : 'z-[1]',
                     colIndex === 0 ? getRowBackgroundClass(rowIndex) : ''
                   ]"
                   :style="{
                     width: columnWidths[column] || defaultColumnWidth(column),
-                    maxWidth: expandedColumns.includes(column)
-                      ? 'none'
-                      : columnWidths[column] || defaultColumnWidth(column)
+                    maxWidth: columnWidths[column] || defaultColumnWidth(column)
                   }"
                   @dblclick.stop="openEditModal(row)"
                 >
@@ -937,8 +910,6 @@ const shiftKeyPressed = ref(false);
 const ctrlKeyPressed = ref(false);
 const selectionStartId = ref(null);
 
-const expandedColumns = ref([]);
-
 const pageInput = ref(1);
 const totalRecordsCount = ref(0);
 const totalPages = computed(() => {
@@ -1144,7 +1115,6 @@ async function loadTableData() {
     });
   } else {
     selectedRows.value = [];
-    expandedColumns.value = [];
   }
 
   try {
@@ -1363,18 +1333,6 @@ function handleOutsideClick(event) {
   if (event.target === tableContainer.value || event.target.closest('thead')) {
     selectedRows.value = [];
     lastSelectedId.value = null;
-  }
-}
-
-function toggleColumnExpansion(column) {
-  const index = expandedColumns.value.indexOf(column);
-
-  if (index !== -1) {
-    expandedColumns.value.splice(index, 1);
-    showAlert(`Column "${column}" collapsed`, 'info');
-  } else {
-    expandedColumns.value.push(column);
-    showAlert(`Column "${column}" expanded - double-click resize handle to collapse`, 'info');
   }
 }
 
