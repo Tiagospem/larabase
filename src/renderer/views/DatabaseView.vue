@@ -301,8 +301,8 @@
             :connection-id="activeTab.connectionId"
             :table-name="activeTab.tableName"
             :filter="activeTab.filter || ''"
-            @update-tab-data="mainTabsRef.handleUpdateTabData"
-            @open-tab="mainTabsRef.handleOpenTab"
+            @update-tab-data="mainTabsRef?.handleUpdateTabData"
+            @open-tab="mainTabsRef?.handleOpenTab"
             @open-database-switcher="handleDatabaseSwitcherFromChild"
           />
         </keep-alive>
@@ -530,7 +530,7 @@ function openTable(table, filter) {
       filter: filter || ''
     });
     nextTick(() => {
-      mainTabsRef.value.scrollToActiveTab();
+      mainTabsRef.value?.scrollToActiveTab();
     });
   } catch (error) {
     console.error(error);
@@ -578,7 +578,7 @@ watch(
   () => tabsStore.activeTabId,
   () => {
     nextTick(() => {
-      mainTabsRef.value.scrollToActiveTab();
+      mainTabsRef.value?.scrollToActiveTab();
     });
   }
 );
@@ -643,11 +643,11 @@ onMounted(async () => {
     // Já carregamos o sidebar width no onBeforeMount
     // então não precisamos fazer novamente aqui
 
-    window.addEventListener('resize', mainTabsRef.value.checkScrollPosition);
+    window.addEventListener('resize', mainTabsRef.value?.checkScrollPosition);
 
     await nextTick(() => {
-      mainTabsRef.value.scrollToActiveTab();
-      mainTabsRef.value.checkScrollPosition();
+      mainTabsRef.value?.scrollToActiveTab();
+      mainTabsRef.value?.checkScrollPosition();
     });
 
     document.querySelector('.flex.flex-col.h-full')?.focus();
