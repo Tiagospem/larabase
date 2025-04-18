@@ -9,7 +9,7 @@ const pluralize = require('pluralize');
 const { createWindow, getMainWindow } = require('./modules/window');
 const { registerRestoreDumpHandlers } = require('./modules/restore-dump');
 const { registerConnectionHandlers } = require('./modules/connections');
-const { registerProjectHandlers, isDockerCliAvailable } = require('./modules/project');
+const { registerProjectHandlers} = require('./modules/project');
 const { registerTableHandlers } = require('./modules/tables');
 
 const store = new Store();
@@ -25,84 +25,12 @@ app.whenReady().then(async () => {
 
   mainWindow = getMainWindow();
 
+  enhancePath();
+
   registerTableHandlers(store, dbMonitoringConnections);
   registerRestoreDumpHandlers(store);
   registerConnectionHandlers(store);
   registerProjectHandlers();
-
-  if (process.env.PATH) {
-    console.log(`Original system PATH: ${process.env.PATH}`);
-
-    if (process.platform === 'darwin') {
-      const additionalPaths = [
-        '/usr/local/bin',
-        '/opt/homebrew/bin',
-        '/Applications/Docker.app/Contents/Resources/bin'
-      ];
-
-      for (const dockerPath of additionalPaths) {
-        if (!process.env.PATH.includes(dockerPath)) {
-          process.env.PATH = `${dockerPath}:${process.env.PATH}`;
-          console.log(`Added ${dockerPath} to PATH`);
-        }
-      }
-    } else if (process.platform === 'linux') {
-      const additionalPaths = ['/usr/bin', '/usr/local/bin', '/snap/bin'];
-
-      for (const dockerPath of additionalPaths) {
-        if (!process.env.PATH.includes(dockerPath)) {
-          process.env.PATH = `${dockerPath}:${process.env.PATH}`;
-          console.log(`Added ${dockerPath} to PATH`);
-        }
-      }
-    } else if (process.platform === 'win32') {
-      const additionalPaths = [
-        'C:\\Program Files\\Docker\\Docker\\resources\\bin',
-        'C:\\Program Files\\Docker Desktop\\resources\\bin'
-      ];
-
-      for (const dockerPath of additionalPaths) {
-        if (!process.env.PATH.includes(dockerPath)) {
-          process.env.PATH = `${dockerPath};${process.env.PATH}`;
-          console.log(`Added ${dockerPath} to PATH`);
-        }
-      }
-    }
-
-    console.log(`Enhanced PATH for Docker detection: ${process.env.PATH}`);
-  } else {
-    console.warn(`PATH environment variable not found, some features might not work correctly`);
-
-    if (process.platform === 'darwin' || process.platform === 'linux') {
-      process.env.PATH =
-        '/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:/opt/homebrew/bin:/Applications/Docker.app/Contents/Resources/bin';
-      console.log(`Set default PATH for ${process.platform}: ${process.env.PATH}`);
-    } else if (process.platform === 'win32') {
-      process.env.PATH =
-        'C:\\Windows\\System32;C:\\Windows;C:\\Program Files\\Docker\\Docker\\resources\\bin;C:\\Program Files\\Docker Desktop\\resources\\bin';
-      console.log(`Set default PATH for Windows: ${process.env.PATH}`);
-    }
-  }
-
-  try {
-    const whichCommand = process.platform === 'win32' ? 'where docker' : 'which docker';
-    const dockerPath = execSync(whichCommand, {
-      timeout: 2000,
-      shell: true,
-      windowsHide: true,
-      encoding: 'utf8'
-    }).trim();
-    console.log(`Docker binary found at: ${dockerPath}`);
-  } catch (e) {
-    console.log(`Docker binary not found in PATH: ${e.message}`);
-  }
-
-  console.log(`Electron running on platform: ${process.platform}`);
-  console.log(`Node.js version: ${process.version}`);
-  console.log(`Electron version: ${process.versions.electron}`);
-
-  const diagnostics = await getSystemDiagnostics();
-  console.log('System diagnostics:', JSON.stringify(diagnostics, null, 2));
 
   setupGlobalMonitoring();
 
@@ -141,26 +69,114 @@ app.whenReady().then(async () => {
   });
 });
 
+function enhancePath() {
+  const platform = process.platform;
+  const sep = platform === 'win32' ? ';' : ':';
+  const envPath = process.env.PATH || '';
+
+  const config = {
+    darwin: {
+      additional: [
+        '/usr/local/bin',
+        '/opt/homebrew/bin',
+        '/Applications/Docker.app/Contents/Resources/bin'
+      ],
+      defaults: [
+        '/usr/local/bin',
+        '/usr/bin',
+        '/bin',
+        '/usr/sbin',
+        '/sbin',
+        '/opt/homebrew/bin',
+        '/Applications/Docker.app/Contents/Resources/bin'
+      ]
+    },
+    linux: {
+      additional: [
+        '/usr/bin',
+        '/usr/local/bin',
+        '/snap/bin'
+      ],
+      defaults: [
+        '/usr/local/bin',
+        '/usr/bin',
+        '/bin',
+        '/usr/sbin',
+        '/sbin',
+        '/snap/bin'
+      ]
+    },
+    win32: {
+      additional: [
+        'C:\\Program Files\\Docker\\Docker\\resources\\bin',
+        'C:\\Program Files\\Docker Desktop\\resources\\bin'
+      ],
+      defaults: [
+        'C:\\Windows\\System32',
+        'C:\\Windows',
+        'C:\\Program Files\\Docker\\Docker\\resources\\bin',
+        'C:\\Program Files\\Docker Desktop\\resources\\bin'
+      ]
+    }
+  };
+
+  const { additional, defaults } = config[platform] || config.linux;
+  let parts = envPath ? envPath.split(sep) : [];
+
+  if (envPath) {
+    additional.forEach(p => {
+      if (!parts.includes(p)) parts.unshift(p);
+    });
+
+    process.env.PATH = parts.join(sep);
+
+    console.log(`Enhanced PATH for Docker detection: ${process.env.PATH}`);
+  } else {
+    process.env.PATH = defaults.join(sep);
+
+    console.warn(
+        `PATH environment variable not found, some features might not work correctly`
+    );
+
+    console.log(`Set default PATH for ${platform}: ${process.env.PATH}`);
+  }
+
+  const whichCmd = platform === 'win32' ? 'where docker' : 'which docker';
+
+  try {
+    const dockerPath = execSync(whichCmd, {
+      timeout: 2000,
+      shell: true,
+      windowsHide: true,
+      encoding: 'utf8'
+    }).trim();
+    console.log(`Docker binary found at: ${dockerPath}`);
+  } catch (err) {
+    console.log(`Docker binary not found in PATH: ${err.message}`);
+  }
+
+  console.log(`Electron running on platform: ${platform}`);
+  console.log(`Node.js version: ${process.version}`);
+  console.log(`Electron version: ${process.versions.electron}`);
+}
+
 function setupGlobalMonitoring() {
-  mysql.createConnection = async function (...args) {
-    const connection = await originalCreateConnection.apply(this, args);
+  mysql.createConnection = async function (config, ...rest) {
+    const connection = await originalCreateConnection.call(this, config, ...rest);
+    const { host, database } = config;
 
-    const config = args[0];
-    console.log('New database connection created:', config.host, config.database);
-
-    for (const [connectionId, monitoredConn] of dbMonitoringConnections.entries()) {
-      if (
-        monitoredConn._config &&
-        monitoredConn._config.host === config.host &&
-        monitoredConn._config.database === config.database
-      ) {
-        console.log(
-          `Auto-monitoring new connection to ${config.database} (from monitored connection ${connectionId})`
+    const match = [...dbMonitoringConnections.entries()]
+        .find(([, monitored]) =>
+            monitored._config?.host === host &&
+            monitored._config?.database === database
         );
 
-        setupMonitoring(connection, config.database);
-        break;
-      }
+    if (match) {
+      const [connectionId] = match;
+      console.log(
+          `Auto-monitoring new connection to ${database} (from monitored connection ${connectionId})`
+      );
+      setupMonitoring(connection, database);
     }
 
     return connection;
@@ -168,6 +184,33 @@ function setupGlobalMonitoring() {
 
   console.log('Global MySQL monitoring configured');
 }
+// function setupGlobalMonitoring() {
+//   mysql.createConnection = async function (...args) {
+//     const connection = await originalCreateConnection.apply(this, args);
+//
+//     const config = args[0];
+//     console.log('New database connection created:', config.host, config.database);
+//
+//     for (const [connectionId, monitoredConn] of dbMonitoringConnections.entries()) {
+//       if (
+//         monitoredConn._config &&
+//         monitoredConn._config.host === config.host &&
+//         monitoredConn._config.database === config.database
+//       ) {
+//         console.log(
+//           `Auto-monitoring new connection to ${config.database} (from monitored connection ${connectionId})`
+//         );
+//
+//         setupMonitoring(connection, config.database);
+//         break;
+//       }
+//     }
+//
+//     return connection;
+//   };
+//
+//   console.log('Global MySQL monitoring configured');
+// }
 
 if (process.env.NODE_ENV === 'development') {
   try {
@@ -178,86 +221,6 @@ if (process.env.NODE_ENV === 'development') {
   } catch (err) {
     console.error('electron-reload:', err);
   }
-}
-
-async function getSystemDiagnostics() {
-  const diagnostics = {
-    platform: process.platform,
-    nodeVersion: process.version,
-    electronVersion: process.versions.electron,
-    arch: process.arch,
-    env: {
-      path: process.env.PATH,
-      home: process.env.HOME || process.env.USERPROFILE,
-      shell: process.env.SHELL || process.env.ComSpec
-    },
-    docker: {
-      available: false,
-      version: null,
-      error: null
-    }
-  };
-
-  try {
-    const dockerCheckPromise = new Promise(resolve => {
-      try {
-        if (isDockerCliAvailable()) {
-          try {
-            const dockerVersion = execSync('docker --version', {
-              timeout: 3000,
-              shell: true,
-              windowsHide: true
-            })
-              .toString()
-              .trim();
-            resolve({
-              available: true,
-              version: dockerVersion,
-              error: null
-            });
-          } catch (versionError) {
-            resolve({
-              available: true,
-              version: null,
-              error: `Docker detected but version check failed: ${versionError.message}`
-            });
-          }
-        } else {
-          resolve({
-            available: false,
-            version: null,
-            error: 'Docker CLI not available'
-          });
-        }
-      } catch (error) {
-        resolve({
-          available: false,
-          version: null,
-          error: `Docker check failed: ${error.message}`
-        });
-      }
-    });
-
-    const timeoutPromise = new Promise(resolve => {
-      setTimeout(() => {
-        resolve({
-          available: false,
-          version: null,
-          error: 'Docker check timed out after 5 seconds'
-        });
-      }, 5000);
-    });
-
-    diagnostics.docker = await Promise.race([dockerCheckPromise, timeoutPromise]);
-  } catch (error) {
-    diagnostics.docker = {
-      available: false,
-      version: null,
-      error: `Docker diagnostics failed: ${error.message}`
-    };
-  }
-
-  return diagnostics;
 }
 
 app.on('will-quit', () => {
