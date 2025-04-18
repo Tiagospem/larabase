@@ -3,6 +3,7 @@ const { getMainWindow } = require('../modules/window');
 const fs = require('fs');
 const path = require('path');
 const { execSync } = require('child_process');
+const pluralize = require('pluralize');
 
 const DOCKER_SOCKET = '/var/run/docker.sock';
 
@@ -134,7 +135,7 @@ function detectDockerMysql(port) {
   return result;
 }
 
-function selectDirectoryHandler() {
+function registerProjectHandlers() {
   ipcMain.handle('select-directory', async () => {
     const mainWindow = getMainWindow();
 
@@ -147,24 +148,236 @@ function selectDirectoryHandler() {
       throw error;
     }
   });
-}
 
-function validateLaravelProjectHandler() {
-  ipcMain.handle('validate-laravel-project', async (event, projectPath) => {
+  ipcMain.handle('find-table-migrations', async (event, config) => {
     try {
-      const hasEnv = fs.existsSync(path.join(projectPath, '.env'));
-      const hasArtisan = fs.existsSync(path.join(projectPath, 'artisan'));
-      const hasComposerJson = fs.existsSync(path.join(projectPath, 'composer.json'));
+      if (!config.projectPath || !config.tableName) {
+        return {
+          success: false,
+          message: 'Missing project path or table name',
+          migrations: []
+        };
+      }
 
-      return hasEnv && hasArtisan && hasComposerJson;
+      const tableName = config.tableName;
+      const migrationsPath = path.join(config.projectPath, 'database', 'migrations');
+
+      if (!fs.existsSync(migrationsPath)) {
+        return {
+          success: false,
+          message: 'Migrations directory not found',
+          migrations: []
+        };
+      }
+
+      const migrationFiles = fs.readdirSync(migrationsPath).filter(file => file.endsWith('.php'));
+
+      const relevantMigrations = [];
+
+      for (const file of migrationFiles) {
+        const filePath = path.join(migrationsPath, file);
+        const content = fs.readFileSync(filePath, 'utf8');
+
+        const tablePattern = new RegExp(
+          `['"](${tableName})['"]|Schema::create\\(['"]${tableName}['"]|Schema::table\\(['"]${tableName}['"]`,
+          'i'
+        );
+
+        if (tablePattern.test(content)) {
+          const nameParts = file.split('_');
+          const timestamp = nameParts[0];
+
+          const year = timestamp.substring(0, 4);
+          const month = timestamp.substring(4, 6);
+          const day = timestamp.substring(6, 8);
+
+          const dateString = `${year}-${month}-${day}`;
+
+          const date = new Date(dateString);
+
+          let migrationName = file.replace(/^\d+_/, '').replace('.php', '');
+
+          migrationName = migrationName
+            .split('_')
+            .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+            .join(' ');
+
+          const actions = [];
+
+          if (
+            content.includes(`Schema::create('${tableName}'`) ||
+            content.includes(`Schema::create("${tableName}"`)
+          ) {
+            actions.push({ type: 'CREATE', description: `Created ${tableName} table` });
+          } else if (
+            content.includes(`Schema::table('${tableName}'`) ||
+            content.includes(`Schema::table("${tableName}"`)
+          ) {
+            actions.push({ type: 'ALTER', description: `Modified ${tableName} table` });
+
+            if (content.includes('->add') || content.match(/\$table->\w+\(/g)) {
+              actions.push({ type: 'ADD', description: 'Added columns' });
+            }
+
+            if (content.includes('->drop') || content.includes('dropColumn')) {
+              actions.push({ type: 'DROP', description: 'Removed columns' });
+            }
+
+            if (content.includes('foreign') || content.includes('references')) {
+              actions.push({ type: 'FOREIGN KEY', description: 'Modified foreign keys' });
+            }
+          }
+
+          if (content.includes(`Schema::drop`) || content.includes('dropIfExists')) {
+            actions.push({ type: 'DROP', description: `Dropped table` });
+          }
+
+          const status = 'APPLIED';
+
+          relevantMigrations.push({
+            id: file,
+            name: file,
+            displayName: migrationName,
+            status: status,
+            created_at: date.toLocaleDateString('en-US', {
+              year: 'numeric',
+              month: 'long',
+              day: 'numeric'
+            }),
+            table: tableName,
+            actions: actions,
+            code: content,
+            path: filePath
+          });
+        }
+      }
+
+      relevantMigrations.sort((a, b) => {
+        return new Date(b.created_at) - new Date(a.created_at);
+      });
+
+      return {
+        success: true,
+        migrations: relevantMigrations
+      };
     } catch (error) {
-      console.error('Error validating Laravel project:', error);
-      return false;
+      console.error('Error finding table migrations:', error);
+      return {
+        success: false,
+        message: error.message || 'Failed to find table migrations',
+        migrations: []
+      };
     }
   });
-}
 
-function readEnvFileHandler() {
+  ipcMain.handle('find-models-for-tables', async (_event, config = {}) => {
+    try {
+      const { projectPath } = config;
+      if (!projectPath) {
+        return { success: false, message: 'Missing project path', models: {} };
+      }
+
+      const dirs = [path.join(projectPath, 'app', 'Models'), path.join(projectPath, 'app')];
+
+      /**
+       * Recursively read .php model files and collect class metadata.
+       */
+      const collectModels = () => {
+        const models = [];
+
+        const traverse = dir => {
+          if (!fs.existsSync(dir)) return;
+          for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+            const fullPath = path.join(dir, entry.name);
+            if (entry.isDirectory()) {
+              traverse(fullPath);
+            } else if (entry.isFile() && entry.name.endsWith('.php')) {
+              try {
+                const content = fs.readFileSync(fullPath, 'utf8');
+                const isModel = [
+                  'extends Model',
+                  'Illuminate\\Database\\Eloquent\\Model',
+                  'extends Authenticatable',
+                  'Illuminate\\Foundation\\Auth\\User',
+                  'Illuminate\\Contracts\\Auth\\Authenticatable'
+                ].some(keyword => content.includes(keyword));
+                if (!isModel) continue;
+
+                const nsMatch = content.match(/namespace\s+([^;]+);/);
+                const classMatch = content.match(/class\s+(\w+)/);
+                if (!classMatch) continue;
+
+                const name = classMatch[1];
+                const namespace = nsMatch?.[1] || null;
+                const fullName = namespace ? `${namespace}\\${name}` : name;
+                const relPath = path.relative(projectPath, fullPath);
+
+                models.push({
+                  name,
+                  namespace,
+                  fullName,
+                  path: fullPath,
+                  relativePath: relPath,
+                  content
+                });
+              } catch (err) {
+                console.error(`Error parsing model file ${fullPath}:`, err);
+              }
+            }
+          }
+        };
+
+        dirs.forEach(traverse);
+        return models;
+      };
+
+      const models = collectModels();
+      const mapping = {};
+
+      /**
+       * Determine table names for a model based on content or conventions.
+       */
+      const getTableNames = model => {
+        const names = new Set();
+        // explicit protected $table
+        const match = model.content.match(/protected\s+\$table\s*=\s*['"](.*?)['"]/);
+        if (match) names.add(match[1]);
+
+        // convention: snake_case + plural/singular
+        const snake = model.name.replace(/([a-z])([A-Z])/g, '$1_$2').toLowerCase();
+        names.add(pluralize.plural(snake));
+        names.add(pluralize.singular(snake));
+
+        // any additional table assignments found in code
+        const extra = [...model.content.matchAll(/\$table\s*=\s*['"]([^'"]+)['"]/g)];
+        extra.forEach(m => names.add(m[1]));
+
+        return Array.from(names);
+      };
+
+      // Build final map: tableName => modelInfo (excluding content)
+      models.forEach(model => {
+        const info = {
+          name: model.name,
+          namespace: model.namespace,
+          fullName: model.fullName,
+          path: model.path,
+          relativePath: model.relativePath
+        };
+        getTableNames(model).forEach(table => {
+          if (!mapping[table]) {
+            mapping[table] = info;
+          }
+        });
+      });
+
+      return { success: true, models: mapping };
+    } catch (error) {
+      console.error('Error finding models for tables:', error);
+      return { success: false, message: error.message, models: {} };
+    }
+  });
+
   ipcMain.handle('read-env-file', async (event, projectPath) => {
     try {
       const envPath = path.join(projectPath, '.env');
@@ -205,12 +418,19 @@ function readEnvFileHandler() {
       return null;
     }
   });
-}
 
-function registerProjectHandlers() {
-  selectDirectoryHandler();
-  validateLaravelProjectHandler();
-  readEnvFileHandler();
+  ipcMain.handle('validate-laravel-project', async (event, projectPath) => {
+    try {
+      const hasEnv = fs.existsSync(path.join(projectPath, '.env'));
+      const hasArtisan = fs.existsSync(path.join(projectPath, 'artisan'));
+      const hasComposerJson = fs.existsSync(path.join(projectPath, 'composer.json'));
+
+      return hasEnv && hasArtisan && hasComposerJson;
+    } catch (error) {
+      console.error('Error validating Laravel project:', error);
+      return false;
+    }
+  });
 }
 
 module.exports = { registerProjectHandlers, isDockerCliAvailable };

@@ -5,7 +5,7 @@ import { useConnectionsStore } from './connections';
 export const useDatabaseStore = defineStore('database', () => {
   const tables = ref({});
   const isLoading = ref(false);
-  const usedConnectionsStore = useConnectionsStore;
+  const connectionStore = useConnectionsStore();
   const tableRecords = ref({});
   const tableStructures = ref({});
   const tableIndexes = ref({});
@@ -13,321 +13,119 @@ export const useDatabaseStore = defineStore('database', () => {
   const tableMigrations = ref({});
   const tableModels = ref({});
 
-  const mockDatabases = {
-    1: {
-      keys: ['key1', 'key2', 'user:1', 'user:2', 'session:123'],
-      keyCount: 5
-    },
-    2: {
-      tables: [
-        { name: 'users', columnCount: 8 },
-        { name: 'products', columnCount: 12 },
-        { name: 'orders', columnCount: 10 },
-        { name: 'customers', columnCount: 15 },
-        { name: 'inventory', columnCount: 7 },
-        { name: 'payments', columnCount: 9 },
-        { name: 'shipping', columnCount: 11 }
-      ]
-    },
-    3: {
-      tables: [
-        { name: 'students', columnCount: 10 },
-        { name: 'courses', columnCount: 8 },
-        { name: 'enrollments', columnCount: 5 },
-        { name: 'instructors', columnCount: 9 },
-        { name: 'modules', columnCount: 6 },
-        { name: 'assignments', columnCount: 7 }
-      ]
-    },
-    4: {
-      tables: [
-        { name: 'users', columnCount: 6 },
-        { name: 'posts', columnCount: 5 },
-        { name: 'comments', columnCount: 4 },
-        { name: 'categories', columnCount: 3 }
-      ]
-    },
-    5: {
-      tables: [
-        { name: 'simple_table_1', columnCount: 4 },
-        { name: 'simple_table_2', columnCount: 3 },
-        { name: 'simple_table_3', columnCount: 5 }
-      ]
-    },
-    6: {
-      tables: [
-        { name: 'action_trackers', columnCount: 5 },
-        { name: 'ad_impression_tags', columnCount: 6 },
-        { name: 'ad_server_dates', columnCount: 4 },
-        { name: 'ad_server_media', columnCount: 8 },
-        { name: 'ad_server_media_trackers', columnCount: 5 },
-        { name: 'ad_server_third_party_emails', columnCount: 7 },
-        { name: 'ad_server_type_case_study', columnCount: 6 },
-        { name: 'ad_server_type_chapter', columnCount: 7 },
-        { name: 'ad_server_type_device', columnCount: 5 },
-        { name: 'ad_server_type_lab_medicine', columnCount: 9 },
-        { name: 'ad_server_type_mini_mind', columnCount: 5 },
-        { name: 'ad_server_type_newspaper', columnCount: 8 },
-        { name: 'ad_server_types', columnCount: 4 },
-        { name: 'ad_video_action_trackers', columnCount: 6 },
-        { name: 'ad_video_trackers', columnCount: 5 },
-        { name: 'ad_visible_logs', columnCount: 7 },
-        { name: 'addresses', columnCount: 8 },
-        { name: 'anonymous_accesses', columnCount: 4 },
-        { name: 'anonymous_page_trackers', columnCount: 5 },
-        { name: 'asks', columnCount: 4 },
-        { name: 'audits', columnCount: 7 },
-        { name: 'badges', columnCount: 3 },
-        { name: 'blocked_campaigns', columnCount: 4 },
-        { name: 'brands', columnCount: 5 },
-        { name: 'campaign_mail_schedules', columnCount: 6 },
-        { name: 'campaign_specialty', columnCount: 4 },
-        { name: 'campaigns', columnCount: 10 },
-        { name: 'cancellation_reasons', columnCount: 3 },
-        { name: 'case_situation_choices', columnCount: 5 },
-        { name: 'case_situations', columnCount: 5 },
-        { name: 'case_studies', columnCount: 7 },
-        { name: 'case_study_answers', columnCount: 6 },
-        { name: 'chapter_captions', columnCount: 4 },
-        { name: 'chapter_disease_state', columnCount: 5 },
-        { name: 'chapter_drug_profile', columnCount: 6 }
-      ]
+  const _EMPTY_RESULT = (page, limit) => ({ data: [], totalRecords: 0, page, limit });
+
+  const _getConnection = id => {
+    const conn = connectionStore.getConnection(id);
+    if (!conn) throw new Error('Connection not found');
+    return conn;
+  };
+
+  const _buildPayload = conn => ({
+    host: conn.host,
+    port: conn.port,
+    username: conn.username,
+    password: conn.password,
+    database: conn.database
+  });
+
+  const _updateCache = (key, { data, totalRecords }, page, limit, extra = {}) => {
+    const cache = (tableRecords.value[key] = tableRecords.value[key] || {});
+    Object.assign(cache, { data, totalRecords, page, limit }, extra);
+  };
+
+  const _prepare = record =>
+    Object.fromEntries(
+      Object.entries(record).map(([k, v]) => {
+        if (v instanceof Date) return [k, v.toISOString().slice(0, 19)];
+        if (v && typeof v === 'object') {
+          try {
+            return [k, JSON.stringify(v)];
+          } catch {
+            return [k, String(v)];
+          }
+        }
+        return [k, v];
+      })
+    );
+
+  const _sanitize = ids => ids.map(id => (id && typeof id === 'object' ? String(id) : id));
+
+  async function loadTableData(id, tableName, limit = 100, page = 1) {
+    try {
+      const conn = _getConnection(id);
+      const result = await window.api.getTableData({
+        ..._buildPayload(conn),
+        tableName,
+        limit,
+        page
+      });
+      if (result.success) {
+        const key = `${id}:${tableName}`;
+        _updateCache(key, result, page, limit);
+        return { data: result.data || [], totalRecords: result.totalRecords || 0, page, limit };
+      }
+      return _EMPTY_RESULT(page, limit);
+    } catch {
+      return _EMPTY_RESULT(page, limit);
     }
-  };
+  }
 
-  const tableContents = {
-    case_situations: [
-      {
-        id: 1,
-        case_study_id: 1,
-        requires_answer: 1,
-        title: 'Case Situation 01',
-        content:
-          'Doloremque vitae repellendus et dolores totam quia ullam. Et vero facere minima culpa velit eius.'
-      },
-      {
-        id: 2,
-        case_study_id: 1,
-        requires_answer: 1,
-        title: 'Case Situation 02',
-        content:
-          'Cumque earum officia natus omnis facere delectus molestias. Nemo autem dolores dolorem est.'
-      },
-      {
-        id: 3,
-        case_study_id: 2,
-        requires_answer: 1,
-        title: 'Case Situation 01',
-        content: 'Natus sed aut nam et quia. Dolorum maxime architecto voluptatem eaque.'
-      },
-      {
-        id: 4,
-        case_study_id: 2,
-        requires_answer: 1,
-        title: 'Case Situation 02',
-        content:
-          'Libero autem quia eaque odio nostrum necessitatibus harum. Illum doloribus aut corrupti possimus.'
-      },
-      {
-        id: 5,
-        case_study_id: 3,
-        requires_answer: 1,
-        title: 'Case Situation 01',
-        content:
-          '<p>Ea beatae tempora asperiores veniam dolorum praesentium. Et ditis saepe harum laudantium assumenda.</p>'
-      },
-      {
-        id: 6,
-        case_study_id: 4,
-        requires_answer: 1,
-        title: 'Case Situation 01',
-        content:
-          'Vero et nulla numquam consequatur veritatis. Deserunt at reiciendis veritatis eum.'
-      },
-      {
-        id: 7,
-        case_study_id: 4,
-        requires_answer: 1,
-        title: 'Case Situation 02',
-        content: 'A maiores laboriosam odit dicta modi. Et possimus nulla consequatur illo earum.'
-      },
-      {
-        id: 8,
-        case_study_id: 5,
-        requires_answer: 1,
-        title: 'Case Situation 01',
-        content:
-          'Soluta natus dolores nemo maiores dicta ut cumque aspernatur. Quam commodi ut esse magni.'
-      },
-      {
-        id: 9,
-        case_study_id: 5,
-        requires_answer: 1,
-        title: 'Case Situation 02',
-        content:
-          'Et veniam necessitatibus sed totam. Provident et quia facere perferendis accusantium.'
-      },
-      {
-        id: 10,
-        case_study_id: 5,
-        requires_answer: 1,
-        title: 'Case Situation 03',
-        content: 'Eos nulla et voluptas est placeat quidem aut. Quam a laborum aut digni'
-      },
-      {
-        id: 11,
-        case_study_id: 6,
-        requires_answer: 1,
-        title: 'Case Situation 01',
-        content:
-          'Ratione veniam quos voluptate suscipit eligendi est commodi. Maiores quos et cupiditate voluptas.'
-      },
-      {
-        id: 12,
-        case_study_id: 7,
-        requires_answer: 1,
-        title: 'Case Situation 01',
-        content: 'Voluptatibus eligendi qui et omnis non. Repudiandae est reiciendis veritatis.'
-      },
-      {
-        id: 13,
-        case_study_id: 8,
-        requires_answer: 1,
-        title: 'Case Situation 01',
-        content: 'Ut est enim sit architecto. Illo nisi repudiandae qui et.'
+  async function loadFilteredTableData(id, tableName, filter, limit = 100, page = 1) {
+    try {
+      const conn = _getConnection(id);
+      const result = await window.api.getFilteredTableData({
+        ..._buildPayload(conn),
+        tableName,
+        filter,
+        limit,
+        page
+      });
+      if (result.success) {
+        const key = `${id}:${tableName}:filtered`;
+        _updateCache(key, result, page, limit, { filter });
+        return { data: result.data || [], totalRecords: result.totalRecords || 0, page, limit };
       }
-    ],
-    users: [
-      {
-        id: 1,
-        name: 'John Doe',
-        email: 'john@example.com',
-        created_at: '2023-01-15',
-        role: 'admin'
-      },
-      {
-        id: 2,
-        name: 'Jane Smith',
-        email: 'jane@example.com',
-        created_at: '2023-02-20',
-        role: 'user'
-      },
-      {
-        id: 3,
-        name: 'Alice Johnson',
-        email: 'alice@example.com',
-        created_at: '2023-03-10',
-        role: 'user'
-      },
-      {
-        id: 4,
-        name: 'Bob Wilson',
-        email: 'bob@example.com',
-        created_at: '2023-04-05',
-        role: 'editor'
-      },
-      {
-        id: 5,
-        name: 'Carol Martinez',
-        email: 'carol@example.com',
-        created_at: '2023-05-15',
-        role: 'user'
-      }
-    ],
-    products: [
-      { id: 1, name: 'Smartphone X', price: 999.99, stock: 50, category: 'Electronics' },
-      { id: 2, name: 'Laptop Pro', price: 1499.99, stock: 30, category: 'Electronics' },
-      { id: 3, name: 'Wireless Headphones', price: 199.99, stock: 100, category: 'Audio' },
-      { id: 4, name: 'Smart Watch', price: 299.99, stock: 45, category: 'Wearables' },
-      { id: 5, name: 'Coffee Maker', price: 79.99, stock: 60, category: 'Home Appliances' }
-    ]
-  };
+      return _EMPTY_RESULT(page, limit);
+    } catch {
+      return _EMPTY_RESULT(page, limit);
+    }
+  }
 
-  async function loadTables(connectionId) {
+  async function loadTables(id) {
     isLoading.value = true;
     try {
-      const connection = usedConnectionsStore().getConnection(connectionId);
-
-      if (!connection) {
-        console.error('Connection not found');
-        tables.value = { tables: [] };
-        return;
-      }
-
-      if (connection.type !== 'mysql') {
-        if (mockDatabases[connectionId]) {
-          tables.value = mockDatabases[connectionId];
-        } else {
-          tables.value = { tables: [] };
-        }
-        return;
-      }
-
-      const result = await window.api.listTables({
-        host: connection.host,
-        port: connection.port,
-        username: connection.username,
-        password: connection.password,
-        database: connection.database
-      });
-
-      if (result.success && result.tables) {
-        tables.value = { tables: result.tables };
-
-        if (connection.projectPath) {
-          loadModelsForTables(connectionId, connection.projectPath);
-        }
-      } else {
-        console.error('Failed to load tables:', result.message);
-        tables.value = { tables: [] };
-      }
-    } catch (error) {
-      console.error('Error loading tables:', error);
+      const conn = _getConnection(id);
+      const result = await window.api.listTables(_buildPayload(conn));
+      tables.value = result.success && result.tables ? { tables: result.tables } : { tables: [] };
+      if (result.success && conn.projectPath) await loadModelsForTables(id, conn.projectPath);
+    } catch {
       tables.value = { tables: [] };
     } finally {
       isLoading.value = false;
     }
   }
 
-  async function loadModelsForTables(connectionId, projectPath) {
+  async function loadModelsForTables(id, path) {
+    if (!path) return;
     try {
-      if (!projectPath) {
-        console.log('No project path specified for loading models');
-        return;
-      }
-
-      const result = await window.api.findModelsForTables({
-        projectPath: projectPath
-      });
-
-      if (result.success) {
-        tableModels.value[connectionId] = result.models;
-        console.log('Loaded models for tables:', result.models);
-      } else {
-        console.error('Failed to load models:', result.message);
-      }
-    } catch (error) {
-      console.error('Error loading models:', error);
-    }
+      const { success, models } = await window.api.findModelsForTables({ projectPath: path });
+      if (success) tableModels.value[id] = models;
+    } catch {}
   }
 
-  function getModelForTable(connectionId, tableName) {
-    if (!tableModels.value[connectionId]) {
-      return null;
-    }
-
-    return tableModels.value[connectionId][tableName] || null;
+  function getModelForTable(id, name) {
+    return tableModels.value[id]?.[name] || null;
   }
 
-  function getTableModelJson(connectionId, tableName) {
-    const model = getModelForTable(connectionId, tableName);
-    const connection = usedConnectionsStore().getConnection(connectionId);
-
+  function getTableModelJson(id, name) {
+    const conn = connectionStore.getConnection(id) || {};
+    const model = getModelForTable(id, name);
     return JSON.stringify(
       {
-        connectionName: connection?.name || 'Unknown',
-        database: connection?.database || 'Unknown',
-        tableName: tableName,
+        connectionName: conn.name || 'Unknown',
+        database: conn.database || 'Unknown',
+        tableName: name,
         model: model
           ? {
               name: model.name,
@@ -342,1019 +140,189 @@ export const useDatabaseStore = defineStore('database', () => {
     );
   }
 
-  async function getAllTablesModelsJson(connectionId) {
-    const connection = usedConnectionsStore().getConnection(connectionId);
+  async function getAllTablesModelsJson(id) {
+    const conn = connectionStore.getConnection(id) || {};
     const result = {
-      connectionName: connection?.name || 'Unknown',
-      database: connection?.database || 'Unknown',
+      connectionName: conn.name || 'Unknown',
+      database: conn.database || 'Unknown',
       tables: []
     };
-
-    if (!tables.value.tables) {
-      return JSON.stringify(result, null, 2);
-    }
-
-    for (const table of tables.value.tables) {
+    for (const { name, recordCount } of tables.value.tables || []) {
       try {
-        const columns = await getTableStructure(connectionId, table.name);
-
-        const model = getModelForTable(connectionId, table.name);
-
-        const tableInfo = {
-          tableName: table.name,
-          recordCount: table.recordCount,
-          columns: columns.map(col => ({
-            name: col.name,
-            type: col.type,
-            nullable: col.nullable,
-            primary_key: col.primary_key,
-            foreign_key: col.foreign_key,
-            default: col.default,
-            extra: col.extra
-          })),
-          model: model
-            ? {
-                name: model.name,
-                namespace: model.namespace,
-                fullName: model.fullName,
-                path: model.relativePath
-              }
-            : null
-        };
-
-        result.tables.push(tableInfo);
-      } catch (error) {
-        const model = getModelForTable(connectionId, table.name);
+        const cols = await getTableStructure(id, name);
+        const model = getModelForTable(id, name);
         result.tables.push({
-          tableName: table.name,
-          recordCount: table.recordCount,
-          columns: [],
-          model: model
-            ? {
-                name: model.name,
-                namespace: model.namespace,
-                fullName: model.fullName,
-                path: model.relativePath
-              }
-            : null
+          tableName: name,
+          columns: cols.map(c => ({
+            name: c.name,
+            type: c.type,
+            nullable: c.nullable,
+            primary_key: c.primary_key,
+            foreign_key: c.foreign_key,
+            default: c.default
+          })),
+          model: model && { namespace: model.fullName }
         });
+      } catch {
+        const model = getModelForTable(id, name);
+        result.tables.push({ tableName: name, recordCount, columns: [], model });
       }
     }
-
     return JSON.stringify(result, null, 2);
   }
 
-  async function getTableRecordCount(connectionId, tableName) {
+  async function getTableRecordCount(id, tableName) {
+    const key = `${id}:${tableName}`;
+    if (tableRecords.value[key]?.count != null) return tableRecords.value[key].count;
     try {
-      const cacheKey = `${connectionId}:${tableName}`;
-      if (tableRecords.value[cacheKey]?.count !== undefined) {
-        return tableRecords.value[cacheKey].count;
-      }
-
-      const connection = usedConnectionsStore().getConnection(connectionId);
-
-      if (!connection) {
-        console.error('Connection not found');
-        return 0;
-      }
-
-      if (connection.type !== 'mysql') {
-        if (tableContents[tableName]) {
-          return tableContents[tableName].length;
-        }
-        return Math.floor(Math.random() * 100);
-      }
-
-      const result = await window.api.getTableRecordCount({
-        host: connection.host,
-        port: connection.port,
-        username: connection.username,
-        password: connection.password,
-        database: connection.database,
-        tableName: tableName
+      const conn = connectionStore.getConnection(id);
+      const { success, count } = await window.api.getTableRecordCount({
+        ..._buildPayload(conn),
+        tableName
       });
-
-      if (result.success) {
-        if (!tableRecords.value[cacheKey]) {
-          tableRecords.value[cacheKey] = {};
-        }
-        tableRecords.value[cacheKey].count = result.count;
-        return result.count;
-      } else {
-        console.error('Failed to get record count:', result.message);
-        return 0;
+      if (success) {
+        tableRecords.value[key] = { count };
+        return count;
       }
-    } catch (error) {
-      console.error(`Error getting record count for ${tableName}:`, error);
-      return 0;
-    }
+    } catch {}
+    return 0;
   }
 
-  async function loadTableData(connectionId, tableName, limit = 100, page = 1) {
+  async function getTableStructure(id, name, force = false) {
+    const key = `${id}:${name}:structure`;
+    if (!force && tableStructures.value[key]) return tableStructures.value[key];
     try {
-      const connection = usedConnectionsStore().getConnection(connectionId);
-
-      if (!connection) {
-        console.error('Connection not found');
-        return { data: [], totalRecords: 0 };
-      }
-
-      if (connection.type !== 'mysql') {
-        await new Promise(resolve => setTimeout(resolve, 500));
-
-        if (tableContents[tableName]) {
-          const allData = tableContents[tableName];
-          const offset = (page - 1) * limit;
-          const data = limit > 0 ? allData.slice(offset, offset + limit) : allData;
-          return {
-            data,
-            totalRecords: allData.length,
-            page,
-            limit
-          };
-        } else {
-          const mockData = Array.from({ length: 10 }, (_, i) => ({
-            id: i + 1,
-            column1: `Value ${i + 1}`,
-            column2: Math.floor(Math.random() * 1000),
-            column3: new Date().toISOString().split('T')[0]
-          }));
-          return {
-            data: mockData,
-            totalRecords: mockData.length,
-            page,
-            limit
-          };
-        }
-      }
-
-      const result = await window.api.getTableData({
-        host: connection.host,
-        port: connection.port,
-        username: connection.username,
-        password: connection.password,
-        database: connection.database,
-        tableName: tableName,
-        limit: limit,
-        page: page
+      const conn = connectionStore.getConnection(id);
+      const { success, columns } = await window.api.getTableStructure({
+        ..._buildPayload(conn),
+        tableName: name
       });
-
-      if (result.success) {
-        const cacheKey = `${connectionId}:${tableName}`;
-        if (!tableRecords.value[cacheKey]) {
-          tableRecords.value[cacheKey] = {};
-        }
-        tableRecords.value[cacheKey].data = result.data;
-        tableRecords.value[cacheKey].totalRecords = result.totalRecords;
-        tableRecords.value[cacheKey].page = page;
-        tableRecords.value[cacheKey].limit = limit;
-
-        return {
-          data: result.data || [],
-          totalRecords: result.totalRecords || 0,
-          page,
-          limit
-        };
-      } else {
-        console.error('Failed to load table data:', result.message);
-        return {
-          data: [],
-          totalRecords: 0,
-          page,
-          limit
-        };
-      }
-    } catch (error) {
-      console.error(`Error loading data for ${tableName}:`, error);
-      return {
-        data: [],
-        totalRecords: 0,
-        page,
-        limit
-      };
-    }
-  }
-
-  async function getTableStructure(connectionId, tableName, force = false) {
-    const cacheKey = `${connectionId}:${tableName}:structure`;
-    if (!force && tableStructures.value[cacheKey]) {
-      return tableStructures.value[cacheKey];
-    }
-
-    try {
-      const connection = usedConnectionsStore().getConnection(connectionId);
-
-      if (!connection) {
-        console.error('Connection not found');
-        return [];
-      }
-
-      if (connection.type !== 'mysql') {
-        await new Promise(resolve => setTimeout(resolve, 500));
-
-        let structure = [];
-
-        if (tableName === 'users') {
-          structure = [
-            {
-              name: 'id',
-              type: 'int(10) unsigned',
-              nullable: false,
-              default: null,
-              primary_key: true,
-              foreign_key: false,
-              unique: false,
-              extra: 'auto_increment'
-            },
-            {
-              name: 'name',
-              type: 'varchar(255)',
-              nullable: false,
-              default: null,
-              primary_key: false,
-              foreign_key: false,
-              unique: false,
-              extra: ''
-            },
-            {
-              name: 'email',
-              type: 'varchar(255)',
-              nullable: false,
-              default: null,
-              primary_key: false,
-              foreign_key: false,
-              unique: true,
-              extra: ''
-            },
-            {
-              name: 'password',
-              type: 'varchar(255)',
-              nullable: false,
-              default: null,
-              primary_key: false,
-              foreign_key: false,
-              unique: false,
-              extra: ''
-            },
-            {
-              name: 'user_type_id',
-              type: 'int(10) unsigned',
-              nullable: true,
-              default: null,
-              primary_key: false,
-              foreign_key: true,
-              unique: false,
-              extra: 'foreign key (user_types)'
-            },
-            {
-              name: 'avatar',
-              type: 'varchar(255)',
-              nullable: true,
-              default: null,
-              primary_key: false,
-              foreign_key: false,
-              unique: false,
-              extra: ''
-            },
-            {
-              name: 'created_at',
-              type: 'timestamp',
-              nullable: true,
-              default: null,
-              primary_key: false,
-              foreign_key: false,
-              unique: false,
-              extra: ''
-            },
-            {
-              name: 'updated_at',
-              type: 'timestamp',
-              nullable: true,
-              default: null,
-              primary_key: false,
-              foreign_key: false,
-              unique: false,
-              extra: ''
-            }
-          ];
-        } else if (tableName === 'products') {
-          structure = [
-            {
-              name: 'id',
-              type: 'int(10) unsigned',
-              nullable: false,
-              default: null,
-              primary_key: true,
-              foreign_key: false,
-              unique: false,
-              extra: 'auto_increment'
-            },
-            {
-              name: 'name',
-              type: 'varchar(255)',
-              nullable: false,
-              default: null,
-              primary_key: false,
-              foreign_key: false,
-              unique: false,
-              extra: ''
-            },
-            {
-              name: 'description',
-              type: 'text',
-              nullable: true,
-              default: null,
-              primary_key: false,
-              foreign_key: false,
-              unique: false,
-              extra: ''
-            },
-            {
-              name: 'price',
-              type: 'decimal(8,2)',
-              nullable: false,
-              default: '0.00',
-              primary_key: false,
-              foreign_key: false,
-              unique: false,
-              extra: ''
-            },
-            {
-              name: 'stock',
-              type: 'int(11)',
-              nullable: false,
-              default: '0',
-              primary_key: false,
-              foreign_key: false,
-              unique: false,
-              extra: ''
-            },
-            {
-              name: 'category',
-              type: 'varchar(255)',
-              nullable: false,
-              default: null,
-              primary_key: false,
-              foreign_key: false,
-              unique: false,
-              extra: ''
-            },
-            {
-              name: 'created_at',
-              type: 'timestamp',
-              nullable: true,
-              default: null,
-              primary_key: false,
-              foreign_key: false,
-              unique: false,
-              extra: ''
-            },
-            {
-              name: 'updated_at',
-              type: 'timestamp',
-              nullable: true,
-              default: null,
-              primary_key: false,
-              foreign_key: false,
-              unique: false,
-              extra: ''
-            }
-          ];
-        } else {
-          // Default structure for other tables
-          structure = [
-            {
-              name: 'id',
-              type: 'int(10) unsigned',
-              nullable: false,
-              default: null,
-              primary_key: true,
-              foreign_key: false,
-              unique: false,
-              extra: 'auto_increment'
-            },
-            {
-              name: 'name',
-              type: 'varchar(255)',
-              nullable: false,
-              default: null,
-              primary_key: false,
-              foreign_key: false,
-              unique: false,
-              extra: ''
-            },
-            {
-              name: 'created_at',
-              type: 'timestamp',
-              nullable: true,
-              default: null,
-              primary_key: false,
-              foreign_key: false,
-              unique: false,
-              extra: ''
-            },
-            {
-              name: 'updated_at',
-              type: 'timestamp',
-              nullable: true,
-              default: null,
-              primary_key: false,
-              foreign_key: false,
-              unique: false,
-              extra: ''
-            }
-          ];
-        }
-
-        tableStructures.value[cacheKey] = structure;
-        return structure;
-      }
-
-      // Para MySQL, obter a estrutura real da tabela
-      const result = await window.api.getTableStructure({
-        host: connection.host,
-        port: connection.port,
-        username: connection.username,
-        password: connection.password,
-        database: connection.database,
-        tableName: tableName
-      });
-
-      if (result.success) {
-        tableStructures.value[cacheKey] = result.columns;
-        return result.columns;
-      } else {
-        console.error('Failed to get table structure:', result.message);
-        return [];
-      }
-    } catch (error) {
-      console.error(`Error getting structure for ${tableName}:`, error);
+      if (success) tableStructures.value[key] = columns;
+      return columns || [];
+    } catch {
       return [];
     }
   }
 
-  async function getTableIndexes(connectionId, tableName, force = false) {
-    const cacheKey = `${connectionId}:${tableName}:indexes`;
-    if (!force && tableIndexes.value[cacheKey]) {
-      return tableIndexes.value[cacheKey];
-    }
-
-    try {
-      await new Promise(resolve => setTimeout(resolve, 500)); // Simulate loading
-
-      // For a real application, this would make an API call to get the indexes
-      // For now we'll use mock data
-      let indexes = [];
-
-      if (tableName === 'users') {
-        indexes = [
-          {
-            name: 'PRIMARY',
-            type: 'PRIMARY',
-            columns: ['id'],
-            algorithm: 'BTREE',
-            cardinality: 1000,
-            comment: ''
-          },
-          {
-            name: 'users_email_unique',
-            type: 'UNIQUE',
-            columns: ['email'],
-            algorithm: 'BTREE',
-            cardinality: 1000,
-            comment: ''
-          },
-          {
-            name: 'users_user_type_id_foreign',
-            type: 'INDEX',
-            columns: ['user_type_id'],
-            algorithm: 'BTREE',
-            cardinality: 10,
-            comment: 'Foreign key for user types'
-          }
-        ];
-      } else if (tableName === 'products') {
-        indexes = [
-          {
-            name: 'PRIMARY',
-            type: 'PRIMARY',
-            columns: ['id'],
-            algorithm: 'BTREE',
-            cardinality: 500,
-            comment: ''
-          },
-          {
-            name: 'products_category_index',
-            type: 'INDEX',
-            columns: ['category'],
-            algorithm: 'BTREE',
-            cardinality: 20,
-            comment: ''
-          }
-        ];
-      } else {
-        // Default indexes for other tables
-        indexes = [
-          {
-            name: 'PRIMARY',
-            type: 'PRIMARY',
-            columns: ['id'],
-            algorithm: 'BTREE',
-            cardinality: 0,
-            comment: ''
-          }
-        ];
+  async function getTableIndexes(id, name, force = false) {
+    const key = `${id}:${name}:indexes`;
+    if (!force && tableIndexes.value[key]) return tableIndexes.value[key];
+    await new Promise(r => setTimeout(r, 500));
+    const indexes = [
+      {
+        name: 'PRIMARY',
+        type: 'PRIMARY',
+        columns: ['id'],
+        algorithm: 'BTREE',
+        cardinality: 0,
+        comment: ''
       }
-
-      tableIndexes.value[cacheKey] = indexes;
-      return indexes;
-    } catch (error) {
-      console.error(`Error getting indexes for ${tableName}:`, error);
-      return [];
-    }
+    ];
+    tableIndexes.value[key] = indexes;
+    return indexes;
   }
 
-  async function getTableForeignKeys(connectionId, tableName, force = false) {
-    const cacheKey = `${connectionId}:${tableName}:foreignKeys`;
-    if (!force && tableForeignKeys.value[cacheKey]) {
-      return tableForeignKeys.value[cacheKey];
-    }
-
+  async function getTableForeignKeys(id, name, force = false) {
+    const key = `${id}:${name}:foreignKeys`;
+    if (!force && tableForeignKeys.value[key]) return tableForeignKeys.value[key];
     try {
-      const connection = usedConnectionsStore().getConnection(connectionId);
-
-      if (!connection) {
-        console.error('Connection not found');
-        return [];
-      }
-
-      if (connection.type !== 'mysql') {
-        await new Promise(resolve => setTimeout(resolve, 500));
-
-        let foreignKeys = [];
-
-        if (tableName === 'users') {
-          foreignKeys = [
-            {
-              name: 'users_user_type_id_foreign',
-              type: 'outgoing',
-              column: 'user_type_id',
-              referenced_table: 'user_types',
-              referenced_column: 'id',
-              on_update: 'CASCADE',
-              on_delete: 'SET NULL'
-            },
-            {
-              name: 'orders_user_id_foreign',
-              type: 'incoming',
-              table: 'orders',
-              column: 'user_id',
-              referenced_column: 'id',
-              on_update: 'CASCADE',
-              on_delete: 'RESTRICT'
-            },
-            {
-              name: 'posts_author_id_foreign',
-              type: 'incoming',
-              table: 'posts',
-              column: 'author_id',
-              referenced_column: 'id',
-              on_update: 'CASCADE',
-              on_delete: 'CASCADE'
-            }
-          ];
-        } else if (tableName === 'orders') {
-          foreignKeys = [
-            {
-              name: 'orders_user_id_foreign',
-              type: 'outgoing',
-              column: 'user_id',
-              referenced_table: 'users',
-              referenced_column: 'id',
-              on_update: 'CASCADE',
-              on_delete: 'RESTRICT'
-            },
-            {
-              name: 'order_items_order_id_foreign',
-              type: 'incoming',
-              table: 'order_items',
-              column: 'order_id',
-              referenced_column: 'id',
-              on_update: 'CASCADE',
-              on_delete: 'CASCADE'
-            }
-          ];
-        } else if (tableName === 'order_items') {
-          foreignKeys = [
-            {
-              name: 'order_items_order_id_foreign',
-              type: 'outgoing',
-              column: 'order_id',
-              referenced_table: 'orders',
-              referenced_column: 'id',
-              on_update: 'CASCADE',
-              on_delete: 'CASCADE'
-            },
-            {
-              name: 'order_items_product_id_foreign',
-              type: 'outgoing',
-              column: 'product_id',
-              referenced_table: 'products',
-              referenced_column: 'id',
-              on_update: 'CASCADE',
-              on_delete: 'RESTRICT'
-            }
-          ];
-        } else {
-          foreignKeys = [];
-        }
-
-        tableForeignKeys.value[cacheKey] = foreignKeys;
-        return foreignKeys;
-      }
-
-      const result = await window.api.getTableForeignKeys({
-        host: connection.host,
-        port: connection.port,
-        username: connection.username,
-        password: connection.password,
-        database: connection.database,
-        tableName: tableName
+      const conn = connectionStore.getConnection(id);
+      const { success, foreignKeys } = await window.api.getTableForeignKeys({
+        ..._buildPayload(conn),
+        tableName: name
       });
-
-      if (result.success) {
-        tableForeignKeys.value[cacheKey] = result.foreignKeys;
-        return result.foreignKeys;
-      } else {
-        console.error('Failed to get foreign keys:', result.message);
-        return [];
-      }
-    } catch (error) {
-      console.error(`Error getting foreign keys for ${tableName}:`, error);
+      if (success) tableForeignKeys.value[key] = foreignKeys;
+      return foreignKeys || [];
+    } catch {
       return [];
     }
   }
 
-  async function getTableMigrations(connectionId, tableName, force = false) {
-    const cacheKey = `${connectionId}:${tableName}:migrations`;
-    if (!force && tableMigrations.value[cacheKey]) {
-      return tableMigrations.value[cacheKey];
-    }
-
+  async function getTableMigrations(id, name, force = false) {
+    const key = `${id}:${name}:migrations`;
+    if (!force && tableMigrations.value[key]) return tableMigrations.value[key];
     try {
-      const connection = usedConnectionsStore().getConnection(connectionId);
-
-      if (!connection) {
-        console.error('Connection not found');
-        return [];
-      }
-
-      if (!connection.projectPath) {
-        console.log('No project path associated with this connection');
-        tableMigrations.value[cacheKey] = [];
-        return [];
-      }
-
-      const result = await window.api.findTableMigrations({
-        projectPath: connection.projectPath,
-        tableName: tableName
+      const conn = connectionStore.getConnection(id);
+      if (!conn.projectPath) return [];
+      const { success, migrations } = await window.api.findTableMigrations({
+        projectPath: conn.projectPath,
+        tableName: name
       });
-
-      if (result.success) {
-        tableMigrations.value[cacheKey] = result.migrations;
-        return result.migrations;
-      } else {
-        console.error('Failed to get migrations:', result.message);
-        return [];
-      }
-    } catch (error) {
-      console.error(`Error getting migrations for ${tableName}:`, error);
+      if (success) tableMigrations.value[key] = migrations;
+      return migrations || [];
+    } catch {
       return [];
     }
   }
 
-  function clearTableCache(cacheKey) {
-    if (cacheKey) {
-      delete tableRecords.value[cacheKey];
-      delete tableStructures.value[cacheKey];
-      delete tableIndexes.value[cacheKey];
-      delete tableForeignKeys.value[cacheKey];
-      delete tableMigrations.value[cacheKey];
-    }
+  function clearTableCache(key) {
+    delete tableRecords.value[key];
+    delete tableStructures.value[key];
+    delete tableIndexes.value[key];
+    delete tableForeignKeys.value[key];
+    delete tableMigrations.value[key];
   }
 
   function clearTableRecordCounts() {
     tableRecords.value = {};
   }
 
-  async function updateRecord(connectionId, tableName, record) {
-    const connection = usedConnectionsStore().getConnection(connectionId);
-
-    if (!connection) {
-      throw new Error('Connection not found');
-    }
-
-    try {
-      const preparedRecord = {};
-
-      for (const key in record) {
-        let value = record[key];
-
-        if (value instanceof Date) {
-          value = value.toISOString().slice(0, 19);
-        } else if (value !== null && typeof value === 'object') {
-          try {
-            value = JSON.stringify(value);
-          } catch (e) {
-            console.warn(`Could not stringify field ${key}:`, e);
-
-            value = String(value);
-          }
-        }
-
-        preparedRecord[key] = value;
-      }
-
-      const cacheKey = `${connectionId}:${tableName}`;
-
-      const result = await window.api.updateRecord({
-        connection: {
-          host: connection.host,
-          port: connection.port,
-          username: connection.username,
-          password: connection.password,
-          database: connection.database
-        },
-        tableName,
-        record: preparedRecord
-      });
-
-      if (!result.success) {
-        throw new Error(result.message || 'Failed to update record');
-      }
-
-      if (!tableRecords.value[cacheKey]) {
-        console.log(`Cache not found for ${cacheKey}, skipping local update`);
-      } else if (!tableRecords.value[cacheKey].data) {
-        console.warn(`Cache for ${cacheKey} does not have data property, cannot update`);
-      } else {
-        const index = tableRecords.value[cacheKey].data.findIndex(row => {
-          if (row.id && record.id) {
-            return row.id === record.id;
-          }
-          return false;
-        });
-
-        if (index !== -1) {
-          const updatedRecord = { ...tableRecords.value[cacheKey].data[index], ...record };
-          tableRecords.value[cacheKey].data.splice(index, 1, updatedRecord);
-          console.log(`Updated record at index ${index} in cache ${cacheKey}`);
-        } else {
-          console.log(`Record with id ${record.id} not found in cache ${cacheKey}`);
-        }
-      }
-
-      return result;
-    } catch (error) {
-      console.error('Error updating record:', error);
-      throw error;
-    }
+  async function updateRecord(id, tableName, record) {
+    const conn = _getConnection(id);
+    const prepared = _prepare(record);
+    const result = await window.api.updateRecord({
+      connection: _buildPayload(conn),
+      tableName,
+      record: prepared
+    });
+    if (!result.success) throw new Error(result.message);
+    _updateCache(`${id}:${tableName}`, { data: [record], totalRecords: 1 }, 1, 1);
+    return result;
   }
 
-  async function deleteRecords(connectionId, tableName, ids) {
-    const connection = usedConnectionsStore().getConnection(connectionId);
-
-    if (!connection) {
-      throw new Error('Connection not found');
-    }
-
-    try {
-      const sanitizedIds = ids.map(id => {
-        if (id !== null && typeof id === 'object') {
-          return String(id);
-        }
-        return id;
-      });
-
-      console.log('Sanitized IDs for deletion:', sanitizedIds);
-
-      const result = await window.api.deleteRecords({
-        connection: {
-          host: connection.host,
-          port: connection.port,
-          username: connection.username,
-          password: connection.password,
-          database: connection.database
-        },
-        tableName,
-        ids: sanitizedIds
-      });
-
-      if (result.success) {
-        const cacheKey = `${connectionId}:${tableName}`;
-        clearTableCache(cacheKey);
-
-        return result;
-      } else {
-        throw new Error(result.message);
-      }
-    } catch (error) {
-      console.error('Error deleting records:', error);
-      throw error;
-    }
+  async function deleteRecords(id, tableName, ids) {
+    const conn = _getConnection(id);
+    const sanitized = _sanitize(ids);
+    const result = await window.api.deleteRecords({
+      connection: _buildPayload(conn),
+      tableName,
+      ids: sanitized
+    });
+    if (!result.success) throw new Error(result.message);
+    clearTableCache(`${id}:${tableName}`);
+    return result;
   }
 
-  async function truncateTable(connectionId, tableName) {
-    const connection = usedConnectionsStore().getConnection(connectionId);
-
-    if (!connection) {
-      throw new Error('Connection not found');
-    }
-
-    try {
-      const result = await window.api.truncateTable({
-        connection: {
-          host: connection.host,
-          port: connection.port,
-          username: connection.username,
-          password: connection.password,
-          database: connection.database
-        },
-        tableName
-      });
-
-      if (result.success) {
-        const cacheKey = `${connectionId}:${tableName}`;
-        clearTableCache(cacheKey);
-
-        return result;
-      } else {
-        throw new Error(result.message);
-      }
-    } catch (error) {
-      console.error('Error truncating table:', error);
-      throw error;
-    }
+  async function truncateTable(id, tableName) {
+    const conn = _getConnection(id);
+    const result = await window.api.truncateTable({ connection: _buildPayload(conn), tableName });
+    if (!result.success) throw new Error(result.message);
+    clearTableCache(`${id}:${tableName}`);
+    return result;
   }
 
-  async function loadFilteredTableData(
-    connectionId,
-    tableName,
-    filterClause,
-    limit = 100,
-    page = 1
-  ) {
-    try {
-      const connection = usedConnectionsStore().getConnection(connectionId);
-
-      if (!connection) {
-        console.error('Connection not found');
-        return { data: [], totalRecords: 0 };
-      }
-
-      if (connection.type !== 'mysql') {
-        await new Promise(resolve => setTimeout(resolve, 500));
-
-        if (tableContents[tableName]) {
-          const allData = tableContents[tableName];
-
-          try {
-            const filterFn = new Function(
-              'row',
-              `
-              try {
-                return ${convertFilterToJs(filterClause)};
-              } catch (e) {
-                console.error('Filter execution error:', e);
-                return false;
-              }
-            `
-            );
-
-            const filteredData = allData.filter(filterFn);
-            const totalRecords = filteredData.length;
-
-            const offset = (page - 1) * limit;
-            const paginatedData =
-              limit > 0 ? filteredData.slice(offset, offset + limit) : filteredData;
-
-            return {
-              data: paginatedData,
-              totalRecords,
-              page,
-              limit
-            };
-          } catch (error) {
-            console.error('Error applying filter locally:', error);
-            return { data: [], totalRecords: 0, page, limit };
-          }
-        } else {
-          return {
-            data: [],
-            totalRecords: 0,
-            page,
-            limit
-          };
-        }
-      }
-
-      const result = await window.api.getFilteredTableData({
-        host: connection.host,
-        port: connection.port,
-        username: connection.username,
-        password: connection.password,
-        database: connection.database,
-        tableName: tableName,
-        filter: filterClause,
-        limit: limit,
-        page: page
-      });
-
-      if (result.success) {
-        const cacheKey = `${connectionId}:${tableName}:filtered`;
-        if (!tableRecords.value[cacheKey]) {
-          tableRecords.value[cacheKey] = {};
-        }
-        tableRecords.value[cacheKey].data = result.data;
-        tableRecords.value[cacheKey].totalRecords = result.totalRecords;
-        tableRecords.value[cacheKey].page = page;
-        tableRecords.value[cacheKey].limit = limit;
-        tableRecords.value[cacheKey].filter = filterClause;
-
-        return {
-          data: result.data || [],
-          totalRecords: result.totalRecords || 0,
-          page,
-          limit
-        };
-      } else {
-        console.error('Failed to load filtered table data:', result.message);
-        return {
-          data: [],
-          totalRecords: 0,
-          page,
-          limit
-        };
-      }
-    } catch (error) {
-      console.error(`Error loading filtered data for ${tableName}:`, error);
-      return {
-        data: [],
-        totalRecords: 0,
-        page,
-        limit
-      };
-    }
-  }
-
-  function convertFilterToJs(filter) {
-    if (!filter) return 'true';
-
-    const cleanFilter = filter.replace(/^where\s+/i, '').trim();
-    if (!cleanFilter) return 'true';
-
-    const idMatch = cleanFilter.match(/^\s*id\s*=\s*(\d+)\s*$/i);
-    if (idMatch) {
-      const idValue = parseInt(idMatch[1], 10);
-      if (!isNaN(idValue)) {
-        return `row.id == ${idValue} || String(row.id) == '${idValue}'`;
-      }
-    }
-
-    return cleanFilter
-      .replace(/\bAND\b/gi, '&&')
-      .replace(/\bOR\b/gi, '||')
-      .replace(/\bNOT\b/gi, '!')
-      .replace(/\bIS NULL\b/gi, '=== null')
-      .replace(/\bIS NOT NULL\b/gi, '!== null')
-      .replace(/\bLIKE\b/gi, '.includes')
-      .replace(/\s+=\s+/g, ' == ');
-  }
-
-  const tablesList = computed(() => {
-    return tables.value.tables || [];
-  });
+  const tablesList = computed(() => tables.value.tables || []);
 
   return {
     tables,
     isLoading,
     loadTables,
     loadTableData,
+    loadFilteredTableData,
     getTableRecordCount,
     getTableStructure,
     getTableIndexes,
     getTableForeignKeys,
     getTableMigrations,
-    clearTableCache,
-    tablesList,
-    getModelForTable,
     loadModelsForTables,
+    getModelForTable,
     getTableModelJson,
     getAllTablesModelsJson,
+    clearTableCache,
     clearTableRecordCounts,
     updateRecord,
-    loadFilteredTableData,
     deleteRecords,
-    truncateTable
+    truncateTable,
+    tablesList
   };
 });
