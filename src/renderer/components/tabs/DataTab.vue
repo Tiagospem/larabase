@@ -1672,6 +1672,48 @@ function handleStorageChange(event) {
   }
 }
 
+const handleTabActivation = event => {
+  // Refresh state immediately and again after a short delay to ensure UI is updated
+  refreshLiveTableState();
+  setTimeout(refreshLiveTableState, 100);
+};
+
+const refreshLiveTableState = () => {
+  try {
+    // Get current state from localStorage
+    const liveTableKey = `liveTable.enabled.${props.connectionId}.${props.tableName}`;
+    const storedState = localStorage.getItem(liveTableKey) === 'true';
+
+    // Update UI state if it doesn't match localStorage
+    if (isLiveTableActive.value !== storedState) {
+      console.log(
+          `Forcing Live Table button update: ${isLiveTableActive.value} -> ${storedState}`
+      );
+      isLiveTableActive.value = storedState;
+
+      // Start or stop updates as needed
+      if (isLiveTableActive.value && !liveTableInterval.value) {
+        startLiveUpdates();
+      } else if (!isLiveTableActive.value && liveTableInterval.value) {
+        stopLiveUpdates();
+      }
+    }
+  } catch (e) {
+    console.error('Error refreshing Live Table state:', e);
+  }
+};
+
+// Also refresh when window receives focus
+const handleWindowFocus = () => {
+  windowInFocus.value = true;
+  // Refresh the live table state when window gets focus
+  refreshLiveTableState();
+};
+
+const handleWindowBlur = () => {
+  windowInFocus.value = false;
+};
+
 onMounted(() => {
   if (props.initialFilter) {
     console.log('Configurando filtro inicial:', props.initialFilter);
@@ -1680,37 +1722,13 @@ onMounted(() => {
   }
 
   // Function to force refresh the Live Table button state
-  const refreshLiveTableState = () => {
-    try {
-      // Get current state from localStorage
-      const liveTableKey = `liveTable.enabled.${props.connectionId}.${props.tableName}`;
-      const storedState = localStorage.getItem(liveTableKey) === 'true';
-
-      // Update UI state if it doesn't match localStorage
-      if (isLiveTableActive.value !== storedState) {
-        console.log(
-          `Forcing Live Table button update: ${isLiveTableActive.value} -> ${storedState}`
-        );
-        isLiveTableActive.value = storedState;
-
-        // Start or stop updates as needed
-        if (isLiveTableActive.value && !liveTableInterval.value) {
-          startLiveUpdates();
-        } else if (!isLiveTableActive.value && liveTableInterval.value) {
-          stopLiveUpdates();
-        }
-      }
-    } catch (e) {
-      console.error('Error refreshing Live Table state:', e);
-    }
-  };
 
   // Listen for tab activation events
-  const handleTabActivation = event => {
-    // Refresh state immediately and again after a short delay to ensure UI is updated
-    refreshLiveTableState();
-    setTimeout(refreshLiveTableState, 100);
-  };
+  // const handleTabActivation = event => {
+  //   // Refresh state immediately and again after a short delay to ensure UI is updated
+  //   refreshLiveTableState();
+  //   setTimeout(refreshLiveTableState, 100);
+  // };
 
   window.addEventListener('tab-activated', handleTabActivation);
 
@@ -1800,16 +1818,9 @@ onMounted(() => {
   window.addEventListener('keydown', handleKeyDown);
   window.addEventListener('keyup', handleKeyUp);
 
-  // Also refresh when window receives focus
-  const handleWindowFocus = () => {
-    windowInFocus.value = true;
-    // Refresh the live table state when window gets focus
-    refreshLiveTableState();
-  };
 
-  const handleWindowBlur = () => {
-    windowInFocus.value = false;
-  };
+
+
 
   window.addEventListener('focus', handleWindowFocus);
   window.addEventListener('blur', handleWindowBlur);
