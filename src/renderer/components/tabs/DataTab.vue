@@ -296,7 +296,7 @@
                       ? 'none'
                       : columnWidths[column] || defaultColumnWidth(column)
                   }"
-                  @click="handleSortClick(column)"
+                  @click.stop="handleSortClick(column)"
                 >
                   <div class="flex items-center justify-between">
                     <span class="truncate">{{ column }}</span>
@@ -926,6 +926,7 @@ const columnWidths = ref({});
 const resizingColumn = ref(null);
 const startX = ref(0);
 const startWidth = ref(0);
+const recentlyResized = ref(false);
 
 const columnTypes = ref({});
 
@@ -1084,10 +1085,10 @@ function formatCellValue(value) {
 
 function defaultColumnWidth(column) {
   // Base width calculation using column name length
-  const baseWidth = Math.max(90, column.length * 10);
+  const baseWidth = Math.max(120, column.length * 10);
   
   // Special case handling for specific column types
-  if (/^id$/i.test(column)) return `${Math.max(40, column.length * 12)}px`;
+  if (/^id$/i.test(column)) return `${Math.max(90, column.length * 12)}px`;
 
   return `${baseWidth}px`;
 }
@@ -1260,6 +1261,14 @@ function stopColumnResize(event) {
   document.removeEventListener('mousemove', handleColumnResize);
   document.removeEventListener('mouseup', stopColumnResize);
   resizingColumn.value = null;
+  
+  // Set the recentlyResized flag
+  recentlyResized.value = true;
+  
+  // Clear the flag after a short delay
+  setTimeout(() => {
+    recentlyResized.value = false;
+  }, 500); // 500ms cooldown
 }
 
 function getRowClasses(rowIndex) {
@@ -2733,6 +2742,12 @@ const currentSortDirection = ref('asc'); // 'asc' ou 'desc'
 
 // 3. Adicionar função de ordenação
 function handleSortClick(column) {
+  // Se estiver redimensionando uma coluna ou recentemente redimensionou, não permitir ordenação
+  if (resizingColumn.value !== null || recentlyResized.value) {
+    console.log('Column resizing in progress or recently resized, sort operation ignored');
+    return;
+  }
+  
   // Se clicar na mesma coluna, inverter a direção
   if (currentSortColumn.value === column) {
     currentSortDirection.value = currentSortDirection.value === 'asc' ? 'desc' : 'asc';
