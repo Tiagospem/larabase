@@ -2738,11 +2738,6 @@ th:has(+ tr td.expanded) {
   min-height: 0;
 }
 
-.table {
-  width: max-content;
-  min-width: 100%;
-}
-
 .pb-3 {
   padding-bottom: 3rem;
 }
