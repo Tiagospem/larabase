@@ -276,9 +276,9 @@
       >
         <div class="overflow-auto h-full pb-3 two-axis-scrollable">
           <table class="table table-sm w-full table-fixed min-w-full">
-            <thead class="bg-base-300 sticky top-0 z-[999]">
+            <thead class="bg-base-300 sticky top-0 z-15">
               <tr class="text-xs select-none">
-                <th class="w-10 px-2 py-2 border-r border-neutral bg-base-300 sticky left-0 z-[99999]">
+                <th class="w-10 px-2 py-2 border-r border-neutral bg-base-300 sticky left-0 z-10">
                   <span class="sr-only">Preview</span>
                 </th>
                 <th
@@ -288,7 +288,7 @@
                   :class="{
                     'bg-base-300': !expandedColumns.includes(column),
                     'bg-base-200': expandedColumns.includes(column),
-                    'sticky left-10 z-[1000]': index === 0
+                    'sticky left-10 z-10': index === 0
                   }"
                   :style="{
                     width: columnWidths[column] || defaultColumnWidth(column),
@@ -346,7 +346,7 @@
                 @mousedown.stop="handleMouseDown($event, rowIndex)"
                 @mouseenter.stop="handleMouseEnter(rowIndex)"
               >
-                <td class="w-10 px-1 border-r border-neutral text-center sticky left-0 z-[500]" :class="getRowBackgroundClass(rowIndex)">
+                <td class="w-10 px-1 border-r border-neutral text-center sticky left-0 z-10" :class="getRowBackgroundClass(rowIndex)">
                   <button
                     class="btn btn-xs btn-circle btn-ghost"
                     title="Preview data"
@@ -379,7 +379,7 @@
                   class="px-4 py-2 border-r border-neutral last:border-r-0 truncate whitespace-nowrap overflow-hidden"
                   :class="[
                     { expanded: expandedColumns.includes(column) },
-                    colIndex === 0 ? `sticky left-10 z-[500]` : 'z-[1]',
+                    colIndex === 0 ? `sticky left-10 z-10` : 'z-[1]',
                     colIndex === 0 ? getRowBackgroundClass(rowIndex) : ''
                   ]"
                   :style="{
