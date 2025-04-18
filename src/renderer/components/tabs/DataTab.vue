@@ -2746,4 +2746,26 @@ th:has(+ tr td.expanded) {
 .pb-3 {
   padding-bottom: 3rem;
 }
+
+/* Fix for sticky columns during horizontal scroll */
+.table {
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+/* Restore all cell borders with direct color values */
+.table th, 
+.table td {
+  border: 0.5px solid #333 !important;
+}
+
+/* Increase z-index for better layer management */
+thead {
+  z-index: 15 !important;
+}
+
+
+.table > thead.bg-base-300 > tr > th {
+  border: 0.5px solid #000 !important;
+}
 </style>
