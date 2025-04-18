@@ -9,7 +9,7 @@ const pluralize = require('pluralize');
 const { createWindow, getMainWindow } = require('./modules/window');
 const { registerRestoreDumpHandlers } = require('./modules/restore-dump');
 const { registerConnectionHandlers } = require('./modules/connections');
-const { registerProjectHandlers} = require('./modules/project');
+const { registerProjectHandlers } = require('./modules/project');
 const { registerTableHandlers } = require('./modules/tables');
 
 const store = new Store();
@@ -92,19 +92,8 @@ function enhancePath() {
       ]
     },
     linux: {
-      additional: [
-        '/usr/bin',
-        '/usr/local/bin',
-        '/snap/bin'
-      ],
-      defaults: [
-        '/usr/local/bin',
-        '/usr/bin',
-        '/bin',
-        '/usr/sbin',
-        '/sbin',
-        '/snap/bin'
-      ]
+      additional: ['/usr/bin', '/usr/local/bin', '/snap/bin'],
+      defaults: ['/usr/local/bin', '/usr/bin', '/bin', '/usr/sbin', '/sbin', '/snap/bin']
     },
     win32: {
       additional: [
@@ -134,9 +123,7 @@ function enhancePath() {
   } else {
     process.env.PATH = defaults.join(sep);
 
-    console.warn(
-        `PATH environment variable not found, some features might not work correctly`
-    );
+    console.warn(`PATH environment variable not found, some features might not work correctly`);
 
     console.log(`Set default PATH for ${platform}: ${process.env.PATH}`);
   }
@@ -165,16 +152,15 @@ function setupGlobalMonitoring() {
     const connection = await originalCreateConnection.call(this, config, ...rest);
     const { host, database } = config;
 
-    const match = [...dbMonitoringConnections.entries()]
-        .find(([, monitored]) =>
-            monitored._config?.host === host &&
-            monitored._config?.database === database
-        );
+    const match = [...dbMonitoringConnections.entries()].find(
+      ([, monitored]) =>
+        monitored._config?.host === host && monitored._config?.database === database
+    );
 
     if (match) {
       const [connectionId] = match;
       console.log(
-          `Auto-monitoring new connection to ${database} (from monitored connection ${connectionId})`
+        `Auto-monitoring new connection to ${database} (from monitored connection ${connectionId})`
       );
       setupMonitoring(connection, database);
     }

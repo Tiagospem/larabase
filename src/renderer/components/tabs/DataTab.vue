@@ -1686,9 +1686,7 @@ const refreshLiveTableState = () => {
 
     // Update UI state if it doesn't match localStorage
     if (isLiveTableActive.value !== storedState) {
-      console.log(
-          `Forcing Live Table button update: ${isLiveTableActive.value} -> ${storedState}`
-      );
+      console.log(`Forcing Live Table button update: ${isLiveTableActive.value} -> ${storedState}`);
       isLiveTableActive.value = storedState;
 
       // Start or stop updates as needed
@@ -1817,10 +1815,6 @@ onMounted(() => {
 
   window.addEventListener('keydown', handleKeyDown);
   window.addEventListener('keyup', handleKeyUp);
-
-
-
-
 
   window.addEventListener('focus', handleWindowFocus);
   window.addEventListener('blur', handleWindowBlur);
