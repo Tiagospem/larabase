@@ -278,13 +278,13 @@
           <table class="table table-sm w-full table-fixed min-w-full">
             <thead class="bg-base-300 sticky top-0 z-[999]">
               <tr class="text-xs select-none">
-                <th class="w-10 px-2 py-2 border-r border-neutral bg-base-300 sticky left-0 z-[1000]">
+                <th class="w-10 px-2 py-2 border-r border-neutral bg-base-300 sticky left-0 z-[99999]">
                   <span class="sr-only">Preview</span>
                 </th>
                 <th
                   v-for="(column, index) in columns"
                   :key="column"
-                  class="px-4 py-2 border-r border-neutral last:border-r-0 relative whitespace-nowrap sticky top-0"
+                  class="px-4 py-2 border-r border-neutral last:border-r-0 relative whitespace-nowrap top-0"
                   :class="{
                     'bg-base-300': !expandedColumns.includes(column),
                     'bg-base-200': expandedColumns.includes(column),
@@ -2743,109 +2743,7 @@ th:has(+ tr td.expanded) {
   min-width: 100%;
 }
 
-.overflow-x-auto {
-  overflow-x: auto;
-  width: 100%;
-  max-width: 100%;
-}
-
 .pb-3 {
   padding-bottom: 3rem;
-}
-
-.line-clamp-5 {
-  display: -webkit-box;
-  -webkit-line-clamp: 5;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-
-/* Fix for the table sticky headers and columns */
-.sticky {
-  position: sticky !important;
-}
-
-/* Separate stacking contexts for better z-index control */
-.two-axis-scrollable {
-  isolation: isolate;
-}
-
-/* Ensure static cells have very low z-index */
-td:not(.sticky), th:not(.sticky) {
-  position: relative;
-  z-index: 1 !important;
-}
-
-/* Making static elements appear behind sticky elements */
-.table tr td:not(.sticky):not(:first-child) {
-  position: relative;
-  z-index: 1 !important;
-}
-
-thead.bg-base-300 {
-  position: sticky;
-  top: 0;
-  z-index: 999 !important;
-}
-
-thead.bg-base-300 th {
-  position: sticky;
-  top: 0;
-  z-index: 999 !important;
-  background-color: var(--b3);
-}
-
-/* Override for corner cell (header) */
-thead th.sticky.left-0 {
-  z-index: 1000 !important;
-  background-color: var(--b3) !important;
-}
-
-/* Override for first data column header */
-thead th.sticky.left-10 {
-  z-index: 1000 !important;
-  left: 40px;
-  background-color: var(--b3) !important;
-}
-
-/* Override for preview column cells */
-tbody td.sticky.left-0 {
-  z-index: 500 !important;
-}
-
-/* Override for first data column cells */
-tbody td.sticky.left-10 {
-  z-index: 500 !important;
-  left: 40px;
-}
-
-/* Make sure all sticky columns have proper backgrounds */
-tbody td.sticky.left-0,
-tbody td.sticky.left-10 {
-  background-color: var(--b1) !important; /* Default background */
-}
-
-/* State-specific backgrounds for sticky cells */
-.selected-row td.sticky.left-0, 
-.selected-row td.sticky.left-10 {
-  background-color: #ea4331 !important;
-}
-
-.updated-row td.sticky.left-0,
-.updated-row td.sticky.left-10 {
-  background-color: rgba(234, 67, 49, 0.1) !important;
-}
-
-/* Visual separator for sticky columns */
-td.sticky::after,
-th.sticky::after {
-  content: '';
-  position: absolute;
-  top: 0;
-  right: 0;
-  bottom: 0;
-  width: 4px;
-  pointer-events: none;
-  background: linear-gradient(to right, rgba(0,0,0,0.1), transparent);
 }
 </style>
