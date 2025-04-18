@@ -362,6 +362,7 @@ async function saveNewConnection() {
       projectPath: newConnection.value.projectPath,
       usingSail: newConnection.value.usingSail,
       status: 'ready',
+      isValid: true,
 
       dockerInfo: dockerInfo.value || null,
       redis: {
