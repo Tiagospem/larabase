@@ -2763,4 +2763,18 @@ thead {
 .table > thead.bg-base-300 > tr > th {
   border: 0.5px solid #000 !important;
 }
+
+/* Fix for hover effects on sticky columns */
+tbody tr:hover td.sticky,
+tbody tr:hover td[class*="sticky"],
+tbody tr.hover td.sticky,
+tbody tr.hover td[class*="sticky"] {
+  background-color: hsl(var(--b2)) !important; /* base-200 color in tailwind */
+}
+
+/* Also apply the hover background to the first data column */
+tbody tr:hover td[class*="left-10"],
+tbody tr.hover td[class*="left-10"] {
+  background-color: hsl(var(--b2)) !important;
+}
 </style>
