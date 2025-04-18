@@ -2770,9 +2770,7 @@ function handleSortClick(column) {
     console.log("Aplicando ordenação sem filtro");
     loadTableData();
   }
-  
-  // Mostrar alerta sobre a ordenação
-  showAlert(`Ordenando por ${column} em ordem ${currentSortDirection.value === 'asc' ? 'crescente' : 'decrescente'}`, 'info');
+
 }
 </script>
 
