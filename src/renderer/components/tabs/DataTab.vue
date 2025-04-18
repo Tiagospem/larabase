@@ -270,24 +270,25 @@
         v-else-if="tableData.length > 0"
         ref="tableContainer"
         tabindex="0"
-        class="h-full overflow-auto relative pb-3"
+        class="h-full relative"
         @click="handleOutsideClick"
         @keydown.prevent="handleTableKeyDown"
       >
-        <div class="overflow-x-auto">
+        <div class="overflow-auto h-full pb-3 two-axis-scrollable">
           <table class="table table-sm w-full table-fixed min-w-full">
-            <thead class="bg-base-300 sticky top-0 z-10">
+            <thead class="bg-base-300 sticky top-0 z-[999]">
               <tr class="text-xs select-none">
-                <th class="w-10 px-2 py-2 border-r border-neutral bg-base-300">
+                <th class="w-10 px-2 py-2 border-r border-neutral bg-base-300 sticky left-0 z-[1000]">
                   <span class="sr-only">Preview</span>
                 </th>
                 <th
                   v-for="(column, index) in columns"
                   :key="column"
-                  class="px-4 py-2 border-r border-neutral last:border-r-0 relative whitespace-nowrap"
+                  class="px-4 py-2 border-r border-neutral last:border-r-0 relative whitespace-nowrap sticky top-0"
                   :class="{
                     'bg-base-300': !expandedColumns.includes(column),
-                    'bg-base-200': expandedColumns.includes(column)
+                    'bg-base-200': expandedColumns.includes(column),
+                    'sticky left-10 z-[1000]': index === 0
                   }"
                   :style="{
                     width: columnWidths[column] || defaultColumnWidth(column),
@@ -345,7 +346,7 @@
                 @mousedown.stop="handleMouseDown($event, rowIndex)"
                 @mouseenter.stop="handleMouseEnter(rowIndex)"
               >
-                <td class="w-10 px-1 border-r border-neutral text-center">
+                <td class="w-10 px-1 border-r border-neutral text-center sticky left-0 z-[500]" :class="getRowBackgroundClass(rowIndex)">
                   <button
                     class="btn btn-xs btn-circle btn-ghost"
                     title="Preview data"
@@ -373,10 +374,14 @@
                   </button>
                 </td>
                 <td
-                  v-for="column in columns"
+                  v-for="(column, colIndex) in columns"
                   :key="`${rowIndex}-${column}`"
                   class="px-4 py-2 border-r border-neutral last:border-r-0 truncate whitespace-nowrap overflow-hidden"
-                  :class="{ expanded: expandedColumns.includes(column) }"
+                  :class="[
+                    { expanded: expandedColumns.includes(column) },
+                    colIndex === 0 ? `sticky left-10 z-[500]` : 'z-[1]',
+                    colIndex === 0 ? getRowBackgroundClass(rowIndex) : ''
+                  ]"
                   :style="{
                     width: columnWidths[column] || defaultColumnWidth(column),
                     maxWidth: expandedColumns.includes(column)
@@ -1197,14 +1202,26 @@ function stopColumnResize(event) {
 }
 
 function getRowClasses(rowIndex) {
-  const isSelected = selectedRows.value.includes(rowIndex);
-  const isUpdated = highlightChanges.value && updatedRows.value.includes(rowIndex);
+  const isSelected = selectedRows.value && selectedRows.value.includes && selectedRows.value.includes(rowIndex);
+  const isUpdated = highlightChanges.value && updatedRows.value && updatedRows.value.includes && updatedRows.value.includes(rowIndex);
 
   return {
     'selected-row': isSelected,
     'updated-row': isUpdated && !isSelected,
     'hover:bg-base-200': !isSelected
   };
+}
+
+function getRowBackgroundClass(rowIndex) {
+  if (selectedRows.value && selectedRows.value.includes && selectedRows.value.includes(rowIndex)) {
+    return 'bg-[#ea4331] text-white';
+  }
+  
+  if (highlightChanges.value && updatedRows.value && updatedRows.value.includes && updatedRows.value.includes(rowIndex)) {
+    return 'bg-[rgba(234,67,49,0.1)]';
+  }
+  
+  return 'bg-base-100';
 }
 
 function handleRowClick(event, rowIndex) {
@@ -2741,5 +2758,94 @@ th:has(+ tr td.expanded) {
   -webkit-line-clamp: 5;
   -webkit-box-orient: vertical;
   overflow: hidden;
+}
+
+/* Fix for the table sticky headers and columns */
+.sticky {
+  position: sticky !important;
+}
+
+/* Separate stacking contexts for better z-index control */
+.two-axis-scrollable {
+  isolation: isolate;
+}
+
+/* Ensure static cells have very low z-index */
+td:not(.sticky), th:not(.sticky) {
+  position: relative;
+  z-index: 1 !important;
+}
+
+/* Making static elements appear behind sticky elements */
+.table tr td:not(.sticky):not(:first-child) {
+  position: relative;
+  z-index: 1 !important;
+}
+
+thead.bg-base-300 {
+  position: sticky;
+  top: 0;
+  z-index: 999 !important;
+}
+
+thead.bg-base-300 th {
+  position: sticky;
+  top: 0;
+  z-index: 999 !important;
+  background-color: var(--b3);
+}
+
+/* Override for corner cell (header) */
+thead th.sticky.left-0 {
+  z-index: 1000 !important;
+  background-color: var(--b3) !important;
+}
+
+/* Override for first data column header */
+thead th.sticky.left-10 {
+  z-index: 1000 !important;
+  left: 40px;
+  background-color: var(--b3) !important;
+}
+
+/* Override for preview column cells */
+tbody td.sticky.left-0 {
+  z-index: 500 !important;
+}
+
+/* Override for first data column cells */
+tbody td.sticky.left-10 {
+  z-index: 500 !important;
+  left: 40px;
+}
+
+/* Make sure all sticky columns have proper backgrounds */
+tbody td.sticky.left-0,
+tbody td.sticky.left-10 {
+  background-color: var(--b1) !important; /* Default background */
+}
+
+/* State-specific backgrounds for sticky cells */
+.selected-row td.sticky.left-0, 
+.selected-row td.sticky.left-10 {
+  background-color: #ea4331 !important;
+}
+
+.updated-row td.sticky.left-0,
+.updated-row td.sticky.left-10 {
+  background-color: rgba(234, 67, 49, 0.1) !important;
+}
+
+/* Visual separator for sticky columns */
+td.sticky::after,
+th.sticky::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 4px;
+  pointer-events: none;
+  background: linear-gradient(to right, rgba(0,0,0,0.1), transparent);
 }
 </style>
