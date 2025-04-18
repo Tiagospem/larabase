@@ -274,7 +274,7 @@
         @click="handleOutsideClick"
         @keydown.prevent="handleTableKeyDown"
       >
-        <div class="overflow-x-scroll overflow-y-auto flex-grow" style="max-height: calc(100% - 56px);">
+        <div class="overflow-x-scroll overflow-y-auto flex-grow" style="max-height: calc(100% - 45px);">
           <table class="table table-sm w-[150%] table-fixed min-w-full">
             <thead class="bg-base-300 sticky top-0 z-15">
               <tr class="text-xs select-none">
