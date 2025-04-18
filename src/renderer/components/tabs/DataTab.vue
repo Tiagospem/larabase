@@ -1038,19 +1038,13 @@ function formatCellValue(value) {
 }
 
 function defaultColumnWidth(column) {
-  if (/^id$/i.test(column)) return '80px';
-  if (/^(created_at|updated_at|deleted_at)$/i.test(column)) return '150px';
-  if (/(email|mail)$/i.test(column)) return '180px';
-  if (/(name|title)$/i.test(column)) return '200px';
-  if (/(description|content|text)$/i.test(column)) return '200px';
-  if (/(status|type|role|category|tag)$/i.test(column)) return '120px';
-  if (/(date|time)$/i.test(column)) return '150px';
-  if (/(amount|price|cost|total|sum)$/i.test(column)) return '120px';
-  if (/(count|number|qty|quantity)$/i.test(column)) return '100px';
-  if (/(active|enabled|visible|published|featured)$/i.test(column)) return '100px';
-  if (/(image|photo|thumbnail|avatar|icon)$/i.test(column)) return '150px';
+  // Base width calculation using column name length
+  const baseWidth = Math.max(90, column.length * 10);
+  
+  // Special case handling for specific column types
+  if (/^id$/i.test(column)) return `${Math.max(40, column.length * 12)}px`;
 
-  return '150px';
+  return `${baseWidth}px`;
 }
 
 function analyzeColumns() {
