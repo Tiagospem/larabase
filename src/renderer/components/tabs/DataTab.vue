@@ -190,7 +190,7 @@
       </div>
 
       <div
-        v-else-if="tableDataStore.tableData.length > 0"
+        v-else-if="tableData.length > 0"
         ref="tableContainer"
         tabindex="0"
         class="h-full relative flex flex-col"
@@ -407,7 +407,7 @@
     </div>
 
     <div
-      v-if="tableDataStore.tableData.length > 0"
+      v-if="tableData.length > 0"
       class="bg-base-200 px-4 py-3 border-t border-neutral flex flex-col sm:flex-row justify-between items-center text-xs sticky bottom-0 left-0 right-0 min-h-[56px] z-20"
     >
       <div class="flex items-center mb-2 sm:mb-0">
@@ -798,14 +798,6 @@ import DataPreviewModal from '@/components/database/DataPreviewModal.vue';
 import RefreshButton from '@/components/tabs/components/RefreshButton.vue';
 import LiveTableButton from '@/components/tabs/components/LiveTableButton.vue';
 
-import { useTableDataStore } from '@/store/table-data';
-import { useDatabaseStore } from '@/store/database';
-
-const tableDataStore = useTableDataStore();
-const databaseStore = useDatabaseStore();
-
-const showAlert = inject('showAlert');
-
 const props = defineProps({
   connectionId: {
     type: String,
@@ -830,6 +822,16 @@ const props = defineProps({
   }
 });
 
+import { useTableDataStore, createTableDataStoreId } from '@/store/table-data';
+import { useDatabaseStore } from '@/store/database';
+
+const storeId = createTableDataStoreId(props.connectionId, props.tableName);
+
+const tableDataStore = useTableDataStore(storeId);
+const databaseStore = useDatabaseStore();
+
+const showAlert = inject('showAlert');
+
 const tableContainer = ref(null);
 const resizingColumn = ref(null);
 const startX = ref(0);
@@ -845,6 +847,8 @@ const totalPages = computed(() => {
   if (tableDataStore.rowsPerPage === 0) return 1;
   return Math.ceil(totalRecords.value / tableDataStore.rowsPerPage);
 });
+
+const tableData = computed(() => tableDataStore.tableData);
 
 const rowsPerPage = computed(() => tableDataStore.rowsPerPage);
 
@@ -872,7 +876,6 @@ const totalRecords = computed(() => {
 });
 
 onMounted(() => {
-  console.log('Table loaded', props.tableName);
   tableDataStore.setConnectionId(props.connectionId);
   tableDataStore.setTableName(props.tableName);
   tableDataStore.setOnLoad(props.onLoad);
@@ -1249,7 +1252,7 @@ async function saveRecord() {
       return;
     }
 
-    const index = tableDataStore.tableData.findIndex(row => {
+    const index = tableData.findIndex(row => {
       if (row.id && originalRecord.value.id) {
         return row.id === originalRecord.value.id;
       }
