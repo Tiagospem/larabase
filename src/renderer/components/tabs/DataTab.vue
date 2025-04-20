@@ -26,72 +26,17 @@
     </div>
 
     <div class="flex-1 overflow-auto">
-      <div
-        v-if="tableDataStore.isLoading && !tableDataStore.isLiveUpdating"
-        class="flex items-center justify-center h-full"
-      >
-        <span class="loading loading-spinner loading-lg" />
-      </div>
-
-      <div
-        v-else-if="tableDataStore.loadError"
-        class="flex items-center justify-center h-full text-error"
-      >
-        <div class="text-center">
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke-width="1.5"
-            stroke="currentColor"
-            class="w-12 h-12 mx-auto mb-4"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"
-            />
-          </svg>
-          <p>{{ tableDataStore.loadError }}</p>
-          <button class="btn btn-sm btn-primary mt-4" @click="tableDataStore.loadTableData()">
-            Try again
-          </button>
-        </div>
-      </div>
-
-      <div
-        v-else-if="
-          (tableDataStore.filterTerm || tableDataStore.activeFilter) &&
-          tableDataStore.filteredData.length === 0
-        "
-        class="flex items-center justify-center h-full text-gray-500"
-      >
-        <div class="text-center">
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke-width="1.5"
-            stroke="currentColor"
-            class="w-12 h-12 mx-auto mb-4 text-gray-400"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              d="M10.5 6h9.75M10.5 6a1.5 1.5 0 1 1-3 0m3 0a1.5 1.5 0 1 0-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m-9.75 0h9.75"
-            />
-          </svg>
-          <p>No records match your filter</p>
-          <div class="flex justify-center space-x-2 mt-4">
-            <button class="btn btn-sm btn-error" @click="filterButtonRef.clearFilters">
-              Clear Filters
-            </button>
-            <button class="btn btn-sm btn-primary" @click="tableDataStore.loadTableData()">
-              Reload Data
-            </button>
-          </div>
-        </div>
-      </div>
+      <LoadingState v-if="isLoading" />
+      <ErrorState
+        v-else-if="loadError"
+        :message="tableDataStore.loadError"
+        @retry="tableDataStore.loadTableData()"
+      />
+      <EmptyFilterState
+        v-else-if="isFilteredEmpty"
+        @clear="filterButtonRef.clearFilters"
+        @reload="tableDataStore.loadTableData()"
+      />
 
       <div
         v-else-if="tableData.length > 0"
@@ -474,13 +419,19 @@
 
 <script setup>
 import { ref, computed, onMounted, onUnmounted, inject, watch } from 'vue';
-import DataPreviewModal from '@/components/database/DataPreviewModal.vue';
-import RefreshButton from '@/components/tabs/components/RefreshButton.vue';
-import LiveTableButton from '@/components/tabs/components/LiveTableButton.vue';
-import TruncateButton from '@/components/tabs/components/TruncateButton.vue';
-import DeleteButton from '@/components/tabs/components/DeleteButton.vue';
-import EditRecord from '@/components/tabs/components/EditRecord.vue';
-import FilterButton from '@/components/tabs/components/FilterButton.vue';
+
+import {
+  DataPreviewModal,
+  RefreshButton,
+  LiveTableButton,
+  TruncateButton,
+  DeleteButton,
+  EditRecord,
+  FilterButton,
+  LoadingState,
+  ErrorState,
+  EmptyFilterState
+} from '@/components/tabs/components';
 
 import { Helpers } from '../../utils/helpers';
 
@@ -518,7 +469,14 @@ const databaseStore = useDatabaseStore();
 
 const showAlert = inject('showAlert');
 
-const windowInFocus = ref(true);
+const isLoading = computed(() => tableDataStore.isLoading && !tableDataStore.isLiveUpdating);
+const loadError = computed(() => !!tableDataStore.loadError);
+const isFilteredEmpty = computed(
+  () =>
+    (tableDataStore.filterTerm || tableDataStore.activeFilter) &&
+    tableDataStore.filteredData.length === 0
+);
+
 const isDragging = ref(false);
 const recentlyResized = ref(false);
 const shiftKeyPressed = ref(false);
@@ -936,12 +894,7 @@ function handleColumnResize(event) {
 }
 
 const handleWindowFocus = () => {
-  windowInFocus.value = true;
   refreshLiveTableState();
-};
-
-const handleWindowBlur = () => {
-  windowInFocus.value = false;
 };
 
 function handleSortClick(column) {
@@ -972,7 +925,6 @@ function addEventListener() {
   window.addEventListener('keydown', handleKeyDown);
   window.addEventListener('keyup', handleKeyUp);
   window.addEventListener('focus', handleWindowFocus);
-  window.addEventListener('blur', handleWindowBlur);
 }
 
 function removeEventListener() {
@@ -983,7 +935,6 @@ function removeEventListener() {
   window.removeEventListener('tab-activated', handleTabActivation);
   window.removeEventListener('storage', handleStorageChange);
   window.removeEventListener('focus', handleWindowFocus);
-  window.removeEventListener('blur', handleWindowBlur);
 }
 
 onMounted(() => {
@@ -1239,19 +1190,16 @@ th:has(+ tr td.expanded) {
   min-height: 0;
 }
 
-/* Fix for sticky columns during horizontal scroll */
 .table {
   border-collapse: separate;
   border-spacing: 0;
 }
 
-/* Restore all cell borders with direct color values */
 .table th,
 .table td {
   border: 0.5px solid #333 !important;
 }
 
-/* Increase z-index for better layer management */
 thead {
   z-index: 15 !important;
 }
@@ -1260,21 +1208,18 @@ thead {
   border: 0.5px solid #000 !important;
 }
 
-/* Fix for hover effects on sticky columns - respecting selected rows */
 tbody tr:not(.selected-row):hover td.sticky,
 tbody tr:not(.selected-row):hover td[class*='sticky'],
 tbody tr:not(.selected-row).hover td.sticky,
 tbody tr:not(.selected-row).hover td[class*='sticky'] {
-  background-color: hsl(var(--b2)) !important; /* base-200 color in tailwind */
+  background-color: hsl(var(--b2)) !important;
 }
 
-/* Also apply the hover background to the first data column - respecting selected rows */
 tbody tr:not(.selected-row):hover td[class*='left-10'],
 tbody tr:not(.selected-row).hover td[class*='left-10'] {
   background-color: hsl(var(--b2)) !important;
 }
 
-/* Ensure selected rows' sticky columns maintain selection color on hover */
 tbody tr.selected-row:hover td.sticky,
 tbody tr.selected-row:hover td[class*='sticky'],
 tbody tr.selected-row:hover td[class*='left-10'] {
