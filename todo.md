@@ -1,5 +1,5 @@
-filtros com bug uqando troca de pagina
+Refactor and organize the event listeners
 
-filtros live com problema com alterna de paginas
+Bug on delete and press ESC
 
-paginas com rpoblemas quaando alterna, as vezes ele nao sava a ativa ou nao reseta os filtros ounao reseta o live.
+Campos de regex estão errados
