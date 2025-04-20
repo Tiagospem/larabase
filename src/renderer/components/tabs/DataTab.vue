@@ -5,11 +5,8 @@
     >
       <div class="flex flex-wrap items-center gap-2">
         <RefreshButton />
-        <LiveTableButton
-            :table-name="props.tableName"
-            :connection-id="props.connectionId"
-            :show-preview-modal="showPreviewModal"
-        />
+
+        <LiveTableButton />
 
         <button
           class="btn btn-sm btn-ghost text-error"
@@ -52,7 +49,11 @@
             />
           </svg>
           <span class="hidden sm:inline"
-            >Delete{{ tableDataStore.selectedRows.length > 0 ? ` (${tableDataStore.selectedRows.length})` : '' }}</span
+            >Delete{{
+              tableDataStore.selectedRows.length > 0
+                ? ` (${tableDataStore.selectedRows.length})`
+                : ''
+            }}</span
           >
         </button>
       </div>
@@ -70,8 +71,10 @@
             <button
               class="btn btn-sm"
               :class="{
-                'bg-base-300 border-base-300': !tableDataStore.activeFilter.value && !tableDataStore.filterTerm,
-                'bg-primary border-primary text-white': tableDataStore.activeFilter.value || tableDataStore.filterTerm
+                'bg-base-300 border-base-300':
+                  !tableDataStore.activeFilter && !tableDataStore.filterTerm,
+                'bg-primary border-primary text-white':
+                  tableDataStore.activeFilter || tableDataStore.filterTerm
               }"
               @click="toggleAdvancedFilter"
             >
@@ -92,7 +95,7 @@
             </button>
           </div>
           <button
-            v-if="tableDataStore.filterTerm || tableDataStore.activeFilter.value"
+            v-if="tableDataStore.filterTerm || tableDataStore.activeFilter"
             class="btn btn-sm btn-primary"
             @click="clearFilters"
           >
@@ -109,7 +112,7 @@
           </button>
         </div>
         <select
-          v-model="tableDataStore.rowsPerPage.value"
+          v-model="tableDataStore.rowsPerPage"
           class="select select-sm select-bordered bg-base-300 w-24 sm:w-32"
         >
           <option value="10">10 rows</option>
@@ -121,11 +124,17 @@
     </div>
 
     <div class="flex-1 overflow-auto">
-      <div v-if="isLoading && !tableDataStore.isLiveUpdating" class="flex items-center justify-center h-full">
+      <div
+        v-if="tableDataStore.isLoading && !tableDataStore.isLiveUpdating"
+        class="flex items-center justify-center h-full"
+      >
         <span class="loading loading-spinner loading-lg" />
       </div>
 
-      <div v-else-if="tableDataStore.loadError" class="flex items-center justify-center h-full text-error">
+      <div
+        v-else-if="tableDataStore.loadError"
+        class="flex items-center justify-center h-full text-error"
+      >
         <div class="text-center">
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -142,12 +151,17 @@
             />
           </svg>
           <p>{{ tableDataStore.loadError }}</p>
-          <button class="btn btn-sm btn-primary mt-4" @click="tableDataStore.loadTableData()">Try again</button>
+          <button class="btn btn-sm btn-primary mt-4" @click="tableDataStore.loadTableData()">
+            Try again
+          </button>
         </div>
       </div>
 
       <div
-        v-else-if="(tableDataStore.filterTerm || tableDataStore.activeFilter.value) && tableDataStore.filteredData.length === 0"
+        v-else-if="
+          (tableDataStore.filterTerm || tableDataStore.activeFilter) &&
+          tableDataStore.filteredData.length === 0
+        "
         class="flex items-center justify-center h-full text-gray-500"
       >
         <div class="text-center">
@@ -168,7 +182,9 @@
           <p>No records match your filter</p>
           <div class="flex justify-center space-x-2 mt-4">
             <button class="btn btn-sm btn-error" @click="clearFilters">Clear Filters</button>
-            <button class="btn btn-sm btn-primary" @click="tableDataStore.loadTableData()">Reload Data</button>
+            <button class="btn btn-sm btn-primary" @click="tableDataStore.loadTableData()">
+              Reload Data
+            </button>
           </div>
         </div>
       </div>
@@ -200,8 +216,12 @@
                     'sticky left-10 z-10': index === 0
                   }"
                   :style="{
-                    width: tableDataStore.columnWidths[column] || tableDataStore.defaultColumnWidth(column),
-                    maxWidth: tableDataStore.columnWidths[column] || tableDataStore.defaultColumnWidth(column)
+                    width:
+                      tableDataStore.columnWidths[column] ||
+                      tableDataStore.defaultColumnWidth(column),
+                    maxWidth:
+                      tableDataStore.columnWidths[column] ||
+                      tableDataStore.defaultColumnWidth(column)
                   }"
                   @click.stop="handleSortClick(column)"
                 >
@@ -290,15 +310,20 @@
                     colIndex === 0 ? getRowBackgroundClass(rowIndex) : ''
                   ]"
                   :style="{
-                    width: tableDataStore.columnWidths[column] || tableDataStore.defaultColumnWidth(column),
-                    maxWidth: tableDataStore.columnWidths[column] || tableDataStore.defaultColumnWidth(column)
+                    width:
+                      tableDataStore.columnWidths[column] ||
+                      tableDataStore.defaultColumnWidth(column),
+                    maxWidth:
+                      tableDataStore.columnWidths[column] ||
+                      tableDataStore.defaultColumnWidth(column)
                   }"
                   @dblclick.stop="openEditModal(row)"
                 >
                   <div class="flex items-center justify-between w-full">
                     <span
                       :class="{
-                        'text-gray-500 italic': row[column] === null && tableDataStore.isForeignKeyColumn(column)
+                        'text-gray-500 italic':
+                          row[column] === null && tableDataStore.isForeignKeyColumn(column)
                       }"
                     >
                       {{
@@ -374,7 +399,9 @@
             />
           </svg>
           <p>Records not found</p>
-          <button class="btn btn-sm btn-primary mt-4" @click="tableDataStore.loadTableData()">Reload</button>
+          <button class="btn btn-sm btn-primary mt-4" @click="tableDataStore.loadTableData()">
+            Reload
+          </button>
         </div>
       </div>
     </div>
@@ -386,7 +413,9 @@
       <div class="flex items-center mb-2 sm:mb-0">
         <span class="text-gray-400">
           {{ tableName }} | {{ totalRecords }} records{{
-            tableDataStore.selectedRows.length > 0 ? ` | ${tableDataStore.selectedRows.length} selected` : ''
+            tableDataStore.selectedRows.length > 0
+              ? ` | ${tableDataStore.selectedRows.length} selected`
+              : ''
           }}
           | <span>{{ tableDataStore.columns.length }} columns</span>
         </span>
@@ -503,7 +532,7 @@
         <div class="flex items-center space-x-2">
           <span class="text-gray-400 hidden sm:inline-block">Rows per page:</span>
           <select
-            v-model="tableDataStore.rowsPerPage.value"
+            v-model="tableDataStore.rowsPerPage"
             class="select select-xs select-bordered bg-base-300 w-16"
             @change="tableDataStore.currentPage = 1"
           >
@@ -742,8 +771,8 @@
       <div class="modal-box">
         <h3 class="font-bold text-lg text-error">Delete Records</h3>
         <p class="py-4">
-          Are you sure you want to delete {{ tableDataStore.selectedRows.length }} record(s)? This action cannot be
-          undone.
+          Are you sure you want to delete {{ tableDataStore.selectedRows.length }} record(s)? This
+          action cannot be undone.
         </p>
         <div class="modal-action">
           <button class="btn" @click="showDeleteConfirm = false">Cancel</button>
@@ -755,7 +784,7 @@
 
     <DataPreviewModal
       v-if="tableDataStore.previewingRecord"
-      :show="showPreviewModal"
+      :show="tableDataStore.showPreviewModal"
       :record="tableDataStore.previewingRecord"
       :columns="tableDataStore.columns"
       @close="closePreviewModal"
@@ -765,14 +794,15 @@
 
 <script setup>
 import { ref, computed, onMounted, onUnmounted, inject, watch } from 'vue';
-import { useDatabaseStore } from '@/store/database';
 import DataPreviewModal from '@/components/database/DataPreviewModal.vue';
-import RefreshButton from "@/components/tabs/components/RefreshButton.vue";
-import LiveTableButton from "@/components/tabs/components/LiveTableButton.vue";
+import RefreshButton from '@/components/tabs/components/RefreshButton.vue';
+import LiveTableButton from '@/components/tabs/components/LiveTableButton.vue';
 
 import { useTableDataStore } from '@/store/table-data';
+import { useDatabaseStore } from '@/store/database';
 
 const tableDataStore = useTableDataStore();
+const databaseStore = useDatabaseStore();
 
 const showAlert = inject('showAlert');
 
@@ -800,7 +830,6 @@ const props = defineProps({
   }
 });
 
-const isLoading = ref(true);
 const tableContainer = ref(null);
 const resizingColumn = ref(null);
 const startX = ref(0);
@@ -811,11 +840,15 @@ const shiftKeyPressed = ref(false);
 const ctrlKeyPressed = ref(false);
 const selectionStartId = ref(null);
 const pageInput = ref(1);
+
 const totalPages = computed(() => {
-  if (tableDataStore.rowsPerPage.value === 0) return 1;
-  return Math.ceil(totalRecords.value / tableDataStore.rowsPerPage.value);
+  if (tableDataStore.rowsPerPage === 0) return 1;
+  return Math.ceil(totalRecords.value / tableDataStore.rowsPerPage);
 });
-const showPreviewModal = ref(false);
+
+const rowsPerPage = computed(() => tableDataStore.rowsPerPage);
+
+const highlightChanges = computed(() => tableDataStore.highlightChanges);
 
 const showEditModal = ref(false);
 const editingRecord = ref(null);
@@ -831,13 +864,18 @@ const showTruncateConfirm = ref(false);
 const deletingIds = ref([]);
 const windowInFocus = ref(true);
 
-const databaseStore = useDatabaseStore();
-
 const totalRecords = computed(() => {
-  if (tableDataStore.filterTerm.value || tableDataStore.activeFilter.value) {
-    return tableDataStore.filteredData.value.length;
+  if (tableDataStore.filterTerm || tableDataStore.activeFilter) {
+    return tableDataStore.filteredData.length;
   }
-  return tableDataStore.totalRecordsCount.value;
+  return tableDataStore.totalRecordsCount;
+});
+
+onMounted(() => {
+  console.log('Table loaded', props.tableName);
+  tableDataStore.setConnectionId(props.connectionId);
+  tableDataStore.setTableName(props.tableName);
+  tableDataStore.setOnLoad(props.onLoad);
 });
 
 function formatCellValue(value) {
@@ -874,17 +912,17 @@ function startColumnResize(event, column) {
   resizingColumn.value = column;
   startX.value = event.clientX;
 
-  if (!tableDataStore.columnWidths.value[column] || !tableDataStore.columnWidths.value[column].endsWith('px')) {
+  if (!tableDataStore.columnWidths[column] || !tableDataStore.columnWidths[column].endsWith('px')) {
     const headerCells = document.querySelectorAll('th');
-    const columnIndex = tableDataStore.columns.value.indexOf(column);
+    const columnIndex = tableDataStore.columns.indexOf(column);
     if (columnIndex >= 0 && headerCells[columnIndex]) {
-      tableDataStore.columnWidths.value[column] = `${headerCells[columnIndex].offsetWidth}px`;
+      tableDataStore.columnWidths[column] = `${headerCells[columnIndex].offsetWidth}px`;
     } else {
-      tableDataStore.columnWidths.value[column] = tableDataStore.defaultColumnWidth(column);
+      tableDataStore.columnWidths[column] = tableDataStore.defaultColumnWidth(column);
     }
   }
 
-  startWidth.value = parseInt(tableDataStore.columnWidths.value[column]) || 100;
+  startWidth.value = parseInt(tableDataStore.columnWidths[column]) || 100;
 
   document.addEventListener('mousemove', handleColumnResize);
   document.addEventListener('mouseup', stopColumnResize);
@@ -895,7 +933,7 @@ function handleColumnResize(event) {
 
   const column = resizingColumn.value;
   const width = Math.max(60, startWidth.value + (event.clientX - startX.value));
-  tableDataStore.columnWidths.value[column] = `${width}px`;
+  tableDataStore.columnWidths[column] = `${width}px`;
 }
 
 function stopColumnResize() {
@@ -912,12 +950,14 @@ function stopColumnResize() {
 
 function getRowClasses(rowIndex) {
   const isSelected =
-    tableDataStore.selectedRows.value && tableDataStore.selectedRows.value.includes && tableDataStore.selectedRows.value.includes(rowIndex);
+    tableDataStore.selectedRows &&
+    tableDataStore.selectedRows.includes &&
+    tableDataStore.selectedRows.includes(rowIndex);
   const isUpdated =
-    tableDataStore.highlightChanges.value &&
-    tableDataStore.updatedRows.value &&
-    tableDataStore.updatedRows.value.includes &&
-    tableDataStore.updatedRows.value.includes(rowIndex);
+    tableDataStore.highlightChanges &&
+    tableDataStore.updatedRows &&
+    tableDataStore.updatedRows.includes &&
+    tableDataStore.updatedRows.includes(rowIndex);
 
   return {
     'selected-row': isSelected,
@@ -927,15 +967,19 @@ function getRowClasses(rowIndex) {
 }
 
 function getRowBackgroundClass(rowIndex) {
-  if (tableDataStore.selectedRows.value && tableDataStore.selectedRows.value.includes && tableDataStore.selectedRows.value.includes(rowIndex)) {
+  if (
+    tableDataStore.selectedRows &&
+    tableDataStore.selectedRows.includes &&
+    tableDataStore.selectedRows.includes(rowIndex)
+  ) {
     return 'bg-[#ea4331] text-white';
   }
 
   if (
-    tableDataStore.highlightChanges.value &&
-    tableDataStore.updatedRows.value &&
-    tableDataStore.updatedRows.value.includes &&
-    tableDataStore.updatedRows.value.includes(rowIndex)
+    tableDataStore.highlightChanges &&
+    tableDataStore.updatedRows &&
+    tableDataStore.updatedRows.includes &&
+    tableDataStore.updatedRows.includes(rowIndex)
   ) {
     return 'bg-[rgba(234,67,49,0.1)]';
   }
@@ -958,20 +1002,20 @@ function handleRowClick(event, rowIndex) {
   }
 
   if (ctrlKeyPressed.value) {
-    const index = tableDataStore.selectedRows.value.indexOf(rowIndex);
+    const index = tableDataStore.selectedRows.indexOf(rowIndex);
     if (index !== -1) {
-      tableDataStore.selectedRows.value.splice(index, 1);
+      tableDataStore.selectedRows.splice(index, 1);
     } else {
-      tableDataStore.selectedRows.value.push(rowIndex);
+      tableDataStore.selectedRows.push(rowIndex);
     }
 
-    tableDataStore.lastSelectedId.value = rowIndex;
+    tableDataStore.lastSelectedId = rowIndex;
     return;
   }
 
-  if (shiftKeyPressed.value && tableDataStore.lastSelectedId.value !== null) {
-    const start = Math.min(tableDataStore.lastSelectedId.value, rowIndex);
-    const end = Math.max(tableDataStore.lastSelectedId.value, rowIndex);
+  if (shiftKeyPressed.value && tableDataStore.lastSelectedId !== null) {
+    const start = Math.min(tableDataStore.lastSelectedId, rowIndex);
+    const end = Math.max(tableDataStore.lastSelectedId, rowIndex);
 
     const rangeIds = [];
 
@@ -979,21 +1023,21 @@ function handleRowClick(event, rowIndex) {
       rangeIds.push(i);
     }
 
-    tableDataStore.selectedRows.value = rangeIds;
+    tableDataStore.selectedRows = rangeIds;
     return;
   }
 
-  if (tableDataStore.selectedRows.value.length === 1 && tableDataStore.selectedRows.value[0] === rowIndex) {
-    tableDataStore.selectedRows.value = [];
-    tableDataStore.lastSelectedId.value = null;
+  if (tableDataStore.selectedRows.length === 1 && tableDataStore.selectedRows[0] === rowIndex) {
+    tableDataStore.selectedRows = [];
+    tableDataStore.lastSelectedId = null;
   } else {
-    tableDataStore.selectedRows.value = [rowIndex];
-    tableDataStore.lastSelectedId.value = rowIndex;
+    tableDataStore.selectedRows = [rowIndex];
+    tableDataStore.lastSelectedId = rowIndex;
   }
 }
 
 function selectAll() {
-  tableDataStore.selectedRows.value = tableDataStore.paginatedData.value.map((_, index) => index);
+  tableDataStore.selectedRows = tableDataStore.paginatedData.map((_, index) => index);
 }
 
 function handleTableKeyDown(e) {
@@ -1001,9 +1045,9 @@ function handleTableKeyDown(e) {
     e.preventDefault();
     selectAll();
   } else if (e.key === 'Escape') {
-    tableDataStore.selectedRows.value = [];
-    tableDataStore.lastSelectedId.value = null;
-  } else if (e.key === 'Delete' && tableDataStore.selectedRows.value.length > 0) {
+    tableDataStore.selectedRows = [];
+    tableDataStore.lastSelectedId = null;
+  } else if (e.key === 'Delete' && tableDataStore.selectedRows.length > 0) {
     e.preventDefault();
     deleteSelected();
   }
@@ -1011,16 +1055,16 @@ function handleTableKeyDown(e) {
 
 function handleOutsideClick(event) {
   if (event.target === tableContainer.value || event.target.closest('thead')) {
-    tableDataStore.selectedRows.value = [];
-    tableDataStore.lastSelectedId.value = null;
+    tableDataStore.selectedRows = [];
+    tableDataStore.lastSelectedId = null;
   }
 }
 
 function deleteSelected() {
-  if (tableDataStore.selectedRows.value.length === 0) return;
+  if (tableDataStore.selectedRows.length === 0) return;
 
-  deletingIds.value = tableDataStore.selectedRows.value.map(index => {
-    const id = tableDataStore.paginatedData.value[index].id;
+  deletingIds.value = tableDataStore.selectedRows.map(index => {
+    const id = tableDataStore.paginatedData[index].id;
 
     return typeof id === 'object' ? String(id) : id;
   });
@@ -1042,7 +1086,7 @@ async function confirmDelete() {
 
     showAlert(result.message, 'success');
 
-    tableDataStore.selectedRows.value = [];
+    tableDataStore.selectedRows = [];
 
     await tableDataStore.loadTableData();
   } catch (error) {
@@ -1071,7 +1115,7 @@ async function truncateTable() {
 
     showAlert(result.message, 'success');
 
-    tableDataStore.selectedRows.value = [];
+    tableDataStore.selectedRows = [];
     await tableDataStore.loadTableData();
   } catch (error) {
     showAlert(`Error truncating table: ${error.message}`, 'error');
@@ -1083,8 +1127,8 @@ const handleKeyDown = e => {
   ctrlKeyPressed.value = e.ctrlKey || e.metaKey;
 
   if (e.key === 'Escape') {
-    tableDataStore.selectedRows.value = [];
-    tableDataStore.lastSelectedId.value = null;
+    tableDataStore.selectedRows = [];
+    tableDataStore.lastSelectedId = null;
   }
 };
 
@@ -1094,40 +1138,45 @@ const handleKeyUp = e => {
 };
 
 function prevPage() {
-  if (tableDataStore.currentPage.value > 1) {
-    tableDataStore.currentPage.value--;
+  if (tableDataStore.currentPage > 1) {
+    tableDataStore.currentPage--;
     scrollToTop();
   }
 }
 
 function nextPage() {
-  if (tableDataStore.currentPage.value < totalPages.value) {
-    tableDataStore.currentPage.value++;
+  if (tableDataStore.currentPage < totalPages.value) {
+    tableDataStore.currentPage++;
     scrollToTop();
   }
 }
 
 function goToFirstPage() {
-  if (tableDataStore.currentPage.value.value !== 1) {
-    tableDataStore.currentPage.value.value = 1;
+  if (tableDataStore.currentPage !== 1) {
+    tableDataStore.currentPage = 1;
     scrollToTop();
   }
 }
 
 function goToLastPage() {
-  if (tableDataStore.currentPage.value !== totalPages.value) {
-    tableDataStore.currentPage.value = totalPages.value;
+  if (tableDataStore.currentPage !== totalPages.value) {
+    tableDataStore.currentPage = totalPages.value;
     scrollToTop();
   }
 }
 
 function goToPage() {
   const page = parseInt(pageInput.value);
-  if (!isNaN(page) && page >= 1 && page <= totalPages.value && page !== tableDataStore.currentPage.value) {
-    tableDataStore.currentPage.value = page;
+  if (
+    !isNaN(page) &&
+    page >= 1 &&
+    page <= totalPages.value &&
+    page !== tableDataStore.currentPage
+  ) {
+    tableDataStore.currentPage = page;
     scrollToTop();
   } else {
-    pageInput.value = tableDataStore.currentPage.value;
+    pageInput.value = tableDataStore.currentPage;
   }
 }
 
@@ -1136,19 +1185,6 @@ function scrollToTop() {
     tableContainer.value.scrollTop = 0;
   }
 }
-
-watch(
-  () => tableDataStore.currentPage.value,
-  (newPage, oldPage) => {
-    if (newPage !== oldPage) {
-      pageInput.value = newPage;
-
-      if (!tableDataStore.filterTerm.value && !tableDataStore.activeFilter.value) {
-        tableDataStore.loadTableData();
-      }
-    }
-  }
-);
 
 function openEditModal(row) {
   originalRecord.value = { ...row };
@@ -1213,7 +1249,7 @@ async function saveRecord() {
       return;
     }
 
-    const index = tableDataStore.tableData.value.findIndex(row => {
+    const index = tableDataStore.tableData.findIndex(row => {
       if (row.id && originalRecord.value.id) {
         return row.id === originalRecord.value.id;
       }
@@ -1232,7 +1268,7 @@ async function saveRecord() {
     );
 
     if (result) {
-      tableDataStore.tableData.value[index] = { ...recordToSave };
+      tableDataStore.tableData[index] = { ...recordToSave };
       showAlert('Record updated successfully', 'success');
       closeEditModal();
     } else {
@@ -1311,10 +1347,10 @@ function getFieldTypeLabel(column) {
 }
 
 function handleRowDoubleClick(row) {
-  const rowIndex = tableDataStore.paginatedData.value.findIndex(r => r === row);
+  const rowIndex = tableDataStore.paginatedData.findIndex(r => r === row);
 
-  if (!tableDataStore.selectedRows.value.includes(rowIndex)) {
-    tableDataStore.selectedRows.value = [];
+  if (!tableDataStore.selectedRows.includes(rowIndex)) {
+    tableDataStore.selectedRows = [];
   }
 
   openEditModal(row);
@@ -1344,7 +1380,7 @@ function handleMouseEnter(rowIndex) {
     rangeIds.push(i);
   }
 
-  tableDataStore.selectedRows.value = rangeIds;
+  tableDataStore.selectedRows = rangeIds;
 }
 
 function handleMouseUp(event) {
@@ -1354,8 +1390,9 @@ function handleMouseUp(event) {
     return;
   }
 
-  if (tableDataStore.selectedRows.value.length > 0) {
-    tableDataStore.lastSelectedId.value = tableDataStore.selectedRows.value[tableDataStore.selectedRows.value.length - 1];
+  if (tableDataStore.selectedRows.length > 0) {
+    tableDataStore.lastSelectedId =
+      tableDataStore.selectedRows[tableDataStore.selectedRows.length - 1];
   }
 
   isDragging.value = false;
@@ -1368,8 +1405,8 @@ function handleStorageChange(event) {
   const ourKey = `liveTable.enabled.${props.connectionId}.${props.tableName}`;
   if (event.key === ourKey) {
     const newValue = event.newValue === 'true';
-    if (newValue !== tableDataStore.isLiveTableActive.value) {
-      tableDataStore.isLiveTableActive.value = newValue;
+    if (newValue !== tableDataStore.isLiveTableActive) {
+      tableDataStore.isLiveTableActive = newValue;
       if (newValue) {
         tableDataStore.startLiveUpdates();
       } else {
@@ -1382,9 +1419,9 @@ function handleStorageChange(event) {
     event.key.startsWith('liveTable.enabled.') &&
     event.key !== ourKey &&
     event.newValue === 'true' &&
-    tableDataStore.isLiveTableActive.value
+    tableDataStore.isLiveTableActive
   ) {
-    tableDataStore.isLiveTableActive.value = false;
+    tableDataStore.isLiveTableActive = false;
     tableDataStore.stopLiveUpdates();
     localStorage.setItem(ourKey, 'false');
   }
@@ -1400,13 +1437,12 @@ const refreshLiveTableState = () => {
     const liveTableKey = `liveTable.enabled.${props.connectionId}.${props.tableName}`;
     const storedState = localStorage.getItem(liveTableKey) === 'true';
 
-    if (tableDataStore.isLiveTableActive.value !== storedState) {
-      console.log(`Forcing Live Table button update: ${tableDataStore.isLiveTableActive.value} -> ${storedState}`);
-      tableDataStore.isLiveTableActive.value = storedState;
+    if (tableDataStore.isLiveTableActive !== storedState) {
+      tableDataStore.isLiveTableActive = storedState;
 
-      if (tableDataStore.isLiveTableActive.value && !tableDataStore.liveTableInterval.value) {
+      if (tableDataStore.isLiveTableActive && !tableDataStore.liveTableInterval) {
         tableDataStore.startLiveUpdates();
-      } else if (!tableDataStore.isLiveTableActive.value && tableDataStore.liveTableInterval.value) {
+      } else if (!tableDataStore.isLiveTableActive && tableDataStore.liveTableInterval) {
         tableDataStore.stopLiveUpdates();
       }
     }
@@ -1424,151 +1460,33 @@ const handleWindowBlur = () => {
   windowInFocus.value = false;
 };
 
-onMounted(() => {
-  if (props.initialFilter) {
-    advancedFilterTerm.value = props.initialFilter;
-    tableDataStore.activeFilter.value = props.initialFilter;
-  }
-
-  window.addEventListener('tab-activated', handleTabActivation);
-
-  try {
-    const tableSpecificLiveEnabled = localStorage.getItem(
-      `liveTable.enabled.${props.connectionId}.${props.tableName}`
-    );
-
-    let otherTableLiveActive = false;
-
-    const allKeys = Object.keys(localStorage);
-    allKeys.forEach(key => {
-      if (
-        key.startsWith('liveTable.enabled.') &&
-        key !== `liveTable.enabled.${props.connectionId}.${props.tableName}` &&
-        localStorage.getItem(key) === 'true'
-      ) {
-        otherTableLiveActive = true;
-      }
-    });
-
-    if (tableSpecificLiveEnabled === 'true' && !otherTableLiveActive) {
-      tableDataStore.isLiveTableActive.value = true;
-    } else {
-      tableDataStore.isLiveTableActive.value = false;
-      if (tableSpecificLiveEnabled === 'true') {
-        localStorage.setItem(`liveTable.enabled.${props.connectionId}.${props.tableName}`, 'false');
-      }
-    }
-
-    const savedLiveDelay = localStorage.getItem('liveTable.delay');
-
-    if (savedLiveDelay) {
-      tableDataStore.liveUpdateDelaySeconds.value = parseInt(savedLiveDelay, 10) || 3;
-      tableDataStore.liveUpdateDelay.value = tableDataStore.liveUpdateDelaySeconds.value * 1000;
-    }
-
-    const savedHighlightChanges = localStorage.getItem('liveTable.highlight');
-    if (savedHighlightChanges !== null) {
-      tableDataStore.highlightChanges.value = savedHighlightChanges === 'true';
-    }
-  } catch (e) {
-    console.error('Failed to load live table preferences', e);
-  }
-
-  tableDataStore.loadTableData();
-
-  if (tableDataStore.isLiveTableActive.value) {
-    tableDataStore.startLiveUpdates();
-  }
-
-  refreshLiveTableState();
-
-  window.addEventListener('storage', handleStorageChange);
-
-  const urlParams = new URLSearchParams(window.location.search);
-
-  const urlFilter = urlParams.get('filter');
-
-  if (urlFilter) {
-    try {
-      const decodedFilter = decodeURIComponent(urlFilter);
-      advancedFilterTerm.value = decodedFilter;
-      tableDataStore.activeFilter.value = decodedFilter;
-    } catch (e) {
-      console.error('Error to process URL filter:', e);
-    }
-  } else if (!props.initialFilter) {
-    const savedFilter = localStorage.getItem(`filter:${props.connectionId}:${props.tableName}`);
-    if (savedFilter) {
-      try {
-        const parsedFilter = JSON.parse(savedFilter);
-        if (parsedFilter.active && parsedFilter.value) {
-          advancedFilterTerm.value = parsedFilter.value;
-          tableDataStore.activeFilter.value = parsedFilter.value;
-        }
-      } catch (e) {
-        console.error('Error to process saved filter:', e);
-      }
-    }
-  }
-
-  window.addEventListener('keydown', handleKeyDown);
-  window.addEventListener('keyup', handleKeyUp);
-
-  window.addEventListener('focus', handleWindowFocus);
-  window.addEventListener('blur', handleWindowBlur);
-});
-
-onUnmounted(() => {
-  window.removeEventListener('keydown', handleKeyDown);
-  window.removeEventListener('keyup', handleKeyUp);
-  window.removeEventListener('mouseup', handleMouseUp);
-  document.removeEventListener('mousemove', handleColumnResize);
-  document.removeEventListener('mouseup', stopColumnResize);
-
-  window.removeEventListener('tab-activated', handleTabActivation);
-  window.removeEventListener('storage', handleStorageChange);
-
-  if (tableDataStore.isLiveTableActive.value) {
-    try {
-      localStorage.setItem(`liveTable.enabled.${props.connectionId}.${props.tableName}`, 'false');
-    } catch (e) {
-      console.error('Failed to update localStorage during component unmount', e);
-    }
-    tableDataStore.isLiveTableActive.value = false;
-    tableDataStore.stopLiveUpdates();
-  }
-
-  window.removeEventListener('focus', handleWindowFocus);
-  window.removeEventListener('blur', handleWindowBlur);
-});
-
 function toggleAdvancedFilter() {
   originalFilterTerm.value = advancedFilterTerm.value;
   showFilterModal.value = true;
 }
 
 function applyFilter() {
-  tableDataStore.currentPage.value = 1;
+  tableDataStore.currentPage = 1;
 }
 
 async function applyAdvancedFilter() {
-  tableDataStore.activeFilter.value = advancedFilterTerm.value;
+  tableDataStore.activeFilter = advancedFilterTerm.value;
 
-  if (persistFilter.value && tableDataStore.activeFilter.value) {
+  if (persistFilter.value && tableDataStore.activeFilter) {
     localStorage.setItem(
       `filter:${props.connectionId}:${props.tableName}`,
       JSON.stringify({
         active: true,
-        value: tableDataStore.activeFilter.value
+        value: tableDataStore.activeFilter
       })
     );
   }
 
   showFilterModal.value = false;
 
-  tableDataStore.currentPage.value = 1;
+  tableDataStore.currentPage = 1;
 
-  const useServerFilter = shouldUseServerFilter(tableDataStore.activeFilter.value);
+  const useServerFilter = shouldUseServerFilter(tableDataStore.activeFilter);
 
   if (useServerFilter) {
     try {
@@ -1586,11 +1504,11 @@ function cancelAdvancedFilter() {
 }
 
 function clearFilters() {
-  const hadActiveFilter = tableDataStore.activeFilter.value || tableDataStore.filterTerm.value;
+  const hadActiveFilter = tableDataStore.activeFilter || tableDataStore.filterTerm;
 
-  tableDataStore.filterTerm.value = '';
+  tableDataStore.filterTerm = '';
   advancedFilterTerm.value = '';
-  tableDataStore.activeFilter.value = '';
+  tableDataStore.activeFilter = '';
 
   localStorage.removeItem(`filter:${props.connectionId}:${props.tableName}`);
 
@@ -1599,7 +1517,7 @@ function clearFilters() {
   window.history.replaceState({}, '', url.toString());
 
   if (hadActiveFilter) {
-    tableDataStore.currentPage.value = 1;
+    tableDataStore.currentPage = 1;
     tableDataStore.loadTableData();
   }
 }
@@ -1638,40 +1556,40 @@ function shouldUseServerFilter(filter) {
 }
 
 async function loadFilteredData() {
-  if (!tableDataStore.activeFilter.value) {
+  if (!tableDataStore.activeFilter) {
     return tableDataStore.loadTableData();
   }
 
-  isLoading.value = true;
-  tableDataStore.loadError.value = null;
-  tableDataStore.selectedRows.value = [];
+  tableDataStore.isLoading = true;
+  tableDataStore.loadError = null;
+  tableDataStore.selectedRows = [];
 
   try {
-    const idMatch = tableDataStore.activeFilter.value.match(/^\s*id\s*=\s*(\d+)\s*$/i);
+    const idMatch = tableDataStore.activeFilter.match(/^\s*id\s*=\s*(\d+)\s*$/i);
     if (idMatch) {
       const idValue = parseInt(idMatch[1], 10);
     }
 
-    const sortParams = tableDataStore.currentSortColumn.value
+    const sortParams = tableDataStore.currentSortColumn
       ? {
-          sortColumn: tableDataStore.currentSortColumn.value,
-          sortDirection: tableDataStore.currentSortDirection.value
+          sortColumn: tableDataStore.currentSortColumn,
+          sortDirection: tableDataStore.currentSortDirection
         }
       : {};
 
     const result = await databaseStore.loadFilteredTableData(
       props.connectionId,
       props.tableName,
-      tableDataStore.activeFilter.value,
-      tableDataStore.rowsPerPage.value,
-      tableDataStore.currentPage.value,
+      tableDataStore.activeFilter,
+      tableDataStore.rowsPerPage,
+      tableDataStore.currentPage,
       sortParams
     );
 
     if (!result.data || result.data.length === 0) {
       if (result.totalRecords > 0) {
         showAlert(
-          `No records found on page ${tableDataStore.currentPage.value}. Total: ${result.totalRecords}`,
+          `No records found on page ${tableDataStore.currentPage}. Total: ${result.totalRecords}`,
           'info'
         );
       } else {
@@ -1685,22 +1603,22 @@ async function loadFilteredData() {
       }
     }
 
-    tableDataStore.tableData.value = result.data || [];
+    tableDataStore.tableData = result.data || [];
 
-    tableDataStore.totalRecordsCount.value = result.totalRecords || 0;
+    tableDataStore.totalRecordsCount = result.totalRecords || 0;
 
     props.onLoad({
-      columns: tableDataStore.columns.value,
+      columns: tableDataStore.columns,
       rowCount: result.totalRecords || 0
     });
   } catch (error) {
     console.error('Error applying filter:', error);
-    tableDataStore.loadError.value = error.message;
+    tableDataStore.loadError = error.message;
     showAlert(`Error applying filter: ${error.message}`, 'error');
-    tableDataStore.tableData.value = [];
-    tableDataStore.totalRecordsCount.value = 0;
+    tableDataStore.tableData = [];
+    tableDataStore.totalRecordsCount = 0;
   } finally {
-    isLoading.value = false;
+    tableDataStore.isLoading = false;
   }
 }
 
@@ -1771,14 +1689,179 @@ function setExampleFilter(example) {
   applyAdvancedFilter();
 }
 
-watch(tableDataStore.rowsPerPage, (newValue, oldValue) => {
+function openPreviewModal(row) {
+  tableDataStore.previewingRecord = JSON.parse(JSON.stringify(row));
+  tableDataStore.showPreviewModal = true;
+}
+
+function closePreviewModal() {
+  tableDataStore.showPreviewModal = false;
+  setTimeout(() => {
+    tableDataStore.previewingRecord = null;
+  }, 300);
+}
+
+function handleSortClick(column) {
+  if (resizingColumn.value !== null || recentlyResized.value) {
+    return;
+  }
+
+  if (tableDataStore.currentSortColumn === column) {
+    tableDataStore.currentSortDirection =
+      tableDataStore.currentSortDirection === 'asc' ? 'desc' : 'asc';
+  } else {
+    tableDataStore.currentSortColumn = column;
+    tableDataStore.currentSortDirection = 'asc';
+  }
+
+  tableDataStore.currentPage = 1;
+
+  if (tableDataStore.activeFilter) {
+    loadFilteredData(); //not implemented
+  } else {
+    tableDataStore.loadTableData();
+  }
+}
+
+onMounted(() => {
+  if (props.initialFilter) {
+    advancedFilterTerm.value = props.initialFilter;
+    tableDataStore.activeFilter = props.initialFilter;
+  }
+
+  window.addEventListener('tab-activated', handleTabActivation);
+
+  try {
+    const tableSpecificLiveEnabled = localStorage.getItem(
+      `liveTable.enabled.${props.connectionId}.${props.tableName}`
+    );
+
+    let otherTableLiveActive = false;
+
+    const allKeys = Object.keys(localStorage);
+    allKeys.forEach(key => {
+      if (
+        key.startsWith('liveTable.enabled.') &&
+        key !== `liveTable.enabled.${props.connectionId}.${props.tableName}` &&
+        localStorage.getItem(key) === 'true'
+      ) {
+        otherTableLiveActive = true;
+      }
+    });
+
+    if (tableSpecificLiveEnabled === 'true' && !otherTableLiveActive) {
+      tableDataStore.isLiveTableActive = true;
+    } else {
+      tableDataStore.isLiveTableActive = false;
+      if (tableSpecificLiveEnabled === 'true') {
+        localStorage.setItem(`liveTable.enabled.${props.connectionId}.${props.tableName}`, 'false');
+      }
+    }
+
+    const savedLiveDelay = localStorage.getItem('liveTable.delay');
+
+    if (savedLiveDelay) {
+      tableDataStore.liveUpdateDelaySeconds = parseInt(savedLiveDelay, 10) || 3;
+      tableDataStore.liveUpdateDelay = tableDataStore.liveUpdateDelaySeconds * 1000;
+    }
+
+    const savedHighlightChanges = localStorage.getItem('liveTable.highlight');
+    if (savedHighlightChanges !== null) {
+      tableDataStore.highlightChanges = savedHighlightChanges === 'true';
+    }
+  } catch (e) {
+    console.error('Failed to load live table preferences', e);
+  }
+
+  tableDataStore.loadTableData();
+
+  if (tableDataStore.isLiveTableActive) {
+    tableDataStore.startLiveUpdates();
+  }
+
+  refreshLiveTableState();
+
+  window.addEventListener('storage', handleStorageChange);
+
+  const urlParams = new URLSearchParams(window.location.search);
+
+  const urlFilter = urlParams.get('filter');
+
+  if (urlFilter) {
+    try {
+      const decodedFilter = decodeURIComponent(urlFilter);
+      advancedFilterTerm.value = decodedFilter;
+      tableDataStore.activeFilter = decodedFilter;
+    } catch (e) {
+      console.error('Error to process URL filter:', e);
+    }
+  } else if (!props.initialFilter) {
+    const savedFilter = localStorage.getItem(`filter:${props.connectionId}:${props.tableName}`);
+    if (savedFilter) {
+      try {
+        const parsedFilter = JSON.parse(savedFilter);
+        if (parsedFilter.active && parsedFilter.value) {
+          advancedFilterTerm.value = parsedFilter.value;
+          tableDataStore.activeFilter = parsedFilter.value;
+        }
+      } catch (e) {
+        console.error('Error to process saved filter:', e);
+      }
+    }
+  }
+
+  window.addEventListener('keydown', handleKeyDown);
+  window.addEventListener('keyup', handleKeyUp);
+
+  window.addEventListener('focus', handleWindowFocus);
+  window.addEventListener('blur', handleWindowBlur);
+});
+
+onUnmounted(() => {
+  window.removeEventListener('keydown', handleKeyDown);
+  window.removeEventListener('keyup', handleKeyUp);
+  window.removeEventListener('mouseup', handleMouseUp);
+  document.removeEventListener('mousemove', handleColumnResize);
+  document.removeEventListener('mouseup', stopColumnResize);
+
+  window.removeEventListener('tab-activated', handleTabActivation);
+  window.removeEventListener('storage', handleStorageChange);
+
+  if (tableDataStore.isLiveTableActive) {
+    try {
+      localStorage.setItem(`liveTable.enabled.${props.connectionId}.${props.tableName}`, 'false');
+    } catch (e) {
+      console.error('Failed to update localStorage during component unmount', e);
+    }
+    tableDataStore.isLiveTableActive = false;
+    tableDataStore.stopLiveUpdates();
+  }
+
+  window.removeEventListener('focus', handleWindowFocus);
+  window.removeEventListener('blur', handleWindowBlur);
+});
+
+watch(
+  () => tableDataStore.currentPage,
+  (newPage, oldPage) => {
+    if (newPage !== oldPage) {
+      pageInput.value = newPage;
+
+      if (!tableDataStore.filterTerm && !tableDataStore.activeFilter) {
+        tableDataStore.loadTableData();
+      }
+    }
+  }
+);
+
+watch(rowsPerPage, (newValue, oldValue) => {
   if (newValue !== oldValue) {
-    tableDataStore.currentPage.value = 1;
+    tableDataStore.currentPage = 1;
     tableDataStore.loadTableData();
   }
 });
 
-watch(tableDataStore.highlightChanges, newValue => {
+watch(highlightChanges, newValue => {
   try {
     localStorage.setItem('liveTable.highlight', String(newValue));
   } catch (e) {
@@ -1786,23 +1869,10 @@ watch(tableDataStore.highlightChanges, newValue => {
   }
 });
 
-function openPreviewModal(row) {
-  tableDataStore.previewingRecord.value = JSON.parse(JSON.stringify(row));
-  showPreviewModal.value = true;
-}
-
-function closePreviewModal() {
-  showPreviewModal.value = false;
-  setTimeout(() => {
-    tableDataStore.previewingRecord.value = null;
-  }, 300);
-}
-
 watch(
   [() => props.tableName, () => props.connectionId],
   ([newTableName, newConnectionId], [oldTableName, oldConnectionId]) => {
     if (newTableName !== oldTableName || newConnectionId !== oldConnectionId) {
-
       if (oldTableName && oldConnectionId) {
         const oldLiveTableKey = `liveTable.enabled.${oldConnectionId}.${oldTableName}`;
         try {
@@ -1812,9 +1882,9 @@ watch(
         }
       }
 
-      if (tableDataStore.isLiveTableActive.value) {
+      if (tableDataStore.isLiveTableActive) {
         tableDataStore.stopLiveUpdates();
-        tableDataStore.isLiveTableActive.value = false;
+        tableDataStore.isLiveTableActive = false;
       }
 
       try {
@@ -1840,39 +1910,18 @@ watch(
           });
         }
 
-        tableDataStore.isLiveTableActive.value = isLiveEnabled;
+        tableDataStore.isLiveTableActive = isLiveEnabled;
 
-        if (tableDataStore.isLiveTableActive.value) {
+        if (tableDataStore.isLiveTableActive) {
           tableDataStore.startLiveUpdates();
         }
       } catch (e) {
         console.error('Error updating live table state during tab switch:', e);
-        tableDataStore.isLiveTableActive.value = false;
+        tableDataStore.isLiveTableActive = false;
       }
     }
   }
 );
-
-function handleSortClick(column) {
-  if (resizingColumn.value !== null || recentlyResized.value) {
-    return;
-  }
-
-  if (tableDataStore.currentSortColumn.value === column) {
-    tableDataStore.currentSortDirection.value = tableDataStore.currentSortDirection.value === 'asc' ? 'desc' : 'asc';
-  } else {
-    tableDataStore.currentSortColumn.value = column;
-    tableDataStore.currentSortDirection.value = 'asc';
-  }
-
-  tableDataStore.currentPage.value = 1;
-
-  if (tableDataStore.activeFilter.value) {
-    loadFilteredTableData(); //not implemented
-  } else {
-    tableDataStore.loadTableData();
-  }
-}
 </script>
 
 <style scoped>
