@@ -41,6 +41,7 @@ export const useTableDataStore = id => {
     const showPreviewModal = ref(false);
     const showDeleteConfirm = ref(false);
     const showEditModal = ref(false);
+    const advancedFilterTerm = ref('');
 
     const databaseStore = useDatabaseStore();
 
@@ -621,6 +622,7 @@ export const useTableDataStore = id => {
       setTableName,
       setOnLoad,
       deleteSelected,
+      onLoad,
       tableData,
       filteredData,
       isLiveUpdating,
@@ -654,7 +656,8 @@ export const useTableDataStore = id => {
       totalRecords,
       deletingIds,
       showDeleteConfirm,
-      showEditModal
+      showEditModal,
+      advancedFilterTerm
     };
   })();
 };

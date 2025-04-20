@@ -11,58 +11,8 @@
       </div>
 
       <div class="flex flex-wrap items-center gap-2">
-        <div class="relative flex items-center gap-2">
-          <div class="input-group">
-            <input
-              v-model="tableDataStore.filterTerm"
-              type="text"
-              placeholder="Filter..."
-              class="input input-sm input-bordered bg-base-300 w-full sm:w-64"
-              @keyup.enter="applyFilter"
-            />
-            <button
-              class="btn btn-sm"
-              :class="{
-                'bg-base-300 border-base-300':
-                  !tableDataStore.activeFilter && !tableDataStore.filterTerm,
-                'bg-primary border-primary text-white':
-                  tableDataStore.activeFilter || tableDataStore.filterTerm
-              }"
-              @click="toggleAdvancedFilter"
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke-width="1.5"
-                stroke="currentColor"
-                class="w-4 h-4"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  d="M10.5 6h9.75M10.5 6a1.5 1.5 0 1 1-3 0m3 0a1.5 1.5 0 1 0-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m-9.75 0h9.75"
-                />
-              </svg>
-            </button>
-          </div>
-          <button
-            v-if="tableDataStore.filterTerm || tableDataStore.activeFilter"
-            class="btn btn-sm btn-primary"
-            @click="clearFilters"
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke-width="1.5"
-              stroke="currentColor"
-              class="w-4 h-4"
-            >
-              <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
-            </svg>
-          </button>
-        </div>
+        <FilterButton :store-id="storeId" ref="filterButtonRef" />
+
         <select
           v-model="tableDataStore.rowsPerPage"
           class="select select-sm select-bordered bg-base-300 w-24 sm:w-32"
@@ -133,7 +83,9 @@
           </svg>
           <p>No records match your filter</p>
           <div class="flex justify-center space-x-2 mt-4">
-            <button class="btn btn-sm btn-error" @click="clearFilters">Clear Filters</button>
+            <button class="btn btn-sm btn-error" @click="filterButtonRef.clearFilters">
+              Clear Filters
+            </button>
             <button class="btn btn-sm btn-primary" @click="tableDataStore.loadTableData()">
               Reload Data
             </button>
@@ -508,119 +460,6 @@
       </div>
     </div>
 
-    <div class="modal z-50" :class="{ 'modal-open': showFilterModal }">
-      <div class="modal-box max-w-3xl">
-        <h3 class="font-bold text-lg mb-4 flex justify-between items-center">
-          Advanced Filter
-          <button class="btn btn-sm btn-circle" @click="showFilterModal = false">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              class="h-6 w-6"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M6 18L18 6M6 6l12 12"
-              />
-            </svg>
-          </button>
-        </h3>
-
-        <div class="mb-4">
-          <div class="form-control">
-            <label class="label">
-              <span class="label-text font-medium">SQL WHERE Clause</span>
-            </label>
-            <textarea
-              v-model="advancedFilterTerm"
-              class="textarea textarea-bordered h-32 font-mono"
-              placeholder="id = 1"
-            />
-            <label class="label">
-              <span class="label-text-alt text-xs">
-                Examples:
-                <code class="bg-base-300 p-1 cursor-pointer" @click="setExampleFilter('id = 2')"
-                  >id = 2</code
-                >,
-                <code
-                  class="bg-base-300 p-1 cursor-pointer"
-                  @click="setExampleFilter('email LIKE \'%example%\'')"
-                  >email LIKE '%example%'</code
-                >,
-                <code
-                  class="bg-base-300 p-1 cursor-pointer"
-                  @click="setExampleFilter('created_at IS NOT NULL')"
-                  >created_at IS NOT NULL</code
-                >,
-                <code
-                  class="bg-base-300 p-1 cursor-pointer"
-                  @click="setExampleFilter('id > 10 AND id < 20')"
-                  >id > 10 AND id < 20</code
-                >
-              </span>
-            </label>
-          </div>
-
-          <div class="mt-2 text-xs">
-            <p class="mb-2">Available columns:</p>
-            <div class="flex flex-wrap gap-1 mb-4">
-              <span
-                v-for="column in tableDataStore.columns"
-                :key="column"
-                class="badge badge-primary cursor-pointer"
-                @click="insertColumnName(column)"
-              >
-                {{ column }}
-              </span>
-            </div>
-
-            <p class="mb-2">Common operators:</p>
-            <div class="flex flex-wrap gap-1">
-              <span
-                v-for="op in [
-                  '=',
-                  '!=',
-                  '>',
-                  '<',
-                  '>=',
-                  '<=',
-                  'LIKE',
-                  'IN',
-                  'IS NULL',
-                  'IS NOT NULL',
-                  'BETWEEN',
-                  'AND',
-                  'OR'
-                ]"
-                :key="op"
-                class="badge badge-secondary cursor-pointer"
-                @click="insertOperator(op)"
-              >
-                {{ op }}
-              </span>
-            </div>
-          </div>
-        </div>
-
-        <div class="form-control mb-4">
-          <label class="label cursor-pointer justify-start">
-            <input v-model="persistFilter" type="checkbox" class="checkbox checkbox-primary" />
-            <span class="label-text ml-2">Persist filter (remember after reload)</span>
-          </label>
-        </div>
-
-        <div class="modal-action">
-          <button class="btn btn-error" @click="cancelAdvancedFilter">Cancel</button>
-          <button class="btn btn-primary" @click="applyAdvancedFilter">Apply Filter</button>
-        </div>
-      </div>
-      <div class="modal-backdrop" @click="showFilterModal = false" />
-    </div>
-
     <DataPreviewModal
       v-if="tableDataStore.previewingRecord"
       :show="tableDataStore.showPreviewModal"
@@ -641,6 +480,7 @@ import LiveTableButton from '@/components/tabs/components/LiveTableButton.vue';
 import TruncateButton from '@/components/tabs/components/TruncateButton.vue';
 import DeleteButton from '@/components/tabs/components/DeleteButton.vue';
 import EditRecord from '@/components/tabs/components/EditRecord.vue';
+import FilterButton from '@/components/tabs/components/FilterButton.vue';
 
 import { Helpers } from '../../utils/helpers';
 
@@ -683,18 +523,15 @@ const isDragging = ref(false);
 const recentlyResized = ref(false);
 const shiftKeyPressed = ref(false);
 const ctrlKeyPressed = ref(false);
-const showFilterModal = ref(false);
-const persistFilter = ref(true);
+
 const startX = ref(0);
 const startWidth = ref(0);
 const pageInput = ref(1);
 const tableContainer = ref(null);
 const editRecordRef = ref(null);
+const filterButtonRef = ref(null);
 const resizingColumn = ref(null);
 const selectionStartId = ref(null);
-
-const advancedFilterTerm = ref('');
-const originalFilterTerm = ref('');
 
 const totalPages = computed(() => {
   if (tableDataStore.rowsPerPage === 0) return 1;
@@ -860,168 +697,6 @@ const refreshLiveTableState = () => {
   }
 };
 
-function toggleAdvancedFilter() {
-  originalFilterTerm.value = advancedFilterTerm.value;
-  showFilterModal.value = true;
-}
-
-function applyFilter() {
-  tableDataStore.currentPage = 1;
-}
-
-async function applyAdvancedFilter() {
-  tableDataStore.activeFilter = advancedFilterTerm.value;
-
-  if (persistFilter.value && tableDataStore.activeFilter) {
-    localStorage.setItem(
-      `filter:${props.connectionId}:${props.tableName}`,
-      JSON.stringify({
-        active: true,
-        value: tableDataStore.activeFilter
-      })
-    );
-  }
-
-  showFilterModal.value = false;
-
-  tableDataStore.currentPage = 1;
-
-  const useServerFilter = shouldUseServerFilter(tableDataStore.activeFilter);
-
-  if (useServerFilter) {
-    try {
-      await loadFilteredData();
-    } catch (error) {
-      console.error('Error to get filtered data:', error);
-      showAlert(`Error to apply filter: ${error.message}`, 'error');
-    }
-  }
-}
-
-function cancelAdvancedFilter() {
-  advancedFilterTerm.value = originalFilterTerm.value;
-  showFilterModal.value = false;
-}
-
-function clearFilters() {
-  const hadActiveFilter = tableDataStore.activeFilter || tableDataStore.filterTerm;
-
-  tableDataStore.filterTerm = '';
-  advancedFilterTerm.value = '';
-  tableDataStore.activeFilter = '';
-
-  localStorage.removeItem(`filter:${props.connectionId}:${props.tableName}`);
-
-  const url = new URL(window.location.href);
-  url.searchParams.delete('filter');
-  window.history.replaceState({}, '', url.toString());
-
-  if (hadActiveFilter) {
-    tableDataStore.currentPage = 1;
-    tableDataStore.loadTableData();
-  }
-}
-
-function insertColumnName(column) {
-  advancedFilterTerm.value += column + ' ';
-}
-
-function insertOperator(op) {
-  advancedFilterTerm.value += ' ' + op + ' ';
-}
-
-function shouldUseServerFilter(filter) {
-  if (!filter) return false;
-
-  const cleanFilter = filter.trim();
-  if (!cleanFilter) return false;
-
-  const idMatch = cleanFilter.match(/^\s*id\s*=\s*(\d+)\s*$/i);
-  if (idMatch) {
-    const idValue = parseInt(idMatch[1], 10);
-    if (!isNaN(idValue)) {
-      return true;
-    }
-  }
-
-  if (/\bLIKE\b/i.test(cleanFilter)) {
-    return true;
-  }
-
-  if (/\bAND\b|\bOR\b|\bIN\b|\bIS NULL\b|\bIS NOT NULL\b/i.test(cleanFilter)) {
-    return true;
-  }
-
-  return /^\s*\w+_id\s*=\s*\d+\s*$/i.test(cleanFilter);
-}
-
-async function loadFilteredData() {
-  if (!tableDataStore.activeFilter) {
-    return tableDataStore.loadTableData();
-  }
-
-  tableDataStore.isLoading = true;
-  tableDataStore.loadError = null;
-  tableDataStore.selectedRows = [];
-
-  try {
-    const idMatch = tableDataStore.activeFilter.match(/^\s*id\s*=\s*(\d+)\s*$/i);
-    if (idMatch) {
-      const idValue = parseInt(idMatch[1], 10);
-    }
-
-    const sortParams = tableDataStore.currentSortColumn
-      ? {
-          sortColumn: tableDataStore.currentSortColumn,
-          sortDirection: tableDataStore.currentSortDirection
-        }
-      : {};
-
-    const result = await databaseStore.loadFilteredTableData(
-      props.connectionId,
-      props.tableName,
-      tableDataStore.activeFilter,
-      tableDataStore.rowsPerPage,
-      tableDataStore.currentPage,
-      sortParams
-    );
-
-    if (!result.data || result.data.length === 0) {
-      if (result.totalRecords > 0) {
-        showAlert(
-          `No records found on page ${tableDataStore.currentPage}. Total: ${result.totalRecords}`,
-          'info'
-        );
-      } else {
-        showAlert('No records match the applied filter', 'info');
-      }
-    } else {
-      showAlert(`Found ${result.totalRecords} record(s) matching the filter`, 'success');
-
-      if (idMatch && result.data.length === 1) {
-        console.log(`Found record with ID: ${idMatch[1]}`, result.data[0]);
-      }
-    }
-
-    tableDataStore.tableData = result.data || [];
-
-    tableDataStore.totalRecordsCount = result.totalRecords || 0;
-
-    props.onLoad({
-      columns: tableDataStore.columns,
-      rowCount: result.totalRecords || 0
-    });
-  } catch (error) {
-    console.error('Error applying filter:', error);
-    tableDataStore.loadError = error.message;
-    showAlert(`Error applying filter: ${error.message}`, 'error');
-    tableDataStore.tableData = [];
-    tableDataStore.totalRecordsCount = 0;
-  } finally {
-    tableDataStore.isLoading = false;
-  }
-}
-
 async function navigateToForeignKey(column, value) {
   if (value === null || value === undefined) {
     showAlert('Null or undefined value. Unable to navigate to the related record.', 'error');
@@ -1081,12 +756,6 @@ async function navigateToForeignKey(column, value) {
     console.error('Error navigating to foreign key:', error);
     showAlert('Failed to navigate to related record: ' + error.message, 'error');
   }
-}
-
-function setExampleFilter(example) {
-  advancedFilterTerm.value = example;
-
-  applyAdvancedFilter();
 }
 
 function openPreviewModal(row) {
@@ -1291,7 +960,7 @@ function handleSortClick(column) {
   tableDataStore.currentPage = 1;
 
   if (tableDataStore.activeFilter) {
-    loadFilteredData();
+    filterButtonRef.loadFilteredData();
   } else {
     tableDataStore.loadTableData();
   }
@@ -1325,7 +994,7 @@ onMounted(() => {
   tableDataStore.setOnLoad(props.onLoad);
 
   if (props.initialFilter) {
-    advancedFilterTerm.value = props.initialFilter;
+    tableDataStore.advancedFilterTerm = props.initialFilter;
     tableDataStore.activeFilter = props.initialFilter;
   }
 
@@ -1388,7 +1057,7 @@ onMounted(() => {
   if (urlFilter) {
     try {
       const decodedFilter = decodeURIComponent(urlFilter);
-      advancedFilterTerm.value = decodedFilter;
+      tableDataStore.advancedFilterTerm = decodedFilter;
       tableDataStore.activeFilter = decodedFilter;
     } catch (e) {
       console.error('Error to process URL filter:', e);
@@ -1399,7 +1068,7 @@ onMounted(() => {
       try {
         const parsedFilter = JSON.parse(savedFilter);
         if (parsedFilter.active && parsedFilter.value) {
-          advancedFilterTerm.value = parsedFilter.value;
+          tableDataStore.advancedFilterTerm = parsedFilter.value;
           tableDataStore.activeFilter = parsedFilter.value;
         }
       } catch (e) {
