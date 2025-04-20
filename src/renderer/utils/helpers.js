@@ -25,6 +25,11 @@ export class Helpers {
 
         if (colInfo && colInfo.type) {
             const type = colInfo.type.toLowerCase();
+
+            if (type.includes('enum')) {
+                return false;
+            }
+            
             return type.includes('int') || type.includes('decimal') ||
                 type.includes('float') || type.includes('double') ||
                 type.includes('numeric') || type.includes('real') ||
