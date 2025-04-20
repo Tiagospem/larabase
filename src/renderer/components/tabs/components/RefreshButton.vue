@@ -21,5 +21,12 @@
 <script setup>
 import { useTableDataStore } from '@/store/table-data';
 
-const tableDataStore = useTableDataStore();
+const props = defineProps({
+  storeId: {
+    type: String,
+    required: true
+  }
+});
+
+const tableDataStore = useTableDataStore(props.storeId);
 </script>

@@ -4,58 +4,10 @@
       class="bg-base-200 p-2 border-b border-neutral flex flex-wrap items-center justify-between gap-2"
     >
       <div class="flex flex-wrap items-center gap-2">
-        <RefreshButton />
-
-        <LiveTableButton />
-
-        <button
-          class="btn btn-sm btn-ghost text-error"
-          :disabled="totalRecords === 0"
-          @click="confirmTruncateTable"
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke-width="1.5"
-            stroke="currentColor"
-            class="w-5 h-5"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"
-            />
-          </svg>
-          <span class="hidden sm:inline">Truncate</span>
-        </button>
-        <button
-          class="btn btn-sm btn-ghost"
-          :disabled="tableDataStore.selectedRows.length === 0"
-          @click="deleteSelected"
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke-width="1.5"
-            stroke="currentColor"
-            class="w-5 h-5"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0"
-            />
-          </svg>
-          <span class="hidden sm:inline"
-            >Delete{{
-              tableDataStore.selectedRows.length > 0
-                ? ` (${tableDataStore.selectedRows.length})`
-                : ''
-            }}</span
-          >
-        </button>
+        <RefreshButton :store-id="storeId" />
+        <LiveTableButton :store-id="storeId" />
+        <TruncateButton :store-id="storeId" />
+        <DeleteButton :store-id="storeId" />
       </div>
 
       <div class="flex flex-wrap items-center gap-2">
@@ -194,8 +146,7 @@
         ref="tableContainer"
         tabindex="0"
         class="h-full relative flex flex-col"
-        @click="handleOutsideClick"
-        @keydown.prevent="handleTableKeyDown"
+        @keydown.prevent="handleKeyDown"
       >
         <div
           class="overflow-x-scroll overflow-y-auto flex-grow"
@@ -412,7 +363,7 @@
     >
       <div class="flex items-center mb-2 sm:mb-0">
         <span class="text-gray-400">
-          {{ tableName }} | {{ totalRecords }} records{{
+          {{ tableName }} | {{ tableDataStore.totalRecords }} records{{
             tableDataStore.selectedRows.length > 0
               ? ` | ${tableDataStore.selectedRows.length} selected`
               : ''
@@ -752,36 +703,6 @@
       <div class="modal-backdrop" @click="showFilterModal = false" />
     </div>
 
-    <div class="modal z-50" :class="{ 'modal-open': showTruncateConfirm }">
-      <div class="modal-box">
-        <h3 class="font-bold text-lg text-error">⚠️ Truncate Table</h3>
-        <p class="py-4">
-          Are you sure you want to truncate the <strong>{{ tableName }}</strong> table? This will
-          delete ALL records and cannot be undone.
-        </p>
-        <div class="modal-action">
-          <button class="btn" @click="showTruncateConfirm = false">Cancel</button>
-          <button class="btn btn-error" @click="truncateTable">Truncate Table</button>
-        </div>
-      </div>
-      <div class="modal-backdrop" @click="showTruncateConfirm = false" />
-    </div>
-
-    <div class="modal z-50" :class="{ 'modal-open': showDeleteConfirm }">
-      <div class="modal-box">
-        <h3 class="font-bold text-lg text-error">Delete Records</h3>
-        <p class="py-4">
-          Are you sure you want to delete {{ tableDataStore.selectedRows.length }} record(s)? This
-          action cannot be undone.
-        </p>
-        <div class="modal-action">
-          <button class="btn" @click="showDeleteConfirm = false">Cancel</button>
-          <button class="btn btn-error" @click="confirmDelete">Delete</button>
-        </div>
-      </div>
-      <div class="modal-backdrop" @click="showDeleteConfirm = false" />
-    </div>
-
     <DataPreviewModal
       v-if="tableDataStore.previewingRecord"
       :show="tableDataStore.showPreviewModal"
@@ -797,6 +718,8 @@ import { ref, computed, onMounted, onUnmounted, inject, watch } from 'vue';
 import DataPreviewModal from '@/components/database/DataPreviewModal.vue';
 import RefreshButton from '@/components/tabs/components/RefreshButton.vue';
 import LiveTableButton from '@/components/tabs/components/LiveTableButton.vue';
+import TruncateButton from '@/components/tabs/components/TruncateButton.vue';
+import DeleteButton from '@/components/tabs/components/DeleteButton.vue';
 
 const props = defineProps({
   connectionId: {
@@ -845,7 +768,7 @@ const pageInput = ref(1);
 
 const totalPages = computed(() => {
   if (tableDataStore.rowsPerPage === 0) return 1;
-  return Math.ceil(totalRecords.value / tableDataStore.rowsPerPage);
+  return Math.ceil(tableDataStore.totalRecords / tableDataStore.rowsPerPage);
 });
 
 const tableData = computed(() => tableDataStore.tableData);
@@ -863,17 +786,7 @@ const advancedFilterTerm = ref('');
 const persistFilter = ref(true);
 const originalFilterTerm = ref('');
 
-const showDeleteConfirm = ref(false);
-const showTruncateConfirm = ref(false);
-const deletingIds = ref([]);
 const windowInFocus = ref(true);
-
-const totalRecords = computed(() => {
-  if (tableDataStore.filterTerm || tableDataStore.activeFilter) {
-    return tableDataStore.filteredData.length;
-  }
-  return tableDataStore.totalRecordsCount;
-});
 
 onMounted(() => {
   tableDataStore.setConnectionId(props.connectionId);
@@ -1039,92 +952,6 @@ function handleRowClick(event, rowIndex) {
   }
 }
 
-function selectAll() {
-  tableDataStore.selectedRows = tableDataStore.paginatedData.map((_, index) => index);
-}
-
-function handleTableKeyDown(e) {
-  if ((e.ctrlKey || e.metaKey) && e.key === 'a') {
-    e.preventDefault();
-    selectAll();
-  } else if (e.key === 'Escape') {
-    tableDataStore.selectedRows = [];
-    tableDataStore.lastSelectedId = null;
-  } else if (e.key === 'Delete' && tableDataStore.selectedRows.length > 0) {
-    e.preventDefault();
-    deleteSelected();
-  }
-}
-
-function handleOutsideClick(event) {
-  if (event.target === tableContainer.value || event.target.closest('thead')) {
-    tableDataStore.selectedRows = [];
-    tableDataStore.lastSelectedId = null;
-  }
-}
-
-function deleteSelected() {
-  if (tableDataStore.selectedRows.length === 0) return;
-
-  deletingIds.value = tableDataStore.selectedRows.map(index => {
-    const id = tableDataStore.paginatedData[index].id;
-
-    return typeof id === 'object' ? String(id) : id;
-  });
-
-  showDeleteConfirm.value = true;
-}
-
-async function confirmDelete() {
-  showDeleteConfirm.value = false;
-
-  try {
-    const idsToDelete = [...deletingIds.value];
-
-    const result = await databaseStore.deleteRecords(
-      props.connectionId,
-      props.tableName,
-      idsToDelete
-    );
-
-    showAlert(result.message, 'success');
-
-    tableDataStore.selectedRows = [];
-
-    await tableDataStore.loadTableData();
-  } catch (error) {
-    console.error('Error in confirmDelete:', error);
-
-    if (error.message.includes('referenced by other tables')) {
-      showAlert(
-        'Cannot delete records because they are referenced by other tables. Remove the related records first or use CASCADE constraints.',
-        'error'
-      );
-    } else {
-      showAlert(`Error deleting records: ${error.message}`, 'error');
-    }
-  }
-}
-
-function confirmTruncateTable() {
-  showTruncateConfirm.value = true;
-}
-
-async function truncateTable() {
-  showTruncateConfirm.value = false;
-
-  try {
-    const result = await databaseStore.truncateTable(props.connectionId, props.tableName);
-
-    showAlert(result.message, 'success');
-
-    tableDataStore.selectedRows = [];
-    await tableDataStore.loadTableData();
-  } catch (error) {
-    showAlert(`Error truncating table: ${error.message}`, 'error');
-  }
-}
-
 const handleKeyDown = e => {
   shiftKeyPressed.value = e.shiftKey;
   ctrlKeyPressed.value = e.ctrlKey || e.metaKey;
@@ -1132,6 +959,21 @@ const handleKeyDown = e => {
   if (e.key === 'Escape') {
     tableDataStore.selectedRows = [];
     tableDataStore.lastSelectedId = null;
+  }
+
+  if ((e.ctrlKey || e.metaKey) && e.key === 'a') {
+    e.preventDefault();
+    tableDataStore.selectedRows = tableDataStore.paginatedData.map((_, index) => index);
+  } else if (e.key === 'Escape') {
+    tableDataStore.selectedRows = [];
+    tableDataStore.lastSelectedId = null;
+    tableDataStore.showDeleteConfirm = false;
+  } else if (
+    (e.key === 'Delete' || e.key === 'Backspace') &&
+    tableDataStore.selectedRows.length > 0
+  ) {
+    e.preventDefault();
+    tableDataStore.deleteSelected();
   }
 };
 
@@ -1386,7 +1228,9 @@ function handleMouseEnter(rowIndex) {
   tableDataStore.selectedRows = rangeIds;
 }
 
-function handleMouseUp(event) {
+function handleMouseUp() {
+  stopColumnResize();
+
   if (!isDragging.value || !selectionStartId.value) {
     isDragging.value = false;
     selectionStartId.value = null;
@@ -1726,13 +1570,33 @@ function handleSortClick(column) {
   }
 }
 
+function addEventListener() {
+  window.addEventListener('tab-activated', handleTabActivation);
+  window.addEventListener('storage', handleStorageChange);
+  window.addEventListener('keydown', handleKeyDown);
+  window.addEventListener('keyup', handleKeyUp);
+  window.addEventListener('focus', handleWindowFocus);
+  window.addEventListener('blur', handleWindowBlur);
+}
+
+function removeEventListener() {
+  window.removeEventListener('keydown', handleKeyDown);
+  window.removeEventListener('keyup', handleKeyUp);
+  window.removeEventListener('mouseup', handleMouseUp);
+  document.removeEventListener('mousemove', handleColumnResize);
+  window.removeEventListener('tab-activated', handleTabActivation);
+  window.removeEventListener('storage', handleStorageChange);
+  window.removeEventListener('focus', handleWindowFocus);
+  window.removeEventListener('blur', handleWindowBlur);
+}
+
 onMounted(() => {
+  addEventListener();
+
   if (props.initialFilter) {
     advancedFilterTerm.value = props.initialFilter;
     tableDataStore.activeFilter = props.initialFilter;
   }
-
-  window.addEventListener('tab-activated', handleTabActivation);
 
   try {
     const tableSpecificLiveEnabled = localStorage.getItem(
@@ -1784,8 +1648,6 @@ onMounted(() => {
 
   refreshLiveTableState();
 
-  window.addEventListener('storage', handleStorageChange);
-
   const urlParams = new URLSearchParams(window.location.search);
 
   const urlFilter = urlParams.get('filter');
@@ -1812,23 +1674,10 @@ onMounted(() => {
       }
     }
   }
-
-  window.addEventListener('keydown', handleKeyDown);
-  window.addEventListener('keyup', handleKeyUp);
-
-  window.addEventListener('focus', handleWindowFocus);
-  window.addEventListener('blur', handleWindowBlur);
 });
 
 onUnmounted(() => {
-  window.removeEventListener('keydown', handleKeyDown);
-  window.removeEventListener('keyup', handleKeyUp);
-  window.removeEventListener('mouseup', handleMouseUp);
-  document.removeEventListener('mousemove', handleColumnResize);
-  document.removeEventListener('mouseup', stopColumnResize);
-
-  window.removeEventListener('tab-activated', handleTabActivation);
-  window.removeEventListener('storage', handleStorageChange);
+  removeEventListener();
 
   if (tableDataStore.isLiveTableActive) {
     try {
@@ -1839,9 +1688,6 @@ onUnmounted(() => {
     tableDataStore.isLiveTableActive = false;
     tableDataStore.stopLiveUpdates();
   }
-
-  window.removeEventListener('focus', handleWindowFocus);
-  window.removeEventListener('blur', handleWindowBlur);
 });
 
 watch(
@@ -1966,25 +1812,9 @@ watch(
   color: white !important;
 }
 
-.selected-row:hover {
-  background-color: #ea4331 !important;
-}
-
-.expanded {
-  white-space: normal !important;
-  overflow: visible !important;
-  min-width: 200px !important;
-  max-width: none !important;
-}
-
 th:has(+ tr td.expanded) {
   min-width: 200px !important;
   max-width: none !important;
-}
-
-.expanded-resize-handle {
-  background-color: theme('colors.primary') !important;
-  width: 2px !important;
 }
 
 .table-fixed {
@@ -2003,10 +1833,6 @@ th:has(+ tr td.expanded) {
 
 .flex-1.overflow-auto {
   min-height: 0;
-}
-
-.pb-3 {
-  padding-bottom: 3rem;
 }
 
 /* Fix for sticky columns during horizontal scroll */

@@ -88,9 +88,16 @@ import { inject } from 'vue';
 
 import { useTableDataStore } from '@/store/table-data';
 
+const props = defineProps({
+  storeId: {
+    type: String,
+    required: true
+  }
+});
+
 const showAlert = inject('showAlert');
 
-const tableDataStore = useTableDataStore();
+const tableDataStore = useTableDataStore(props.storeId);
 
 function toggleLiveTable() {
   try {
