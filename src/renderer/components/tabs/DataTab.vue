@@ -280,7 +280,7 @@
                       {{
                         row[column] === null && tableDataStore.isForeignKeyColumn(column)
                             ? 'Not related'
-                            : formatCellValue(row[column])
+                            : Helpers.formatCellValue(column, row[column])
                       }}
                     </span>
 
@@ -536,19 +536,19 @@
             <label class="label">
               <span class="label-text font-medium">{{ column }}</span>
               <span class="label-text-alt text-xs bg-base-300 px-2 py-1 rounded-md">
-                {{ getFieldTypeLabel(column) }}
+                {{ Helpers.getFieldTypeLabel(column) }}
               </span>
             </label>
 
             <textarea
-                v-if="isLongTextField(column)"
+                v-if="Helpers.isLongTextField(column)"
                 v-model="editingRecord[column]"
                 class="textarea textarea-bordered h-24"
                 :placeholder="column"
             />
 
             <input
-                v-else-if="isDateField(column)"
+                v-else-if="Helpers.isDateField(column)"
                 v-model="editingRecord[column]"
                 type="datetime-local"
                 class="input input-bordered w-full"
@@ -556,7 +556,7 @@
             />
 
             <input
-                v-else-if="isNumberField(column)"
+                v-else-if="Helpers.isNumberField(column)"
                 v-model.number="editingRecord[column]"
                 type="number"
                 class="input input-bordered w-full"
@@ -564,7 +564,7 @@
             />
 
             <select
-                v-else-if="isBooleanField(column)"
+                v-else-if="Helpers.isBooleanField(column)"
                 v-model="editingRecord[column]"
                 class="select select-bordered w-full"
             >
@@ -721,7 +721,7 @@ import LiveTableButton from '@/components/tabs/components/LiveTableButton.vue';
 import TruncateButton from '@/components/tabs/components/TruncateButton.vue';
 import DeleteButton from '@/components/tabs/components/DeleteButton.vue';
 
-import { Regex } from '../../utils/regex'
+import { Helpers } from '../../utils/helpers'
 
 import { useTableDataStore, createTableDataStoreId } from '@/store/table-data';
 import { useDatabaseStore } from '@/store/database';
@@ -783,102 +783,6 @@ const totalPages = computed(() => {
 const tableData = computed(() => tableDataStore.tableData);
 const rowsPerPage = computed(() => tableDataStore.rowsPerPage);
 const highlightChanges = computed(() => tableDataStore.highlightChanges);
-
-//regex validations
-function formatCellValue(value) {
-  if (value == null) {
-    return '';
-  }
-
-  if (value instanceof Date) {
-    return value.toLocaleString();
-  }
-
-  if (typeof value === 'string') {
-    let date;
-
-    if (Regex.test(Regex.ISO_DATETIME_REGEX, value)) {
-      date = new Date(value);
-    } else if (Regex.test(Regex.SPACE_DATETIME_REGEX, value)) {
-      date = new Date(value.replace(' ', 'T') + 'Z');
-    }
-
-    if (date && !isNaN(date.getTime())) {
-      return date.toLocaleString();
-    }
-  }
-
-  return String(value);
-}
-
-function isLongTextField(column) {
-  const record = editingRecord.value;
-
-  if (!record) {
-    return false;
-  }
-
-  const fieldValue = record[column];
-
-  return typeof fieldValue === 'string' && fieldValue.length > 100;
-}
-
-function isDateField(column) {
-  const record = editingRecord.value;
-
-  if (!record) {
-    return false;
-  }
-
-  const fieldValue = record[column];
-
-  console.log('fieldValue', fieldValue)
-
-  return Regex.test(Regex.DATE_FIELD, column);
-}
-
-function isNumberField(column) {
-  const record = editingRecord.value;
-  if (!record) {
-    return false;
-  }
-
-  const value = record[column];
-
-  if (typeof value === 'number') {
-    return true;
-  }
-
-  if (column.includes('id') && column !== 'uuid') {
-    return true;
-  }
-
-  if (Regex.test(Regex.NUMBER_FIELD, column)) {
-    return true;
-  }
-
-  return false;
-}
-
-function isBooleanField(column) {
-  const record = editingRecord.value;
-  if (!record) {
-    return false;
-  }
-
-  const value = record[column];
-
-  if (typeof value === 'boolean') {
-    return true;
-  }
-
-  if (Regex.test(Regex.BOOLEAN_FIELD, column)) {
-    return true;
-  }
-
-  return false;
-}
-// end regex validation
 
 function startColumnResize(event, column) {
   event.preventDefault();
@@ -1008,7 +912,7 @@ function openEditModal(row) {
   const processedRecord = JSON.parse(JSON.stringify(row));
 
   for (const key in processedRecord) {
-    if (isDateField(key) && processedRecord[key]) {
+    if (Helpers.isDateField(key) && processedRecord[key]) {
       if (typeof processedRecord[key] === 'string') {
         try {
           if (processedRecord[key].includes(' ')) {
@@ -1048,7 +952,7 @@ async function saveRecord() {
     for (const key in editingRecord.value) {
       let value = editingRecord.value[key];
 
-      if (value && isDateField(key)) {
+      if (value && Helpers.isDateField(key)) {
         if (typeof value === 'string' && value.includes('T')) {
           const date = new Date(value);
           if (!isNaN(date.getTime())) {
@@ -1103,27 +1007,19 @@ function getEditableColumns() {
   });
 }
 
-function getFieldTypeLabel(column) {
-  if (!editingRecord.value) return 'Unknown';
+async function loadTableStructure() {
+  try {
+    const structure = await databaseStore.getTableStructure(
+      props.connectionId,
+      props.tableName,
+      true
+    );
 
-  const value = editingRecord.value[column];
-
-  if (isLongTextField(column)) return 'Text';
-  if (isDateField(column)) return 'Date';
-  if (isNumberField(column)) return 'Number';
-  if (isBooleanField(column)) return 'Boolean';
-
-  if (value === null) return 'NULL';
-
-  return typeof value === 'object'
-      ? 'Object'
-      : typeof value === 'string'
-          ? 'String'
-          : typeof value === 'number'
-              ? 'Number'
-              : typeof value === 'boolean'
-                  ? 'Boolean'
-                  : typeof value;
+    Helpers.setColumnStructure(structure)
+  } catch (error) {
+    console.error('Error loading table structure:', error);
+    showAlert(`Error loading table structure: ${error.message}`, 'error');
+  }
 }
 
 const refreshLiveTableState = () => {
@@ -1386,7 +1282,6 @@ function closePreviewModal() {
   }, 300);
 }
 
-//handlers
 function handleRowClick(event, rowIndex) {
   if (event) {
     event.preventDefault();
@@ -1587,12 +1482,11 @@ function handleSortClick(column) {
   tableDataStore.currentPage = 1;
 
   if (tableDataStore.activeFilter) {
-    loadFilteredData(); //not implemented
+    loadFilteredData();
   } else {
     tableDataStore.loadTableData();
   }
 }
-//end handlers
 
 function addEventListener() {
   window.addEventListener('tab-activated', handleTabActivation);
@@ -1668,7 +1562,9 @@ onMounted(() => {
     console.error('Failed to load live table preferences', e);
   }
 
-  tableDataStore.loadTableData();
+  loadTableStructure().then(() => {
+    tableDataStore.loadTableData();
+  });
 
   if (tableDataStore.isLiveTableActive) {
     tableDataStore.startLiveUpdates();
@@ -1748,8 +1644,10 @@ watch(highlightChanges, newValue => {
 
 watch(
     [() => props.tableName, () => props.connectionId],
-    ([newTableName, newConnectionId], [oldTableName, oldConnectionId]) => {
+    async ([newTableName, newConnectionId], [oldTableName, oldConnectionId]) => {
       if (newTableName !== oldTableName || newConnectionId !== oldConnectionId) {
+        await loadTableStructure();
+        
         if (oldTableName && oldConnectionId) {
           const oldLiveTableKey = `liveTable.enabled.${oldConnectionId}.${oldTableName}`;
           try {
