@@ -4,105 +4,12 @@
       class="bg-base-200 p-2 border-b border-neutral flex flex-wrap items-center justify-between gap-2"
     >
       <div class="flex flex-wrap items-center gap-2">
-        <button class="btn btn-sm btn-ghost" @click="loadTableData">
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke-width="1.5"
-            stroke="currentColor"
-            class="w-5 h-5"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99"
-            />
-          </svg>
-          <span class="hidden sm:inline">Refresh</span>
-        </button>
-
-        <!-- Live Table Toggle Button -->
-        <div class="flex items-center gap-1">
-          <div class="dropdown dropdown-end">
-            <button
-              class="btn btn-sm"
-              :class="isLiveTableActive ? 'btn-primary' : 'btn-ghost'"
-              @click="toggleLiveTable"
-            >
-              <div class="flex items-center gap-1">
-                <span class="relative flex h-2 w-2">
-                  <span
-                    class="absolute inline-flex h-full w-full rounded-full opacity-75"
-                    :class="isLiveTableActive ? 'animate-ping bg-success' : 'bg-transparent'"
-                  ></span>
-                  <span
-                    class="relative inline-flex rounded-full h-2 w-2"
-                    :class="isLiveTableActive ? 'bg-success' : 'bg-transparent'"
-                  ></span>
-                </span>
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke-width="1.5"
-                  stroke="currentColor"
-                  class="w-4 h-4"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    d="M9.348 14.651a3.75 3.75 0 010-5.303m5.304 0a3.75 3.75 0 010 5.303m-7.425 2.122a6.75 6.75 0 010-9.546m9.546 0a6.75 6.75 0 010 9.546M5.106 18.894c-3.808-3.808-3.808-9.98 0-13.789m13.788 0c3.808 3.808 3.808 9.981 0 13.79"
-                  />
-                </svg>
-                <span class="hidden sm:inline">Live</span>
-                <span v-if="updateCounter > 0" class="badge badge-sm badge-accent">{{
-                  updateCounter
-                }}</span>
-              </div>
-            </button>
-            <div
-              tabindex="0"
-              class="dropdown-content z-[40] menu p-2 shadow bg-base-200 rounded-box w-52"
-            >
-              <div class="p-2">
-                <div class="form-control">
-                  <label class="label">
-                    <span class="label-text">Update interval</span>
-                  </label>
-                  <div class="flex items-center gap-2">
-                    <input
-                      v-model="liveUpdateDelaySeconds"
-                      type="range"
-                      min="1"
-                      max="30"
-                      class="range range-primary range-xs"
-                      @change="updateLiveDelay"
-                    />
-                    <span>{{ liveUpdateDelaySeconds }}s</span>
-                  </div>
-                </div>
-                <div class="form-control mt-2">
-                  <label class="label cursor-pointer">
-                    <span class="label-text">Highlight changes</span>
-                    <input
-                      v-model="highlightChanges"
-                      type="checkbox"
-                      class="toggle toggle-primary toggle-sm"
-                    />
-                  </label>
-                </div>
-                <button
-                  v-if="updateCounter > 0"
-                  class="btn btn-xs btn-ghost mt-2 w-full"
-                  @click="clearUpdateCounter"
-                >
-                  Clear counter ({{ updateCounter }})
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
+        <RefreshButton />
+        <LiveTableButton
+            :table-name="props.tableName"
+            :connection-id="props.connectionId"
+            :show-preview-modal="showPreviewModal"
+        />
 
         <button
           class="btn btn-sm btn-ghost text-error"
@@ -127,7 +34,7 @@
         </button>
         <button
           class="btn btn-sm btn-ghost"
-          :disabled="selectedRows.length === 0"
+          :disabled="tableDataStore.selectedRows.length === 0"
           @click="deleteSelected"
         >
           <svg
@@ -145,7 +52,7 @@
             />
           </svg>
           <span class="hidden sm:inline"
-            >Delete{{ selectedRows.length > 0 ? ` (${selectedRows.length})` : '' }}</span
+            >Delete{{ tableDataStore.selectedRows.length > 0 ? ` (${tableDataStore.selectedRows.length})` : '' }}</span
           >
         </button>
       </div>
@@ -154,7 +61,7 @@
         <div class="relative flex items-center gap-2">
           <div class="input-group">
             <input
-              v-model="filterTerm"
+              v-model="tableDataStore.filterTerm"
               type="text"
               placeholder="Filter..."
               class="input input-sm input-bordered bg-base-300 w-full sm:w-64"
@@ -163,8 +70,8 @@
             <button
               class="btn btn-sm"
               :class="{
-                'bg-base-300 border-base-300': !activeFilter && !filterTerm,
-                'bg-primary border-primary text-white': activeFilter || filterTerm
+                'bg-base-300 border-base-300': !tableDataStore.activeFilter.value && !tableDataStore.filterTerm,
+                'bg-primary border-primary text-white': tableDataStore.activeFilter.value || tableDataStore.filterTerm
               }"
               @click="toggleAdvancedFilter"
             >
@@ -185,7 +92,7 @@
             </button>
           </div>
           <button
-            v-if="filterTerm || activeFilter"
+            v-if="tableDataStore.filterTerm || tableDataStore.activeFilter.value"
             class="btn btn-sm btn-primary"
             @click="clearFilters"
           >
@@ -202,7 +109,7 @@
           </button>
         </div>
         <select
-          v-model="rowsPerPage"
+          v-model="tableDataStore.rowsPerPage.value"
           class="select select-sm select-bordered bg-base-300 w-24 sm:w-32"
         >
           <option value="10">10 rows</option>
@@ -214,11 +121,11 @@
     </div>
 
     <div class="flex-1 overflow-auto">
-      <div v-if="isLoading && !isLiveUpdating" class="flex items-center justify-center h-full">
+      <div v-if="isLoading && !tableDataStore.isLiveUpdating" class="flex items-center justify-center h-full">
         <span class="loading loading-spinner loading-lg" />
       </div>
 
-      <div v-else-if="loadError" class="flex items-center justify-center h-full text-error">
+      <div v-else-if="tableDataStore.loadError" class="flex items-center justify-center h-full text-error">
         <div class="text-center">
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -234,13 +141,13 @@
               d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"
             />
           </svg>
-          <p>{{ loadError }}</p>
-          <button class="btn btn-sm btn-primary mt-4" @click="loadTableData">Try again</button>
+          <p>{{ tableDataStore.loadError }}</p>
+          <button class="btn btn-sm btn-primary mt-4" @click="tableDataStore.loadTableData()">Try again</button>
         </div>
       </div>
 
       <div
-        v-else-if="(filterTerm || activeFilter) && filteredData.length === 0"
+        v-else-if="(tableDataStore.filterTerm || tableDataStore.activeFilter.value) && tableDataStore.filteredData.length === 0"
         class="flex items-center justify-center h-full text-gray-500"
       >
         <div class="text-center">
@@ -261,13 +168,13 @@
           <p>No records match your filter</p>
           <div class="flex justify-center space-x-2 mt-4">
             <button class="btn btn-sm btn-error" @click="clearFilters">Clear Filters</button>
-            <button class="btn btn-sm btn-primary" @click="loadTableData">Reload Data</button>
+            <button class="btn btn-sm btn-primary" @click="tableDataStore.loadTableData()">Reload Data</button>
           </div>
         </div>
       </div>
 
       <div
-        v-else-if="tableData.length > 0"
+        v-else-if="tableDataStore.tableData.length > 0"
         ref="tableContainer"
         tabindex="0"
         class="h-full relative flex flex-col"
@@ -285,7 +192,7 @@
                   <span class="sr-only">Preview</span>
                 </th>
                 <th
-                  v-for="(column, index) in columns"
+                  v-for="(column, index) in tableDataStore.columns"
                   :key="column"
                   class="px-4 py-2 border-r border-neutral last:border-r-0 relative whitespace-nowrap top-0 cursor-pointer"
                   :class="{
@@ -293,16 +200,15 @@
                     'sticky left-10 z-10': index === 0
                   }"
                   :style="{
-                    width: columnWidths[column] || defaultColumnWidth(column),
-                    maxWidth: columnWidths[column] || defaultColumnWidth(column)
+                    width: tableDataStore.columnWidths[column] || tableDataStore.defaultColumnWidth(column),
+                    maxWidth: tableDataStore.columnWidths[column] || tableDataStore.defaultColumnWidth(column)
                   }"
                   @click.stop="handleSortClick(column)"
                 >
                   <div class="flex items-center justify-between">
                     <span class="truncate">{{ column }}</span>
                     <div class="flex items-center">
-                      <!-- Sort indicator -->
-                      <span v-if="currentSortColumn === column" class="ml-1">
+                      <span v-if="tableDataStore.currentSortColumn === column" class="ml-1">
                         <svg
                           xmlns="http://www.w3.org/2000/svg"
                           fill="none"
@@ -310,7 +216,7 @@
                           stroke-width="1.5"
                           stroke="currentColor"
                           class="w-4 h-4"
-                          :class="{ 'rotate-180': currentSortDirection === 'desc' }"
+                          :class="{ 'rotate-180': tableDataStore.currentSortDirection === 'desc' }"
                         >
                           <path
                             stroke-linecap="round"
@@ -321,9 +227,8 @@
                       </span>
                     </div>
                   </div>
-                  <!-- Enhanced resize handle with visual indicator -->
                   <div
-                    v-if="index < columns.length - 1"
+                    v-if="index < tableDataStore.columns.length - 1"
                     class="absolute right-0 top-0 h-full w-2 cursor-col-resize group"
                     @mousedown.stop="startColumnResize($event, column)"
                   >
@@ -337,7 +242,7 @@
 
             <tbody @dblclick.stop.prevent>
               <tr
-                v-for="(row, rowIndex) in paginatedData"
+                v-for="(row, rowIndex) in tableDataStore.paginatedData"
                 :key="rowIndex"
                 :class="getRowClasses(rowIndex)"
                 class="border-b border-neutral hover:bg-base-200 cursor-pointer"
@@ -377,7 +282,7 @@
                   </button>
                 </td>
                 <td
-                  v-for="(column, colIndex) in columns"
+                  v-for="(column, colIndex) in tableDataStore.columns"
                   :key="`${rowIndex}-${column}`"
                   class="px-4 py-2 border-r border-neutral last:border-r-0 truncate whitespace-nowrap overflow-hidden"
                   :class="[
@@ -385,30 +290,27 @@
                     colIndex === 0 ? getRowBackgroundClass(rowIndex) : ''
                   ]"
                   :style="{
-                    width: columnWidths[column] || defaultColumnWidth(column),
-                    maxWidth: columnWidths[column] || defaultColumnWidth(column)
+                    width: tableDataStore.columnWidths[column] || tableDataStore.defaultColumnWidth(column),
+                    maxWidth: tableDataStore.columnWidths[column] || tableDataStore.defaultColumnWidth(column)
                   }"
                   @dblclick.stop="openEditModal(row)"
                 >
                   <div class="flex items-center justify-between w-full">
-                    <!-- Conteúdo da célula -->
                     <span
                       :class="{
-                        'text-gray-500 italic': row[column] === null && isForeignKeyColumn(column)
+                        'text-gray-500 italic': row[column] === null && tableDataStore.isForeignKeyColumn(column)
                       }"
                     >
                       {{
-                        row[column] === null && isForeignKeyColumn(column)
-                          ? 'Não relacionado'
+                        row[column] === null && tableDataStore.isForeignKeyColumn(column)
+                          ? 'Not related'
                           : formatCellValue(row[column])
                       }}
                     </span>
 
-                    <!-- Ícone de chave estrangeira, quando aplicável (agora no final da célula) -->
                     <button
-                      v-if="isForeignKeyColumn(column) && row[column] !== null"
+                      v-if="tableDataStore.isForeignKeyColumn(column) && row[column] !== null"
                       class="ml-1 text-white hover:text-primary-focus transition-colors cursor-pointer flex-shrink-0"
-                      title="Navegar para registro relacionado"
                       @click.stop="navigateToForeignKey(column, row[column])"
                     >
                       <svg
@@ -427,9 +329,8 @@
                       </svg>
                     </button>
 
-                    <!-- Ícone para chaves estrangeiras nulas (agora no final da célula) -->
                     <span
-                      v-else-if="isForeignKeyColumn(column) && row[column] === null"
+                      v-else-if="tableDataStore.isForeignKeyColumn(column) && row[column] === null"
                       class="ml-1 text-gray-500 flex-shrink-0"
                       title="Relação nula"
                     >
@@ -473,21 +374,21 @@
             />
           </svg>
           <p>Records not found</p>
-          <button class="btn btn-sm btn-primary mt-4" @click="loadTableData">Reload</button>
+          <button class="btn btn-sm btn-primary mt-4" @click="tableDataStore.loadTableData()">Reload</button>
         </div>
       </div>
     </div>
 
     <div
-      v-if="tableData.length > 0"
+      v-if="tableDataStore.tableData.length > 0"
       class="bg-base-200 px-4 py-3 border-t border-neutral flex flex-col sm:flex-row justify-between items-center text-xs sticky bottom-0 left-0 right-0 min-h-[56px] z-20"
     >
       <div class="flex items-center mb-2 sm:mb-0">
         <span class="text-gray-400">
           {{ tableName }} | {{ totalRecords }} records{{
-            selectedRows.length > 0 ? ` | ${selectedRows.length} selected` : ''
+            tableDataStore.selectedRows.length > 0 ? ` | ${tableDataStore.selectedRows.length} selected` : ''
           }}
-          | <span>{{ columns.length }} columns</span>
+          | <span>{{ tableDataStore.columns.length }} columns</span>
         </span>
         <div class="ml-4 flex space-x-2">
           <button class="btn btn-ghost btn-xs">
@@ -514,8 +415,8 @@
         <div class="join">
           <button
             class="join-item btn btn-xs"
-            :class="{ 'btn-disabled': currentPage === 1 }"
-            :disabled="currentPage === 1"
+            :class="{ 'btn-disabled': tableDataStore.currentPage === 1 }"
+            :disabled="tableDataStore.currentPage === 1"
             @click="goToFirstPage"
           >
             <svg
@@ -535,8 +436,8 @@
           </button>
           <button
             class="join-item btn btn-xs"
-            :class="{ 'btn-disabled': currentPage === 1 }"
-            :disabled="currentPage === 1"
+            :class="{ 'btn-disabled': tableDataStore.currentPage === 1 }"
+            :disabled="tableDataStore.currentPage === 1"
             @click="prevPage"
           >
             <svg
@@ -556,13 +457,13 @@
           </button>
 
           <div class="join-item btn btn-xs btn-disabled">
-            <span class="text-xs"> {{ currentPage }} / {{ totalPages }} </span>
+            <span class="text-xs"> {{ tableDataStore.currentPage }} / {{ totalPages }} </span>
           </div>
 
           <button
             class="join-item btn btn-xs"
-            :class="{ 'btn-disabled': currentPage === totalPages }"
-            :disabled="currentPage === totalPages"
+            :class="{ 'btn-disabled': tableDataStore.currentPage === totalPages }"
+            :disabled="tableDataStore.currentPage === totalPages"
             @click="nextPage"
           >
             <svg
@@ -578,8 +479,8 @@
           </button>
           <button
             class="join-item btn btn-xs"
-            :class="{ 'btn-disabled': currentPage === totalPages }"
-            :disabled="currentPage === totalPages"
+            :class="{ 'btn-disabled': tableDataStore.currentPage === totalPages }"
+            :disabled="tableDataStore.currentPage === totalPages"
             @click="goToLastPage"
           >
             <svg
@@ -602,9 +503,9 @@
         <div class="flex items-center space-x-2">
           <span class="text-gray-400 hidden sm:inline-block">Rows per page:</span>
           <select
-            v-model="rowsPerPage"
+            v-model="tableDataStore.rowsPerPage.value"
             class="select select-xs select-bordered bg-base-300 w-16"
-            @change="currentPage = 1"
+            @change="tableDataStore.currentPage = 1"
           >
             <option value="10">10</option>
             <option value="25">25</option>
@@ -659,7 +560,6 @@
               </span>
             </label>
 
-            <!-- Different input types based on column type -->
             <textarea
               v-if="isLongTextField(column)"
               v-model="editingRecord[column]"
@@ -771,7 +671,7 @@
             <p class="mb-2">Available columns:</p>
             <div class="flex flex-wrap gap-1 mb-4">
               <span
-                v-for="column in columns"
+                v-for="column in tableDataStore.columns"
                 :key="column"
                 class="badge badge-primary cursor-pointer"
                 @click="insertColumnName(column)"
@@ -823,7 +723,6 @@
       <div class="modal-backdrop" @click="showFilterModal = false" />
     </div>
 
-    <!-- Confirm truncate modal -->
     <div class="modal z-50" :class="{ 'modal-open': showTruncateConfirm }">
       <div class="modal-box">
         <h3 class="font-bold text-lg text-error">⚠️ Truncate Table</h3>
@@ -839,12 +738,11 @@
       <div class="modal-backdrop" @click="showTruncateConfirm = false" />
     </div>
 
-    <!-- Confirm delete modal -->
     <div class="modal z-50" :class="{ 'modal-open': showDeleteConfirm }">
       <div class="modal-box">
         <h3 class="font-bold text-lg text-error">Delete Records</h3>
         <p class="py-4">
-          Are you sure you want to delete {{ selectedRows.length }} record(s)? This action cannot be
+          Are you sure you want to delete {{ tableDataStore.selectedRows.length }} record(s)? This action cannot be
           undone.
         </p>
         <div class="modal-action">
@@ -855,21 +753,26 @@
       <div class="modal-backdrop" @click="showDeleteConfirm = false" />
     </div>
 
-    <!-- Use the separate preview modal component -->
     <DataPreviewModal
-      v-if="previewingRecord"
+      v-if="tableDataStore.previewingRecord"
       :show="showPreviewModal"
-      :record="previewingRecord"
-      :columns="columns"
+      :record="tableDataStore.previewingRecord"
+      :columns="tableDataStore.columns"
       @close="closePreviewModal"
     />
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted, inject, nextTick, watch } from 'vue';
+import { ref, computed, onMounted, onUnmounted, inject, watch } from 'vue';
 import { useDatabaseStore } from '@/store/database';
 import DataPreviewModal from '@/components/database/DataPreviewModal.vue';
+import RefreshButton from "@/components/tabs/components/RefreshButton.vue";
+import LiveTableButton from "@/components/tabs/components/LiveTableButton.vue";
+
+import { useTableDataStore } from '@/store/table-data';
+
+const tableDataStore = useTableDataStore();
 
 const showAlert = inject('showAlert');
 
@@ -898,34 +801,21 @@ const props = defineProps({
 });
 
 const isLoading = ref(true);
-const tableData = ref([]);
-const filterTerm = ref('');
-const loadError = ref(null);
-const rowsPerPage = ref(25);
-const currentPage = ref(1);
 const tableContainer = ref(null);
-
-const columnWidths = ref({});
 const resizingColumn = ref(null);
 const startX = ref(0);
 const startWidth = ref(0);
 const recentlyResized = ref(false);
-
-const columnTypes = ref({});
-
-const selectedRows = ref([]);
 const isDragging = ref(false);
-const lastSelectedId = ref(null);
 const shiftKeyPressed = ref(false);
 const ctrlKeyPressed = ref(false);
 const selectionStartId = ref(null);
-
 const pageInput = ref(1);
-const totalRecordsCount = ref(0);
 const totalPages = computed(() => {
-  if (rowsPerPage.value === 0) return 1;
-  return Math.ceil(totalRecords.value / rowsPerPage.value);
+  if (tableDataStore.rowsPerPage.value === 0) return 1;
+  return Math.ceil(totalRecords.value / tableDataStore.rowsPerPage.value);
 });
+const showPreviewModal = ref(false);
 
 const showEditModal = ref(false);
 const editingRecord = ref(null);
@@ -934,106 +824,20 @@ const originalRecord = ref(null);
 const showFilterModal = ref(false);
 const advancedFilterTerm = ref('');
 const persistFilter = ref(true);
-const activeFilter = ref('');
 const originalFilterTerm = ref('');
 
 const showDeleteConfirm = ref(false);
 const showTruncateConfirm = ref(false);
 const deletingIds = ref([]);
+const windowInFocus = ref(true);
 
 const databaseStore = useDatabaseStore();
 
-const columns = computed(() => {
-  if (tableData.value.length === 0) {
-    return [];
-  }
-  return Object.keys(tableData.value[0]);
-});
-
-const filteredData = computed(() => {
-  let data = tableData.value;
-
-  // First apply the advanced SQL filter if present
-  if (activeFilter.value) {
-    try {
-      data = applySqlFilter(data, activeFilter.value);
-    } catch (error) {
-      console.error('Error applying SQL filter:', error);
-    }
-  }
-
-  // Then apply the simple text filter if present
-  if (filterTerm.value) {
-    const term = filterTerm.value.toLowerCase();
-    data = data.filter(row => {
-      return Object.values(row).some(value => {
-        if (value === null) return false;
-        return String(value).toLowerCase().includes(term);
-      });
-    });
-  }
-
-  // Apply sorting if there's a sort column and local filtering/sorting is active
-  if (currentSortColumn.value && (activeFilter.value || filterTerm.value)) {
-    data = [...data].sort((a, b) => {
-      const valA = a[currentSortColumn.value];
-      const valB = b[currentSortColumn.value];
-
-      // Handle null values
-      if (valA === null && valB === null) return 0;
-      if (valA === null) return currentSortDirection.value === 'asc' ? -1 : 1;
-      if (valB === null) return currentSortDirection.value === 'asc' ? 1 : -1;
-
-      // Compare based on type
-      if (typeof valA === 'number' && typeof valB === 'number') {
-        return currentSortDirection.value === 'asc' ? valA - valB : valB - valA;
-      }
-
-      // Default string comparison
-      const strA = String(valA).toLowerCase();
-      const strB = String(valB).toLowerCase();
-
-      if (currentSortDirection.value === 'asc') {
-        return strA.localeCompare(strB);
-      } else {
-        return strB.localeCompare(strA);
-      }
-    });
-  }
-
-  return data;
-});
-
-const paginatedData = computed(() => {
-  // Se houver filtro, precisamos paginar os dados filtrados localmente
-  if (filterTerm.value || activeFilter.value) {
-    // Aplicar paginação local nos dados filtrados
-    if (rowsPerPage.value === 0) {
-      return filteredData.value;
-    }
-
-    const start = (currentPage.value - 1) * parseInt(rowsPerPage.value);
-    const end = start + parseInt(rowsPerPage.value);
-
-    console.log(
-      `Paginação local: página ${currentPage.value}, início ${start}, fim ${end}, total ${filteredData.value.length}`
-    );
-
-    return filteredData.value.slice(start, end);
-  } else {
-    // Sem filtro, já temos os dados paginados do servidor
-    console.log(
-      `Usando dados paginados do servidor: ${tableData.value.length} registros na página ${currentPage.value}`
-    );
-    return tableData.value;
-  }
-});
-
 const totalRecords = computed(() => {
-  if (filterTerm.value || activeFilter.value) {
-    return filteredData.value.length;
+  if (tableDataStore.filterTerm.value || tableDataStore.activeFilter.value) {
+    return tableDataStore.filteredData.value.length;
   }
-  return totalRecordsCount.value;
+  return tableDataStore.totalRecordsCount.value;
 });
 
 function formatCellValue(value) {
@@ -1064,168 +868,23 @@ function formatCellValue(value) {
   return String(value);
 }
 
-function defaultColumnWidth(column) {
-  // Base width calculation using column name length
-  const baseWidth = Math.max(120, column.length * 10);
-
-  // Special case handling for specific column types
-  if (/^id$/i.test(column)) return `${Math.max(90, column.length * 12)}px`;
-
-  return `${baseWidth}px`;
-}
-
-function analyzeColumns() {
-  if (tableData.value.length === 0 || columns.value.length === 0) return;
-
-  columns.value.forEach(column => {
-    if (columnWidths.value[column]) return;
-
-    const sampleValue = tableData.value.find(row => row[column] !== null)?.[column];
-    if (sampleValue !== undefined) {
-      const type = typeof sampleValue;
-      columnTypes.value[column] = type;
-
-      if (!columnWidths.value[column]) {
-        columnWidths.value[column] = defaultColumnWidth(column);
-      }
-    }
-  });
-}
-
-async function loadTableData() {
-  console.log('loadTableData chamado com:', {
-    sortColumn: currentSortColumn.value,
-    sortDirection: currentSortDirection.value
-  });
-
-  const wasLoading = isLoading.value;
-
-  if (!isLiveUpdating.value) {
-    isLoading.value = true;
-  }
-
-  if (!loadStartTime.value) {
-    loadStartTime.value = Date.now();
-  }
-
-  const loadingTimer = setTimeout(() => {
-    if (isLoading.value) {
-    }
-  }, 100);
-
-  loadError.value = null;
-
-  const selectedRowIds = [];
-  if (isLiveTableActive.value && selectedRows.value.length > 0) {
-    selectedRows.value.forEach(rowIndex => {
-      const row = paginatedData.value[rowIndex];
-      if (row && row.id) {
-        selectedRowIds.push(row.id);
-      }
-    });
-  } else {
-    selectedRows.value = [];
-  }
-
-  try {
-    const cacheKey = `${props.connectionId}:${props.tableName}`;
-    databaseStore.clearTableCache(cacheKey);
-
-    // Adicionar parâmetros de ordenação
-    const sortParams = currentSortColumn.value
-      ? {
-          sortColumn: currentSortColumn.value,
-          sortDirection: currentSortDirection.value
-        }
-      : {};
-
-    // Verificar os parâmetros de ordenação
-    console.log('Enviando parâmetros de ordenação:', JSON.stringify(sortParams));
-
-    const result = await databaseStore.loadTableData(
-      props.connectionId,
-      props.tableName,
-      rowsPerPage.value,
-      currentPage.value,
-      sortParams
-    );
-
-    // Verificar os resultados
-    console.log(`Resultados recebidos: ${result.data?.length || 0} registros`);
-    if (result.data?.length > 1) {
-      console.log('Primeiro registro:', result.data[0]);
-      console.log('Último registro:', result.data[result.data.length - 1]);
-    }
-
-    if (!result.data || result.data.length === 0) {
-      showAlert('No data found for this page', 'warning');
-    }
-
-    tableData.value = result.data || [];
-    totalRecordsCount.value = result.totalRecords || 0;
-
-    if (isLiveTableActive.value && selectedRowIds.length > 0) {
-      selectedRows.value = [];
-      paginatedData.value.forEach((row, index) => {
-        if (row && row.id && selectedRowIds.includes(row.id)) {
-          selectedRows.value.push(index);
-        }
-      });
-
-      if (selectedRows.value.length > 0) {
-        lastSelectedId.value = selectedRows.value[selectedRows.value.length - 1];
-      }
-    }
-
-    nextTick(() => {
-      analyzeColumns();
-    });
-
-    await loadForeignKeyInfo();
-
-    props.onLoad({
-      columns: columns.value,
-      rowCount: result.totalRecords || 0
-    });
-  } catch (error) {
-    loadError.value = error.message;
-    showAlert(`Error loading data: ${error.message}`, 'error');
-    tableData.value = [];
-    totalRecordsCount.value = 0;
-  } finally {
-    clearTimeout(loadingTimer);
-
-    if (Date.now() - loadStartTime.value < 100 && wasLoading === false) {
-      isLoading.value = false;
-    } else {
-      setTimeout(() => {
-        isLoading.value = false;
-      }, 50);
-    }
-
-    loadStartTime.value = 0;
-  }
-
-  return Promise.resolve();
-}
-
 function startColumnResize(event, column) {
   event.preventDefault();
   event.stopPropagation();
   resizingColumn.value = column;
   startX.value = event.clientX;
 
-  if (!columnWidths.value[column] || !columnWidths.value[column].endsWith('px')) {
+  if (!tableDataStore.columnWidths.value[column] || !tableDataStore.columnWidths.value[column].endsWith('px')) {
     const headerCells = document.querySelectorAll('th');
-    const columnIndex = columns.value.indexOf(column);
+    const columnIndex = tableDataStore.columns.value.indexOf(column);
     if (columnIndex >= 0 && headerCells[columnIndex]) {
-      columnWidths.value[column] = `${headerCells[columnIndex].offsetWidth}px`;
+      tableDataStore.columnWidths.value[column] = `${headerCells[columnIndex].offsetWidth}px`;
     } else {
-      columnWidths.value[column] = defaultColumnWidth(column);
+      tableDataStore.columnWidths.value[column] = tableDataStore.defaultColumnWidth(column);
     }
   }
 
-  startWidth.value = parseInt(columnWidths.value[column]) || 100;
+  startWidth.value = parseInt(tableDataStore.columnWidths.value[column]) || 100;
 
   document.addEventListener('mousemove', handleColumnResize);
   document.addEventListener('mouseup', stopColumnResize);
@@ -1236,31 +895,29 @@ function handleColumnResize(event) {
 
   const column = resizingColumn.value;
   const width = Math.max(60, startWidth.value + (event.clientX - startX.value));
-  columnWidths.value[column] = `${width}px`;
+  tableDataStore.columnWidths.value[column] = `${width}px`;
 }
 
-function stopColumnResize(event) {
+function stopColumnResize() {
   document.removeEventListener('mousemove', handleColumnResize);
   document.removeEventListener('mouseup', stopColumnResize);
   resizingColumn.value = null;
 
-  // Set the recentlyResized flag
   recentlyResized.value = true;
 
-  // Clear the flag after a short delay
   setTimeout(() => {
     recentlyResized.value = false;
-  }, 500); // 500ms cooldown
+  }, 500);
 }
 
 function getRowClasses(rowIndex) {
   const isSelected =
-    selectedRows.value && selectedRows.value.includes && selectedRows.value.includes(rowIndex);
+    tableDataStore.selectedRows.value && tableDataStore.selectedRows.value.includes && tableDataStore.selectedRows.value.includes(rowIndex);
   const isUpdated =
-    highlightChanges.value &&
-    updatedRows.value &&
-    updatedRows.value.includes &&
-    updatedRows.value.includes(rowIndex);
+    tableDataStore.highlightChanges.value &&
+    tableDataStore.updatedRows.value &&
+    tableDataStore.updatedRows.value.includes &&
+    tableDataStore.updatedRows.value.includes(rowIndex);
 
   return {
     'selected-row': isSelected,
@@ -1270,15 +927,15 @@ function getRowClasses(rowIndex) {
 }
 
 function getRowBackgroundClass(rowIndex) {
-  if (selectedRows.value && selectedRows.value.includes && selectedRows.value.includes(rowIndex)) {
+  if (tableDataStore.selectedRows.value && tableDataStore.selectedRows.value.includes && tableDataStore.selectedRows.value.includes(rowIndex)) {
     return 'bg-[#ea4331] text-white';
   }
 
   if (
-    highlightChanges.value &&
-    updatedRows.value &&
-    updatedRows.value.includes &&
-    updatedRows.value.includes(rowIndex)
+    tableDataStore.highlightChanges.value &&
+    tableDataStore.updatedRows.value &&
+    tableDataStore.updatedRows.value.includes &&
+    tableDataStore.updatedRows.value.includes(rowIndex)
   ) {
     return 'bg-[rgba(234,67,49,0.1)]';
   }
@@ -1301,41 +958,42 @@ function handleRowClick(event, rowIndex) {
   }
 
   if (ctrlKeyPressed.value) {
-    const index = selectedRows.value.indexOf(rowIndex);
+    const index = tableDataStore.selectedRows.value.indexOf(rowIndex);
     if (index !== -1) {
-      selectedRows.value.splice(index, 1);
+      tableDataStore.selectedRows.value.splice(index, 1);
     } else {
-      selectedRows.value.push(rowIndex);
+      tableDataStore.selectedRows.value.push(rowIndex);
     }
 
-    lastSelectedId.value = rowIndex;
+    tableDataStore.lastSelectedId.value = rowIndex;
     return;
   }
 
-  if (shiftKeyPressed.value && lastSelectedId.value !== null) {
-    const start = Math.min(lastSelectedId.value, rowIndex);
-    const end = Math.max(lastSelectedId.value, rowIndex);
+  if (shiftKeyPressed.value && tableDataStore.lastSelectedId.value !== null) {
+    const start = Math.min(tableDataStore.lastSelectedId.value, rowIndex);
+    const end = Math.max(tableDataStore.lastSelectedId.value, rowIndex);
 
     const rangeIds = [];
+
     for (let i = start; i <= end; i++) {
       rangeIds.push(i);
     }
 
-    selectedRows.value = rangeIds;
+    tableDataStore.selectedRows.value = rangeIds;
     return;
   }
 
-  if (selectedRows.value.length === 1 && selectedRows.value[0] === rowIndex) {
-    selectedRows.value = [];
-    lastSelectedId.value = null;
+  if (tableDataStore.selectedRows.value.length === 1 && tableDataStore.selectedRows.value[0] === rowIndex) {
+    tableDataStore.selectedRows.value = [];
+    tableDataStore.lastSelectedId.value = null;
   } else {
-    selectedRows.value = [rowIndex];
-    lastSelectedId.value = rowIndex;
+    tableDataStore.selectedRows.value = [rowIndex];
+    tableDataStore.lastSelectedId.value = rowIndex;
   }
 }
 
 function selectAll() {
-  selectedRows.value = paginatedData.value.map((_, index) => index);
+  tableDataStore.selectedRows.value = tableDataStore.paginatedData.value.map((_, index) => index);
 }
 
 function handleTableKeyDown(e) {
@@ -1343,9 +1001,9 @@ function handleTableKeyDown(e) {
     e.preventDefault();
     selectAll();
   } else if (e.key === 'Escape') {
-    selectedRows.value = [];
-    lastSelectedId.value = null;
-  } else if (e.key === 'Delete' && selectedRows.value.length > 0) {
+    tableDataStore.selectedRows.value = [];
+    tableDataStore.lastSelectedId.value = null;
+  } else if (e.key === 'Delete' && tableDataStore.selectedRows.value.length > 0) {
     e.preventDefault();
     deleteSelected();
   }
@@ -1353,16 +1011,16 @@ function handleTableKeyDown(e) {
 
 function handleOutsideClick(event) {
   if (event.target === tableContainer.value || event.target.closest('thead')) {
-    selectedRows.value = [];
-    lastSelectedId.value = null;
+    tableDataStore.selectedRows.value = [];
+    tableDataStore.lastSelectedId.value = null;
   }
 }
 
 function deleteSelected() {
-  if (selectedRows.value.length === 0) return;
+  if (tableDataStore.selectedRows.value.length === 0) return;
 
-  deletingIds.value = selectedRows.value.map(index => {
-    const id = paginatedData.value[index].id;
+  deletingIds.value = tableDataStore.selectedRows.value.map(index => {
+    const id = tableDataStore.paginatedData.value[index].id;
 
     return typeof id === 'object' ? String(id) : id;
   });
@@ -1376,8 +1034,6 @@ async function confirmDelete() {
   try {
     const idsToDelete = [...deletingIds.value];
 
-    console.log('Deleting IDs:', idsToDelete);
-
     const result = await databaseStore.deleteRecords(
       props.connectionId,
       props.tableName,
@@ -1386,10 +1042,12 @@ async function confirmDelete() {
 
     showAlert(result.message, 'success');
 
-    selectedRows.value = [];
-    await loadTableData();
+    tableDataStore.selectedRows.value = [];
+
+    await tableDataStore.loadTableData();
   } catch (error) {
     console.error('Error in confirmDelete:', error);
+
     if (error.message.includes('referenced by other tables')) {
       showAlert(
         'Cannot delete records because they are referenced by other tables. Remove the related records first or use CASCADE constraints.',
@@ -1413,8 +1071,8 @@ async function truncateTable() {
 
     showAlert(result.message, 'success');
 
-    selectedRows.value = [];
-    await loadTableData();
+    tableDataStore.selectedRows.value = [];
+    await tableDataStore.loadTableData();
   } catch (error) {
     showAlert(`Error truncating table: ${error.message}`, 'error');
   }
@@ -1425,8 +1083,8 @@ const handleKeyDown = e => {
   ctrlKeyPressed.value = e.ctrlKey || e.metaKey;
 
   if (e.key === 'Escape') {
-    selectedRows.value = [];
-    lastSelectedId.value = null;
+    tableDataStore.selectedRows.value = [];
+    tableDataStore.lastSelectedId.value = null;
   }
 };
 
@@ -1436,40 +1094,40 @@ const handleKeyUp = e => {
 };
 
 function prevPage() {
-  if (currentPage.value > 1) {
-    currentPage.value--;
+  if (tableDataStore.currentPage.value > 1) {
+    tableDataStore.currentPage.value--;
     scrollToTop();
   }
 }
 
 function nextPage() {
-  if (currentPage.value < totalPages.value) {
-    currentPage.value++;
+  if (tableDataStore.currentPage.value < totalPages.value) {
+    tableDataStore.currentPage.value++;
     scrollToTop();
   }
 }
 
 function goToFirstPage() {
-  if (currentPage.value !== 1) {
-    currentPage.value = 1;
+  if (tableDataStore.currentPage.value.value !== 1) {
+    tableDataStore.currentPage.value.value = 1;
     scrollToTop();
   }
 }
 
 function goToLastPage() {
-  if (currentPage.value !== totalPages.value) {
-    currentPage.value = totalPages.value;
+  if (tableDataStore.currentPage.value !== totalPages.value) {
+    tableDataStore.currentPage.value = totalPages.value;
     scrollToTop();
   }
 }
 
 function goToPage() {
   const page = parseInt(pageInput.value);
-  if (!isNaN(page) && page >= 1 && page <= totalPages.value && page !== currentPage.value) {
-    currentPage.value = page;
+  if (!isNaN(page) && page >= 1 && page <= totalPages.value && page !== tableDataStore.currentPage.value) {
+    tableDataStore.currentPage.value = page;
     scrollToTop();
   } else {
-    pageInput.value = currentPage.value;
+    pageInput.value = tableDataStore.currentPage.value;
   }
 }
 
@@ -1480,13 +1138,13 @@ function scrollToTop() {
 }
 
 watch(
-  () => currentPage.value,
+  () => tableDataStore.currentPage.value,
   (newPage, oldPage) => {
     if (newPage !== oldPage) {
       pageInput.value = newPage;
 
-      if (!filterTerm.value && !activeFilter.value) {
-        loadTableData();
+      if (!tableDataStore.filterTerm.value && !tableDataStore.activeFilter.value) {
+        tableDataStore.loadTableData();
       }
     }
   }
@@ -1547,18 +1205,15 @@ async function saveRecord() {
         }
       }
 
-      // Armazenar o valor processado
       recordToSave[key] = value;
     }
-
-    console.log('Saving record:', recordToSave);
 
     if (!recordToSave.id) {
       showAlert('Record must have an ID field to update', 'error');
       return;
     }
 
-    const index = tableData.value.findIndex(row => {
+    const index = tableDataStore.tableData.value.findIndex(row => {
       if (row.id && originalRecord.value.id) {
         return row.id === originalRecord.value.id;
       }
@@ -1577,7 +1232,7 @@ async function saveRecord() {
     );
 
     if (result) {
-      tableData.value[index] = { ...recordToSave };
+      tableDataStore.tableData.value[index] = { ...recordToSave };
       showAlert('Record updated successfully', 'success');
       closeEditModal();
     } else {
@@ -1656,10 +1311,10 @@ function getFieldTypeLabel(column) {
 }
 
 function handleRowDoubleClick(row) {
-  const rowIndex = paginatedData.value.findIndex(r => r === row);
+  const rowIndex = tableDataStore.paginatedData.value.findIndex(r => r === row);
 
-  if (!selectedRows.value.includes(rowIndex)) {
-    selectedRows.value = [];
+  if (!tableDataStore.selectedRows.value.includes(rowIndex)) {
+    tableDataStore.selectedRows.value = [];
   }
 
   openEditModal(row);
@@ -1689,7 +1344,7 @@ function handleMouseEnter(rowIndex) {
     rangeIds.push(i);
   }
 
-  selectedRows.value = rangeIds;
+  tableDataStore.selectedRows.value = rangeIds;
 }
 
 function handleMouseUp(event) {
@@ -1699,68 +1354,60 @@ function handleMouseUp(event) {
     return;
   }
 
-  if (selectedRows.value.length > 0) {
-    lastSelectedId.value = selectedRows.value[selectedRows.value.length - 1];
+  if (tableDataStore.selectedRows.value.length > 0) {
+    tableDataStore.lastSelectedId.value = tableDataStore.selectedRows.value[tableDataStore.selectedRows.value.length - 1];
   }
 
   isDragging.value = false;
   selectionStartId.value = null;
 }
 
-// Handle localStorage changes from other tabs/windows
 function handleStorageChange(event) {
   if (!event.key) return;
 
-  // Check if our specific live table setting was changed from another window
   const ourKey = `liveTable.enabled.${props.connectionId}.${props.tableName}`;
   if (event.key === ourKey) {
     const newValue = event.newValue === 'true';
-    if (newValue !== isLiveTableActive.value) {
-      isLiveTableActive.value = newValue;
+    if (newValue !== tableDataStore.isLiveTableActive.value) {
+      tableDataStore.isLiveTableActive.value = newValue;
       if (newValue) {
-        startLiveUpdates();
+        tableDataStore.startLiveUpdates();
       } else {
-        stopLiveUpdates();
+        tableDataStore.stopLiveUpdates();
       }
     }
   }
 
-  // Check if another table was activated
   if (
     event.key.startsWith('liveTable.enabled.') &&
     event.key !== ourKey &&
     event.newValue === 'true' &&
-    isLiveTableActive.value
+    tableDataStore.isLiveTableActive.value
   ) {
-    // Another table was activated, deactivate this one
-    isLiveTableActive.value = false;
-    stopLiveUpdates();
+    tableDataStore.isLiveTableActive.value = false;
+    tableDataStore.stopLiveUpdates();
     localStorage.setItem(ourKey, 'false');
   }
 }
 
-const handleTabActivation = event => {
-  // Refresh state immediately and again after a short delay to ensure UI is updated
+const handleTabActivation = () => {
   refreshLiveTableState();
   setTimeout(refreshLiveTableState, 100);
 };
 
 const refreshLiveTableState = () => {
   try {
-    // Get current state from localStorage
     const liveTableKey = `liveTable.enabled.${props.connectionId}.${props.tableName}`;
     const storedState = localStorage.getItem(liveTableKey) === 'true';
 
-    // Update UI state if it doesn't match localStorage
-    if (isLiveTableActive.value !== storedState) {
-      console.log(`Forcing Live Table button update: ${isLiveTableActive.value} -> ${storedState}`);
-      isLiveTableActive.value = storedState;
+    if (tableDataStore.isLiveTableActive.value !== storedState) {
+      console.log(`Forcing Live Table button update: ${tableDataStore.isLiveTableActive.value} -> ${storedState}`);
+      tableDataStore.isLiveTableActive.value = storedState;
 
-      // Start or stop updates as needed
-      if (isLiveTableActive.value && !liveTableInterval.value) {
-        startLiveUpdates();
-      } else if (!isLiveTableActive.value && liveTableInterval.value) {
-        stopLiveUpdates();
+      if (tableDataStore.isLiveTableActive.value && !tableDataStore.liveTableInterval.value) {
+        tableDataStore.startLiveUpdates();
+      } else if (!tableDataStore.isLiveTableActive.value && tableDataStore.liveTableInterval.value) {
+        tableDataStore.stopLiveUpdates();
       }
     }
   } catch (e) {
@@ -1768,10 +1415,8 @@ const refreshLiveTableState = () => {
   }
 };
 
-// Also refresh when window receives focus
 const handleWindowFocus = () => {
   windowInFocus.value = true;
-  // Refresh the live table state when window gets focus
   refreshLiveTableState();
 };
 
@@ -1781,30 +1426,19 @@ const handleWindowBlur = () => {
 
 onMounted(() => {
   if (props.initialFilter) {
-    console.log('Configurando filtro inicial:', props.initialFilter);
     advancedFilterTerm.value = props.initialFilter;
-    activeFilter.value = props.initialFilter;
+    tableDataStore.activeFilter.value = props.initialFilter;
   }
-
-  // Function to force refresh the Live Table button state
-
-  // Listen for tab activation events
-  // const handleTabActivation = event => {
-  //   // Refresh state immediately and again after a short delay to ensure UI is updated
-  //   refreshLiveTableState();
-  //   setTimeout(refreshLiveTableState, 100);
-  // };
 
   window.addEventListener('tab-activated', handleTabActivation);
 
   try {
-    // Check for table-specific Live Table state first
     const tableSpecificLiveEnabled = localStorage.getItem(
       `liveTable.enabled.${props.connectionId}.${props.tableName}`
     );
 
-    // Check if any other table has Live Table active
     let otherTableLiveActive = false;
+
     const allKeys = Object.keys(localStorage);
     allKeys.forEach(key => {
       if (
@@ -1816,54 +1450,51 @@ onMounted(() => {
       }
     });
 
-    // Only activate if this table has it enabled AND no other table has it active
     if (tableSpecificLiveEnabled === 'true' && !otherTableLiveActive) {
-      isLiveTableActive.value = true;
+      tableDataStore.isLiveTableActive.value = true;
     } else {
-      // If another table has Live Table active, make sure this one is inactive
-      isLiveTableActive.value = false;
-      // Update localStorage to match current state
+      tableDataStore.isLiveTableActive.value = false;
       if (tableSpecificLiveEnabled === 'true') {
         localStorage.setItem(`liveTable.enabled.${props.connectionId}.${props.tableName}`, 'false');
       }
     }
 
     const savedLiveDelay = localStorage.getItem('liveTable.delay');
+
     if (savedLiveDelay) {
-      liveUpdateDelaySeconds.value = parseInt(savedLiveDelay, 10) || 3;
-      liveUpdateDelay.value = liveUpdateDelaySeconds.value * 1000;
+      tableDataStore.liveUpdateDelaySeconds.value = parseInt(savedLiveDelay, 10) || 3;
+      tableDataStore.liveUpdateDelay.value = tableDataStore.liveUpdateDelaySeconds.value * 1000;
     }
 
     const savedHighlightChanges = localStorage.getItem('liveTable.highlight');
     if (savedHighlightChanges !== null) {
-      highlightChanges.value = savedHighlightChanges === 'true';
+      tableDataStore.highlightChanges.value = savedHighlightChanges === 'true';
     }
   } catch (e) {
     console.error('Failed to load live table preferences', e);
   }
 
-  loadTableData();
+  tableDataStore.loadTableData();
 
-  if (isLiveTableActive.value) {
-    startLiveUpdates();
+  if (tableDataStore.isLiveTableActive.value) {
+    tableDataStore.startLiveUpdates();
   }
 
-  // Initial refresh to ensure correct state
   refreshLiveTableState();
 
-  // Add storage event listener to detect changes from other tabs/windows
   window.addEventListener('storage', handleStorageChange);
 
   const urlParams = new URLSearchParams(window.location.search);
+
   const urlFilter = urlParams.get('filter');
 
   if (urlFilter) {
     try {
       const decodedFilter = decodeURIComponent(urlFilter);
       advancedFilterTerm.value = decodedFilter;
-      activeFilter.value = decodedFilter;
+      tableDataStore.activeFilter.value = decodedFilter;
     } catch (e) {
-      console.error('Erro ao processar filtro da URL:', e);
+      console.error('Error to process URL filter:', e);
     }
   } else if (!props.initialFilter) {
     const savedFilter = localStorage.getItem(`filter:${props.connectionId}:${props.tableName}`);
@@ -1872,10 +1503,10 @@ onMounted(() => {
         const parsedFilter = JSON.parse(savedFilter);
         if (parsedFilter.active && parsedFilter.value) {
           advancedFilterTerm.value = parsedFilter.value;
-          activeFilter.value = parsedFilter.value;
+          tableDataStore.activeFilter.value = parsedFilter.value;
         }
       } catch (e) {
-        console.error('Erro ao processar filtro salvo:', e);
+        console.error('Error to process saved filter:', e);
       }
     }
   }
@@ -1894,20 +1525,17 @@ onUnmounted(() => {
   document.removeEventListener('mousemove', handleColumnResize);
   document.removeEventListener('mouseup', stopColumnResize);
 
-  // Remove event listeners
   window.removeEventListener('tab-activated', handleTabActivation);
   window.removeEventListener('storage', handleStorageChange);
 
-  // Always stop live updates when component is unmounted
-  if (isLiveTableActive.value) {
-    // Also update localStorage to match our state
+  if (tableDataStore.isLiveTableActive.value) {
     try {
       localStorage.setItem(`liveTable.enabled.${props.connectionId}.${props.tableName}`, 'false');
     } catch (e) {
       console.error('Failed to update localStorage during component unmount', e);
     }
-    isLiveTableActive.value = false;
-    stopLiveUpdates();
+    tableDataStore.isLiveTableActive.value = false;
+    tableDataStore.stopLiveUpdates();
   }
 
   window.removeEventListener('focus', handleWindowFocus);
@@ -1920,38 +1548,35 @@ function toggleAdvancedFilter() {
 }
 
 function applyFilter() {
-  currentPage.value = 1;
+  tableDataStore.currentPage.value = 1;
 }
 
 async function applyAdvancedFilter() {
-  activeFilter.value = advancedFilterTerm.value;
+  tableDataStore.activeFilter.value = advancedFilterTerm.value;
 
-  if (persistFilter.value && activeFilter.value) {
+  if (persistFilter.value && tableDataStore.activeFilter.value) {
     localStorage.setItem(
       `filter:${props.connectionId}:${props.tableName}`,
       JSON.stringify({
         active: true,
-        value: activeFilter.value
+        value: tableDataStore.activeFilter.value
       })
     );
   }
 
   showFilterModal.value = false;
 
-  currentPage.value = 1;
+  tableDataStore.currentPage.value = 1;
 
-  const useServerFilter = shouldUseServerFilter(activeFilter.value);
+  const useServerFilter = shouldUseServerFilter(tableDataStore.activeFilter.value);
 
   if (useServerFilter) {
-    console.log('Aplicando filtro diretamente no servidor');
     try {
       await loadFilteredData();
     } catch (error) {
-      console.error('Erro ao carregar dados filtrados:', error);
-      showAlert(`Erro ao aplicar filtro: ${error.message}`, 'error');
+      console.error('Error to get filtered data:', error);
+      showAlert(`Error to apply filter: ${error.message}`, 'error');
     }
-  } else {
-    console.log('Aplicando filtro localmente');
   }
 }
 
@@ -1961,24 +1586,21 @@ function cancelAdvancedFilter() {
 }
 
 function clearFilters() {
-  const hadActiveFilter = activeFilter.value || filterTerm.value;
+  const hadActiveFilter = tableDataStore.activeFilter.value || tableDataStore.filterTerm.value;
 
-  filterTerm.value = '';
+  tableDataStore.filterTerm.value = '';
   advancedFilterTerm.value = '';
-  activeFilter.value = '';
+  tableDataStore.activeFilter.value = '';
 
-  // Limpar filtro salvo
   localStorage.removeItem(`filter:${props.connectionId}:${props.tableName}`);
 
-  // Remover filtro da URL
   const url = new URL(window.location.href);
   url.searchParams.delete('filter');
   window.history.replaceState({}, '', url.toString());
 
-  // Se tínhamos um filtro ativo, recarregar dados sem filtro
   if (hadActiveFilter) {
-    currentPage.value = 1; // Voltar para a primeira página
-    loadTableData();
+    tableDataStore.currentPage.value = 1;
+    tableDataStore.loadTableData();
   }
 }
 
@@ -1990,294 +1612,66 @@ function insertOperator(op) {
   advancedFilterTerm.value += ' ' + op + ' ';
 }
 
-function applySqlFilter(data, filter) {
-  if (!filter || !data || data.length === 0) return data;
-
-  // Limpar o filtro
-  const cleanFilter = filter.trim();
-  if (!cleanFilter) return data;
-
-  console.log(`Aplicando filtro: "${cleanFilter}" em ${data.length} linhas`);
-
-  try {
-    // Convert the filter to a JavaScript function
-    const filterCode = convertFilterToJs(cleanFilter);
-    console.log('Filtro convertido para JS:', filterCode);
-
-    // Criar uma cópia profunda dos dados para não modificar os originais
-    const dataCopy = JSON.parse(JSON.stringify(data));
-
-    // Create a function from the generated code with tratamento de erros
-    let filterFn;
-    try {
-      filterFn = new Function(
-        'row',
-        `
-        try {
-          return ${filterCode};
-        } catch (e) {
-          console.error('Erro de execução do filtro:', e);
-          return false;
-        }
-      `
-      );
-    } catch (e) {
-      console.error('Erro ao criar função de filtro:', e);
-
-      return data;
-    }
-
-    const filteredResults = dataCopy.filter(row => {
-      try {
-        const result = filterFn(row);
-        return result;
-      } catch (e) {
-        console.error('Erro aplicando filtro à linha:', e, row);
-        return false;
-      }
-    });
-
-    console.log(`Filtro resultou em ${filteredResults.length} de ${data.length} linhas`);
-    return filteredResults;
-  } catch (error) {
-    console.error('Erro analisando filtro SQL:', error, filter);
-    return data;
-  }
-}
-
-function convertFilterToJs(filter) {
-  if (!filter) return 'true';
-
-  try {
-    const idEqualityRegex = /^\s*id\s*=\s*(\d+)\s*$/i;
-    const idMatch = filter.match(idEqualityRegex);
-
-    if (idMatch) {
-      const idValue = parseInt(idMatch[1], 10);
-      if (!isNaN(idValue)) {
-        return `row['id'] == ${idValue} || String(row['id']) == '${idValue}'`;
-      }
-    }
-
-    const likeMatcher = /^\s*(\w+)\s+LIKE\s+['"](.*)['"]$/i;
-    const likeMatch = filter.match(likeMatcher);
-
-    if (likeMatch) {
-      const [_, column, pattern] = likeMatch;
-      // Remover caracteres % para usar com includes
-      const cleanPattern = pattern.replace(/%/g, '');
-      return `row['${column}'] != null && String(row['${column}'] || '').toLowerCase().includes('${cleanPattern.toLowerCase()}')`;
-    }
-
-    // Filtro de igualdade simples
-    const simpleEqualityRegex = /^\s*(\w+)\s*=\s*(\d+|\w+|'[^']*'|"[^"]*")\s*$/i;
-    const simpleMatch = filter.match(simpleEqualityRegex);
-
-    if (simpleMatch) {
-      const [_, column, value] = simpleMatch;
-
-      if (value.startsWith("'") || value.startsWith('"')) {
-        const strValue = value.substring(1, value.length - 1);
-        return `row['${column}'] === '${strValue}'`;
-      } else if (!isNaN(Number(value))) {
-        const numValue = Number(value);
-        return `row['${column}'] == ${numValue} || String(row['${column}']) == '${numValue}'`;
-      } else {
-        return `row['${column}'] === row['${value}']`;
-      }
-    }
-
-    if (filter.toLowerCase().match(/^where\s+/)) {
-      filter = filter.replace(/^where\s+/i, '');
-    }
-
-    console.log('Processando filtro complexo:', filter);
-
-    // Proteger as strings antes do processamento
-    const stringLiterals = [];
-    let stringReplacedFilter = filter.replace(/'([^']*)'/g, (match, content) => {
-      const placeholder = `__STRING_${stringLiterals.length}__`;
-      stringLiterals.push(match);
-      return placeholder;
-    });
-
-    stringReplacedFilter = stringReplacedFilter.replace(
-      /(\w+)\s+LIKE\s+(__STRING_\d+__)/gi,
-      (match, column, placeholder) => {
-        const placeholderIndex = parseInt(placeholder.match(/__STRING_(\d+)__/)[1]);
-        const originalStr = stringLiterals[placeholderIndex].substring(
-          1,
-          stringLiterals[placeholderIndex].length - 1
-        );
-        const cleanPattern = originalStr.replace(/%/g, '');
-
-        return `(row['${column}'] != null && String(row['${column}'] || '').toLowerCase().includes('${cleanPattern.toLowerCase()}'))`;
-      }
-    );
-
-    // Tratar operadores de comparação
-    stringReplacedFilter = stringReplacedFilter.replace(/([<>!=]+)/g, ' $1 ').replace(/\s+/g, ' ');
-
-    // Tratar o operador IN
-    const inRegex = /(\w+|\[\w+\])\s+IN\s*\(\s*([^)]+)\s*\)/gi;
-    stringReplacedFilter = stringReplacedFilter.replace(inRegex, (match, col, values) => {
-      return `[${values}].includes(row['${col}'])`;
-    });
-
-    // Substituir operadores SQL para JS
-    stringReplacedFilter = stringReplacedFilter
-      .replace(/\bAND\b/gi, ' && ')
-      .replace(/\bOR\b/gi, ' || ')
-      .replace(/\bNOT\b/gi, '!')
-      .replace(/\bIS NULL\b/gi, '=== null')
-      .replace(/\bIS NOT NULL\b/gi, '!== null')
-      .replace(/\s+=\s+/g, ' == ');
-
-    const keywords = [
-      'AND',
-      'OR',
-      'NOT',
-      'NULL',
-      'IN',
-      'LIKE',
-      'BETWEEN',
-      'IS',
-      'AS',
-      'TRUE',
-      'FALSE',
-      'true',
-      'false',
-      'null',
-      'undefined',
-      'return',
-      'if',
-      'else',
-      'for',
-      'while',
-      'function'
-    ];
-
-    stringReplacedFilter = stringReplacedFilter.replace(
-      /\b([a-zA-Z_]\w*)\b(?!\s*\()/g,
-      (match, column) => {
-        if (match.startsWith('__STRING_')) {
-          return match;
-        }
-
-        if (keywords.includes(match) || keywords.includes(match.toUpperCase())) {
-          return match.toUpperCase();
-        }
-
-        if (!isNaN(Number(match))) {
-          return match;
-        }
-
-        return `row['${column}']`;
-      }
-    );
-
-    stringLiterals.forEach((str, index) => {
-      const placeholder = `__STRING_${index}__`;
-      const cleanStr = str.substring(1, str.length - 1).replace(/'/g, "\\'"); // Escape aspas simples para JS
-
-      stringReplacedFilter = stringReplacedFilter.replace(placeholder, `'${cleanStr}'`);
-    });
-
-    // Limpar espaços extras
-    stringReplacedFilter = stringReplacedFilter.trim();
-
-    console.log('Filtro convertido final:', stringReplacedFilter);
-
-    return stringReplacedFilter;
-  } catch (e) {
-    console.error('Error converting SQL filter to JS:', e, 'Original filter:', filter);
-    return 'true'; // Fallback to not filter anything
-  }
-}
-
-// Melhorar a função para determinar quando usar filtro no servidor
 function shouldUseServerFilter(filter) {
   if (!filter) return false;
 
-  // Clean the filter
   const cleanFilter = filter.trim();
   if (!cleanFilter) return false;
 
-  console.log('Checking if server filter should be used for:', cleanFilter);
-
-  // 1. ID Filter - ALWAYS use server for direct ID searches
   const idMatch = cleanFilter.match(/^\s*id\s*=\s*(\d+)\s*$/i);
   if (idMatch) {
     const idValue = parseInt(idMatch[1], 10);
     if (!isNaN(idValue)) {
-      console.log(`Detected ID filter: ${idValue} - Using server`);
       return true;
     }
   }
 
-  // 2. Filter with LIKE operator (may involve many records)
   if (/\bLIKE\b/i.test(cleanFilter)) {
-    console.log('Detected LIKE filter - Using server');
     return true;
   }
 
   if (/\bAND\b|\bOR\b|\bIN\b|\bIS NULL\b|\bIS NOT NULL\b/i.test(cleanFilter)) {
-    console.log('Detected complex filter with logical operators - Using server');
     return true;
   }
 
-  if (/^\s*\w+_id\s*=\s*\d+\s*$/i.test(cleanFilter)) {
-    console.log('Detected foreign key filter - Using server');
-    return true;
-  }
-
-  console.log('Using local filter for:', cleanFilter);
-  return false;
+  return /^\s*\w+_id\s*=\s*\d+\s*$/i.test(cleanFilter);
 }
 
 async function loadFilteredData() {
-  if (!activeFilter.value) {
-    return loadTableData();
+  if (!tableDataStore.activeFilter.value) {
+    return tableDataStore.loadTableData();
   }
 
   isLoading.value = true;
-  loadError.value = null;
-  selectedRows.value = [];
+  tableDataStore.loadError.value = null;
+  tableDataStore.selectedRows.value = [];
 
   try {
-    console.log(`Applying filter on server: "${activeFilter.value}"`);
-
-    const idMatch = activeFilter.value.match(/^\s*id\s*=\s*(\d+)\s*$/i);
+    const idMatch = tableDataStore.activeFilter.value.match(/^\s*id\s*=\s*(\d+)\s*$/i);
     if (idMatch) {
       const idValue = parseInt(idMatch[1], 10);
-      console.log(`Searching for record with ID: ${idValue}`);
     }
 
-    // Adicionar parâmetros de ordenação
-    const sortParams = currentSortColumn.value
+    const sortParams = tableDataStore.currentSortColumn.value
       ? {
-          sortColumn: currentSortColumn.value,
-          sortDirection: currentSortDirection.value
+          sortColumn: tableDataStore.currentSortColumn.value,
+          sortDirection: tableDataStore.currentSortDirection.value
         }
       : {};
 
     const result = await databaseStore.loadFilteredTableData(
       props.connectionId,
       props.tableName,
-      activeFilter.value,
-      rowsPerPage.value,
-      currentPage.value,
+      tableDataStore.activeFilter.value,
+      tableDataStore.rowsPerPage.value,
+      tableDataStore.currentPage.value,
       sortParams
-    );
-
-    console.log(
-      `Resultado da busca filtrada: ${result.data?.length || 0} registros de ${result.totalRecords || 0} total`
     );
 
     if (!result.data || result.data.length === 0) {
       if (result.totalRecords > 0) {
         showAlert(
-          `No records found on page ${currentPage.value}. Total: ${result.totalRecords}`,
+          `No records found on page ${tableDataStore.currentPage.value}. Total: ${result.totalRecords}`,
           'info'
         );
       } else {
@@ -2291,20 +1685,20 @@ async function loadFilteredData() {
       }
     }
 
-    tableData.value = result.data || [];
+    tableDataStore.tableData.value = result.data || [];
 
-    totalRecordsCount.value = result.totalRecords || 0;
+    tableDataStore.totalRecordsCount.value = result.totalRecords || 0;
 
     props.onLoad({
-      columns: columns.value,
+      columns: tableDataStore.columns.value,
       rowCount: result.totalRecords || 0
     });
   } catch (error) {
     console.error('Error applying filter:', error);
-    loadError.value = error.message;
+    tableDataStore.loadError.value = error.message;
     showAlert(`Error applying filter: ${error.message}`, 'error');
-    tableData.value = [];
-    totalRecordsCount.value = 0;
+    tableDataStore.tableData.value = [];
+    tableDataStore.totalRecordsCount.value = 0;
   } finally {
     isLoading.value = false;
   }
@@ -2321,7 +1715,6 @@ async function navigateToForeignKey(column, value) {
     const columnInfo = structure.find(col => col.name === column);
 
     if (!columnInfo || !columnInfo.foreign_key) {
-      console.log(`Column "${column}" is not a foreign key`);
       return;
     }
 
@@ -2335,8 +1728,6 @@ async function navigateToForeignKey(column, value) {
       console.error(`Foreign key information not found for column "${column}"`);
       return;
     }
-
-    console.log('Navigating to foreign key:', foreignKey);
 
     const targetTable = foreignKey.referenced_table;
     const targetColumn = foreignKey.referenced_column;
@@ -2355,8 +1746,6 @@ async function navigateToForeignKey(column, value) {
 
     const tabTitle = `${targetTable} (Filtered)`;
 
-    console.log(`Navigating to ${targetTable} where ${filter}`);
-
     const newTab = {
       id: `data-${props.connectionId}-${targetTable}-${Date.now()}`,
       title: tabTitle,
@@ -2369,30 +1758,11 @@ async function navigateToForeignKey(column, value) {
       icon: 'table'
     };
 
-    console.log('Opening new tab with filter:', filter);
-
     props.onOpenTab(newTab);
   } catch (error) {
     console.error('Error navigating to foreign key:', error);
     showAlert('Failed to navigate to related record: ' + error.message, 'error');
   }
-}
-
-const foreignKeyColumns = ref([]);
-
-async function loadForeignKeyInfo() {
-  try {
-    const structure = await databaseStore.getTableStructure(props.connectionId, props.tableName);
-    if (structure && Array.isArray(structure)) {
-      foreignKeyColumns.value = structure.filter(col => col.foreign_key).map(col => col.name);
-    }
-  } catch (error) {
-    console.error('Error loading foreign key info:', error);
-  }
-}
-
-function isForeignKeyColumn(column) {
-  return foreignKeyColumns.value.includes(column);
 }
 
 function setExampleFilter(example) {
@@ -2401,224 +1771,14 @@ function setExampleFilter(example) {
   applyAdvancedFilter();
 }
 
-watch(
-  () => paginatedData.value.length,
-  (newLength, oldLength) => {
-    console.log(`Dados paginados mudaram: ${oldLength} -> ${newLength} linhas`);
-  }
-);
-
-watch(
-  () => activeFilter.value,
-  (newFilter, oldFilter) => {
-    if (newFilter !== oldFilter) {
-      console.log(`Filtro ativo mudou: "${oldFilter}" -> "${newFilter}"`);
-    }
-  }
-);
-
-watch(rowsPerPage, (newValue, oldValue) => {
+watch(tableDataStore.rowsPerPage, (newValue, oldValue) => {
   if (newValue !== oldValue) {
-    currentPage.value = 1;
-    loadTableData();
+    tableDataStore.currentPage.value = 1;
+    tableDataStore.loadTableData();
   }
 });
 
-watch(
-  () => totalRecordsCount.value,
-  newCount => {
-    console.log(`Total de registros atualizado: ${newCount}`);
-  }
-);
-
-const isLiveTableActive = ref(false);
-const liveTableInterval = ref(null);
-const liveUpdateDelay = ref(3000);
-const liveUpdateDelaySeconds = ref(3);
-const previousDataSnapshot = ref([]);
-const updatedRows = ref([]);
-const highlightChanges = ref(true);
-const loadStartTime = ref(0);
-const isLiveUpdating = ref(false);
-const updateCounter = ref(0);
-const windowInFocus = ref(true);
-
-function updateLiveDelay() {
-  liveUpdateDelay.value = liveUpdateDelaySeconds.value * 1000;
-
-  try {
-    localStorage.setItem('liveTable.delay', String(liveUpdateDelaySeconds.value));
-  } catch (e) {
-    console.error('Failed to save live table delay preference', e);
-  }
-
-  if (isLiveTableActive.value) {
-    stopLiveUpdates();
-    startLiveUpdates();
-    showAlert(`Live update interval changed to ${liveUpdateDelaySeconds.value} seconds`, 'info');
-  }
-}
-
-function deactivateAllOtherLiveTables() {
-  try {
-    // Get all localStorage keys
-    const allKeys = Object.keys(localStorage);
-    const currentLiveTableKey = `liveTable.enabled.${props.connectionId}.${props.tableName}`;
-
-    // Collect all active live table keys
-    const activeLiveTableKeys = allKeys.filter(
-      key =>
-        key.startsWith('liveTable.enabled.') &&
-        key !== currentLiveTableKey &&
-        localStorage.getItem(key) === 'true'
-    );
-
-    // Deactivate all other live tables
-    if (activeLiveTableKeys.length > 0) {
-      console.log(`Deactivating ${activeLiveTableKeys.length} other live tables`);
-      activeLiveTableKeys.forEach(key => {
-        localStorage.setItem(key, 'false');
-      });
-
-      // Notify about deactivated tables (if debugging)
-      // console.log('Deactivated tables:', activeLiveTableKeys);
-    }
-  } catch (e) {
-    console.error('Failed to deactivate other live tables', e);
-  }
-}
-
-function toggleLiveTable() {
-  try {
-    if (!isLiveTableActive.value) {
-      // If currently inactive, activate it
-      startLiveUpdates();
-      clearUpdateCounter();
-      showAlert(
-        `Live table updates activated for ${props.tableName} - refreshing every ${liveUpdateDelaySeconds.value}s`,
-        'success'
-      );
-    } else {
-      // If currently active, deactivate it
-      stopLiveUpdates(true);
-      clearUpdateCounter();
-      showAlert('Live table updates stopped', 'info');
-    }
-  } catch (e) {
-    console.error('Failed to toggle live table:', e);
-    showAlert('Failed to toggle live table updates', 'error');
-  }
-}
-
-function startLiveUpdates() {
-  // First stop any existing updates
-  stopLiveUpdates();
-
-  // Update UI state
-  isLiveTableActive.value = true;
-
-  // Update localStorage to match
-  try {
-    localStorage.setItem(`liveTable.enabled.${props.connectionId}.${props.tableName}`, 'true');
-
-    // Deactivate all other live tables
-    deactivateAllOtherLiveTables();
-  } catch (e) {
-    console.error('Failed to update localStorage during live table start', e);
-  }
-
-  previousDataSnapshot.value = JSON.parse(JSON.stringify(tableData.value));
-
-  liveTableInterval.value = setInterval(() => {
-    if (!isLoading.value) {
-      loadStartTime.value = Date.now();
-      isLiveUpdating.value = true;
-
-      loadTableData()
-        .then(() => {
-          if (highlightChanges.value) {
-            detectChangedRows();
-          }
-
-          if (showPreviewModal.value && previewingRecord.value) {
-            updatePreviewData();
-          }
-
-          previousDataSnapshot.value = JSON.parse(JSON.stringify(tableData.value));
-        })
-        .catch(error => {
-          console.error('Error during live update:', error);
-        })
-        .finally(() => {
-          isLiveUpdating.value = false;
-        });
-    }
-  }, liveUpdateDelay.value);
-}
-
-function updatePreviewData() {
-  if (!previewingRecord.value || !previewingRecord.value.id) return;
-
-  const updatedRow = tableData.value.find(row => row.id === previewingRecord.value.id);
-
-  if (updatedRow) {
-    previewingRecord.value = JSON.parse(JSON.stringify(updatedRow));
-  }
-}
-
-function detectChangedRows() {
-  updatedRows.value = [];
-
-  if (!previousDataSnapshot.value.length) return;
-
-  let changesDetected = 0;
-
-  paginatedData.value.forEach((currentRow, index) => {
-    const previousRow = previousDataSnapshot.value.find(row => {
-      if (row.id !== undefined && currentRow.id !== undefined) {
-        return row.id === currentRow.id;
-      }
-      return false;
-    });
-
-    if (!previousRow || JSON.stringify(currentRow) !== JSON.stringify(previousRow)) {
-      updatedRows.value.push(index);
-      changesDetected++;
-    }
-  });
-
-  if (changesDetected > 0 && !windowInFocus.value) {
-    updateCounter.value += changesDetected;
-    updateAppIcon(updateCounter.value);
-  }
-
-  if (updatedRows.value.length > 0) {
-    setTimeout(() => {
-      updatedRows.value = [];
-    }, 2000);
-  }
-}
-
-function stopLiveUpdates(updateLocalStorage = false) {
-  if (liveTableInterval.value !== null) {
-    clearInterval(liveTableInterval.value);
-    liveTableInterval.value = null;
-  }
-
-  // Update UI state
-  isLiveTableActive.value = false;
-
-  // Optionally update localStorage to match our state
-  if (updateLocalStorage) {
-    try {
-      localStorage.setItem(`liveTable.enabled.${props.connectionId}.${props.tableName}`, 'false');
-    } catch (e) {
-      console.error('Failed to update localStorage during live table stop', e);
-    }
-  }
-}
-
-watch(highlightChanges, newValue => {
+watch(tableDataStore.highlightChanges, newValue => {
   try {
     localStorage.setItem('liveTable.highlight', String(newValue));
   } catch (e) {
@@ -2626,63 +1786,41 @@ watch(highlightChanges, newValue => {
   }
 });
 
-const showPreviewModal = ref(false);
-const previewingRecord = ref(null);
-
 function openPreviewModal(row) {
-  previewingRecord.value = JSON.parse(JSON.stringify(row));
+  tableDataStore.previewingRecord.value = JSON.parse(JSON.stringify(row));
   showPreviewModal.value = true;
 }
 
 function closePreviewModal() {
   showPreviewModal.value = false;
   setTimeout(() => {
-    previewingRecord.value = null;
+    tableDataStore.previewingRecord.value = null;
   }, 300);
 }
 
-function clearUpdateCounter() {
-  updateCounter.value = 0;
-  updateAppIcon(0);
-}
-
-function updateAppIcon(count) {
-  if (window.api && window.api.setAppBadge) {
-    window.api.setAppBadge(count);
-  }
-}
-
-// Watch for tab changes (when switching between tabs)
 watch(
   [() => props.tableName, () => props.connectionId],
   ([newTableName, newConnectionId], [oldTableName, oldConnectionId]) => {
     if (newTableName !== oldTableName || newConnectionId !== oldConnectionId) {
-      console.log(`Tab changed: ${oldTableName || 'none'} -> ${newTableName}`);
 
-      // First, let's handle the old tab we're switching from
       if (oldTableName && oldConnectionId) {
         const oldLiveTableKey = `liveTable.enabled.${oldConnectionId}.${oldTableName}`;
         try {
-          // Always deactivate Live Table for the tab we're switching from
           localStorage.setItem(oldLiveTableKey, 'false');
         } catch (e) {
           console.error('Error deactivating previous tab live table:', e);
         }
       }
 
-      // Always stop current live updates
-      if (isLiveTableActive.value) {
-        stopLiveUpdates();
-        isLiveTableActive.value = false;
+      if (tableDataStore.isLiveTableActive.value) {
+        tableDataStore.stopLiveUpdates();
+        tableDataStore.isLiveTableActive.value = false;
       }
 
-      // Check if the new tab should have live table enabled
       try {
         const newLiveTableKey = `liveTable.enabled.${newConnectionId}.${newTableName}`;
         const isLiveEnabled = localStorage.getItem(newLiveTableKey) === 'true';
 
-        // Clean up any inconsistent state
-        // 1. Get all live table keys and ensure only one (at most) is active
         const activeLiveTableKeys = [];
         const allKeys = Object.keys(localStorage);
         for (const key of allKeys) {
@@ -2691,7 +1829,6 @@ watch(
           }
         }
 
-        // 2. If multiple keys are active, deactivate all except the current one (if it should be active)
         if (
           activeLiveTableKeys.length > 1 ||
           (activeLiveTableKeys.length === 1 && !isLiveEnabled)
@@ -2703,54 +1840,37 @@ watch(
           });
         }
 
-        // Set the current tab's Live Table state
-        isLiveTableActive.value = isLiveEnabled;
+        tableDataStore.isLiveTableActive.value = isLiveEnabled;
 
-        // Start live updates if needed
-        if (isLiveTableActive.value) {
-          startLiveUpdates();
+        if (tableDataStore.isLiveTableActive.value) {
+          tableDataStore.startLiveUpdates();
         }
       } catch (e) {
         console.error('Error updating live table state during tab switch:', e);
-        isLiveTableActive.value = false;
+        tableDataStore.isLiveTableActive.value = false;
       }
     }
   }
 );
 
-// 1. Adicionar estado de ordenação nas refs
-const currentSortColumn = ref(null);
-const currentSortDirection = ref('asc'); // 'asc' ou 'desc'
-
-// 3. Adicionar função de ordenação
 function handleSortClick(column) {
-  // Se estiver redimensionando uma coluna ou recentemente redimensionou, não permitir ordenação
   if (resizingColumn.value !== null || recentlyResized.value) {
-    console.log('Column resizing in progress or recently resized, sort operation ignored');
     return;
   }
 
-  // Se clicar na mesma coluna, inverter a direção
-  if (currentSortColumn.value === column) {
-    currentSortDirection.value = currentSortDirection.value === 'asc' ? 'desc' : 'asc';
+  if (tableDataStore.currentSortColumn.value === column) {
+    tableDataStore.currentSortDirection.value = tableDataStore.currentSortDirection.value === 'asc' ? 'desc' : 'asc';
   } else {
-    // Nova coluna, resetar para ascendente
-    currentSortColumn.value = column;
-    currentSortDirection.value = 'asc';
+    tableDataStore.currentSortColumn.value = column;
+    tableDataStore.currentSortDirection.value = 'asc';
   }
 
-  console.log(`Ordenando por ${column} em ordem ${currentSortDirection.value}`);
+  tableDataStore.currentPage.value = 1;
 
-  // Resetar para a primeira página
-  currentPage.value = 1;
-
-  // Aplicar filtro quando houver, senão recarregar os dados
-  if (activeFilter.value) {
-    console.log('Aplicando ordenação com filtro ativo');
-    loadFilteredTableData();
+  if (tableDataStore.activeFilter.value) {
+    loadFilteredTableData(); //not implemented
   } else {
-    console.log('Aplicando ordenação sem filtro');
-    loadTableData();
+    tableDataStore.loadTableData();
   }
 }
 </script>
