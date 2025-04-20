@@ -40,6 +40,7 @@ export const useTableDataStore = id => {
     const onLoad = ref(null);
     const showPreviewModal = ref(false);
     const showDeleteConfirm = ref(false);
+    const showEditModal = ref(false);
 
     const databaseStore = useDatabaseStore();
 
@@ -652,7 +653,8 @@ export const useTableDataStore = id => {
       tableName,
       totalRecords,
       deletingIds,
-      showDeleteConfirm
+      showDeleteConfirm,
+      showEditModal
     };
   })();
 };

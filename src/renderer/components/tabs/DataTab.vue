@@ -1,7 +1,7 @@
 <template>
   <div class="h-full flex flex-col">
     <div
-        class="bg-base-200 p-2 border-b border-neutral flex flex-wrap items-center justify-between gap-2"
+      class="bg-base-200 p-2 border-b border-neutral flex flex-wrap items-center justify-between gap-2"
     >
       <div class="flex flex-wrap items-center gap-2">
         <RefreshButton :store-id="storeId" />
@@ -14,58 +14,58 @@
         <div class="relative flex items-center gap-2">
           <div class="input-group">
             <input
-                v-model="tableDataStore.filterTerm"
-                type="text"
-                placeholder="Filter..."
-                class="input input-sm input-bordered bg-base-300 w-full sm:w-64"
-                @keyup.enter="applyFilter"
+              v-model="tableDataStore.filterTerm"
+              type="text"
+              placeholder="Filter..."
+              class="input input-sm input-bordered bg-base-300 w-full sm:w-64"
+              @keyup.enter="applyFilter"
             />
             <button
-                class="btn btn-sm"
-                :class="{
+              class="btn btn-sm"
+              :class="{
                 'bg-base-300 border-base-300':
                   !tableDataStore.activeFilter && !tableDataStore.filterTerm,
                 'bg-primary border-primary text-white':
                   tableDataStore.activeFilter || tableDataStore.filterTerm
               }"
-                @click="toggleAdvancedFilter"
+              @click="toggleAdvancedFilter"
             >
               <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke-width="1.5"
-                  stroke="currentColor"
-                  class="w-4 h-4"
-              >
-                <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    d="M10.5 6h9.75M10.5 6a1.5 1.5 0 1 1-3 0m3 0a1.5 1.5 0 1 0-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m-9.75 0h9.75"
-                />
-              </svg>
-            </button>
-          </div>
-          <button
-              v-if="tableDataStore.filterTerm || tableDataStore.activeFilter"
-              class="btn btn-sm btn-primary"
-              @click="clearFilters"
-          >
-            <svg
                 xmlns="http://www.w3.org/2000/svg"
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke-width="1.5"
                 stroke="currentColor"
                 class="w-4 h-4"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  d="M10.5 6h9.75M10.5 6a1.5 1.5 0 1 1-3 0m3 0a1.5 1.5 0 1 0-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m-9.75 0h9.75"
+                />
+              </svg>
+            </button>
+          </div>
+          <button
+            v-if="tableDataStore.filterTerm || tableDataStore.activeFilter"
+            class="btn btn-sm btn-primary"
+            @click="clearFilters"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke-width="1.5"
+              stroke="currentColor"
+              class="w-4 h-4"
             >
               <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
             </svg>
           </button>
         </div>
         <select
-            v-model="tableDataStore.rowsPerPage"
-            class="select select-sm select-bordered bg-base-300 w-24 sm:w-32"
+          v-model="tableDataStore.rowsPerPage"
+          class="select select-sm select-bordered bg-base-300 w-24 sm:w-32"
         >
           <option value="10">10 rows</option>
           <option value="25">25 rows</option>
@@ -77,29 +77,29 @@
 
     <div class="flex-1 overflow-auto">
       <div
-          v-if="tableDataStore.isLoading && !tableDataStore.isLiveUpdating"
-          class="flex items-center justify-center h-full"
+        v-if="tableDataStore.isLoading && !tableDataStore.isLiveUpdating"
+        class="flex items-center justify-center h-full"
       >
         <span class="loading loading-spinner loading-lg" />
       </div>
 
       <div
-          v-else-if="tableDataStore.loadError"
-          class="flex items-center justify-center h-full text-error"
+        v-else-if="tableDataStore.loadError"
+        class="flex items-center justify-center h-full text-error"
       >
         <div class="text-center">
           <svg
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke-width="1.5"
-              stroke="currentColor"
-              class="w-12 h-12 mx-auto mb-4"
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke-width="1.5"
+            stroke="currentColor"
+            class="w-12 h-12 mx-auto mb-4"
           >
             <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"
             />
           </svg>
           <p>{{ tableDataStore.loadError }}</p>
@@ -110,25 +110,25 @@
       </div>
 
       <div
-          v-else-if="
+        v-else-if="
           (tableDataStore.filterTerm || tableDataStore.activeFilter) &&
           tableDataStore.filteredData.length === 0
         "
-          class="flex items-center justify-center h-full text-gray-500"
+        class="flex items-center justify-center h-full text-gray-500"
       >
         <div class="text-center">
           <svg
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke-width="1.5"
-              stroke="currentColor"
-              class="w-12 h-12 mx-auto mb-4 text-gray-400"
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke-width="1.5"
+            stroke="currentColor"
+            class="w-12 h-12 mx-auto mb-4 text-gray-400"
           >
             <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                d="M10.5 6h9.75M10.5 6a1.5 1.5 0 1 1-3 0m3 0a1.5 1.5 0 1 0-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m-9.75 0h9.75"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              d="M10.5 6h9.75M10.5 6a1.5 1.5 0 1 1-3 0m3 0a1.5 1.5 0 1 0-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m-9.75 0h9.75"
             />
           </svg>
           <p>No records match your filter</p>
@@ -142,23 +142,23 @@
       </div>
 
       <div
-          v-else-if="tableData.length > 0"
-          ref="tableContainer"
-          tabindex="0"
-          class="h-full relative flex flex-col"
-          @keydown.prevent="handleKeyDown"
+        v-else-if="tableData.length > 0"
+        ref="tableContainer"
+        tabindex="0"
+        class="h-full relative flex flex-col"
+        @keydown.prevent="handleKeyDown"
       >
         <div
-            class="overflow-x-scroll overflow-y-auto flex-grow"
-            style="max-height: calc(100% - 45px)"
+          class="overflow-x-scroll overflow-y-auto flex-grow"
+          style="max-height: calc(100% - 45px)"
         >
           <table class="table table-sm w-[150%] table-fixed min-w-full">
             <thead class="bg-base-300 sticky top-0 z-15">
-            <tr class="text-xs select-none">
-              <th class="w-10 px-2 py-2 border-r border-neutral bg-base-300 sticky left-0 z-10">
-                <span class="sr-only">Preview</span>
-              </th>
-              <th
+              <tr class="text-xs select-none">
+                <th class="w-10 px-2 py-2 border-r border-neutral bg-base-300 sticky left-0 z-10">
+                  <span class="sr-only">Preview</span>
+                </th>
+                <th
                   v-for="(column, index) in tableDataStore.columns"
                   :key="column"
                   class="px-4 py-2 border-r border-neutral last:border-r-0 relative whitespace-nowrap top-0 cursor-pointer"
@@ -175,84 +175,83 @@
                       tableDataStore.defaultColumnWidth(column)
                   }"
                   @click.stop="handleSortClick(column)"
-              >
-                <div class="flex items-center justify-between">
-                  <span class="truncate">{{ column }}</span>
-                  <div class="flex items-center">
+                >
+                  <div class="flex items-center justify-between">
+                    <span class="truncate">{{ column }}</span>
+                    <div class="flex items-center">
                       <span v-if="tableDataStore.currentSortColumn === column" class="ml-1">
                         <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            stroke-width="1.5"
-                            stroke="currentColor"
-                            class="w-4 h-4"
-                            :class="{ 'rotate-180': tableDataStore.currentSortDirection === 'desc' }"
+                          xmlns="http://www.w3.org/2000/svg"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke-width="1.5"
+                          stroke="currentColor"
+                          class="w-4 h-4"
+                          :class="{ 'rotate-180': tableDataStore.currentSortDirection === 'desc' }"
                         >
                           <path
-                              stroke-linecap="round"
-                              stroke-linejoin="round"
-                              d="M4.5 15.75l7.5-7.5 7.5 7.5"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            d="M4.5 15.75l7.5-7.5 7.5 7.5"
                           />
                         </svg>
                       </span>
+                    </div>
                   </div>
-                </div>
-                <div
+                  <div
                     v-if="index < tableDataStore.columns.length - 1"
                     class="absolute right-0 top-0 h-full w-2 cursor-col-resize group"
                     @mousedown.stop="startColumnResize($event, column)"
-                >
-                  <div
+                  >
+                    <div
                       class="absolute right-0 top-0 w-[1px] h-full bg-transparent group-hover:bg-primary group-hover:w-[2px] transition-all"
-                  />
-                </div>
-              </th>
-            </tr>
+                    />
+                  </div>
+                </th>
+              </tr>
             </thead>
 
             <tbody @dblclick.stop.prevent>
-            <tr
+              <tr
                 v-for="(row, rowIndex) in tableDataStore.paginatedData"
                 :key="rowIndex"
                 :class="getRowClasses(rowIndex)"
                 class="border-b border-neutral hover:bg-base-200 cursor-pointer"
                 @click.stop="handleRowClick($event, rowIndex)"
-                @dblclick.stop="handleRowDoubleClick(row)"
                 @mousedown.stop="handleMouseDown($event, rowIndex)"
                 @mouseenter.stop="handleMouseEnter(rowIndex)"
-            >
-              <td
+              >
+                <td
                   class="w-10 px-1 border-r border-neutral text-center sticky left-0 z-10"
                   :class="getRowBackgroundClass(rowIndex)"
-              >
-                <button
+                >
+                  <button
                     class="btn btn-xs btn-circle btn-ghost"
                     title="Preview data"
                     @click.stop="openPreviewModal(row)"
-                >
-                  <svg
+                  >
+                    <svg
                       xmlns="http://www.w3.org/2000/svg"
                       fill="none"
                       viewBox="0 0 24 24"
                       stroke-width="1.5"
                       stroke="currentColor"
                       class="w-4 h-4"
-                  >
-                    <path
+                    >
+                      <path
                         stroke-linecap="round"
                         stroke-linejoin="round"
                         d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z"
-                    />
-                    <path
+                      />
+                      <path
                         stroke-linecap="round"
                         stroke-linejoin="round"
                         d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"
-                    />
-                  </svg>
-                </button>
-              </td>
-              <td
+                      />
+                    </svg>
+                  </button>
+                </td>
+                <td
                   v-for="(column, colIndex) in tableDataStore.columns"
                   :key="`${rowIndex}-${column}`"
                   class="px-4 py-2 border-r border-neutral last:border-r-0 truncate whitespace-nowrap overflow-hidden"
@@ -268,66 +267,66 @@
                       tableDataStore.columnWidths[column] ||
                       tableDataStore.defaultColumnWidth(column)
                   }"
-                  @dblclick.stop="openEditModal(row)"
-              >
-                <div class="flex items-center justify-between w-full">
+                  @dblclick.stop="editRecordRef.openEditModal(row)"
+                >
+                  <div class="flex items-center justify-between w-full">
                     <span
-                        :class="{
+                      :class="{
                         'text-gray-500 italic':
                           row[column] === null && tableDataStore.isForeignKeyColumn(column)
                       }"
                     >
                       {{
                         row[column] === null && tableDataStore.isForeignKeyColumn(column)
-                            ? 'Not related'
-                            : Helpers.formatCellValue(column, row[column])
+                          ? 'Not related'
+                          : Helpers.formatCellValue(column, row[column])
                       }}
                     </span>
 
-                  <button
+                    <button
                       v-if="tableDataStore.isForeignKeyColumn(column) && row[column] !== null"
                       class="ml-1 text-white hover:text-primary-focus transition-colors cursor-pointer flex-shrink-0"
                       @click.stop="navigateToForeignKey(column, row[column])"
-                  >
-                    <svg
+                    >
+                      <svg
                         xmlns="http://www.w3.org/2000/svg"
                         fill="none"
                         viewBox="0 0 24 24"
                         stroke-width="1.5"
                         stroke="currentColor"
                         class="w-4 h-4"
-                    >
-                      <path
+                      >
+                        <path
                           stroke-linecap="round"
                           stroke-linejoin="round"
                           d="M13.19 8.688a4.5 4.5 0 011.242 7.244l-4.5 4.5a4.5 4.5 0 01-6.364-6.364l1.757-1.757m13.35-.622l1.757-1.757a4.5 4.5 0 00-6.364-6.364l-4.5 4.5a4.5 4.5 0 001.242 7.244"
-                      />
-                    </svg>
-                  </button>
+                        />
+                      </svg>
+                    </button>
 
-                  <span
+                    <span
                       v-else-if="tableDataStore.isForeignKeyColumn(column) && row[column] === null"
                       class="ml-1 text-gray-500 flex-shrink-0"
                       title="Relação nula"
-                  >
+                    >
                       <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          stroke-width="1.5"
-                          stroke="currentColor"
-                          class="w-4 h-4"
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke-width="1.5"
+                        stroke="currentColor"
+                        class="w-4 h-4"
                       >
                         <path
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"
                         />
                       </svg>
                     </span>
-                </div>
-              </td>
-            </tr>
+                  </div>
+                </td>
+              </tr>
             </tbody>
           </table>
         </div>
@@ -336,17 +335,17 @@
       <div v-else class="flex items-center justify-center h-full text-gray-500">
         <div class="text-center">
           <svg
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke-width="1.5"
-              stroke="currentColor"
-              class="w-12 h-12 mx-auto mb-4 text-gray-400"
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke-width="1.5"
+            stroke="currentColor"
+            class="w-12 h-12 mx-auto mb-4 text-gray-400"
           >
             <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                d="M20.25 6.375c0 2.278-3.694 4.125-8.25 4.125S3.75 8.653 3.75 6.375m16.5 0c0-2.278-3.694-4.125-8.25-4.125S3.75 4.097 3.75 6.375m16.5 0v11.25c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125V6.375m16.5 0v3.75m-16.5-3.75v3.75m16.5 0v3.75C20.25 16.153 16.556 18 12 18s-8.25-1.847-8.25-4.125v-3.75m16.5 0c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              d="M20.25 6.375c0 2.278-3.694 4.125-8.25 4.125S3.75 8.653 3.75 6.375m16.5 0c0-2.278-3.694-4.125-8.25-4.125S3.75 4.097 3.75 6.375m16.5 0v11.25c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125V6.375m16.5 0v3.75m-16.5-3.75v3.75m16.5 0v3.75C20.25 16.153 16.556 18 12 18s-8.25-1.847-8.25-4.125v-3.75m16.5 0c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125"
             />
           </svg>
           <p>Records not found</p>
@@ -358,32 +357,32 @@
     </div>
 
     <div
-        v-if="tableData.length > 0"
-        class="bg-base-200 px-4 py-3 border-t border-neutral flex flex-col sm:flex-row justify-between items-center text-xs sticky bottom-0 left-0 right-0 min-h-[56px] z-20"
+      v-if="tableData.length > 0"
+      class="bg-base-200 px-4 py-3 border-t border-neutral flex flex-col sm:flex-row justify-between items-center text-xs sticky bottom-0 left-0 right-0 min-h-[56px] z-20"
     >
       <div class="flex items-center mb-2 sm:mb-0">
         <span class="text-gray-400">
           {{ tableName }} | {{ tableDataStore.totalRecords }} records{{
             tableDataStore.selectedRows.length > 0
-                ? ` | ${tableDataStore.selectedRows.length} selected`
-                : ''
+              ? ` | ${tableDataStore.selectedRows.length} selected`
+              : ''
           }}
           | <span>{{ tableDataStore.columns.length }} columns</span>
         </span>
         <div class="ml-4 flex space-x-2">
           <button class="btn btn-ghost btn-xs">
             <svg
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke-width="1.5"
-                stroke="currentColor"
-                class="w-4 h-4"
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke-width="1.5"
+              stroke="currentColor"
+              class="w-4 h-4"
             >
               <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3"
               />
             </svg>
             Export
@@ -394,44 +393,44 @@
       <div class="flex items-center space-x-4">
         <div class="join">
           <button
-              class="join-item btn btn-xs"
-              :class="{ 'btn-disabled': tableDataStore.currentPage === 1 }"
-              :disabled="tableDataStore.currentPage === 1"
-              @click="goToFirstPage"
+            class="join-item btn btn-xs"
+            :class="{ 'btn-disabled': tableDataStore.currentPage === 1 }"
+            :disabled="tableDataStore.currentPage === 1"
+            @click="goToFirstPage"
           >
             <svg
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke-width="1.5"
-                stroke="currentColor"
-                class="w-4 h-4"
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke-width="1.5"
+              stroke="currentColor"
+              class="w-4 h-4"
             >
               <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  d="M18.75 19.5l-7.5-7.5 7.5-7.5m-6 15L5.25 12l7.5-7.5"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                d="M18.75 19.5l-7.5-7.5 7.5-7.5m-6 15L5.25 12l7.5-7.5"
               />
             </svg>
           </button>
           <button
-              class="join-item btn btn-xs"
-              :class="{ 'btn-disabled': tableDataStore.currentPage === 1 }"
-              :disabled="tableDataStore.currentPage === 1"
-              @click="prevPage"
+            class="join-item btn btn-xs"
+            :class="{ 'btn-disabled': tableDataStore.currentPage === 1 }"
+            :disabled="tableDataStore.currentPage === 1"
+            @click="prevPage"
           >
             <svg
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke-width="1.5"
-                stroke="currentColor"
-                class="w-4 h-4"
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke-width="1.5"
+              stroke="currentColor"
+              class="w-4 h-4"
             >
               <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  d="M15.75 19.5L8.25 12l7.5-7.5"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                d="M15.75 19.5L8.25 12l7.5-7.5"
               />
             </svg>
           </button>
@@ -441,40 +440,40 @@
           </div>
 
           <button
-              class="join-item btn btn-xs"
-              :class="{ 'btn-disabled': tableDataStore.currentPage === totalPages }"
-              :disabled="tableDataStore.currentPage === totalPages"
-              @click="nextPage"
+            class="join-item btn btn-xs"
+            :class="{ 'btn-disabled': tableDataStore.currentPage === totalPages }"
+            :disabled="tableDataStore.currentPage === totalPages"
+            @click="nextPage"
           >
             <svg
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke-width="1.5"
-                stroke="currentColor"
-                class="w-4 h-4"
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke-width="1.5"
+              stroke="currentColor"
+              class="w-4 h-4"
             >
               <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
             </svg>
           </button>
           <button
-              class="join-item btn btn-xs"
-              :class="{ 'btn-disabled': tableDataStore.currentPage === totalPages }"
-              :disabled="tableDataStore.currentPage === totalPages"
-              @click="goToLastPage"
+            class="join-item btn btn-xs"
+            :class="{ 'btn-disabled': tableDataStore.currentPage === totalPages }"
+            :disabled="tableDataStore.currentPage === totalPages"
+            @click="goToLastPage"
           >
             <svg
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke-width="1.5"
-                stroke="currentColor"
-                class="w-4 h-4"
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke-width="1.5"
+              stroke="currentColor"
+              class="w-4 h-4"
             >
               <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  d="M11.25 4.5l7.5 7.5-7.5 7.5m-6-15l7.5 7.5-7.5 7.5"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                d="M11.25 4.5l7.5 7.5-7.5 7.5m-6-15l7.5 7.5-7.5 7.5"
               />
             </svg>
           </button>
@@ -483,9 +482,9 @@
         <div class="flex items-center space-x-2">
           <span class="text-gray-400 hidden sm:inline-block">Rows per page:</span>
           <select
-              v-model="tableDataStore.rowsPerPage"
-              class="select select-xs select-bordered bg-base-300 w-16"
-              @change="tableDataStore.currentPage = 1"
+            v-model="tableDataStore.rowsPerPage"
+            class="select select-xs select-bordered bg-base-300 w-16"
+            @change="tableDataStore.currentPage = 1"
           >
             <option value="10">10</option>
             <option value="25">25</option>
@@ -497,97 +496,16 @@
         <div class="hidden md:flex items-center space-x-2">
           <span class="text-gray-400">Go to page:</span>
           <input
-              v-model="pageInput"
-              type="number"
-              min="1"
-              :max="totalPages"
-              class="input input-xs input-bordered bg-base-300 w-14"
-              @keyup.enter="goToPage"
+            v-model="pageInput"
+            type="number"
+            min="1"
+            :max="totalPages"
+            class="input input-xs input-bordered bg-base-300 w-14"
+            @keyup.enter="goToPage"
           />
           <button class="btn btn-xs btn-ghost" @click="goToPage">Go</button>
         </div>
       </div>
-    </div>
-
-    <div class="modal z-50" :class="{ 'modal-open': showEditModal }">
-      <div class="modal-box max-w-4xl">
-        <h3 class="font-bold text-lg mb-4 flex justify-between items-center">
-          Edit Record
-          <button class="btn btn-sm btn-circle" @click="closeEditModal">
-            <svg
-                xmlns="http://www.w3.org/2000/svg"
-                class="h-6 w-6"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-            >
-              <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M6 18L18 6M6 6l12 12"
-              />
-            </svg>
-          </button>
-        </h3>
-
-        <div v-if="editingRecord" class="overflow-y-auto max-h-[60vh]">
-          <div v-for="column in getEditableColumns()" :key="column" class="form-control mb-4">
-            <label class="label">
-              <span class="label-text font-medium">{{ column }}</span>
-              <span class="label-text-alt text-xs bg-base-300 px-2 py-1 rounded-md">
-                {{ Helpers.getFieldTypeLabel(column) }}
-              </span>
-            </label>
-
-            <textarea
-                v-if="Helpers.isLongTextField(column)"
-                v-model="editingRecord[column]"
-                class="textarea textarea-bordered h-24"
-                :placeholder="column"
-            />
-
-            <input
-                v-else-if="Helpers.isDateField(column)"
-                v-model="editingRecord[column]"
-                type="datetime-local"
-                class="input input-bordered w-full"
-                :max="'9999-12-31T23:59'"
-            />
-
-            <input
-                v-else-if="Helpers.isNumberField(column)"
-                v-model.number="editingRecord[column]"
-                type="number"
-                class="input input-bordered w-full"
-                step="any"
-            />
-
-            <select
-                v-else-if="Helpers.isBooleanField(column)"
-                v-model="editingRecord[column]"
-                class="select select-bordered w-full"
-            >
-              <option :value="true">True</option>
-              <option :value="false">False</option>
-              <option v-if="editingRecord[column] === null" :value="null">NULL</option>
-            </select>
-
-            <input
-                v-else
-                v-model="editingRecord[column]"
-                type="text"
-                class="input input-bordered w-full"
-            />
-          </div>
-        </div>
-
-        <div class="modal-action">
-          <button class="btn btn-error" @click="closeEditModal">Cancel</button>
-          <button class="btn btn-primary" @click="saveRecord">Save Changes</button>
-        </div>
-      </div>
-      <div class="modal-backdrop" @click="closeEditModal" />
     </div>
 
     <div class="modal z-50" :class="{ 'modal-open': showFilterModal }">
@@ -596,17 +514,17 @@
           Advanced Filter
           <button class="btn btn-sm btn-circle" @click="showFilterModal = false">
             <svg
-                xmlns="http://www.w3.org/2000/svg"
-                class="h-6 w-6"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
+              xmlns="http://www.w3.org/2000/svg"
+              class="h-6 w-6"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
             >
               <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M6 18L18 6M6 6l12 12"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M6 18L18 6M6 6l12 12"
               />
             </svg>
           </button>
@@ -618,30 +536,30 @@
               <span class="label-text font-medium">SQL WHERE Clause</span>
             </label>
             <textarea
-                v-model="advancedFilterTerm"
-                class="textarea textarea-bordered h-32 font-mono"
-                placeholder="id = 1"
+              v-model="advancedFilterTerm"
+              class="textarea textarea-bordered h-32 font-mono"
+              placeholder="id = 1"
             />
             <label class="label">
               <span class="label-text-alt text-xs">
                 Examples:
                 <code class="bg-base-300 p-1 cursor-pointer" @click="setExampleFilter('id = 2')"
-                >id = 2</code
+                  >id = 2</code
                 >,
                 <code
-                    class="bg-base-300 p-1 cursor-pointer"
-                    @click="setExampleFilter('email LIKE \'%example%\'')"
-                >email LIKE '%example%'</code
+                  class="bg-base-300 p-1 cursor-pointer"
+                  @click="setExampleFilter('email LIKE \'%example%\'')"
+                  >email LIKE '%example%'</code
                 >,
                 <code
-                    class="bg-base-300 p-1 cursor-pointer"
-                    @click="setExampleFilter('created_at IS NOT NULL')"
-                >created_at IS NOT NULL</code
+                  class="bg-base-300 p-1 cursor-pointer"
+                  @click="setExampleFilter('created_at IS NOT NULL')"
+                  >created_at IS NOT NULL</code
                 >,
                 <code
-                    class="bg-base-300 p-1 cursor-pointer"
-                    @click="setExampleFilter('id > 10 AND id < 20')"
-                >id > 10 AND id < 20</code
+                  class="bg-base-300 p-1 cursor-pointer"
+                  @click="setExampleFilter('id > 10 AND id < 20')"
+                  >id > 10 AND id < 20</code
                 >
               </span>
             </label>
@@ -651,10 +569,10 @@
             <p class="mb-2">Available columns:</p>
             <div class="flex flex-wrap gap-1 mb-4">
               <span
-                  v-for="column in tableDataStore.columns"
-                  :key="column"
-                  class="badge badge-primary cursor-pointer"
-                  @click="insertColumnName(column)"
+                v-for="column in tableDataStore.columns"
+                :key="column"
+                class="badge badge-primary cursor-pointer"
+                @click="insertColumnName(column)"
               >
                 {{ column }}
               </span>
@@ -663,7 +581,7 @@
             <p class="mb-2">Common operators:</p>
             <div class="flex flex-wrap gap-1">
               <span
-                  v-for="op in [
+                v-for="op in [
                   '=',
                   '!=',
                   '>',
@@ -678,9 +596,9 @@
                   'AND',
                   'OR'
                 ]"
-                  :key="op"
-                  class="badge badge-secondary cursor-pointer"
-                  @click="insertOperator(op)"
+                :key="op"
+                class="badge badge-secondary cursor-pointer"
+                @click="insertOperator(op)"
               >
                 {{ op }}
               </span>
@@ -704,12 +622,14 @@
     </div>
 
     <DataPreviewModal
-        v-if="tableDataStore.previewingRecord"
-        :show="tableDataStore.showPreviewModal"
-        :record="tableDataStore.previewingRecord"
-        :columns="tableDataStore.columns"
-        @close="closePreviewModal"
+      v-if="tableDataStore.previewingRecord"
+      :show="tableDataStore.showPreviewModal"
+      :record="tableDataStore.previewingRecord"
+      :columns="tableDataStore.columns"
+      @close="closePreviewModal"
     />
+
+    <EditRecord :store-id="storeId" ref="editRecordRef" />
   </div>
 </template>
 
@@ -720,8 +640,9 @@ import RefreshButton from '@/components/tabs/components/RefreshButton.vue';
 import LiveTableButton from '@/components/tabs/components/LiveTableButton.vue';
 import TruncateButton from '@/components/tabs/components/TruncateButton.vue';
 import DeleteButton from '@/components/tabs/components/DeleteButton.vue';
+import EditRecord from '@/components/tabs/components/EditRecord.vue';
 
-import { Helpers } from '../../utils/helpers'
+import { Helpers } from '../../utils/helpers';
 
 import { useTableDataStore, createTableDataStoreId } from '@/store/table-data';
 import { useDatabaseStore } from '@/store/database';
@@ -762,17 +683,16 @@ const isDragging = ref(false);
 const recentlyResized = ref(false);
 const shiftKeyPressed = ref(false);
 const ctrlKeyPressed = ref(false);
-const showEditModal = ref(false);
 const showFilterModal = ref(false);
 const persistFilter = ref(true);
 const startX = ref(0);
 const startWidth = ref(0);
 const pageInput = ref(1);
 const tableContainer = ref(null);
+const editRecordRef = ref(null);
 const resizingColumn = ref(null);
 const selectionStartId = ref(null);
-const editingRecord = ref(null);
-const originalRecord = ref(null);
+
 const advancedFilterTerm = ref('');
 const originalFilterTerm = ref('');
 
@@ -820,14 +740,14 @@ function stopColumnResize() {
 
 function getRowClasses(rowIndex) {
   const isSelected =
-      tableDataStore.selectedRows &&
-      tableDataStore.selectedRows.includes &&
-      tableDataStore.selectedRows.includes(rowIndex);
+    tableDataStore.selectedRows &&
+    tableDataStore.selectedRows.includes &&
+    tableDataStore.selectedRows.includes(rowIndex);
   const isUpdated =
-      tableDataStore.highlightChanges &&
-      tableDataStore.updatedRows &&
-      tableDataStore.updatedRows.includes &&
-      tableDataStore.updatedRows.includes(rowIndex);
+    tableDataStore.highlightChanges &&
+    tableDataStore.updatedRows &&
+    tableDataStore.updatedRows.includes &&
+    tableDataStore.updatedRows.includes(rowIndex);
 
   return {
     'selected-row': isSelected,
@@ -838,18 +758,18 @@ function getRowClasses(rowIndex) {
 
 function getRowBackgroundClass(rowIndex) {
   if (
-      tableDataStore.selectedRows &&
-      tableDataStore.selectedRows.includes &&
-      tableDataStore.selectedRows.includes(rowIndex)
+    tableDataStore.selectedRows &&
+    tableDataStore.selectedRows.includes &&
+    tableDataStore.selectedRows.includes(rowIndex)
   ) {
     return 'bg-[#ea4331] text-white';
   }
 
   if (
-      tableDataStore.highlightChanges &&
-      tableDataStore.updatedRows &&
-      tableDataStore.updatedRows.includes &&
-      tableDataStore.updatedRows.includes(rowIndex)
+    tableDataStore.highlightChanges &&
+    tableDataStore.updatedRows &&
+    tableDataStore.updatedRows.includes &&
+    tableDataStore.updatedRows.includes(rowIndex)
   ) {
     return 'bg-[rgba(234,67,49,0.1)]';
   }
@@ -888,10 +808,10 @@ function goToLastPage() {
 function goToPage() {
   const page = parseInt(pageInput.value);
   if (
-      !isNaN(page) &&
-      page >= 1 &&
-      page <= totalPages.value &&
-      page !== tableDataStore.currentPage
+    !isNaN(page) &&
+    page >= 1 &&
+    page <= totalPages.value &&
+    page !== tableDataStore.currentPage
   ) {
     tableDataStore.currentPage = page;
     scrollToTop();
@@ -906,107 +826,6 @@ function scrollToTop() {
   }
 }
 
-function openEditModal(row) {
-  originalRecord.value = { ...row };
-
-  const processedRecord = JSON.parse(JSON.stringify(row));
-
-  for (const key in processedRecord) {
-    if (Helpers.isDateField(key) && processedRecord[key]) {
-      if (typeof processedRecord[key] === 'string') {
-        try {
-          if (processedRecord[key].includes(' ')) {
-            processedRecord[key] = processedRecord[key].replace(' ', 'T');
-          }
-
-          const date = new Date(processedRecord[key]);
-          if (!isNaN(date.getTime())) {
-            processedRecord[key] = date.toISOString().slice(0, 16);
-          }
-        } catch (e) {
-          console.warn(`Failed to process date for ${key}:`, e);
-        }
-      }
-    }
-  }
-
-  editingRecord.value = processedRecord;
-  showEditModal.value = true;
-}
-
-function closeEditModal() {
-  showEditModal.value = false;
-  editingRecord.value = null;
-  originalRecord.value = null;
-}
-
-async function saveRecord() {
-  if (!editingRecord.value) {
-    showAlert('No record to save', 'error');
-    return;
-  }
-
-  try {
-    const recordToSave = {};
-
-    for (const key in editingRecord.value) {
-      let value = editingRecord.value[key];
-
-      if (value && Helpers.isDateField(key)) {
-        if (typeof value === 'string' && value.includes('T')) {
-          const date = new Date(value);
-          if (!isNaN(date.getTime())) {
-            value = date.toISOString().slice(0, 19).replace('Z', '');
-          }
-        }
-      }
-
-      recordToSave[key] = value;
-    }
-
-    if (!recordToSave.id) {
-      showAlert('Record must have an ID field to update', 'error');
-      return;
-    }
-
-    const index = tableData.findIndex(row => {
-      if (row.id && originalRecord.value.id) {
-        return row.id === originalRecord.value.id;
-      }
-      return JSON.stringify(row) === JSON.stringify(originalRecord.value);
-    });
-
-    if (index === -1) {
-      showAlert('Could not find record to update', 'error');
-      return;
-    }
-
-    const result = await databaseStore.updateRecord(
-        props.connectionId,
-        props.tableName,
-        recordToSave
-    );
-
-    if (result) {
-      tableDataStore.tableData[index] = { ...recordToSave };
-      showAlert('Record updated successfully', 'success');
-      closeEditModal();
-    } else {
-      showAlert('Failed to update record. Unknown error.', 'error');
-    }
-  } catch (error) {
-    console.error('Error saving record:', error);
-    showAlert(`Error updating record: ${error.message}`, 'error');
-  }
-}
-
-function getEditableColumns() {
-  if (!editingRecord.value) return [];
-  return Object.keys(editingRecord.value).filter(column => {
-    return !['id', 'created_at', 'updated_at'].includes(column);
-  });
-}
-
 async function loadTableStructure() {
   try {
     const structure = await databaseStore.getTableStructure(
@@ -1015,7 +834,7 @@ async function loadTableStructure() {
       true
     );
 
-    Helpers.setColumnStructure(structure)
+    Helpers.setColumnStructure(structure);
   } catch (error) {
     console.error('Error loading table structure:', error);
     showAlert(`Error loading table structure: ${error.message}`, 'error');
@@ -1055,11 +874,11 @@ async function applyAdvancedFilter() {
 
   if (persistFilter.value && tableDataStore.activeFilter) {
     localStorage.setItem(
-        `filter:${props.connectionId}:${props.tableName}`,
-        JSON.stringify({
-          active: true,
-          value: tableDataStore.activeFilter
-        })
+      `filter:${props.connectionId}:${props.tableName}`,
+      JSON.stringify({
+        active: true,
+        value: tableDataStore.activeFilter
+      })
     );
   }
 
@@ -1152,26 +971,26 @@ async function loadFilteredData() {
     }
 
     const sortParams = tableDataStore.currentSortColumn
-        ? {
+      ? {
           sortColumn: tableDataStore.currentSortColumn,
           sortDirection: tableDataStore.currentSortDirection
         }
-        : {};
+      : {};
 
     const result = await databaseStore.loadFilteredTableData(
-        props.connectionId,
-        props.tableName,
-        tableDataStore.activeFilter,
-        tableDataStore.rowsPerPage,
-        tableDataStore.currentPage,
-        sortParams
+      props.connectionId,
+      props.tableName,
+      tableDataStore.activeFilter,
+      tableDataStore.rowsPerPage,
+      tableDataStore.currentPage,
+      sortParams
     );
 
     if (!result.data || result.data.length === 0) {
       if (result.totalRecords > 0) {
         showAlert(
-            `No records found on page ${tableDataStore.currentPage}. Total: ${result.totalRecords}`,
-            'info'
+          `No records found on page ${tableDataStore.currentPage}. Total: ${result.totalRecords}`,
+          'info'
         );
       } else {
         showAlert('No records match the applied filter', 'info');
@@ -1218,8 +1037,8 @@ async function navigateToForeignKey(column, value) {
     }
 
     const foreignKeys = await databaseStore.getTableForeignKeys(
-        props.connectionId,
-        props.tableName
+      props.connectionId,
+      props.tableName
     );
     const foreignKey = foreignKeys.find(fk => fk.column === column);
 
@@ -1348,8 +1167,8 @@ const handleKeyDown = e => {
     tableDataStore.lastSelectedId = null;
     tableDataStore.showDeleteConfirm = false;
   } else if (
-      (e.key === 'Delete' || e.key === 'Backspace') &&
-      tableDataStore.selectedRows.length > 0
+    (e.key === 'Delete' || e.key === 'Backspace') &&
+    tableDataStore.selectedRows.length > 0
   ) {
     e.preventDefault();
     tableDataStore.deleteSelected();
@@ -1360,16 +1179,6 @@ const handleKeyUp = e => {
   shiftKeyPressed.value = e.shiftKey;
   ctrlKeyPressed.value = e.ctrlKey || e.metaKey;
 };
-
-function handleRowDoubleClick(row) {
-  const rowIndex = tableDataStore.paginatedData.findIndex(r => r === row);
-
-  if (!tableDataStore.selectedRows.includes(rowIndex)) {
-    tableDataStore.selectedRows = [];
-  }
-
-  openEditModal(row);
-}
 
 function handleMouseDown(event, rowIndex) {
   if (ctrlKeyPressed.value || shiftKeyPressed.value) {
@@ -1409,7 +1218,7 @@ function handleMouseUp() {
 
   if (tableDataStore.selectedRows.length > 0) {
     tableDataStore.lastSelectedId =
-        tableDataStore.selectedRows[tableDataStore.selectedRows.length - 1];
+      tableDataStore.selectedRows[tableDataStore.selectedRows.length - 1];
   }
 
   isDragging.value = false;
@@ -1433,10 +1242,10 @@ function handleStorageChange(event) {
   }
 
   if (
-      event.key.startsWith('liveTable.enabled.') &&
-      event.key !== ourKey &&
-      event.newValue === 'true' &&
-      tableDataStore.isLiveTableActive
+    event.key.startsWith('liveTable.enabled.') &&
+    event.key !== ourKey &&
+    event.newValue === 'true' &&
+    tableDataStore.isLiveTableActive
   ) {
     tableDataStore.isLiveTableActive = false;
     tableDataStore.stopLiveUpdates();
@@ -1473,7 +1282,7 @@ function handleSortClick(column) {
 
   if (tableDataStore.currentSortColumn === column) {
     tableDataStore.currentSortDirection =
-        tableDataStore.currentSortDirection === 'asc' ? 'desc' : 'asc';
+      tableDataStore.currentSortDirection === 'asc' ? 'desc' : 'asc';
   } else {
     tableDataStore.currentSortColumn = column;
     tableDataStore.currentSortDirection = 'asc';
@@ -1522,7 +1331,7 @@ onMounted(() => {
 
   try {
     const tableSpecificLiveEnabled = localStorage.getItem(
-        `liveTable.enabled.${props.connectionId}.${props.tableName}`
+      `liveTable.enabled.${props.connectionId}.${props.tableName}`
     );
 
     let otherTableLiveActive = false;
@@ -1530,9 +1339,9 @@ onMounted(() => {
     const allKeys = Object.keys(localStorage);
     allKeys.forEach(key => {
       if (
-          key.startsWith('liveTable.enabled.') &&
-          key !== `liveTable.enabled.${props.connectionId}.${props.tableName}` &&
-          localStorage.getItem(key) === 'true'
+        key.startsWith('liveTable.enabled.') &&
+        key !== `liveTable.enabled.${props.connectionId}.${props.tableName}` &&
+        localStorage.getItem(key) === 'true'
       ) {
         otherTableLiveActive = true;
       }
@@ -1615,16 +1424,16 @@ onUnmounted(() => {
 });
 
 watch(
-    () => tableDataStore.currentPage,
-    (newPage, oldPage) => {
-      if (newPage !== oldPage) {
-        pageInput.value = newPage;
+  () => tableDataStore.currentPage,
+  (newPage, oldPage) => {
+    if (newPage !== oldPage) {
+      pageInput.value = newPage;
 
-        if (!tableDataStore.filterTerm && !tableDataStore.activeFilter) {
-          tableDataStore.loadTableData();
-        }
+      if (!tableDataStore.filterTerm && !tableDataStore.activeFilter) {
+        tableDataStore.loadTableData();
       }
     }
+  }
 );
 
 watch(rowsPerPage, (newValue, oldValue) => {
@@ -1643,59 +1452,59 @@ watch(highlightChanges, newValue => {
 });
 
 watch(
-    [() => props.tableName, () => props.connectionId],
-    async ([newTableName, newConnectionId], [oldTableName, oldConnectionId]) => {
-      if (newTableName !== oldTableName || newConnectionId !== oldConnectionId) {
-        await loadTableStructure();
-        
-        if (oldTableName && oldConnectionId) {
-          const oldLiveTableKey = `liveTable.enabled.${oldConnectionId}.${oldTableName}`;
-          try {
-            localStorage.setItem(oldLiveTableKey, 'false');
-          } catch (e) {
-            console.error('Error deactivating previous tab live table:', e);
-          }
-        }
+  [() => props.tableName, () => props.connectionId],
+  async ([newTableName, newConnectionId], [oldTableName, oldConnectionId]) => {
+    if (newTableName !== oldTableName || newConnectionId !== oldConnectionId) {
+      await loadTableStructure();
 
-        if (tableDataStore.isLiveTableActive) {
-          tableDataStore.stopLiveUpdates();
-          tableDataStore.isLiveTableActive = false;
-        }
-
+      if (oldTableName && oldConnectionId) {
+        const oldLiveTableKey = `liveTable.enabled.${oldConnectionId}.${oldTableName}`;
         try {
-          const newLiveTableKey = `liveTable.enabled.${newConnectionId}.${newTableName}`;
-          const isLiveEnabled = localStorage.getItem(newLiveTableKey) === 'true';
-
-          const activeLiveTableKeys = [];
-          const allKeys = Object.keys(localStorage);
-          for (const key of allKeys) {
-            if (key.startsWith('liveTable.enabled.') && localStorage.getItem(key) === 'true') {
-              activeLiveTableKeys.push(key);
-            }
-          }
-
-          if (
-              activeLiveTableKeys.length > 1 ||
-              (activeLiveTableKeys.length === 1 && !isLiveEnabled)
-          ) {
-            activeLiveTableKeys.forEach(key => {
-              if (key !== newLiveTableKey || !isLiveEnabled) {
-                localStorage.setItem(key, 'false');
-              }
-            });
-          }
-
-          tableDataStore.isLiveTableActive = isLiveEnabled;
-
-          if (tableDataStore.isLiveTableActive) {
-            tableDataStore.startLiveUpdates();
-          }
+          localStorage.setItem(oldLiveTableKey, 'false');
         } catch (e) {
-          console.error('Error updating live table state during tab switch:', e);
-          tableDataStore.isLiveTableActive = false;
+          console.error('Error deactivating previous tab live table:', e);
         }
       }
+
+      if (tableDataStore.isLiveTableActive) {
+        tableDataStore.stopLiveUpdates();
+        tableDataStore.isLiveTableActive = false;
+      }
+
+      try {
+        const newLiveTableKey = `liveTable.enabled.${newConnectionId}.${newTableName}`;
+        const isLiveEnabled = localStorage.getItem(newLiveTableKey) === 'true';
+
+        const activeLiveTableKeys = [];
+        const allKeys = Object.keys(localStorage);
+        for (const key of allKeys) {
+          if (key.startsWith('liveTable.enabled.') && localStorage.getItem(key) === 'true') {
+            activeLiveTableKeys.push(key);
+          }
+        }
+
+        if (
+          activeLiveTableKeys.length > 1 ||
+          (activeLiveTableKeys.length === 1 && !isLiveEnabled)
+        ) {
+          activeLiveTableKeys.forEach(key => {
+            if (key !== newLiveTableKey || !isLiveEnabled) {
+              localStorage.setItem(key, 'false');
+            }
+          });
+        }
+
+        tableDataStore.isLiveTableActive = isLiveEnabled;
+
+        if (tableDataStore.isLiveTableActive) {
+          tableDataStore.startLiveUpdates();
+        }
+      } catch (e) {
+        console.error('Error updating live table state during tab switch:', e);
+        tableDataStore.isLiveTableActive = false;
+      }
     }
+  }
 );
 </script>
 
