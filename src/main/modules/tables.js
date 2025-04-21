@@ -405,24 +405,34 @@ function registerTableHandlers(store, dbMonitoringConnections) {
       }
 
       const page = config.page || 1;
-      const limit = parseInt(config.limit, 10) || 100;
-      const offset = (page - 1) * limit;
+      const limit = parseInt(config.limit, 10);
+      const effectiveLimit = limit || 100;
+      const offset = (page - 1) * effectiveLimit;
 
       const [countRows] = await connection.query(`SELECT COUNT(*) AS totalRecords FROM ${tableName} WHERE ${filter}`);
       const totalRecords = countRows[0]?.totalRecords || 0;
 
       const baseSql = `SELECT * FROM ${tableName} WHERE ${filter}`;
       const sql = _applySortingAndPagination(baseSql, connection, config);
-      const [rows] = await connection.query(sql, [limit, offset]);
+
+      const [rows] = await connection.query(sql, [effectiveLimit, offset]);
 
       return {
         success: true,
         data: rows,
         totalRecords,
         page,
-        limit
+        limit: effectiveLimit,
+        debug: {
+          filter,
+          sql,
+          offset,
+          effectiveLimit,
+          page
+        }
       };
     } catch (err) {
+      console.error("Error filter data:", err);
       return {
         success: false,
         message: err.message || "Failed to fetch filtered table data",
