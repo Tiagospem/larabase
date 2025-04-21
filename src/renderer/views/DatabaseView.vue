@@ -2,15 +2,15 @@
   <div
     class="flex flex-col h-full"
     tabindex="0"
-    @keydown.ctrl.k.prevent="openDatabaseSwitcher"
-    @keydown.meta.k.prevent="openDatabaseSwitcher"
+    @keydown.ctrl.k.prevent="databaseSwitcherRef?.openDatabaseSwitcher"
+    @keydown.meta.k.prevent="databaseSwitcherRef?.openDatabaseSwitcher"
     v-cloak
   >
     <header class="bg-neutral px-4 py-2 border-b border-neutral flex items-center justify-between">
       <div class="flex items-center">
         <button
           class="btn btn-ghost btn-sm mr-2"
-          @click="goBack"
+          @click="router.push('/')"
           v-tooltip.right="'Back to connections'"
         >
           <svg
@@ -36,33 +36,7 @@
           <span class="text-white font-bold text-sm">{{ connection?.icon }}</span>
         </div>
 
-        <div>
-          <h1 class="text-lg font-semibold">
-            {{ connection?.name }}
-          </h1>
-          <div class="text-xs text-gray-400 flex items-center">
-            <span>{{ connection?.database || connection?.path }}</span>
-            <button
-              class="ml-1 text-gray-400 hover:text-gray-300"
-              @click="showConnectionInfo = true"
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke-width="1.5"
-                stroke="currentColor"
-                class="size-3"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  d="M20.25 6.375c0 2.278-3.694 4.125-8.25 4.125S3.75 8.653 3.75 6.375m16.5 0c0-2.278-3.694-4.125-8.25-4.125S3.75 4.097 3.75 6.375m16.5 0v11.25c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125V6.375m16.5 0v3.75m-16.5-3.75v3.75m16.5 0v3.75C20.25 16.153 16.556 18 12 18s-8.25-1.847-8.25-4.125v-3.75m16.5 0c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125"
-                />
-              </svg>
-            </button>
-          </div>
-        </div>
+        <ShowConnectionInfo :connection-id="connectionId" />
       </div>
 
       <div class="flex">
@@ -259,7 +233,7 @@
       </div>
     </header>
 
-    <MainTabs ref="mainTabsRef" />
+    <MainTabs ref="mainTabsRef" :connection-id="connectionId" />
 
     <div class="flex flex-1 overflow-hidden">
       <TablesSidebar
@@ -267,7 +241,7 @@
         :active-tab-name="activeTab?.tableName"
         :sidebar-width="sidebarWidth"
         @resize-start="startResize"
-        @table-open="openTable"
+        @table-open="mainTabsRef?.openTable"
         @update:sidebar-width="sidebarWidth = $event"
         :style="{ width: `${sidebarWidth}px` }"
       />
@@ -317,49 +291,6 @@
     </footer>
   </div>
 
-  <div class="modal" :class="{ 'modal-open': connectionError }">
-    <div class="modal-box bg-base-300">
-      <h3 class="font-bold text-lg">Connection Error</h3>
-      <p class="py-4">
-        {{ connectionErrorMessage }}
-      </p>
-      <div class="modal-action">
-        <button class="btn btn-primary" @click="goBack">Back to Home</button>
-      </div>
-    </div>
-  </div>
-
-  <div class="modal" :class="{ 'modal-open': showConnectionInfo }">
-    <div class="modal-box bg-base-300">
-      <h3 class="font-bold text-lg">Connection Details</h3>
-      <div class="py-4">
-        <div v-if="connection" class="space-y-2">
-          <p><span class="font-semibold">Name:</span> {{ connection.name }}</p>
-          <p><span class="font-semibold">Type:</span> {{ connection.type }}</p>
-          <p v-if="connection.host">
-            <span class="font-semibold">Host:</span> {{ connection.host }}
-          </p>
-          <p v-if="connection.port">
-            <span class="font-semibold">Port:</span> {{ connection.port }}
-          </p>
-          <p v-if="connection.database">
-            <span class="font-semibold">Database:</span> {{ connection.database }}
-          </p>
-          <p v-if="connection.username">
-            <span class="font-semibold">Username:</span> {{ connection.username }}
-          </p>
-          <p v-if="connection.path">
-            <span class="font-semibold">Path:</span> {{ connection.path }}
-          </p>
-        </div>
-      </div>
-      <div class="modal-action">
-        <button class="btn btn-primary" @click="showConnectionInfo = false">Close</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Project Logs Modal -->
   <ProjectLogs
     :is-open="showProjectLogs"
     :connection-id="connectionId"
@@ -368,7 +299,6 @@
     @select-project="handleSelectProject"
   />
 
-  <!-- Live Database Updates Modal -->
   <LiveUpdates
     :is-open="showLiveUpdates"
     :connection-id="connectionId"
@@ -376,14 +306,37 @@
     @goto-table="handleGotoTable"
   />
 
-  <!-- Database Diagram Modal -->
   <DatabaseDiagram
     :is-open="showDatabaseDiagram"
     :connection-id="connectionId"
     @close="showDatabaseDiagram = false"
   />
 
-  <!-- Tables Models JSON Modal -->
+  <Settings v-if="showSettings" @close="showSettings = false" />
+
+  <ArtisanCommands
+    v-if="showArtisanCommands"
+    :connection-id="connectionId"
+    :project-path="connection?.projectPath"
+    @close="showArtisanCommands = false"
+  />
+
+  <CommandOutput />
+
+  <DatabaseSwitcher :connection-id="connectionId" />
+
+  <div v-if="connectionError" class="modal modal-open">
+    <div class="modal-box bg-base-300">
+      <h3 class="font-bold text-lg">Connection Error</h3>
+      <p class="py-4">
+        {{ connectionErrorMessage }}
+      </p>
+      <div class="modal-action">
+        <button class="btn btn-primary" @click="router.push('/')">Back to Home</button>
+      </div>
+    </div>
+  </div>
+
   <div v-if="showTablesModelsModal" class="modal modal-open">
     <div class="modal-box w-11/12 max-w-5xl max-h-[90vh]">
       <h3 class="font-bold text-lg mb-4">All Tables Models Data</h3>
@@ -413,60 +366,6 @@
     </div>
     <div class="modal-backdrop" @click="showTablesModelsModal = false" />
   </div>
-
-  <!-- Settings Modal -->
-  <Settings v-if="showSettings" @close="showSettings = false" />
-
-  <!-- Artisan Commands Modal -->
-  <ArtisanCommands
-    v-if="showArtisanCommands"
-    :connection-id="connectionId"
-    :project-path="connection?.projectPath"
-    @close="showArtisanCommands = false"
-  />
-
-  <!-- Command Output Panel -->
-  <CommandOutput />
-
-  <!-- Database Switcher Modal -->
-  <div class="modal" :class="{ 'modal-open': showDatabaseSwitcher }">
-    <div class="modal-box bg-base-300 w-96">
-      <h3 class="font-bold text-lg mb-4">Switch Database</h3>
-      <div v-if="loadingDatabases" class="flex justify-center py-4">
-        <div class="loading loading-spinner" />
-      </div>
-      <div v-else-if="availableDatabases.length === 0" class="text-center py-4">
-        No databases found
-      </div>
-      <div v-else class="max-h-60 overflow-y-auto">
-        <ul class="menu bg-base-200 rounded-box">
-          <li
-            v-for="db in availableDatabases"
-            :key="db"
-            :class="{ 'bg-primary bg-opacity-20': db === connection?.database }"
-          >
-            <a class="flex items-center justify-between" @click="switchDatabase(db)">
-              {{ db }}
-              <svg
-                v-if="db === connection?.database"
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke-width="1.5"
-                stroke="currentColor"
-                class="w-4 h-4"
-              >
-                <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" />
-              </svg>
-            </a>
-          </li>
-        </ul>
-      </div>
-      <div class="modal-action">
-        <button class="btn" @click="showDatabaseSwitcher = false">Close</button>
-      </div>
-    </div>
-  </div>
 </template>
 
 <script setup>
@@ -484,6 +383,8 @@ import Settings from '../components/Settings.vue';
 import ArtisanCommands from '../components/ArtisanCommands.vue';
 import CommandOutput from '../components/CommandOutput.vue';
 import MainTabs from '../components/database/MainTabs.vue';
+import ShowConnectionInfo from '@/components/database/ShowConnectionInfo.vue';
+import DatabaseSwitcher from '@/components/database/DatabaseSwitcher.vue';
 
 const TableContentComponent = markRaw(TableContent);
 
@@ -503,7 +404,6 @@ const initialSidebarLoaded = ref(false);
 const isResizing = ref(false);
 const connectionError = ref(false);
 const connectionErrorMessage = ref('');
-const showConnectionInfo = ref(false);
 const showProjectLogs = ref(false);
 const showLiveUpdates = ref(false);
 const showDatabaseDiagram = ref(false);
@@ -511,31 +411,12 @@ const showTablesModelsModal = ref(false);
 const allTablesModelsJson = ref('');
 const showSettings = ref(false);
 const showArtisanCommands = ref(false);
-const showDatabaseSwitcher = ref(false);
-const availableDatabases = ref([]);
-const loadingDatabases = ref(false);
 
 const connection = computed(() => {
   return connectionsStore.getConnection(connectionId.value);
 });
 
 const activeTab = computed(() => tabsStore.activeTab);
-
-function openTable(table, filter) {
-  try {
-    tabsStore.addTab({
-      connectionId: connectionId.value,
-      tableName: table.name,
-      columnCount: table.columnCount,
-      filter: filter || ''
-    });
-    nextTick(() => {
-      mainTabsRef.value?.scrollToActiveTab();
-    });
-  } catch (error) {
-    console.error(error);
-  }
-}
 
 // Global function to expose table model info for AI integration
 window.getTableModelJson = tableName => {
@@ -549,11 +430,7 @@ window.getAllTablesModelsJson = async () => {
   return await databaseStore.getAllTablesModelsJson(connectionId.value);
 };
 
-function goBack() {
-  router.push('/');
-}
-
-function startResize(e) {
+function startResize() {
   isResizing.value = true;
   document.addEventListener('mousemove', onResize);
   document.addEventListener('mouseup', stopResize);
@@ -570,18 +447,8 @@ function stopResize() {
   document.removeEventListener('mousemove', onResize);
   document.removeEventListener('mouseup', stopResize);
 
-  // Salvar o tamanho do sidebar no localStorage
   localStorage.setItem('sidebarWidth', sidebarWidth.value.toString());
 }
-
-watch(
-  () => tabsStore.activeTabId,
-  () => {
-    nextTick(() => {
-      mainTabsRef.value?.scrollToActiveTab();
-    });
-  }
-);
 
 async function testConnection() {
   if (!connection.value) {
@@ -673,10 +540,11 @@ function getConnectionColor(type) {
   }
 }
 
+//precisa deixar essa funcao de abrir globalmente.
 function handleGotoTable(tableName) {
   const tableData = databaseStore.tablesList.find(t => t.name === tableName);
   if (tableData) {
-    openTable(tableData);
+    mainTabsRef?.value.openTable(tableData);
   } else {
     showAlert(`Table "${tableName}" not found`, 'error');
   }
@@ -737,70 +605,7 @@ function openSqlEditor() {
   router.push(`/sql-editor/${connectionId.value}`);
 }
 
-function openDatabaseSwitcher() {
-  showDatabaseSwitcher.value = true;
-  loadAvailableDatabases();
-}
-
-async function loadAvailableDatabases() {
-  if (!connection.value || connection.value.type !== 'mysql') {
-    availableDatabases.value = [];
-    return;
-  }
-
-  loadingDatabases.value = true;
-  try {
-    const result = await window.api.listDatabases({
-      host: connection.value.host,
-      port: connection.value.port,
-      username: connection.value.username,
-      password: connection.value.password
-    });
-
-    if (result.success) {
-      availableDatabases.value = result.databases;
-    } else {
-      showAlert(`Failed to load databases: ${result.message}`, 'error');
-      availableDatabases.value = [];
-    }
-  } catch (error) {
-    console.error('Error loading databases:', error);
-    showAlert(`Error loading databases: ${error.message}`, 'error');
-    availableDatabases.value = [];
-  } finally {
-    loadingDatabases.value = false;
-  }
-}
-
-async function switchDatabase(databaseName) {
-  if (!connection.value || databaseName === connection.value.database) {
-    showDatabaseSwitcher.value = false;
-    return;
-  }
-
-  try {
-    await connectionsStore.updateConnection(connectionId.value, {
-      database: databaseName
-    });
-
-    showDatabaseSwitcher.value = false;
-
-    await tabsStore.closeAllTabs();
-
-    await databaseStore.loadTables(connectionId.value);
-
-    databaseStore.clearTableRecordCounts();
-
-    showAlert(`Switched to database: ${databaseName}`, 'success');
-
-    window.location.reload();
-  } catch (error) {
-    console.error('Error switching database:', error);
-    showAlert(`Failed to switch database: ${error.message}`, 'error');
-  }
-}
-
-function handleDatabaseSwitcherFromChild(connectionId) {
+function handleDatabaseSwitcherFromChild() {
   openDatabaseSwitcher();
 }
 
