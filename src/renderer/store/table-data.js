@@ -58,14 +58,15 @@ export const useTableDataStore = (id) => {
     });
 
     const totalRecords = computed(() => {
-      if (filterTerm.value || activeFilter.value) {
-        return filteredData.value.length;
-      }
       return totalRecordsCount.value;
     });
 
     const paginatedData = computed(() => {
-      if (filterTerm.value || activeFilter.value) {
+      if (activeFilter.value) {
+        return tableData.value;
+      }
+
+      if (filterTerm.value) {
         if (rowsPerPage.value === 0) {
           return filteredData.value;
         }
@@ -74,24 +75,21 @@ export const useTableDataStore = (id) => {
         const end = start + parseInt(rowsPerPage.value);
 
         return filteredData.value.slice(start, end);
-      } else {
-        return tableData.value;
       }
+
+      return tableData.value;
     });
 
     const filteredData = computed(() => {
-      let data = tableData.value;
-
       if (activeFilter.value) {
-        try {
-          data = applySqlFilter(data, activeFilter.value);
-        } catch (error) {
-          console.error("Error applying SQL filter:", error);
-        }
+        return tableData.value;
       }
+
+      let data = tableData.value;
 
       if (filterTerm.value) {
         const term = filterTerm.value.toLowerCase();
+
         data = data.filter((row) => {
           return Object.values(row).some((value) => {
             if (value === null) return false;
@@ -100,7 +98,7 @@ export const useTableDataStore = (id) => {
         });
       }
 
-      if (currentSortColumn.value && (activeFilter.value || filterTerm.value)) {
+      if (currentSortColumn.value && filterTerm.value) {
         data = [...data].sort((a, b) => {
           const valA = a[currentSortColumn.value];
           const valB = b[currentSortColumn.value];
@@ -176,159 +174,6 @@ export const useTableDataStore = (id) => {
           }
         }
       });
-    }
-
-    function convertFilterToJs(filter) {
-      if (!filter) return "true";
-
-      try {
-        const idEqualityRegex = /^\s*id\s*=\s*(\d+)\s*$/i;
-        const idMatch = filter.match(idEqualityRegex);
-
-        if (idMatch) {
-          const idValue = parseInt(idMatch[1], 10);
-          if (!isNaN(idValue)) {
-            return `row['id'] == ${idValue} || String(row['id']) == '${idValue}'`;
-          }
-        }
-
-        const likeMatcher = /^\s*(\w+)\s+LIKE\s+['"](.*)['"]$/i;
-        const likeMatch = filter.match(likeMatcher);
-
-        if (likeMatch) {
-          const [_, column, pattern] = likeMatch;
-          const cleanPattern = pattern.replace(/%/g, "");
-          return `row['${column}'] != null && String(row['${column}'] || '').toLowerCase().includes('${cleanPattern.toLowerCase()}')`;
-        }
-
-        const simpleEqualityRegex = /^\s*(\w+)\s*=\s*(\d+|\w+|'[^']*'|"[^"]*")\s*$/i;
-        const simpleMatch = filter.match(simpleEqualityRegex);
-
-        if (simpleMatch) {
-          const [_, column, value] = simpleMatch;
-
-          if (value.startsWith("'") || value.startsWith('"')) {
-            const strValue = value.substring(1, value.length - 1);
-            return `row['${column}'] === '${strValue}'`;
-          } else if (!isNaN(Number(value))) {
-            const numValue = Number(value);
-            return `row['${column}'] == ${numValue} || String(row['${column}']) == '${numValue}'`;
-          } else {
-            return `row['${column}'] === row['${value}']`;
-          }
-        }
-
-        if (filter.toLowerCase().match(/^where\s+/)) {
-          filter = filter.replace(/^where\s+/i, "");
-        }
-
-        const stringLiterals = [];
-
-        let stringReplacedFilter = filter.replace(/'([^']*)'/g, (match, content) => {
-          const placeholder = `__STRING_${stringLiterals.length}__`;
-          stringLiterals.push(match);
-          return placeholder;
-        });
-
-        stringReplacedFilter = stringReplacedFilter.replace(/(\w+)\s+LIKE\s+(__STRING_\d+__)/gi, (match, column, placeholder) => {
-          const placeholderIndex = parseInt(placeholder.match(/__STRING_(\d+)__/)[1]);
-          const originalStr = stringLiterals[placeholderIndex].substring(1, stringLiterals[placeholderIndex].length - 1);
-          const cleanPattern = originalStr.replace(/%/g, "");
-
-          return `(row['${column}'] != null && String(row['${column}'] || '').toLowerCase().includes('${cleanPattern.toLowerCase()}'))`;
-        });
-
-        stringReplacedFilter = stringReplacedFilter.replace(/([<>!=]+)/g, " $1 ").replace(/\s+/g, " ");
-
-        const inRegex = /(\w+|\[\w+\])\s+IN\s*\(\s*([^)]+)\s*\)/gi;
-        stringReplacedFilter = stringReplacedFilter.replace(inRegex, (match, col, values) => {
-          return `[${values}].includes(row['${col}'])`;
-        });
-
-        stringReplacedFilter = stringReplacedFilter
-          .replace(/\bAND\b/gi, " && ")
-          .replace(/\bOR\b/gi, " || ")
-          .replace(/\bNOT\b/gi, "!")
-          .replace(/\bIS NULL\b/gi, "=== null")
-          .replace(/\bIS NOT NULL\b/gi, "!== null")
-          .replace(/\s+=\s+/g, " == ");
-
-        const keywords = ["AND", "OR", "NOT", "NULL", "IN", "LIKE", "BETWEEN", "IS", "AS", "TRUE", "FALSE", "true", "false", "null", "undefined", "return", "if", "else", "for", "while", "function"];
-
-        stringReplacedFilter = stringReplacedFilter.replace(/\b([a-zA-Z_]\w*)\b(?!\s*\()/g, (match, column) => {
-          if (match.startsWith("__STRING_")) {
-            return match;
-          }
-
-          if (keywords.includes(match) || keywords.includes(match.toUpperCase())) {
-            return match.toUpperCase();
-          }
-
-          if (!isNaN(Number(match))) {
-            return match;
-          }
-
-          return `row['${column}']`;
-        });
-
-        stringLiterals.forEach((str, index) => {
-          const placeholder = `__STRING_${index}__`;
-          const cleanStr = str.substring(1, str.length - 1).replace(/'/g, "\\'");
-
-          stringReplacedFilter = stringReplacedFilter.replace(placeholder, `'${cleanStr}'`);
-        });
-
-        stringReplacedFilter = stringReplacedFilter.trim();
-
-        return stringReplacedFilter;
-      } catch (e) {
-        console.error("Error converting SQL filter to JS:", e, "Original filter:", filter);
-        return "true";
-      }
-    }
-
-    function applySqlFilter(data, filter) {
-      if (!filter || !data || data.length === 0) return data;
-
-      const cleanFilter = filter.trim();
-
-      if (!cleanFilter) return data;
-
-      try {
-        const filterCode = convertFilterToJs(cleanFilter);
-
-        const dataCopy = JSON.parse(JSON.stringify(data));
-
-        let filterFn;
-        try {
-          filterFn = new Function(
-            "row",
-            `
-                    try {
-                      return ${filterCode};
-                    } catch (e) {
-                      console.error('Execution Error:', e);
-                      return false;
-                    }`
-          );
-        } catch (e) {
-          console.error("Error to create function filter:", e);
-
-          return data;
-        }
-
-        return dataCopy.filter((row) => {
-          try {
-            return filterFn(row);
-          } catch (e) {
-            console.error("Error to apply filter:", e, row);
-            return false;
-          }
-        });
-      } catch (error) {
-        console.error("Error SQL filter:", error, filter);
-        return data;
-      }
     }
 
     async function loadForeignKeyInfo() {
@@ -419,17 +264,116 @@ export const useTableDataStore = (id) => {
       } catch (error) {
         loadError.value = error.message;
         console.error(`Error loading data: ${error.message}`);
-        
-        // Ensure we don't lose column information
+
         if (tableData.value.length > 0 && tableData.value[0]) {
           lastKnownColumns.value = Object.keys(tableData.value[0]);
         }
-        
+
         tableData.value = [];
         totalRecordsCount.value = 0;
       } finally {
         clearTimeout(loadingTimer);
 
+        if (Date.now() - loadStartTime.value < 100 && wasLoading === false) {
+          isLoading.value = false;
+        } else {
+          setTimeout(() => {
+            isLoading.value = false;
+          }, 50);
+        }
+
+        loadStartTime.value = 0;
+      }
+
+      return Promise.resolve();
+    }
+
+    async function loadFilteredData() {
+      if (!activeFilter.value && !filterTerm.value) {
+        return loadTableData();
+      }
+
+      const wasLoading = isLoading.value;
+
+      if (!isLiveUpdating.value) {
+        isLoading.value = true;
+      }
+
+      loadStartTime.value = Date.now();
+
+      loadError.value = null;
+      selectedRows.value = [];
+
+      try {
+        let filter = activeFilter.value;
+
+        if (!filter && filterTerm.value) {
+          const searchTerm = filterTerm.value.trim();
+
+          if (/^\d+$/.test(searchTerm)) {
+            filter = `id = ${searchTerm}`;
+          } else {
+            const columnsToSearch = columns.value.length > 0 ? columns.value : lastKnownColumns.value;
+
+            if (columnsToSearch.length > 0) {
+              const likeFilters = columnsToSearch.map((column) => `${column} LIKE '%${searchTerm.replace(/'/g, "''")}%'`);
+              filter = likeFilters.join(" OR ");
+            }
+          }
+        }
+
+        if (!filter) {
+          return loadTableData();
+        }
+
+        const sortParams = currentSortColumn.value
+          ? {
+              sortColumn: currentSortColumn.value,
+              sortDirection: currentSortDirection.value
+            }
+          : {};
+
+        const conn = databaseStore.getConnection(connectionId.value);
+        if (!conn) {
+          throw new Error("Connection not found");
+        }
+
+        const payload = {
+          host: conn.host,
+          port: conn.port,
+          username: conn.username,
+          password: conn.password,
+          database: conn.database,
+          tableName: tableName.value,
+          filter,
+          limit: rowsPerPage.value,
+          page: currentPage.value,
+          sortColumn: sortParams.sortColumn,
+          sortDirection: sortParams.sortDirection
+        };
+
+        const result = await window.api.getFilteredTableData(payload);
+
+        tableData.value = result.data || [];
+        totalRecordsCount.value = result.totalRecords || 0;
+
+        await nextTick(() => {
+          analyzeColumns();
+        });
+
+        await loadForeignKeyInfo();
+
+        onLoad.value({
+          columns: columns.value,
+          rowCount: result.totalRecords || 0
+        });
+      } catch (error) {
+        loadError.value = error.message;
+        console.error(`Erro to load filtered data: ${error.message}`);
+
+        tableData.value = [];
+        totalRecordsCount.value = 0;
+      } finally {
         if (Date.now() - loadStartTime.value < 100 && wasLoading === false) {
           isLoading.value = false;
         } else {
@@ -573,8 +517,8 @@ export const useTableDataStore = (id) => {
 
     return {
       loadTableData,
+      loadFilteredData,
       updateAppIcon,
-      updatePreviewData,
       defaultColumnWidth,
       isForeignKeyColumn,
       startLiveUpdates,
