@@ -10,9 +10,9 @@
     "build:mac": "vite build && electron-builder --mac",
     "build:win": "vite build && electron-builder --win",
     "build:linux": "vite build && electron-builder --linux",
-    "publish-win": "npm run build && electron-builder --publish always --win",
+    "publish-win": "vite build && electron-builder --publish always --win",
     "publish-mac": "vite build && electron-builder --publish always --mac --universal",
-    "publish-linux": "npm run build && electron-builder --publish always --linux",
+    "publish-linux": "vite build && electron-builder --publish always --linux",
     "format": "prettier . --write --single-attribute-per-line"
   },
   "keywords": [],
@@ -78,16 +78,34 @@
       "icon": "src/renderer/assets/icons/mac/icon.icns",
       "mergeASARs": false,
       "target": [
-        { "target": "dmg", "arch": ["universal"] },
-        { "target": "zip", "arch": ["universal"] }
+        {
+          "target": "dmg",
+          "arch": [
+            "universal"
+          ]
+        },
+        {
+          "target": "zip",
+          "arch": [
+            "universal"
+          ]
+        }
       ]
     },
     "dmg": {
       "title": "${productName} ${version}",
       "icon": "src/renderer/assets/icons/mac/icon.icns",
       "contents": [
-        { "x": 110, "y": 150 },
-        { "x": 240, "y": 150, "type": "link", "path": "/Applications" }
+        {
+          "x": 110,
+          "y": 150
+        },
+        {
+          "x": 240,
+          "y": 150,
+          "type": "link",
+          "path": "/Applications"
+        }
       ]
     },
     "win": {
