@@ -34,11 +34,6 @@ export const useDatabaseStore = defineStore("database", () => {
     database: conn.database
   });
 
-  const _updateCache = (key, { data, totalRecords }, page, limit, extra = {}) => {
-    const cache = (tableRecords.value[key] = tableRecords.value[key] || {});
-    Object.assign(cache, { data, totalRecords, page, limit }, extra);
-  };
-
   const _prepare = (record) =>
     Object.fromEntries(
       Object.entries(record).map(([k, v]) => {
@@ -60,13 +55,6 @@ export const useDatabaseStore = defineStore("database", () => {
     try {
       const conn = _getConnection(id);
 
-      console.log("loadTableData chamado com:", {
-        tableName,
-        limit,
-        page,
-        sortOptions
-      });
-
       const payload = {
         ..._buildPayload(conn),
         tableName,
@@ -76,19 +64,9 @@ export const useDatabaseStore = defineStore("database", () => {
         sortDirection: sortOptions.sortDirection
       };
 
-      console.log("Enviando para getTableData:", JSON.stringify(payload));
-
       const result = await window.api.getTableData(payload);
 
-      console.log("Resultado de getTableData:", {
-        success: result.success,
-        totalRecords: result.totalRecords,
-        dataLength: result.data?.length
-      });
-
       if (result.success) {
-        const key = `${id}:${tableName}`;
-        _updateCache(key, result, page, limit);
         return {
           data: result.data || [],
           totalRecords: result.totalRecords || 0,
@@ -96,9 +74,9 @@ export const useDatabaseStore = defineStore("database", () => {
           limit
         };
       }
+
       return _EMPTY_RESULT(page, limit);
     } catch (error) {
-      console.error("Erro em loadTableData:", error);
       return _EMPTY_RESULT(page, limit);
     }
   }
@@ -117,19 +95,12 @@ export const useDatabaseStore = defineStore("database", () => {
         sortDirection: sortOptions.sortDirection
       };
 
-      console.log("Enviando para getFilteredTableData:", JSON.stringify(payload));
-
       const result = await window.api.getFilteredTableData(payload);
 
-      console.log("Resultado de getFilteredTableData:", {
-        success: result.success,
-        totalRecords: result.totalRecords,
-        dataLength: result.data?.length
-      });
-
       if (result.success) {
-        const key = `${id}:${tableName}:filtered`;
-        _updateCache(key, result, page, limit, { filter });
+        const key = `${id}:${tableName}:filter`;
+        tableRecords.value[key] = { filter };
+
         return {
           data: result.data || [],
           totalRecords: result.totalRecords || 0,
@@ -139,7 +110,6 @@ export const useDatabaseStore = defineStore("database", () => {
       }
       return _EMPTY_RESULT(page, limit);
     } catch (error) {
-      console.error("Erro em loadFilteredTableData:", error);
       return _EMPTY_RESULT(page, limit);
     }
   }
@@ -335,7 +305,7 @@ export const useDatabaseStore = defineStore("database", () => {
       record: prepared
     });
     if (!result.success) throw new Error(result.message);
-    _updateCache(`${id}:${tableName}`, { data: [record], totalRecords: 1 }, 1, 1);
+
     return result;
   }
 
@@ -370,7 +340,6 @@ export const useDatabaseStore = defineStore("database", () => {
     isLoading,
     loadTables,
     loadTableData,
-    loadFilteredTableData,
     getTableRecordCount,
     getTableStructure,
     getTableIndexes,
@@ -385,6 +354,7 @@ export const useDatabaseStore = defineStore("database", () => {
     updateRecord,
     deleteRecords,
     truncateTable,
-    tablesList
+    tablesList,
+    getConnection: _getConnection
   };
 });
