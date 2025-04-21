@@ -241,17 +241,53 @@ onMounted(() => {
   window.addEventListener("focus", handleWindowFocus);
 
   loadTableStructure().then(() => {
-    tableDataStore.loadTableData();
+    let hasFilter = false;
+
+    if (props.initialFilter) {
+      tableDataStore.advancedFilterTerm = props.initialFilter;
+      tableDataStore.activeFilter = props.initialFilter;
+      hasFilter = true;
+    }
+
+    tableDataStore.setConnectionId(props.connectionId);
+    tableDataStore.setTableName(props.tableName);
+    tableDataStore.setOnLoad(props.onLoad);
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const urlFilter = urlParams.get("filter");
+
+    if (urlFilter) {
+      try {
+        const decodedFilter = decodeURIComponent(urlFilter);
+        tableDataStore.advancedFilterTerm = decodedFilter;
+        tableDataStore.activeFilter = decodedFilter;
+        hasFilter = true;
+      } catch (e) {
+        console.error("Error to process URL filter:", e);
+      }
+    } else if (!props.initialFilter) {
+      const savedFilter = localStorage.getItem(`filter:${props.connectionId}:${props.tableName}`);
+      if (savedFilter) {
+        try {
+          const parsedFilter = JSON.parse(savedFilter);
+          if (parsedFilter.active && parsedFilter.value) {
+            tableDataStore.advancedFilterTerm = parsedFilter.value;
+            tableDataStore.activeFilter = parsedFilter.value;
+            hasFilter = true;
+          }
+        } catch (e) {
+          console.error("Error to process saved filter:", e);
+        }
+      }
+    }
+
+    if (hasFilter) {
+      console.log("Applying filter on initialization:", tableDataStore.activeFilter);
+      tableDataStore.loadFilteredData();
+    } else {
+      tableDataStore.loadTableData();
+    }
   });
-
-  tableDataStore.setConnectionId(props.connectionId);
-  tableDataStore.setTableName(props.tableName);
-  tableDataStore.setOnLoad(props.onLoad);
-
-  if (props.initialFilter) {
-    tableDataStore.advancedFilterTerm = props.initialFilter;
-    tableDataStore.activeFilter = props.initialFilter;
-  }
 
   try {
     const tableSpecificLiveEnabled = localStorage.getItem(`liveTable.enabled.${props.connectionId}.${props.tableName}`);
@@ -294,33 +330,6 @@ onMounted(() => {
   }
 
   refreshLiveTableState();
-
-  const urlParams = new URLSearchParams(window.location.search);
-
-  const urlFilter = urlParams.get("filter");
-
-  if (urlFilter) {
-    try {
-      const decodedFilter = decodeURIComponent(urlFilter);
-      tableDataStore.advancedFilterTerm = decodedFilter;
-      tableDataStore.activeFilter = decodedFilter;
-    } catch (e) {
-      console.error("Error to process URL filter:", e);
-    }
-  } else if (!props.initialFilter) {
-    const savedFilter = localStorage.getItem(`filter:${props.connectionId}:${props.tableName}`);
-    if (savedFilter) {
-      try {
-        const parsedFilter = JSON.parse(savedFilter);
-        if (parsedFilter.active && parsedFilter.value) {
-          tableDataStore.advancedFilterTerm = parsedFilter.value;
-          tableDataStore.activeFilter = parsedFilter.value;
-        }
-      } catch (e) {
-        console.error("Error to process saved filter:", e);
-      }
-    }
-  }
 });
 
 onUnmounted(() => {
