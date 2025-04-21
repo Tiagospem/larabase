@@ -227,41 +227,12 @@ async function applyAdvancedFilter() {
 
   tableDataStore.currentPage = 1;
 
-  const useServerFilter = shouldUseServerFilter(tableDataStore.activeFilter);
-
-  if (useServerFilter) {
-    try {
-      await loadFilteredData();
-    } catch (error) {
-      console.error("Error to get filtered data:", error);
-      showAlert(`Error to apply filter: ${error.message}`, "error");
-    }
+  try {
+    await loadFilteredData();
+  } catch (error) {
+    console.error("Error to get filtered data:", error);
+    showAlert(`Error to apply filter: ${error.message}`, "error");
   }
-}
-
-function shouldUseServerFilter(filter) {
-  if (!filter) return false;
-
-  const cleanFilter = filter.trim();
-  if (!cleanFilter) return false;
-
-  const idMatch = cleanFilter.match(/^\s*id\s*=\s*(\d+)\s*$/i);
-  if (idMatch) {
-    const idValue = parseInt(idMatch[1], 10);
-    if (!isNaN(idValue)) {
-      return true;
-    }
-  }
-
-  if (/\bLIKE\b/i.test(cleanFilter)) {
-    return true;
-  }
-
-  if (/\bAND\b|\bOR\b|\bIN\b|\bIS NULL\b|\bIS NOT NULL\b/i.test(cleanFilter)) {
-    return true;
-  }
-
-  return /^\s*\w+_id\s*=\s*\d+\s*$/i.test(cleanFilter);
 }
 
 function toggleAdvancedFilter() {
@@ -338,21 +309,15 @@ async function loadFilteredData() {
       showAlert(`Found ${result.totalRecords} record(s) matching the filter`, "success");
     }
 
-    // Keep previous data structure if new data is empty
     if (result.data && result.data.length > 0) {
       tableDataStore.tableData = result.data;
     } else {
-      // If no records match the filter, preserve the column structure
-      // but clear the row data
       const previousData = tableDataStore.tableData;
       if (previousData.length > 0) {
-        // Create an empty version of the first row to maintain structure
         const emptyRow = Object.fromEntries(
           Object.keys(previousData[0]).map(key => [key, null])
         );
-        // Set empty data but with structure preserved
         tableDataStore.tableData = [emptyRow];
-        // Then immediately clear it to show empty state
         setTimeout(() => {
           tableDataStore.tableData = [];
         }, 0);

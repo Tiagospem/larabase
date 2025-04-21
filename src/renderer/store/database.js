@@ -107,14 +107,6 @@ export const useDatabaseStore = defineStore("database", () => {
     try {
       const conn = _getConnection(id);
 
-      console.log("loadFilteredTableData chamado com:", {
-        tableName,
-        filter,
-        limit,
-        page,
-        sortOptions
-      });
-
       const payload = {
         ..._buildPayload(conn),
         tableName,
