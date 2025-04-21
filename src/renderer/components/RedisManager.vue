@@ -3,7 +3,7 @@
     class="modal z-50"
     :class="{ 'modal-open': isOpen }"
   >
-    <div class="modal-box max-w-3xl">
+    <div class="modal-box max-w-5xl">
       <h3 class="font-bold text-lg mb-4 flex justify-between items-center">
         Redis Databases Manager
         <button
@@ -57,95 +57,93 @@
         </div>
       </div>
 
-      <div
-        v-else-if="!existingDatabases.length"
-        class="py-10 text-center"
-      >
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke-width="1.5"
-          stroke="currentColor"
-          class="w-12 h-12 mx-auto mb-4 text-gray-400"
-        >
-          <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            d="M20.25 6.375c0 2.278-3.694 4.125-8.25 4.125S3.75 8.653 3.75 6.375m16.5 0c0-2.278-3.694-4.125-8.25-4.125S3.75 4.097 3.75 6.375m16.5 0v11.25c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125V6.375m16.5 0v3.75m-16.5-3.75v3.75m16.5 0v3.75C20.25 16.153 16.556 18 12 18s-8.25-1.847-8.25-4.125v-3.75m16.5 0c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125"
+      <!-- Database list view -->
+      <template v-else-if="!showDataPreview">
+        <div v-if="!existingDatabases.length">
+          <RedisEmptyState
+            :loading="loading"
+            @refresh="refreshDatabases"
           />
-        </svg>
-        <p class="text-gray-500">No Redis databases found</p>
-      </div>
-
-      <div v-else>
-        <div class="mb-4 bg-base-300 p-3 rounded-md">
-          <p class="text-sm"><strong>Connection Info:</strong> {{ connectionInfo }}</p>
-          <p class="text-sm mt-1"><strong>Running On:</strong> {{ redisRunningMode }}</p>
         </div>
 
-        <div class="overflow-x-auto">
-          <table class="table w-full">
-            <thead>
-              <tr>
-                <th>Database</th>
-                <th>Keys</th>
-                <th>Memory Used</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr
-                v-for="db in existingDatabases"
-                :key="db.id"
-                class="hover"
+        <div v-else>
+          <!-- Connection info box -->
+          <div class="mb-4 bg-base-200 p-4 rounded-lg">
+            <div class="flex justify-between items-center">
+              <div>
+                <p class="text-sm"><strong>Connection:</strong> {{ connectionInfo }}</p>
+                <p class="text-sm mt-1"><strong>Running On:</strong> {{ redisRunningMode }}</p>
+              </div>
+              <button
+                class="btn btn-sm btn-ghost"
+                @click="refreshDatabases"
+                :disabled="loading || clearingDb"
               >
-                <td>
-                  <div class="font-medium">{{ db.name }}</div>
-                  <div class="text-xs text-gray-500">{{ db.id }}</div>
-                </td>
-                <td>{{ db.keys }}</td>
-                <td>{{ formatMemory(db.memory) }}</td>
-                <td>
-                  <button
-                    class="btn btn-xs btn-error"
-                    @click="confirmClearDatabase(db)"
-                    :disabled="db.keys === 0 || clearingDb"
-                  >
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke-width="1.5"
-                      stroke="currentColor"
-                      class="w-4 h-4 mr-1"
-                    >
-                      <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0"
-                      />
-                    </svg>
-                    Clear
-                  </button>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke-width="1.5"
+                  stroke="currentColor"
+                  class="w-4 h-4 mr-1"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99"
+                  />
+                </svg>
+                Refresh
+              </button>
+            </div>
+          </div>
 
-        <div class="mt-4 flex justify-between">
+          <!-- Database list component -->
+          <RedisDatabasesList
+            :databases="existingDatabases"
+            :loading="clearingDb"
+            @preview="previewDatabaseData"
+            @clear="confirmClearDatabase"
+            @flush="confirmClearAllDatabases"
+            @refresh="refreshDatabases"
+            @preview-all="previewRedisData"
+          />
+        </div>
+      </template>
+
+      <!-- Data Preview Panel (Integrated) -->
+      <template v-else>
+        <div class="flex justify-between items-center mb-4">
+          <div class="flex items-center">
+            <button
+              class="btn btn-sm btn-ghost mr-3"
+              @click="closeDataPreview"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke-width="1.5"
+                stroke="currentColor"
+                class="w-4 h-4 mr-1"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  d="M9 15L3 9m0 0l6-6M3 9h12a6 6 0 010 12h-3"
+                />
+              </svg>
+              Back
+            </button>
+            <h3 class="font-bold">
+              {{ selectedDatabase ? `Data Preview - ${selectedDatabase.name}` : "Data Preview" }}
+              <span class="ml-2 badge badge-sm">{{ dataKeys.length }} keys</span>
+            </h3>
+          </div>
           <button
-            class="btn btn-sm btn-warning"
-            @click="confirmClearAllDatabases"
-            :disabled="!hasKeys || clearingDb"
-          >
-            Clear All Databases
-          </button>
-          <button
-            class="btn btn-sm btn-primary"
-            @click="refreshDatabases"
-            :disabled="loading || clearingDb"
+            class="btn btn-sm btn-ghost"
+            @click="refreshDataKeys"
+            :disabled="loadingDataKeys"
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -164,7 +162,67 @@
             Refresh
           </button>
         </div>
-      </div>
+
+        <!-- Search bar -->
+        <div class="flex gap-2 mb-4">
+          <div class="flex-1">
+            <input
+              type="text"
+              placeholder="Search keys (e.g. user:*, session:*)"
+              class="input input-bordered w-full"
+              v-model="keyPattern"
+              @keyup.enter="loadDataKeys"
+            />
+          </div>
+          <button
+            class="btn btn-ghost"
+            @click="loadDataKeys"
+            :disabled="loadingDataKeys"
+          >
+            <svg
+              v-if="loadingDataKeys"
+              class="animate-spin h-4 w-4 mr-1"
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+            >
+              <circle
+                class="opacity-25"
+                cx="12"
+                cy="12"
+                r="10"
+                stroke="currentColor"
+                stroke-width="4"
+              ></circle>
+              <path
+                class="opacity-75"
+                fill="currentColor"
+                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+              ></path>
+            </svg>
+            Search
+          </button>
+        </div>
+
+        <!-- Keys list and value display -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <!-- Keys list component -->
+          <RedisKeysList
+            :keys="dataKeys"
+            :loading="loadingDataKeys"
+            :selectedKey="selectedKey"
+            @select-key="loadKeyValue"
+          />
+
+          <!-- Key value component -->
+          <RedisKeyValue
+            :selectedKey="selectedKey"
+            :keyData="keyData"
+            :loading="loadingKeyValue"
+            :error="keyValueError"
+          />
+        </div>
+      </template>
 
       <!-- Confirmation Modal for clearing database -->
       <div
@@ -182,7 +240,7 @@
               Cancel
             </button>
             <button
-              class="btn btn-error"
+              class="btn btn-ghost"
               @click="executeConfirmedAction"
               :disabled="clearingDb"
             >
@@ -228,6 +286,10 @@
 
 <script setup>
 import { ref, computed, onMounted, inject, watch } from "vue";
+import RedisEmptyState from "./redis/RedisEmptyState.vue";
+import RedisDatabasesList from "./redis/RedisDatabasesList.vue";
+import RedisKeysList from "./redis/RedisKeysList.vue";
+import RedisKeyValue from "./redis/RedisKeyValue.vue";
 
 const props = defineProps({
   isOpen: {
@@ -258,6 +320,17 @@ const databaseToDelete = ref(null);
 const clearAll = ref(false);
 const clearingDb = ref(false);
 const redisRunningMode = ref("Unknown");
+const showDataPreview = ref(false);
+const selectedDatabase = ref(null);
+
+// Data preview state
+const dataKeys = ref([]);
+const loadingDataKeys = ref(false);
+const loadingKeyValue = ref(false);
+const keyPattern = ref("");
+const selectedKey = ref(null);
+const keyData = ref(null);
+const keyValueError = ref(null);
 
 // Computed properties
 const connectionInfo = computed(() => {
@@ -267,10 +340,6 @@ const connectionInfo = computed(() => {
   }
 
   return conn.redis.path ? conn.redis.path : `${conn.redis.host}:${conn.redis.port}`;
-});
-
-const hasKeys = computed(() => {
-  return existingDatabases.value.length > 0;
 });
 
 const existingDatabases = computed(() => {
@@ -322,7 +391,7 @@ async function loadRedisDatabases() {
     }
 
     // Only include databases that have keys
-    redisDatabases.value = result.databases.filter((db) => db.keys > 0) || [];
+    redisDatabases.value = result.databases || [];
   } catch (err) {
     error.value = true;
     errorMessage.value = err.message || "An error occurred while loading Redis databases";
@@ -332,15 +401,104 @@ async function loadRedisDatabases() {
   }
 }
 
-function formatMemory(bytes) {
-  if (bytes === 0) return "0 Bytes";
+function previewRedisData() {
+  // Check if we have any databases with keys before showing the preview
+  const dbWithKeys = redisDatabases.value.find((db) => db.keys > 0);
 
-  const k = 1024;
-  const sizes = ["Bytes", "KB", "MB", "GB"];
+  if (dbWithKeys) {
+    previewDatabaseData(dbWithKeys);
+  } else {
+    showAlert("No databases with keys to preview", "info");
+  }
+}
 
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
+function previewDatabaseData(db) {
+  selectedDatabase.value = db;
+  showDataPreview.value = true;
+  loadDataKeys();
+}
 
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
+function closeDataPreview() {
+  showDataPreview.value = false;
+  selectedDatabase.value = null;
+  dataKeys.value = [];
+  keyPattern.value = "";
+  selectedKey.value = null;
+  keyData.value = null;
+}
+
+async function loadDataKeys() {
+  if (!selectedDatabase.value) return;
+
+  loadingDataKeys.value = true;
+  keyValueError.value = null;
+  selectedKey.value = null;
+  keyData.value = null;
+
+  try {
+    const payload = {
+      host: props.connection.redis.host,
+      port: props.connection.redis.port,
+      password: props.connection.redis.password,
+      path: props.connection.redis.path,
+      dbIndex: selectedDatabase.value.id,
+      pattern: keyPattern.value || "*",
+      limit: 100,
+      offset: 0
+    };
+
+    const result = await window.api.getRedisKeys(payload);
+
+    if (!result.success) {
+      showAlert(`Failed to load Redis keys: ${result.message}`, "error");
+      return;
+    }
+
+    dataKeys.value = result.keys;
+  } catch (err) {
+    showAlert(`Error loading Redis keys: ${err.message}`, "error");
+    console.error("Redis keys load error:", err);
+  } finally {
+    loadingDataKeys.value = false;
+  }
+}
+
+function refreshDataKeys() {
+  loadDataKeys();
+}
+
+async function loadKeyValue(key) {
+  if (!key) return;
+
+  selectedKey.value = key;
+  loadingKeyValue.value = true;
+  keyValueError.value = null;
+  keyData.value = null;
+
+  try {
+    const payload = {
+      host: props.connection.redis.host,
+      port: props.connection.redis.port,
+      password: props.connection.redis.password,
+      path: props.connection.redis.path,
+      dbIndex: selectedDatabase.value.id,
+      key: key
+    };
+
+    const result = await window.api.getRedisKeyValue(payload);
+
+    if (!result.success) {
+      keyValueError.value = result.message || "Failed to load key value";
+      return;
+    }
+
+    keyData.value = result;
+  } catch (err) {
+    keyValueError.value = err.message || "An error occurred while loading key value";
+    console.error("Redis key value load error:", err);
+  } finally {
+    loadingKeyValue.value = false;
+  }
 }
 
 function confirmClearDatabase(db) {

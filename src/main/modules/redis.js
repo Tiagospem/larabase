@@ -320,11 +320,204 @@ function getTotalKeys(keyspaceInfo) {
   return total || 1; // Avoid division by zero
 }
 
+/**
+ * Get keys from a specific Redis database with pagination
+ */
+async function getRedisKeys(event, config) {
+  let client = null;
+
+  try {
+    if (!config.dbIndex && config.dbIndex !== 0) {
+      return {
+        success: false,
+        message: "Database index is required"
+      };
+    }
+
+    // Extract the numeric index from dbIndex (e.g., 'db0' -> 0)
+    const dbIndex = parseInt(config.dbIndex.replace("db", ""), 10);
+    if (isNaN(dbIndex) || dbIndex < 0 || dbIndex > 15) {
+      return {
+        success: false,
+        message: "Invalid database index. Must be between 0 and 15."
+      };
+    }
+
+    // First check if Redis is running
+    const statusCheck = await checkRedisStatus(event, config);
+    if (!statusCheck.success) {
+      return statusCheck;
+    }
+
+    // Create client
+    client = createRedisClient(config, statusCheck.runningMode === "Docker");
+    await client.connect();
+
+    // Select the database
+    await client.sendCommand(["SELECT", dbIndex.toString()]);
+
+    // Get all keys with pattern match and pagination
+    const pattern = config.pattern || "*";
+    const limit = config.limit || 100;
+    const offset = config.offset || 0;
+
+    // Use SCAN for pagination
+    let keys = [];
+    let cursor = "0";
+    let count = 0;
+
+    do {
+      // SCAN cursor COUNT 50 MATCH pattern
+      const result = await client.sendCommand(["SCAN", cursor, "MATCH", pattern, "COUNT", "50"]);
+      cursor = result[0];
+      const batchKeys = result[1];
+
+      // Add keys within our offset/limit range
+      for (const key of batchKeys) {
+        if (count >= offset && keys.length < limit) {
+          keys.push(key);
+        }
+        count++;
+      }
+
+      // Stop if we've collected enough keys or there are no more keys
+    } while (cursor !== "0" && keys.length < limit);
+
+    await client.quit();
+
+    return {
+      success: true,
+      keys,
+      hasMore: keys.length >= limit
+    };
+  } catch (err) {
+    if (client && client.isOpen) {
+      await client.quit().catch(() => {});
+    }
+
+    return {
+      success: false,
+      message: `Failed to get Redis keys: ${err.message}`
+    };
+  }
+}
+
+/**
+ * Get the value of a specific Redis key
+ */
+async function getRedisKeyValue(event, config) {
+  let client = null;
+
+  try {
+    if (!config.dbIndex && config.dbIndex !== 0) {
+      return {
+        success: false,
+        message: "Database index is required"
+      };
+    }
+
+    if (!config.key) {
+      return {
+        success: false,
+        message: "Key is required"
+      };
+    }
+
+    // Extract the numeric index from dbIndex (e.g., 'db0' -> 0)
+    const dbIndex = parseInt(config.dbIndex.replace("db", ""), 10);
+    if (isNaN(dbIndex) || dbIndex < 0 || dbIndex > 15) {
+      return {
+        success: false,
+        message: "Invalid database index. Must be between 0 and 15."
+      };
+    }
+
+    // First check if Redis is running
+    const statusCheck = await checkRedisStatus(event, config);
+    if (!statusCheck.success) {
+      return statusCheck;
+    }
+
+    // Create client
+    client = createRedisClient(config, statusCheck.runningMode === "Docker");
+    await client.connect();
+
+    // Select the database
+    await client.sendCommand(["SELECT", dbIndex.toString()]);
+
+    // Get the type of key
+    const keyType = await client.sendCommand(["TYPE", config.key]);
+    let value;
+    let ttl = await client.sendCommand(["TTL", config.key]);
+
+    // Get the value based on the key type
+    switch (keyType.toLowerCase()) {
+      case "string":
+        value = await client.sendCommand(["GET", config.key]);
+        break;
+      case "list":
+        value = await client.sendCommand(["LRANGE", config.key, "0", "99"]);
+        break;
+      case "set":
+        value = await client.sendCommand(["SMEMBERS", config.key]);
+        break;
+      case "zset":
+        value = await client.sendCommand(["ZRANGE", config.key, "0", "99", "WITHSCORES"]);
+        // Convert array to score-value pairs
+        if (Array.isArray(value)) {
+          const result = [];
+          for (let i = 0; i < value.length; i += 2) {
+            result.push({
+              value: value[i],
+              score: value[i + 1]
+            });
+          }
+          value = result;
+        }
+        break;
+      case "hash":
+        value = await client.sendCommand(["HGETALL", config.key]);
+        // Convert array to key-value pairs
+        if (Array.isArray(value)) {
+          const result = {};
+          for (let i = 0; i < value.length; i += 2) {
+            result[value[i]] = value[i + 1];
+          }
+          value = result;
+        }
+        break;
+      default:
+        value = `Unsupported type: ${keyType}`;
+    }
+
+    await client.quit();
+
+    return {
+      success: true,
+      key: config.key,
+      type: keyType.toLowerCase(),
+      value,
+      ttl: ttl === -1 ? null : ttl
+    };
+  } catch (err) {
+    if (client && client.isOpen) {
+      await client.quit().catch(() => {});
+    }
+
+    return {
+      success: false,
+      message: `Failed to get Redis key value: ${err.message}`
+    };
+  }
+}
+
 function registerRedisHandlers() {
   ipcMain.handle("check-redis-status", checkRedisStatus);
   ipcMain.handle("get-redis-databases", getRedisDatabases);
   ipcMain.handle("clear-redis-database", clearRedisDatabase);
   ipcMain.handle("clear-all-redis-databases", clearAllRedisDatabases);
+  ipcMain.handle("get-redis-keys", getRedisKeys);
+  ipcMain.handle("get-redis-key-value", getRedisKeyValue);
 }
 
 module.exports = {
