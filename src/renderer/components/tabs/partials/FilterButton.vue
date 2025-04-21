@@ -380,8 +380,6 @@ async function loadFilteredData() {
 
 function setExampleFilter(example) {
   tableDataStore.advancedFilterTerm = example;
-
-  applyAdvancedFilter();
 }
 
 function applyFilter() {
