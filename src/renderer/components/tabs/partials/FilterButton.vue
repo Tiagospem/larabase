@@ -228,7 +228,7 @@ async function applyAdvancedFilter() {
   tableDataStore.currentPage = 1;
 
   try {
-    await loadFilteredData();
+    await tableDataStore.loadFilteredData();
   } catch (error) {
     console.error("Error to get filtered data:", error);
     showAlert(`Error to apply filter: ${error.message}`, "error");
@@ -273,83 +273,14 @@ function clearFilters() {
   }
 }
 
-async function loadFilteredData() {
-  if (!tableDataStore.activeFilter) {
-    return tableDataStore.loadTableData();
-  }
-
-  tableDataStore.isLoading = true;
-  tableDataStore.loadError = null;
-  tableDataStore.selectedRows = [];
-
-  try {
-    const sortParams = tableDataStore.currentSortColumn
-      ? {
-          sortColumn: tableDataStore.currentSortColumn,
-          sortDirection: tableDataStore.currentSortDirection
-        }
-      : {};
-
-    const result = await databaseStore.loadFilteredTableData(
-      tableDataStore.connectionId,
-      tableDataStore.tableName,
-      tableDataStore.activeFilter,
-      tableDataStore.rowsPerPage,
-      tableDataStore.currentPage,
-      sortParams
-    );
-
-    if (!result.data || result.data.length === 0) {
-      if (result.totalRecords > 0) {
-        showAlert(`No records found on page ${tableDataStore.currentPage}. Total: ${result.totalRecords}`, "info");
-      } else {
-        showAlert("No records match the applied filter", "info");
-      }
-    } else {
-      showAlert(`Found ${result.totalRecords} record(s) matching the filter`, "success");
-    }
-
-    if (result.data && result.data.length > 0) {
-      tableDataStore.tableData = result.data;
-    } else {
-      const previousData = tableDataStore.tableData;
-      if (previousData.length > 0) {
-        const emptyRow = Object.fromEntries(
-          Object.keys(previousData[0]).map(key => [key, null])
-        );
-        tableDataStore.tableData = [emptyRow];
-        setTimeout(() => {
-          tableDataStore.tableData = [];
-        }, 0);
-      } else {
-        tableDataStore.tableData = [];
-      }
-    }
-
-    tableDataStore.totalRecordsCount = result.totalRecords || 0;
-
-    tableDataStore.onLoad({
-      columns: tableDataStore.columns,
-      rowCount: result.totalRecords || 0
-    });
-  } catch (error) {
-    console.error("Error applying filter:", error);
-    tableDataStore.loadError = error.message;
-    showAlert(`Error applying filter: ${error.message}`, "error");
-    tableDataStore.tableData = [];
-    tableDataStore.totalRecordsCount = 0;
-  } finally {
-    tableDataStore.isLoading = false;
-  }
-}
-
 function setExampleFilter(example) {
   tableDataStore.advancedFilterTerm = example;
 }
 
 function applyFilter() {
   tableDataStore.currentPage = 1;
+  tableDataStore.loadFilteredData();
 }
 
-defineExpose({ loadFilteredData, clearFilters });
+defineExpose({ clearFilters });
 </script>
