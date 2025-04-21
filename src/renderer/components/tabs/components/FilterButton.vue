@@ -86,7 +86,9 @@
           <label class="label">
             <span class="label-text-alt text-xs">
               Examples:
-              <code class="bg-base-300 p-1 cursor-pointer" @click="setExampleFilter('id = 2')">id = 2</code>,
+              <code class="bg-base-300 p-1 cursor-pointer" @click="setExampleFilter('id = 2')"
+                >id = 2</code
+              >,
               <code
                 class="bg-base-300 p-1 cursor-pointer"
                 @click="setExampleFilter('email LIKE \'%example%\'')"
@@ -194,7 +196,7 @@ const props = defineProps({
 const databaseStore = useDatabaseStore();
 const tableDataStore = useTableDataStore(props.storeId);
 
-async function applyAdvancedFilter () {
+async function applyAdvancedFilter() {
   tableDataStore.activeFilter = tableDataStore.advancedFilterTerm;
 
   if (persistFilter.value && tableDataStore.activeFilter) {
@@ -223,7 +225,7 @@ async function applyAdvancedFilter () {
   }
 }
 
-function shouldUseServerFilter (filter) {
+function shouldUseServerFilter(filter) {
   if (!filter) return false;
 
   const cleanFilter = filter.trim();
@@ -248,25 +250,25 @@ function shouldUseServerFilter (filter) {
   return /^\s*\w+_id\s*=\s*\d+\s*$/i.test(cleanFilter);
 }
 
-function toggleAdvancedFilter () {
+function toggleAdvancedFilter() {
   originalFilterTerm.value = tableDataStore.advancedFilterTerm;
   showFilterModal.value = true;
 }
 
-function insertColumnName (column) {
+function insertColumnName(column) {
   tableDataStore.advancedFilterTerm += column + ' ';
 }
 
-function insertOperator (op) {
+function insertOperator(op) {
   tableDataStore.advancedFilterTerm += ' ' + op + ' ';
 }
 
-function cancelAdvancedFilter () {
+function cancelAdvancedFilter() {
   tableDataStore.advancedFilterTerm = originalFilterTerm.value;
   showFilterModal.value = false;
 }
 
-function clearFilters () {
+function clearFilters() {
   const hadActiveFilter = tableDataStore.activeFilter || tableDataStore.filterTerm;
 
   tableDataStore.filterTerm = '';
@@ -286,7 +288,7 @@ function clearFilters () {
   }
 }
 
-async function loadFilteredData () {
+async function loadFilteredData() {
   if (!tableDataStore.activeFilter) {
     return tableDataStore.loadTableData();
   }
@@ -344,13 +346,13 @@ async function loadFilteredData () {
   }
 }
 
-function setExampleFilter (example) {
+function setExampleFilter(example) {
   tableDataStore.advancedFilterTerm = example;
 
   applyAdvancedFilter();
 }
 
-function applyFilter () {
+function applyFilter() {
   tableDataStore.currentPage = 1;
 }
 

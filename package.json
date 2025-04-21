@@ -1,12 +1,12 @@
 {
   "name": "larabase",
   "version": "0.0.5-beta",
-  "description": "Database management tool like TablePlus",
+  "description": "An Opined Database GUI for Laravel Developers",
   "main": "src/main/index.js",
   "type": "commonjs",
   "scripts": {
     "clean": "rm -rf dist build",
-    "dev": "concurrently -k \"vite\" \"wait-on tcp:5173 && cross-env NODE_ENV=development electron .\"",
+    "dev": "concurrently -k \"vite\" \"cross-env NODE_ENV=development electron .\"",
     "build": "npm run clean && vite build && electron-builder",
     "build:mac": "npm run clean && vite build && electron-builder --mac",
     "build:win": "npm run clean && vite build && electron-builder --win",
