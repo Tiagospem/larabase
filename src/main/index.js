@@ -11,6 +11,7 @@ const { registerRestoreDumpHandlers } = require("./modules/restore-dump");
 const { registerConnectionHandlers } = require("./modules/connections");
 const { registerProjectHandlers } = require("./modules/project");
 const { registerTableHandlers } = require("./modules/tables");
+const { registerRedisHandlers } = require("./modules/redis");
 
 const store = new Store();
 const dbMonitoringConnections = new Map();
@@ -31,6 +32,7 @@ app.whenReady().then(async () => {
   registerRestoreDumpHandlers(store);
   registerConnectionHandlers(store);
   registerProjectHandlers();
+  registerRedisHandlers();
 
   setupGlobalMonitoring();
 

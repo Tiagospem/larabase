@@ -35,6 +35,10 @@ try {
     listDatabases: (config) => safeIpcRenderer.invoke("list-databases", config),
     getTableData: (config) => safeIpcRenderer.invoke("get-table-data", config),
     getFilteredTableData: (config) => safeIpcRenderer.invoke("get-filtered-table-data", config),
+    checkRedisStatus: (config) => safeIpcRenderer.invoke("check-redis-status", config),
+    getRedisDatabases: (config) => safeIpcRenderer.invoke("get-redis-databases", config),
+    clearRedisDatabase: (config) => safeIpcRenderer.invoke("clear-redis-database", config),
+    clearAllRedisDatabases: (config) => safeIpcRenderer.invoke("clear-all-redis-databases", config),
 
     saveConnections: (connections) => safeIpcRenderer.invoke("save-connections", connections),
     getOpenTabs: () => safeIpcRenderer.invoke("get-open-tabs"),
