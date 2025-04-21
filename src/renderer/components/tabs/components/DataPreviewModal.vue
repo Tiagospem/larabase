@@ -155,7 +155,7 @@ const props = defineProps({
   }
 });
 
-defineEmits(['close']);
+const emit = defineEmits(['close']);
 
 const expandedFields = ref({});
 const copyFeedback = ref('');
@@ -280,7 +280,6 @@ function shouldShowExpandButton(value) {
   const isVeryLong = value.length > 250;
 
   const lineCount = value.split('\n').length;
-  const wordCount = value.split(/\s+/).length;
   const averageCharsPerLine = 80;
   const estimatedLines = Math.max(lineCount, Math.ceil(value.length / averageCharsPerLine));
 

@@ -1,0 +1,1 @@
+quando aplica um filtro avançado a paginação esta com problema
