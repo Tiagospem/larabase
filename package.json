@@ -17,12 +17,12 @@
     "lint": "eslint --ext .js,.vue,.ts --fix src",
     "lint:check": "eslint --ext .js,.vue,.ts src",
     "lint:fix-style": "eslint --ext .js,.vue,.ts --fix --fix-type layout,suggestion,problem src",
-    "remove-comments": "node remove-comments.js",
     "format": "prettier --write \"src/**/*.{js,vue,css,scss,html,ts,tsx}\"",
     "format:check": "prettier --check \"src/**/*.{js,vue,css,scss,html,ts,tsx}\"",
     "cleanup": "npm run remove-comments && npm run format",
     "type-check": "vue-tsc --noEmit",
-    "ts:compile": "tsc --noEmit"
+    "ts:compile": "tsc --noEmit",
+    "remove-comments": "node remove-comments.js"
   },
   "keywords": [],
   "author": "",

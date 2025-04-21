@@ -13,11 +13,11 @@
               :class="
                 tableDataStore.isLiveTableActive ? 'animate-ping bg-success' : 'bg-transparent'
               "
-            ></span>
+            />
             <span
               class="relative inline-flex rounded-full h-2 w-2"
               :class="tableDataStore.isLiveTableActive ? 'bg-success' : 'bg-transparent'"
-            ></span>
+            />
           </span>
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -99,7 +99,7 @@ const showAlert = inject('showAlert');
 
 const tableDataStore = useTableDataStore(props.storeId);
 
-function toggleLiveTable() {
+function toggleLiveTable () {
   try {
     if (!tableDataStore.isLiveTableActive) {
       tableDataStore.startLiveUpdates();
@@ -119,7 +119,7 @@ function toggleLiveTable() {
   }
 }
 
-function updateLiveDelay() {
+function updateLiveDelay () {
   tableDataStore.liveUpdateDelay = tableDataStore.liveUpdateDelaySeconds * 1000;
 
   try {
@@ -138,7 +138,7 @@ function updateLiveDelay() {
   }
 }
 
-function clearUpdateCounter() {
+function clearUpdateCounter () {
   tableDataStore.updateCounter = 0;
   tableDataStore.updateAppIcon(0);
 }

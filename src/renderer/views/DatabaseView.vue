@@ -1,17 +1,17 @@
 <template>
   <div
+    v-cloak
     class="flex flex-col h-full"
     tabindex="0"
     @keydown.ctrl.k.prevent="databaseSwitcherRef?.openDatabaseSwitcher"
     @keydown.meta.k.prevent="databaseSwitcherRef?.openDatabaseSwitcher"
-    v-cloak
   >
     <header class="bg-neutral px-4 py-2 border-b border-neutral flex items-center justify-between">
       <div class="flex items-center">
         <button
+          v-tooltip.right="'Back to connections'"
           class="btn btn-ghost btn-sm mr-2"
           @click="router.push('/')"
-          v-tooltip.right="'Back to connections'"
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -114,21 +114,21 @@
             @click="showDatabaseDiagram = true"
           >
             <svg
+              id="Capa_1"
               fill="#fff"
               class="size-5"
               version="1.1"
-              id="Capa_1"
               xmlns="http://www.w3.org/2000/svg"
               xmlns:xlink="http://www.w3.org/1999/xlink"
               viewBox="0 0 60 60"
               xml:space="preserve"
             >
-              <g id="SVGRepo_bgCarrier" stroke-width="0"></g>
-              <g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g>
+              <g id="SVGRepo_bgCarrier" stroke-width="0" />
+              <g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round" />
               <g id="SVGRepo_iconCarrier">
                 <path
                   d="M53,41V29H31V19h7V3H22v16h7v10H7v12H0v16h16V41H9V31h20v10h-7v16h16V41h-7V31h20v10h-7v16h16V41H53z M24,5h12v12H24V5z M14,55H2V43h12V55z M36,55H24V43h12V55z M58,55H46V43h12V55z"
-                ></path>
+                />
               </g>
             </svg>
           </button>
@@ -169,7 +169,7 @@
             >
               <title>db-tables-swap</title>
               <desc>Created with Sketch.</desc>
-              <defs></defs>
+              <defs />
               <g
                 id="64px-Line"
                 stroke="none"
@@ -177,27 +177,27 @@
                 fill="currentColor"
                 fill-rule="evenodd"
               >
-                <g id="db-tables-swap"></g>
+                <g id="db-tables-swap" />
                 <path
+                  id="Shape"
                   d="M29,16 C29.552,16 30,15.552 30,15 C30,14.448 29.552,14 29,14 C21.832,14 16,19.832 16,27 L16,30.586 L13.707,28.293 C13.316,27.902 12.684,27.902 12.293,28.293 C11.902,28.684 11.902,29.316 12.293,29.707 L16.292,33.707 C16.384,33.799 16.495,33.873 16.618,33.923 C16.74,33.974 16.87,34 17,34 C17.13,34 17.26,33.974 17.382,33.923 C17.505,33.872 17.615,33.799 17.708,33.707 L21.707,29.707 C22.098,29.316 22.098,28.684 21.707,28.293 C21.316,27.902 20.684,27.902 20.293,28.293 L18,30.586 L18,27 C18,20.935 22.935,16 29,16 L29,16 Z"
-                  id="Shape"
                   fill="currentColor"
-                ></path>
+                />
                 <path
+                  id="Shape"
                   d="M35,48 C34.448,48 34,48.447 34,49 C34,49.553 34.448,50 35,50 C42.168,50 48,44.168 48,37 L48,33.414 L50.293,35.707 C50.488,35.902 50.744,36 51,36 C51.256,36 51.512,35.902 51.707,35.707 C52.098,35.316 52.098,34.684 51.707,34.293 L47.707,30.293 C47.615,30.201 47.504,30.127 47.382,30.077 C47.138,29.976 46.862,29.976 46.618,30.077 C46.496,30.128 46.385,30.201 46.293,30.293 L42.293,34.293 C41.902,34.684 41.902,35.316 42.293,35.707 C42.684,36.098 43.316,36.098 43.707,35.707 L46,33.414 L46,37 C46,43.065 41.065,48 35,48 L35,48 Z"
-                  id="Shape"
                   fill="currentColor"
-                ></path>
+                />
                 <path
+                  id="Shape"
                   d="M59,6 L35,6 C34.448,6 34,6.448 34,7 L34,25 C34,25.552 34.448,26 35,26 L59,26 C59.552,26 60,25.552 60,25 L60,7 C60,6.448 59.552,6 59,6 L59,6 Z M44,18 L44,14 L50,14 L50,18 L44,18 L44,18 Z M50,20 L50,24 L44,24 L44,20 L50,20 L50,20 Z M36,14 L42,14 L42,18 L36,18 L36,14 L36,14 Z M52,14 L58,14 L58,18 L52,18 L52,14 L52,14 Z M58,8 L58,12 L36,12 L36,8 L58,8 L58,8 Z M36,20 L42,20 L42,24 L36,24 L36,20 L36,20 Z M52,24 L52,20 L58,20 L58,24 L52,24 L52,24 Z"
-                  id="Shape"
                   fill="currentColor"
-                ></path>
+                />
                 <path
-                  d="M5,58 L29,58 C29.552,58 30,57.553 30,57 L30,39 C30,38.447 29.552,38 29,38 L5,38 C4.448,38 4,38.447 4,39 L4,57 C4,57.553 4.448,58 5,58 L5,58 Z M20,46 L20,50 L14,50 L14,46 L20,46 L20,46 Z M28,46 L28,50 L22,50 L22,46 L28,46 L28,46 Z M20,52 L20,56 L14,56 L14,52 L20,52 L20,52 Z M12,50 L6,50 L6,46 L12,46 L12,50 L12,50 Z M6,52 L12,52 L12,56 L6,56 L6,52 L6,52 Z M22,56 L22,52 L28,52 L28,56 L22,56 L22,56 Z M28,40 L28,44 L6,44 L6,40 L28,40 L28,40 Z"
                   id="Shape"
+                  d="M5,58 L29,58 C29.552,58 30,57.553 30,57 L30,39 C30,38.447 29.552,38 29,38 L5,38 C4.448,38 4,38.447 4,39 L4,57 C4,57.553 4.448,58 5,58 L5,58 Z M20,46 L20,50 L14,50 L14,46 L20,46 L20,46 Z M28,46 L28,50 L22,50 L22,46 L28,46 L28,46 Z M20,52 L20,56 L14,56 L14,52 L20,52 L20,52 Z M12,50 L6,50 L6,46 L12,46 L12,50 L12,50 Z M6,52 L12,52 L12,56 L6,56 L6,52 L6,52 Z M22,56 L22,52 L28,52 L28,56 L22,56 L22,56 Z M28,40 L28,44 L6,44 L6,40 L28,40 L28,40 Z"
                   fill="currentColor"
-                ></path>
+                />
               </g>
             </svg>
           </button>
@@ -240,10 +240,10 @@
         :connection-id="connectionId"
         :active-tab-name="activeTab?.tableName"
         :sidebar-width="sidebarWidth"
+        :style="{ width: `${sidebarWidth}px` }"
         @resize-start="startResize"
         @table-open="mainTabsRef?.openTable"
         @update:sidebar-width="sidebarWidth = $event"
-        :style="{ width: `${sidebarWidth}px` }"
       />
 
       <div class="flex-1 bg-base-100 overflow-hidden">

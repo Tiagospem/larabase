@@ -11,7 +11,7 @@
       </div>
 
       <div class="flex flex-wrap items-center gap-2">
-        <FilterButton :store-id="storeId" ref="filterButtonRef" />
+        <FilterButton ref="filterButtonRef" :store-id="storeId" />
       </div>
     </div>
 
@@ -29,15 +29,15 @@
       />
       <DataTable
         v-else-if="hasData"
-        :store-id="storeId"
         ref="dataTableRef"
-        @loadFilteredData="filterButtonRef.loadFilteredData()"
-        @navigateToForeignKey="(column, row) => navigateToForeignKey(column, row)"
+        :store-id="storeId"
+        @load-filtered-data="filterButtonRef.loadFilteredData()"
+        @navigate-to-foreign-key="(column, row) => navigateToForeignKey(column, row)"
       />
       <NoRecordState v-else @reload="tableDataStore.loadTableData()" />
     </div>
 
-    <PaginatorBar v-if="hasData" :store-id="storeId" @scrollToTop="dataTableRef.scrollToTop()" />
+    <PaginatorBar v-if="hasData" :store-id="storeId" @scroll-to-top="dataTableRef.scrollToTop()" />
   </div>
 </template>
 
@@ -126,7 +126,7 @@ const refreshLiveTableState = () => {
   }
 };
 
-function handleStorageChange(event) {
+function handleStorageChange (event) {
   if (!event.key) return;
 
   const ourKey = `liveTable.enabled.${props.connectionId}.${props.tableName}`;
@@ -163,7 +163,7 @@ const handleWindowFocus = () => {
   refreshLiveTableState();
 };
 
-async function navigateToForeignKey(column, value) {
+async function navigateToForeignKey (column, value) {
   if (value === null || value === undefined) {
     showAlert('Null or undefined value. Unable to navigate to the related record.', 'error');
     return;
@@ -224,7 +224,7 @@ async function navigateToForeignKey(column, value) {
   }
 }
 
-async function loadTableStructure() {
+async function loadTableStructure () {
   try {
     const structure = await databaseStore.getTableStructure(
       props.connectionId,
