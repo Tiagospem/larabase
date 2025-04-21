@@ -48,3 +48,9 @@ defineProps({
 
 defineEmits(["select-key"]);
 </script>
+
+<style scoped>
+.break-all {
+  word-break: break-all;
+}
+</style>

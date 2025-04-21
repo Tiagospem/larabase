@@ -23,8 +23,8 @@
       <div class="mb-4">
         <div class="flex justify-between items-start">
           <div>
-            <h4 class="font-medium text-primary">{{ selectedKey }}</h4>
-            <div class="flex gap-2 mt-1">
+            <h4 class="font-medium text-primary break-all">{{ selectedKey }}</h4>
+            <div class="flex gap-2 mt-1 flex-wrap">
               <span class="badge badge-sm">Type: {{ keyData.type }}</span>
               <span
                 v-if="keyData.ttl !== null"
@@ -37,11 +37,11 @@
       </div>
 
       <!-- Value based on type -->
-      <div class="bg-base-300 p-3 rounded-lg">
+      <div class="bg-base-300 p-3 rounded-lg overflow-auto max-h-[320px]">
         <!-- String type -->
         <div
           v-if="keyData.type === 'string'"
-          class="whitespace-pre-wrap break-all"
+          class="whitespace-pre-wrap break-all text-sm"
         >
           {{ keyData.value }}
         </div>
@@ -54,9 +54,9 @@
           <div
             v-for="(item, index) in keyData.value"
             :key="index"
-            class="p-1 text-sm"
+            class="p-1 text-sm break-all"
           >
-            {{ index }}. {{ item }}
+            <span class="font-medium inline-block w-8">{{ index }}.</span> {{ item }}
           </div>
         </div>
 
@@ -68,7 +68,7 @@
           <div
             v-for="(item, index) in keyData.value"
             :key="index"
-            class="p-1 text-sm"
+            class="p-1 text-sm break-all"
           >
             {{ item }}
           </div>
@@ -84,7 +84,8 @@
             :key="index"
             class="p-1 text-sm"
           >
-            <span class="badge badge-neutral mr-2">{{ item.score }}</span> {{ item.value }}
+            <span class="badge badge-neutral mr-2">{{ item.score }}</span>
+            <span class="break-all">{{ item.value }}</span>
           </div>
         </div>
 
@@ -98,7 +99,8 @@
             :key="key"
             class="p-1 text-sm"
           >
-            <span class="font-medium">{{ key }}:</span> {{ value }}
+            <span class="font-medium break-all">{{ key }}:</span>
+            <span class="break-all">{{ value }}</span>
           </div>
         </div>
 
@@ -134,3 +136,10 @@ defineProps({
   }
 });
 </script>
+
+<style scoped>
+/* Ensure long text wraps properly */
+.break-all {
+  word-break: break-all;
+}
+</style>

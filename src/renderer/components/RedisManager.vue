@@ -106,7 +106,6 @@
             @clear="confirmClearDatabase"
             @flush="confirmClearAllDatabases"
             @refresh="refreshDatabases"
-            @preview-all="previewRedisData"
           />
         </div>
       </template>
@@ -165,14 +164,34 @@
 
         <!-- Search bar -->
         <div class="flex gap-2 mb-4">
-          <div class="flex-1">
+          <div class="flex-1 relative">
             <input
               type="text"
               placeholder="Search keys (e.g. user:*, session:*)"
-              class="input input-bordered w-full"
+              class="input input-bordered w-full pr-10"
               v-model="keyPattern"
               @keyup.enter="loadDataKeys"
             />
+            <button
+              v-if="keyPattern"
+              class="absolute right-2 top-1/2 -translate-y-1/2 btn btn-ghost btn-xs btn-circle"
+              @click="clearSearch"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                class="h-4 w-4"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M6 18L18 6M6 6l12 12"
+                />
+              </svg>
+            </button>
           </div>
           <button
             class="btn btn-ghost"
@@ -401,17 +420,6 @@ async function loadRedisDatabases() {
   }
 }
 
-function previewRedisData() {
-  // Check if we have any databases with keys before showing the preview
-  const dbWithKeys = redisDatabases.value.find((db) => db.keys > 0);
-
-  if (dbWithKeys) {
-    previewDatabaseData(dbWithKeys);
-  } else {
-    showAlert("No databases with keys to preview", "info");
-  }
-}
-
 function previewDatabaseData(db) {
   selectedDatabase.value = db;
   showDataPreview.value = true;
@@ -464,6 +472,13 @@ async function loadDataKeys() {
 }
 
 function refreshDataKeys() {
+  loadDataKeys();
+}
+
+function clearSearch() {
+  keyPattern.value = "";
+  selectedKey.value = null;
+  keyData.value = null;
   loadDataKeys();
 }
 
