@@ -25,14 +25,14 @@
       />
       <EmptyFilterState
         v-else-if="isFilteredEmpty"
-        @clear="filterButtonRef.clearFilters"
+        @clear="filterButtonRef.clearFilters()"
         @reload="tableDataStore.loadTableData()"
       />
       <DataTable
         v-else-if="hasData"
         ref="dataTableRef"
         :store-id="storeId"
-        @load-filtered-data="filterButtonRef.loadFilteredData()"
+        @load-filtered-data="tableDataStore.loadFilteredData()"
         @navigate-to-foreign-key="(column, row) => navigateToForeignKey(column, row)"
       />
       <NoRecordState
@@ -225,10 +225,9 @@ async function loadTableStructure() {
     const structure = await databaseStore.getTableStructure(props.connectionId, props.tableName, true);
 
     Helpers.setColumnStructure(structure);
-    
-    // Store column names in the table data store for advanced filtering
+
     if (structure && Array.isArray(structure) && structure.length > 0) {
-      tableDataStore.lastKnownColumns = structure.map(col => col.name);
+      tableDataStore.lastKnownColumns = structure.map((col) => col.name);
     }
   } catch (error) {
     console.error("Error loading table structure:", error);
