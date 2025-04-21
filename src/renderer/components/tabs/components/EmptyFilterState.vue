@@ -17,13 +17,13 @@
       </svg>
       <p>No records match your filter</p>
       <div class="flex justify-center space-x-2 mt-4">
-        <button class="btn btn-sm btn-error" @click="$emit('clear')">Clear Filters</button>
-        <button class="btn btn-sm btn-primary" @click="$emit('reload')">Reload Data</button>
+        <button class="btn btn-sm btn-error" @click="emit('clear')">Clear Filters</button>
+        <button class="btn btn-sm btn-primary" @click="emit('reload')">Reload Data</button>
       </div>
     </div>
   </div>
 </template>
 
 <script setup>
-defineEmits(['clear', 'reload']);
+const emit = defineEmits(['clear', 'reload']);
 </script>

@@ -16,7 +16,7 @@
         />
       </svg>
       <p>{{ props.message }}</p>
-      <button class="btn btn-sm btn-primary mt-4" @click="$emit('retry')">Try again</button>
+      <button class="btn btn-sm btn-primary mt-4" @click="emit('retry')">Try again</button>
     </div>
   </div>
 </template>
@@ -29,5 +29,5 @@ const props = defineProps({
   }
 });
 
-defineEmits(['retry']);
+const emit = defineEmits(['retry']);
 </script>

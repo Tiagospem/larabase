@@ -99,7 +99,7 @@
               <button
                 class="btn btn-xs btn-circle btn-ghost"
                 title="Preview data"
-                @click.stop="emit('openPreviewModal', row)"
+                @click.stop="openPreviewModal(row)"
               >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
@@ -132,7 +132,7 @@
                 maxWidth:
                   tableDataStore.columnWidths[column] || tableDataStore.defaultColumnWidth(column)
               }"
-              @dblclick.stop="emit('openEditModal', row)"
+              @dblclick.stop="editRecordRef.openEditModal(row)"
             >
               <div class="flex items-center justify-between w-full">
                 <span
@@ -196,6 +196,16 @@
       </table>
     </div>
   </div>
+
+  <EditRecord :store-id="storeId" ref="editRecordRef" />
+
+  <DataPreviewModal
+    v-if="tableDataStore.previewingRecord"
+    :show="tableDataStore.showPreviewModal"
+    :record="tableDataStore.previewingRecord"
+    :columns="tableDataStore.columns"
+    @close="closePreviewModal"
+  />
 </template>
 
 <script setup>
@@ -203,6 +213,8 @@ import { useTableDataStore } from '@/store/table-data';
 import { Helpers } from '@/utils/helpers';
 import { onMounted, onUnmounted, ref } from 'vue';
 import { useDatabaseStore } from '@/store/database';
+import EditRecord from '@/components/tabs/components/EditRecord.vue';
+import DataPreviewModal from '@/components/tabs/components/DataPreviewModal.vue';
 
 const databaseStore = useDatabaseStore();
 
@@ -213,7 +225,7 @@ const props = defineProps({
   }
 });
 
-const emit = defineEmits(['openPreviewModal', 'openEditModal', 'navigateToForeignKey']);
+const emit = defineEmits(['navigateToForeignKey']);
 
 const tableContainer = ref(null);
 const shiftKeyPressed = ref(false);
@@ -224,6 +236,7 @@ const resizingColumn = ref(null);
 const recentlyResized = ref(false);
 const startX = ref(0);
 const startWidth = ref(0);
+const editRecordRef = ref(null);
 
 const tableDataStore = useTableDataStore(props.storeId);
 
@@ -451,6 +464,18 @@ function getRowBackgroundClass(rowIndex) {
   }
 
   return 'bg-base-100';
+}
+
+function closePreviewModal() {
+  tableDataStore.showPreviewModal = false;
+  setTimeout(() => {
+    tableDataStore.previewingRecord = null;
+  }, 300);
+}
+
+function openPreviewModal(row) {
+  tableDataStore.previewingRecord = JSON.parse(JSON.stringify(row));
+  tableDataStore.showPreviewModal = true;
 }
 
 onMounted(() => {

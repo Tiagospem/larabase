@@ -12,16 +12,6 @@
 
       <div class="flex flex-wrap items-center gap-2">
         <FilterButton :store-id="storeId" ref="filterButtonRef" />
-
-        <select
-          v-model="tableDataStore.rowsPerPage"
-          class="select select-sm select-bordered bg-base-300 w-24 sm:w-32"
-        >
-          <option value="10">10 rows</option>
-          <option value="25">25 rows</option>
-          <option value="50">50 rows</option>
-          <option value="100">100 rows</option>
-        </select>
       </div>
     </div>
 
@@ -42,174 +32,12 @@
         :store-id="storeId"
         ref="dataTableRef"
         @loadFilteredData="filterButtonRef.loadFilteredData()"
-        @openPreviewModal="openPreviewModal"
-        @openEditModal="row => editRecordRef.openEditModal(row)"
         @navigateToForeignKey="(column, row) => navigateToForeignKey(column, row)"
       />
       <NoRecordState v-else @reload="tableDataStore.loadTableData()" />
     </div>
 
-    <div
-      v-if="tableData.length > 0"
-      class="bg-base-200 px-4 py-3 border-t border-neutral flex flex-col sm:flex-row justify-between items-center text-xs sticky bottom-0 left-0 right-0 min-h-[56px] z-20"
-    >
-      <div class="flex items-center mb-2 sm:mb-0">
-        <span class="text-gray-400">
-          {{ tableName }} | {{ tableDataStore.totalRecords }} records{{
-            tableDataStore.selectedRows.length > 0
-              ? ` | ${tableDataStore.selectedRows.length} selected`
-              : ''
-          }}
-          | <span>{{ tableDataStore.columns.length }} columns</span>
-        </span>
-        <div class="ml-4 flex space-x-2">
-          <button class="btn btn-ghost btn-xs">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke-width="1.5"
-              stroke="currentColor"
-              class="w-4 h-4"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3"
-              />
-            </svg>
-            Export
-          </button>
-        </div>
-      </div>
-
-      <div class="flex items-center space-x-4">
-        <div class="join">
-          <button
-            class="join-item btn btn-xs"
-            :class="{ 'btn-disabled': tableDataStore.currentPage === 1 }"
-            :disabled="tableDataStore.currentPage === 1"
-            @click="goToFirstPage"
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke-width="1.5"
-              stroke="currentColor"
-              class="w-4 h-4"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                d="M18.75 19.5l-7.5-7.5 7.5-7.5m-6 15L5.25 12l7.5-7.5"
-              />
-            </svg>
-          </button>
-          <button
-            class="join-item btn btn-xs"
-            :class="{ 'btn-disabled': tableDataStore.currentPage === 1 }"
-            :disabled="tableDataStore.currentPage === 1"
-            @click="prevPage"
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke-width="1.5"
-              stroke="currentColor"
-              class="w-4 h-4"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                d="M15.75 19.5L8.25 12l7.5-7.5"
-              />
-            </svg>
-          </button>
-
-          <div class="join-item btn btn-xs btn-disabled">
-            <span class="text-xs"> {{ tableDataStore.currentPage }} / {{ totalPages }} </span>
-          </div>
-
-          <button
-            class="join-item btn btn-xs"
-            :class="{ 'btn-disabled': tableDataStore.currentPage === totalPages }"
-            :disabled="tableDataStore.currentPage === totalPages"
-            @click="nextPage"
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke-width="1.5"
-              stroke="currentColor"
-              class="w-4 h-4"
-            >
-              <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
-            </svg>
-          </button>
-          <button
-            class="join-item btn btn-xs"
-            :class="{ 'btn-disabled': tableDataStore.currentPage === totalPages }"
-            :disabled="tableDataStore.currentPage === totalPages"
-            @click="goToLastPage"
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke-width="1.5"
-              stroke="currentColor"
-              class="w-4 h-4"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                d="M11.25 4.5l7.5 7.5-7.5 7.5m-6-15l7.5 7.5-7.5 7.5"
-              />
-            </svg>
-          </button>
-        </div>
-
-        <div class="flex items-center space-x-2">
-          <span class="text-gray-400 hidden sm:inline-block">Rows per page:</span>
-          <select
-            v-model="tableDataStore.rowsPerPage"
-            class="select select-xs select-bordered bg-base-300 w-16"
-            @change="tableDataStore.currentPage = 1"
-          >
-            <option value="10">10</option>
-            <option value="25">25</option>
-            <option value="50">50</option>
-            <option value="100">100</option>
-          </select>
-        </div>
-
-        <div class="hidden md:flex items-center space-x-2">
-          <span class="text-gray-400">Go to page:</span>
-          <input
-            v-model="pageInput"
-            type="number"
-            min="1"
-            :max="totalPages"
-            class="input input-xs input-bordered bg-base-300 w-14"
-            @keyup.enter="goToPage"
-          />
-          <button class="btn btn-xs btn-ghost" @click="goToPage">Go</button>
-        </div>
-      </div>
-    </div>
-
-    <DataPreviewModal
-      v-if="tableDataStore.previewingRecord"
-      :show="tableDataStore.showPreviewModal"
-      :record="tableDataStore.previewingRecord"
-      :columns="tableDataStore.columns"
-      @close="closePreviewModal"
-    />
-
-    <EditRecord :store-id="storeId" ref="editRecordRef" />
+    <PaginatorBar v-if="hasData" :store-id="storeId" @scrollToTop="dataTableRef.scrollToTop()" />
   </div>
 </template>
 
@@ -217,18 +45,17 @@
 import { ref, computed, onMounted, onUnmounted, inject, watch } from 'vue';
 
 import {
-  DataPreviewModal,
   RefreshButton,
   LiveTableButton,
   TruncateButton,
   DeleteButton,
-  EditRecord,
   FilterButton,
   LoadingState,
   ErrorState,
   EmptyFilterState,
   DataTable,
-  NoRecordState
+  NoRecordState,
+  PaginatorBar
 } from '@/components/tabs/components';
 
 import { Helpers } from '../../utils/helpers';
@@ -275,62 +102,10 @@ const isFilteredEmpty = computed(
     tableDataStore.filteredData.length === 0
 );
 const hasData = computed(() => tableDataStore.tableData.length > 0);
-
-const pageInput = ref(1);
-const editRecordRef = ref(null);
-const filterButtonRef = ref(null);
-const dataTableRef = ref(null);
-
-const totalPages = computed(() => {
-  if (tableDataStore.rowsPerPage === 0) return 1;
-  return Math.ceil(tableDataStore.totalRecords / tableDataStore.rowsPerPage);
-});
-const tableData = computed(() => tableDataStore.tableData);
-const rowsPerPage = computed(() => tableDataStore.rowsPerPage);
 const highlightChanges = computed(() => tableDataStore.highlightChanges);
 
-function prevPage() {
-  if (tableDataStore.currentPage > 1) {
-    tableDataStore.currentPage--;
-    dataTableRef.value.scrollToTop();
-  }
-}
-
-function nextPage() {
-  if (tableDataStore.currentPage < totalPages.value) {
-    tableDataStore.currentPage++;
-    dataTableRef.value.scrollToTop();
-  }
-}
-
-function goToFirstPage() {
-  if (tableDataStore.currentPage !== 1) {
-    tableDataStore.currentPage = 1;
-    dataTableRef.value.scrollToTop();
-  }
-}
-
-function goToLastPage() {
-  if (tableDataStore.currentPage !== totalPages.value) {
-    tableDataStore.currentPage = totalPages.value;
-    dataTableRef.value.scrollToTop();
-  }
-}
-
-function goToPage() {
-  const page = parseInt(pageInput.value);
-  if (
-    !isNaN(page) &&
-    page >= 1 &&
-    page <= totalPages.value &&
-    page !== tableDataStore.currentPage
-  ) {
-    tableDataStore.currentPage = page;
-    dataTableRef.value.scrollToTop();
-  } else {
-    pageInput.value = tableDataStore.currentPage;
-  }
-}
+const filterButtonRef = ref(null);
+const dataTableRef = ref(null);
 
 const refreshLiveTableState = () => {
   try {
@@ -349,6 +124,43 @@ const refreshLiveTableState = () => {
   } catch (e) {
     console.error('Error refreshing Live Table state:', e);
   }
+};
+
+function handleStorageChange(event) {
+  if (!event.key) return;
+
+  const ourKey = `liveTable.enabled.${props.connectionId}.${props.tableName}`;
+  if (event.key === ourKey) {
+    const newValue = event.newValue === 'true';
+    if (newValue !== tableDataStore.isLiveTableActive) {
+      tableDataStore.isLiveTableActive = newValue;
+      if (newValue) {
+        tableDataStore.startLiveUpdates();
+      } else {
+        tableDataStore.stopLiveUpdates();
+      }
+    }
+  }
+
+  if (
+    event.key.startsWith('liveTable.enabled.') &&
+    event.key !== ourKey &&
+    event.newValue === 'true' &&
+    tableDataStore.isLiveTableActive
+  ) {
+    tableDataStore.isLiveTableActive = false;
+    tableDataStore.stopLiveUpdates();
+    localStorage.setItem(ourKey, 'false');
+  }
+}
+
+const handleTabActivation = () => {
+  refreshLiveTableState();
+  setTimeout(refreshLiveTableState, 100);
+};
+
+const handleWindowFocus = () => {
+  refreshLiveTableState();
 };
 
 async function navigateToForeignKey(column, value) {
@@ -412,67 +224,6 @@ async function navigateToForeignKey(column, value) {
   }
 }
 
-function openPreviewModal(row) {
-  tableDataStore.previewingRecord = JSON.parse(JSON.stringify(row));
-  tableDataStore.showPreviewModal = true;
-}
-
-function closePreviewModal() {
-  tableDataStore.showPreviewModal = false;
-  setTimeout(() => {
-    tableDataStore.previewingRecord = null;
-  }, 300);
-}
-
-function handleStorageChange(event) {
-  if (!event.key) return;
-
-  const ourKey = `liveTable.enabled.${props.connectionId}.${props.tableName}`;
-  if (event.key === ourKey) {
-    const newValue = event.newValue === 'true';
-    if (newValue !== tableDataStore.isLiveTableActive) {
-      tableDataStore.isLiveTableActive = newValue;
-      if (newValue) {
-        tableDataStore.startLiveUpdates();
-      } else {
-        tableDataStore.stopLiveUpdates();
-      }
-    }
-  }
-
-  if (
-    event.key.startsWith('liveTable.enabled.') &&
-    event.key !== ourKey &&
-    event.newValue === 'true' &&
-    tableDataStore.isLiveTableActive
-  ) {
-    tableDataStore.isLiveTableActive = false;
-    tableDataStore.stopLiveUpdates();
-    localStorage.setItem(ourKey, 'false');
-  }
-}
-
-const handleTabActivation = () => {
-  refreshLiveTableState();
-  setTimeout(refreshLiveTableState, 100);
-};
-
-const handleWindowFocus = () => {
-  refreshLiveTableState();
-};
-
-function addEventListener() {
-  window.addEventListener('tab-activated', handleTabActivation);
-  window.addEventListener('storage', handleStorageChange);
-  window.addEventListener('focus', handleWindowFocus);
-}
-
-function removeEventListener() {
-  window.removeEventListener('tab-activated', handleTabActivation);
-  window.removeEventListener('storage', handleStorageChange);
-  window.removeEventListener('focus', handleWindowFocus);
-}
-
 async function loadTableStructure() {
   try {
     const structure = await databaseStore.getTableStructure(
@@ -489,7 +240,9 @@ async function loadTableStructure() {
 }
 
 onMounted(() => {
-  addEventListener();
+  window.addEventListener('tab-activated', handleTabActivation);
+  window.addEventListener('storage', handleStorageChange);
+  window.addEventListener('focus', handleWindowFocus);
 
   loadTableStructure().then(() => {
     tableDataStore.loadTableData();
@@ -581,7 +334,9 @@ onMounted(() => {
 });
 
 onUnmounted(() => {
-  removeEventListener();
+  window.removeEventListener('tab-activated', handleTabActivation);
+  window.removeEventListener('storage', handleStorageChange);
+  window.removeEventListener('focus', handleWindowFocus);
 
   if (tableDataStore.isLiveTableActive) {
     try {
@@ -591,26 +346,6 @@ onUnmounted(() => {
     }
     tableDataStore.isLiveTableActive = false;
     tableDataStore.stopLiveUpdates();
-  }
-});
-
-watch(
-  () => tableDataStore.currentPage,
-  (newPage, oldPage) => {
-    if (newPage !== oldPage) {
-      pageInput.value = newPage;
-
-      if (!tableDataStore.filterTerm && !tableDataStore.activeFilter) {
-        tableDataStore.loadTableData();
-      }
-    }
-  }
-);
-
-watch(rowsPerPage, (newValue, oldValue) => {
-  if (newValue !== oldValue) {
-    tableDataStore.currentPage = 1;
-    tableDataStore.loadTableData();
   }
 });
 

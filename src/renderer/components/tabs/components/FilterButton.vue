@@ -163,6 +163,16 @@
     </div>
     <div class="modal-backdrop" @click="showFilterModal = false" />
   </div>
+
+  <select
+    v-model="tableDataStore.rowsPerPage"
+    class="select select-sm select-bordered bg-base-300 w-24 sm:w-32"
+  >
+    <option value="10">10 rows</option>
+    <option value="25">25 rows</option>
+    <option value="50">50 rows</option>
+    <option value="100">100 rows</option>
+  </select>
 </template>
 
 <script setup>
@@ -288,11 +298,6 @@ async function loadFilteredData() {
   tableDataStore.selectedRows = [];
 
   try {
-    // const idMatch = tableDataStore.activeFilter.match(/^\s*id\s*=\s*(\d+)\s*$/i);
-    // if (idMatch) {
-    //   const idValue = parseInt(idMatch[1], 10);
-    // }
-
     const sortParams = tableDataStore.currentSortColumn
       ? {
           sortColumn: tableDataStore.currentSortColumn,
