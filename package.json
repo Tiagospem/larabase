@@ -76,22 +76,16 @@
     ],
     "mac": {
       "darkModeSupport": true,
-      "icon": "src/renderer/assets/icons/mac/icon.icns"
+      "icon": "src/renderer/assets/icons/mac/icon.icns",
+      "mergeASARs": true,
+      "singleArchFiles": "*"
     },
     "dmg": {
       "title": "${productName} ${version}",
       "icon": "src/renderer/assets/icons/mac/icon.icns",
       "contents": [
-        {
-          "x": 110,
-          "y": 150
-        },
-        {
-          "x": 240,
-          "y": 150,
-          "type": "link",
-          "path": "/Applications"
-        }
+        { "x": 110, "y": 150 },
+        { "x": 240, "y": 150, "type": "link", "path": "/Applications" }
       ]
     },
     "win": {
