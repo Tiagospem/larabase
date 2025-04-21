@@ -11,7 +11,7 @@
     "build:win": "vite build && electron-builder --win",
     "build:linux": "vite build && electron-builder --linux",
     "publish-win": "npm run build && electron-builder --publish always --win",
-    "publish-mac": "npm run build && electron-builder --publish always --mac --universal",
+    "publish-mac": "vite build && electron-builder --publish always --mac --universal",
     "publish-linux": "npm run build && electron-builder --publish always --linux",
     "format": "prettier . --write --single-attribute-per-line"
   },
