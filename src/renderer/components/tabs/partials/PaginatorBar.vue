@@ -195,6 +195,11 @@ const totalPages = computed(() => {
 function prevPage() {
   if (tableDataStore.currentPage > 1) {
     tableDataStore.currentPage--;
+
+    if (tableDataStore.filterTerm || tableDataStore.activeFilter) {
+      tableDataStore.loadFilteredData();
+    }
+
     emit("scrollToTop");
   }
 }
@@ -202,6 +207,11 @@ function prevPage() {
 function nextPage() {
   if (tableDataStore.currentPage < totalPages.value) {
     tableDataStore.currentPage++;
+
+    if (tableDataStore.filterTerm || tableDataStore.activeFilter) {
+      tableDataStore.loadFilteredData();
+    }
+
     emit("scrollToTop");
   }
 }
@@ -209,21 +219,40 @@ function nextPage() {
 function goToFirstPage() {
   if (tableDataStore.currentPage !== 1) {
     tableDataStore.currentPage = 1;
+
+    if (tableDataStore.filterTerm || tableDataStore.activeFilter) {
+      tableDataStore.loadFilteredData();
+    }
+
     emit("scrollToTop");
   }
 }
 
 function goToLastPage() {
-  if (tableDataStore.currentPage !== totalPages.value) {
-    tableDataStore.currentPage = totalPages.value;
+  const lastPage = totalPages.value;
+
+  if (tableDataStore.currentPage !== lastPage) {
+    tableDataStore.currentPage = lastPage;
+
+    if (tableDataStore.filterTerm || tableDataStore.activeFilter) {
+      tableDataStore.loadFilteredData();
+    }
+
     emit("scrollToTop");
   }
 }
 
 function goToPage() {
   const page = parseInt(pageInput.value);
-  if (!isNaN(page) && page >= 1 && page <= totalPages.value && page !== tableDataStore.currentPage) {
+  const maxPage = totalPages.value;
+
+  if (!isNaN(page) && page >= 1 && page <= maxPage && page !== tableDataStore.currentPage) {
     tableDataStore.currentPage = page;
+
+    if (tableDataStore.filterTerm || tableDataStore.activeFilter) {
+      tableDataStore.loadFilteredData();
+    }
+
     emit("scrollToTop");
   } else {
     pageInput.value = tableDataStore.currentPage;
@@ -235,15 +264,10 @@ watch(
   (newPage, oldPage) => {
     if (newPage !== oldPage) {
       pageInput.value = newPage;
-    }
-  }
-);
 
-watch(
-  () => tableDataStore.currentPage,
-  (newPage, oldPage) => {
-    if (newPage !== oldPage) {
-      if (!tableDataStore.filterTerm && !tableDataStore.activeFilter) {
+      if (tableDataStore.filterTerm || tableDataStore.activeFilter) {
+        tableDataStore.loadFilteredData();
+      } else {
         tableDataStore.loadTableData();
       }
     }
@@ -253,7 +277,12 @@ watch(
 watch(rowsPerPage, (newValue, oldValue) => {
   if (newValue !== oldValue) {
     tableDataStore.currentPage = 1;
-    tableDataStore.loadTableData();
+
+    if (tableDataStore.filterTerm || tableDataStore.activeFilter) {
+      tableDataStore.loadFilteredData();
+    } else {
+      tableDataStore.loadTableData();
+    }
   }
 });
 </script>
