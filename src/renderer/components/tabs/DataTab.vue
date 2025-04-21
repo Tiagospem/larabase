@@ -225,6 +225,11 @@ async function loadTableStructure() {
     const structure = await databaseStore.getTableStructure(props.connectionId, props.tableName, true);
 
     Helpers.setColumnStructure(structure);
+    
+    // Store column names in the table data store for advanced filtering
+    if (structure && Array.isArray(structure) && structure.length > 0) {
+      tableDataStore.lastKnownColumns = structure.map(col => col.name);
+    }
   } catch (error) {
     console.error("Error loading table structure:", error);
     showAlert(`Error loading table structure: ${error.message}`, "error");

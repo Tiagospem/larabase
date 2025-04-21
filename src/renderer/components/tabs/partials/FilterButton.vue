@@ -338,7 +338,28 @@ async function loadFilteredData() {
       showAlert(`Found ${result.totalRecords} record(s) matching the filter`, "success");
     }
 
-    tableDataStore.tableData = result.data || [];
+    // Keep previous data structure if new data is empty
+    if (result.data && result.data.length > 0) {
+      tableDataStore.tableData = result.data;
+    } else {
+      // If no records match the filter, preserve the column structure
+      // but clear the row data
+      const previousData = tableDataStore.tableData;
+      if (previousData.length > 0) {
+        // Create an empty version of the first row to maintain structure
+        const emptyRow = Object.fromEntries(
+          Object.keys(previousData[0]).map(key => [key, null])
+        );
+        // Set empty data but with structure preserved
+        tableDataStore.tableData = [emptyRow];
+        // Then immediately clear it to show empty state
+        setTimeout(() => {
+          tableDataStore.tableData = [];
+        }, 0);
+      } else {
+        tableDataStore.tableData = [];
+      }
+    }
 
     tableDataStore.totalRecordsCount = result.totalRecords || 0;
 

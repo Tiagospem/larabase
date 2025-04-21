@@ -42,14 +42,19 @@ export const useTableDataStore = (id) => {
     const showDeleteConfirm = ref(false);
     const showEditModal = ref(false);
     const advancedFilterTerm = ref("");
+    const lastKnownColumns = ref([]);
 
     const databaseStore = useDatabaseStore();
 
     const columns = computed(() => {
       if (tableData.value.length === 0) {
-        return [];
+        return lastKnownColumns.value;
       }
-      return Object.keys(tableData.value[0]);
+      const currentColumns = Object.keys(tableData.value[0]);
+      if (currentColumns.length > 0) {
+        lastKnownColumns.value = currentColumns;
+      }
+      return currentColumns;
     });
 
     const totalRecords = computed(() => {
@@ -414,6 +419,12 @@ export const useTableDataStore = (id) => {
       } catch (error) {
         loadError.value = error.message;
         console.error(`Error loading data: ${error.message}`);
+        
+        // Ensure we don't lose column information
+        if (tableData.value.length > 0 && tableData.value[0]) {
+          lastKnownColumns.value = Object.keys(tableData.value[0]);
+        }
+        
         tableData.value = [];
         totalRecordsCount.value = 0;
       } finally {
@@ -607,7 +618,8 @@ export const useTableDataStore = (id) => {
       deletingIds,
       showDeleteConfirm,
       showEditModal,
-      advancedFilterTerm
+      advancedFilterTerm,
+      lastKnownColumns
     };
   })();
 };
