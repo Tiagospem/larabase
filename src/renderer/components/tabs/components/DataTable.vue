@@ -6,7 +6,7 @@
     @keydown.prevent="handleKeyDown"
   >
     <div class="overflow-x-scroll overflow-y-auto flex-grow" style="max-height: calc(100% - 45px)">
-      <table class="table table-sm w-[150%] table-fixed min-w-full">
+      <table class="table table-sm w-[110%] table-fixed min-w-full">
         <thead class="bg-base-300 sticky top-0 z-15">
           <tr class="text-xs select-none">
             <th class="w-10 px-2 py-2 border-r border-neutral bg-base-300 sticky left-0 z-10">
@@ -15,11 +15,7 @@
             <th
               v-for="(column, index) in tableDataStore.columns"
               :key="column"
-              class="px-4 py-2 border-r border-neutral last:border-r-0 relative whitespace-nowrap top-0 cursor-pointer"
-              :class="{
-                'bg-base-300': true,
-                'sticky left-10 z-10': index === 0
-              }"
+              class="px-4 py-2 border-r border-neutral last:border-r-0 relative whitespace-nowrap top-0 cursor-pointer bg-base-300"
               :style="{
                 width:
                   tableDataStore.columnWidths[column] || tableDataStore.defaultColumnWidth(column),
@@ -105,12 +101,8 @@
             </td>
             <td
               v-for="(column, colIndex) in tableDataStore.columns"
-              :key="`${rowIndex}-${column}`"
-              class="px-4 py-2 border-r border-neutral last:border-r-0 truncate whitespace-nowrap overflow-hidden"
-              :class="[
-                colIndex === 0 ? `sticky left-10 z-10` : 'z-[1]',
-                colIndex === 0 ? getRowBackgroundClass(rowIndex) : ''
-              ]"
+              :key="`${rowIndex}-${column}-${colIndex}`"
+              class="px-4 py-2 border-r border-neutral last:border-r-0 truncate whitespace-nowrap overflow-hidden z-[1]"
               :style="{
                 width:
                   tableDataStore.columnWidths[column] || tableDataStore.defaultColumnWidth(column),
@@ -186,10 +178,19 @@
 <script setup>
 import { useTableDataStore } from '@/store/table-data';
 import { Helpers } from '@/utils/helpers';
-import { onMounted, onUnmounted, ref, watch } from 'vue';
+import { onMounted, onUnmounted, ref } from 'vue';
 import { useDatabaseStore } from '@/store/database';
 
 const databaseStore = useDatabaseStore();
+
+const props = defineProps({
+  storeId: {
+    type: String,
+    required: true
+  }
+});
+
+const emit = defineEmits(['openPreviewModal', 'openEditModal', 'navigateToForeignKey']);
 
 const tableContainer = ref(null);
 const shiftKeyPressed = ref(false);
@@ -200,13 +201,6 @@ const resizingColumn = ref(null);
 const recentlyResized = ref(false);
 const startX = ref(0);
 const startWidth = ref(0);
-
-const props = defineProps({
-  storeId: {
-    type: String,
-    required: true
-  }
-});
 
 const tableDataStore = useTableDataStore(props.storeId);
 
@@ -219,6 +213,7 @@ function startColumnResize(event, column) {
   if (!tableDataStore.columnWidths[column] || !tableDataStore.columnWidths[column].endsWith('px')) {
     const headerCells = document.querySelectorAll('th');
     const columnIndex = tableDataStore.columns.indexOf(column);
+
     if (columnIndex >= 0 && headerCells[columnIndex]) {
       tableDataStore.columnWidths[column] = `${headerCells[columnIndex].offsetWidth}px`;
     } else {
@@ -235,6 +230,7 @@ function startColumnResize(event, column) {
 function stopColumnResize() {
   document.removeEventListener('mousemove', handleColumnResize);
   document.removeEventListener('mouseup', stopColumnResize);
+
   resizingColumn.value = null;
 
   recentlyResized.value = true;
@@ -284,26 +280,36 @@ const handleKeyDown = e => {
   shiftKeyPressed.value = e.shiftKey;
   ctrlKeyPressed.value = e.ctrlKey || e.metaKey;
 
-  if (e.key === 'Escape') {
-    tableDataStore.selectedRows = [];
-    tableDataStore.lastSelectedId = null;
-  }
+  const isCtrlOrMeta = e.ctrlKey || e.metaKey;
+  const hasSelection = tableDataStore.selectedRows.length > 0;
 
-  if ((e.ctrlKey || e.metaKey) && e.key === 'a') {
-    e.preventDefault();
-    tableDataStore.selectedRows = tableDataStore.paginatedData.map((_, index) => index);
-  } else if (e.key === 'Escape') {
-    tableDataStore.selectedRows = [];
-    tableDataStore.lastSelectedId = null;
-    tableDataStore.showDeleteConfirm = false;
-  } else if (
-    (e.key === 'Delete' || e.key === 'Backspace') &&
-    tableDataStore.selectedRows.length > 0
-  ) {
-    e.preventDefault();
-    tableDataStore.deleteSelected();
+  switch (e.key) {
+    case 'Escape':
+      clearSelection();
+      tableDataStore.showDeleteConfirm = false;
+      break;
+
+    case 'a':
+      if (isCtrlOrMeta) {
+        e.preventDefault();
+        tableDataStore.selectedRows = tableDataStore.paginatedData.map((_, index) => index);
+      }
+      break;
+
+    case 'Delete':
+    case 'Backspace':
+      if (hasSelection) {
+        e.preventDefault();
+        tableDataStore.deleteSelected();
+      }
+      break;
   }
 };
+
+function clearSelection() {
+  tableDataStore.selectedRows = [];
+  tableDataStore.lastSelectedId = null;
+}
 
 function handleMouseDown(event, rowIndex) {
   if (ctrlKeyPressed.value || shiftKeyPressed.value) {
@@ -316,11 +322,6 @@ function handleMouseDown(event, rowIndex) {
   window.addEventListener('mouseup', handleMouseUp, { once: true });
 }
 
-const handleKeyUp = e => {
-  shiftKeyPressed.value = e.shiftKey;
-  ctrlKeyPressed.value = e.ctrlKey || e.metaKey;
-};
-
 function handleMouseEnter(rowIndex) {
   if (!isDragging.value || selectionStartId.value === null) {
     return;
@@ -330,6 +331,7 @@ function handleMouseEnter(rowIndex) {
   const end = Math.max(selectionStartId.value, rowIndex);
 
   const rangeIds = [];
+
   for (let i = start; i <= end; i++) {
     rangeIds.push(i);
   }
@@ -404,27 +406,10 @@ function handleRowClick(event, rowIndex) {
   }
 }
 
-function addEventListener() {
-  window.addEventListener('keyup', handleKeyUp);
-  window.addEventListener('keydown', handleKeyDown);
-}
-
-function removeEventListener() {
-  window.removeEventListener('keydown', handleKeyDown);
-  window.removeEventListener('mouseup', handleMouseUp);
-  window.removeEventListener('keyup', handleKeyUp);
-}
-
 function getRowClasses(rowIndex) {
-  const isSelected =
-    tableDataStore.selectedRows &&
-    tableDataStore.selectedRows.includes &&
-    tableDataStore.selectedRows.includes(rowIndex);
+  const isSelected = tableDataStore.selectedRows?.includes?.(rowIndex) ?? false;
   const isUpdated =
-    tableDataStore.highlightChanges &&
-    tableDataStore.updatedRows &&
-    tableDataStore.updatedRows.includes &&
-    tableDataStore.updatedRows.includes(rowIndex);
+    tableDataStore.highlightChanges && (tableDataStore.updatedRows?.includes?.(rowIndex) ?? false);
 
   return {
     'selected-row': isSelected,
@@ -434,20 +419,15 @@ function getRowClasses(rowIndex) {
 }
 
 function getRowBackgroundClass(rowIndex) {
-  if (
-    tableDataStore.selectedRows &&
-    tableDataStore.selectedRows.includes &&
-    tableDataStore.selectedRows.includes(rowIndex)
-  ) {
+  const isSelected = tableDataStore.selectedRows?.includes?.(rowIndex) ?? false;
+  const isUpdated =
+    tableDataStore.highlightChanges && (tableDataStore.updatedRows?.includes?.(rowIndex) ?? false);
+
+  if (isSelected) {
     return 'bg-[#ea4331] text-white';
   }
 
-  if (
-    tableDataStore.highlightChanges &&
-    tableDataStore.updatedRows &&
-    tableDataStore.updatedRows.includes &&
-    tableDataStore.updatedRows.includes(rowIndex)
-  ) {
+  if (isUpdated) {
     return 'bg-[rgba(234,67,49,0.1)]';
   }
 
@@ -455,14 +435,16 @@ function getRowBackgroundClass(rowIndex) {
 }
 
 onMounted(() => {
-  addEventListener();
+  window.addEventListener('keydown', handleKeyDown);
+  window.addEventListener('keyup', handleKeyDown);
+  window.addEventListener('mouseup', handleMouseUp);
 });
 
 onUnmounted(() => {
-  removeEventListener();
+  window.removeEventListener('keydown', handleKeyDown);
+  window.removeEventListener('keyup', handleKeyDown);
+  window.removeEventListener('mouseup', handleMouseUp);
 });
-
-defineEmits(['openPreviewModal', 'openEditModal', 'navigateToForeignKey']);
 
 defineExpose({ scrollToTop });
 </script>
