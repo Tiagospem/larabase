@@ -11,7 +11,7 @@
       </div>
 
       <div class="flex flex-wrap items-center gap-2">
-        <FilterButton :store-id="storeId" ref="filterButtonRef" />
+        <FilterButton ref="filterButtonRef" :store-id="storeId" />
       </div>
     </div>
 
@@ -29,15 +29,15 @@
       />
       <DataTable
         v-else-if="hasData"
-        :store-id="storeId"
         ref="dataTableRef"
-        @loadFilteredData="filterButtonRef.loadFilteredData()"
-        @navigateToForeignKey="(column, row) => navigateToForeignKey(column, row)"
+        :store-id="storeId"
+        @load-filtered-data="filterButtonRef.loadFilteredData()"
+        @navigate-to-foreign-key="(column, row) => navigateToForeignKey(column, row)"
       />
       <NoRecordState v-else @reload="tableDataStore.loadTableData()" />
     </div>
 
-    <PaginatorBar v-if="hasData" :store-id="storeId" @scrollToTop="dataTableRef.scrollToTop()" />
+    <PaginatorBar v-if="hasData" :store-id="storeId" @scroll-to-top="dataTableRef.scrollToTop()" />
   </div>
 </template>
 

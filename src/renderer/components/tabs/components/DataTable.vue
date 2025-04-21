@@ -197,7 +197,7 @@
     </div>
   </div>
 
-  <EditRecord :store-id="storeId" ref="editRecordRef" />
+  <EditRecord ref="editRecordRef" :store-id="storeId" />
 
   <DataPreviewModal
     v-if="tableDataStore.previewingRecord"

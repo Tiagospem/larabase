@@ -1,7 +1,7 @@
 <template>
   <div class="code-viewer">
     <div class="mockup-code bg-neutral h-full overflow-auto text-xs">
-      <pre><code v-html="highlightedCode"></code></pre>
+      <pre><code v-html="highlightedCode"/></pre>
     </div>
   </div>
 </template>

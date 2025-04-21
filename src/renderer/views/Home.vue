@@ -90,9 +90,9 @@
                 </div>
                 <div class="flex gap-2 self-end sm:self-center mt-2 sm:mt-0">
                   <button
+                    v-tooltip.bottom="'Edit connection'"
                     class="btn btn-sm btn-ghost text-white"
                     @click.stop="editConnection(connection)"
-                    v-tooltip.bottom="'Edit connection'"
                   >
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
@@ -110,9 +110,9 @@
                     </svg>
                   </button>
                   <button
+                    v-tooltip.bottom="'Restore database'"
                     class="btn btn-sm btn-ghost text-white"
                     @click.stop="restoreDump(connection)"
-                    v-tooltip.bottom="'Restore database'"
                   >
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
@@ -130,9 +130,9 @@
                     </svg>
                   </button>
                   <button
+                    v-tooltip.bottom="'Remove connection'"
                     class="btn btn-sm btn-ghost text-white"
                     @click.stop="removeConnection(connection.id)"
-                    v-tooltip.bottom="'Remove connection'"
                   >
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
@@ -150,10 +150,10 @@
                     </svg>
                   </button>
                   <button
+                    v-tooltip.bottom="'Open connection'"
                     :disabled="!connection.isValid"
                     class="btn btn-sm btn-ghost"
                     @click.stop="openConnection(connection.id)"
-                    v-tooltip.bottom="'Open connection'"
                   >
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
