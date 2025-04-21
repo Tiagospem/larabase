@@ -78,7 +78,11 @@
       "darkModeSupport": true,
       "icon": "src/renderer/assets/icons/mac/icon.icns",
       "mergeASARs": true,
-      "singleArchFiles": "*"
+      "singleArchFiles": "*",
+      "target": [
+        { "target": "dmg", "arch": ["universal"] },
+        { "target": "zip", "arch": ["universal"] }
+      ]
     },
     "dmg": {
       "title": "${productName} ${version}",
