@@ -125,6 +125,31 @@ export const useTableDataStore = (id) => {
       return data;
     });
 
+    const connectionHost = computed(() => {
+      const conn = databaseStore.getConnection(connectionId.value);
+      return conn?.host || "";
+    });
+
+    const connectionPort = computed(() => {
+      const conn = databaseStore.getConnection(connectionId.value);
+      return conn?.port || 3306;
+    });
+
+    const connectionUsername = computed(() => {
+      const conn = databaseStore.getConnection(connectionId.value);
+      return conn?.username || "";
+    });
+
+    const connectionPassword = computed(() => {
+      const conn = databaseStore.getConnection(connectionId.value);
+      return conn?.password || "";
+    });
+
+    const connectionDatabase = computed(() => {
+      const conn = databaseStore.getConnection(connectionId.value);
+      return conn?.database || "";
+    });
+
     function setConnectionId(id) {
       connectionId.value = id;
     }
@@ -563,7 +588,12 @@ export const useTableDataStore = (id) => {
       showDeleteConfirm,
       showEditModal,
       advancedFilterTerm,
-      lastKnownColumns
+      lastKnownColumns,
+      connectionHost,
+      connectionPort,
+      connectionUsername,
+      connectionPassword,
+      connectionDatabase
     };
   })();
 };

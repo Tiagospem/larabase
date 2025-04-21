@@ -9,7 +9,11 @@
         <span>{{ tableDataStore.columns.length }} columns</span>
       </span>
       <div class="ml-4 flex space-x-2">
-        <button class="btn btn-ghost btn-xs">
+        <button
+          v-if="tableDataStore.tableData.length > 0"
+          class="btn btn-ghost btn-xs"
+          @click="showExportModal = true"
+        >
           <svg
             xmlns="http://www.w3.org/2000/svg"
             fill="none"
@@ -163,12 +167,22 @@
       </div>
     </div>
   </div>
+
+  <ExportDataModal
+    v-if="showExportModal"
+    :show="showExportModal"
+    :store-id="storeId"
+    @close="showExportModal = false"
+  />
 </template>
 
 <script setup>
 import { useDatabaseStore } from "@/store/database";
 import { useTableDataStore } from "@/store/table-data";
 import { computed, ref, watch } from "vue";
+import ExportDataModal from "./ExportDataModal.vue";
+
+const showExportModal = ref(false);
 
 const pageInput = ref(1);
 
