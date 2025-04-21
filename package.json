@@ -1,6 +1,6 @@
 {
   "name": "larabase",
-  "version": "1.0.0",
+  "version": "0.0.1-beta",
   "description": "Database management tool like TablePlus",
   "main": "src/main/index.js",
   "type": "commonjs",
