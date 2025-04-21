@@ -2,7 +2,10 @@
   <div class="h-full flex flex-col">
     <div class="bg-base-200 p-2 border-b border-neutral flex items-center justify-between">
       <div class="flex items-center space-x-2">
-        <button class="btn btn-sm btn-ghost" @click="loadFactory">
+        <button
+          class="btn btn-sm btn-ghost"
+          @click="loadFactory"
+        >
           <svg
             xmlns="http://www.w3.org/2000/svg"
             fill="none"
@@ -20,7 +23,11 @@
           <span>Refresh</span>
         </button>
 
-        <button v-if="factoryFound" class="btn btn-sm btn-primary" @click="openGenerateDataModal">
+        <button
+          v-if="factoryFound"
+          class="btn btn-sm btn-primary"
+          @click="openGenerateDataModal"
+        >
           <svg
             xmlns="http://www.w3.org/2000/svg"
             fill="none"
@@ -39,10 +46,11 @@
         </button>
       </div>
 
-      <div v-if="!isLoading" class="flex items-center space-x-2">
-        <span class="text-xs text-gray-400">{{
-          factoryFound ? 'Factory found' : 'No factory found'
-        }}</span>
+      <div
+        v-if="!isLoading"
+        class="flex items-center space-x-2"
+      >
+        <span class="text-xs text-gray-400">{{ factoryFound ? "Factory found" : "No factory found" }}</span>
 
         <button
           v-if="!connection?.projectPath"
@@ -69,7 +77,10 @@
     </div>
 
     <div class="flex-1 overflow-auto">
-      <div v-if="isLoading" class="flex items-center justify-center h-full">
+      <div
+        v-if="isLoading"
+        class="flex items-center justify-center h-full"
+      >
         <span class="loading loading-spinner loading-lg" />
       </div>
 
@@ -93,13 +104,19 @@
             />
           </svg>
           <p>No Laravel project path is associated with this connection</p>
-          <button class="btn btn-sm btn-primary mt-4" @click="selectProjectPath">
+          <button
+            class="btn btn-sm btn-primary mt-4"
+            @click="selectProjectPath"
+          >
             Select Project
           </button>
         </div>
       </div>
 
-      <div v-else-if="!factoryFound" class="flex items-center justify-center h-full text-gray-500">
+      <div
+        v-else-if="!factoryFound"
+        class="flex items-center justify-center h-full text-gray-500"
+      >
         <div class="text-center">
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -116,10 +133,7 @@
             />
           </svg>
           <p>No Laravel factory found for {{ tableName }} table</p>
-          <p class="text-xs mt-2 text-gray-500">
-            Factories are typically named using singular form and located in database/factories
-            directory
-          </p>
+          <p class="text-xs mt-2 text-gray-500">Factories are typically named using singular form and located in database/factories directory</p>
           <button
             v-if="connection?.projectPath"
             class="btn btn-sm btn-ghost mt-4"
@@ -130,7 +144,10 @@
         </div>
       </div>
 
-      <div v-else class="p-4">
+      <div
+        v-else
+        class="p-4"
+      >
         <div class="card bg-base-200">
           <div class="card-body">
             <h3 class="card-title flex items-center gap-2">
@@ -191,13 +208,23 @@
 
             <div class="divider" />
 
-            <div v-if="factoryContent" class="mb-4">
+            <div
+              v-if="factoryContent"
+              class="mb-4"
+            >
               <h4 class="text-sm font-medium text-gray-400 mb-2">Factory Code</h4>
-              <PhpViewer :code="factoryContent" language="php" height="64" />
+              <PhpViewer
+                :code="factoryContent"
+                language="php"
+                height="64"
+              />
             </div>
 
             <div class="flex justify-end">
-              <button class="btn btn-sm btn-ghost" @click="openFileInEditor(factory.path)">
+              <button
+                class="btn btn-sm btn-ghost"
+                @click="openFileInEditor(factory.path)"
+              >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
                   fill="none"
@@ -229,7 +256,10 @@
     </div>
 
     <!-- Factory Data Generation Modal -->
-    <div v-if="showGenerateDataModal" class="modal modal-open">
+    <div
+      v-if="showGenerateDataModal"
+      class="modal modal-open"
+    >
       <div class="modal-box bg-base-100 max-w-xl">
         <h3 class="font-bold text-lg mb-3 text-center">Generate Factory Data</h3>
 
@@ -248,12 +278,15 @@
               min="1"
               max="1000"
               class="input input-bordered w-full"
-              :class="{ 'input-error': recordCount < 1 || recordCount > 1000 }"
+              :class="{
+                'input-error': recordCount < 1 || recordCount > 1000
+              }"
             />
-            <label v-if="recordCount < 1 || recordCount > 1000" class="label">
-              <span class="label-text-alt text-error"
-                >Please enter a number between 1 and 1000</span
-              >
+            <label
+              v-if="recordCount < 1 || recordCount > 1000"
+              class="label"
+            >
+              <span class="label-text-alt text-error">Please enter a number between 1 and 1000</span>
             </label>
           </div>
         </div>
@@ -277,9 +310,9 @@
           >
             Attributes
             <span
-              v-if="customAttributes.filter(a => a.field && a.value).length > 0"
+              v-if="customAttributes.filter((a) => a.field && a.value).length > 0"
               class="badge badge-xs badge-primary absolute -top-1 -right-1"
-              >{{ customAttributes.filter(a => a.field && a.value).length }}</span
+              >{{ customAttributes.filter((a) => a.field && a.value).length }}</span
             >
           </a>
         </div>
@@ -314,15 +347,25 @@
           </div>
 
           <div class="form-control mb-4">
-            <select v-model="selectedRelation" class="select select-bordered w-full">
+            <select
+              v-model="selectedRelation"
+              class="select select-bordered w-full"
+            >
               <option value="">No relationship (create standalone)</option>
-              <option v-for="rel in availableRelations" :key="rel.model" :value="rel.model">
+              <option
+                v-for="rel in availableRelations"
+                :key="rel.model"
+                :value="rel.model"
+              >
                 {{ rel.model }} ({{ rel.table }})
               </option>
             </select>
           </div>
 
-          <div v-if="selectedRelation" class="form-control mb-4">
+          <div
+            v-if="selectedRelation"
+            class="form-control mb-4"
+          >
             <label class="label">
               <span class="label-text">Select ID from {{ selectedRelation }}</span>
             </label>
@@ -357,11 +400,17 @@
             </div>
           </div>
 
-          <div v-if="isLoadingRelatedRecords" class="flex justify-center my-2">
+          <div
+            v-if="isLoadingRelatedRecords"
+            class="flex justify-center my-2"
+          >
             <span class="loading loading-spinner loading-sm" />
           </div>
 
-          <div v-if="showRelatedRecords && relatedRecords.length > 0" class="overflow-x-auto">
+          <div
+            v-if="showRelatedRecords && relatedRecords.length > 0"
+            class="overflow-x-auto"
+          >
             <div class="flex justify-between items-center mb-2">
               <span class="text-sm font-medium">Selected records</span>
               <button
@@ -397,7 +446,9 @@
                 <tr
                   v-for="record in relatedRecords"
                   :key="record.id"
-                  :class="{ 'bg-primary bg-opacity-10': record.id == relatedModelId }"
+                  :class="{
+                    'bg-primary bg-opacity-10': record.id == relatedModelId
+                  }"
                 >
                   <td>{{ record.id }}</td>
                   <td class="font-mono text-xs truncate max-w-[200px]">
@@ -409,7 +460,7 @@
                       :class="record.id == relatedModelId ? 'btn-primary' : 'btn-ghost'"
                       @click="selectRelatedRecord(record.id)"
                     >
-                      {{ record.id == relatedModelId ? 'Selected' : 'Select' }}
+                      {{ record.id == relatedModelId ? "Selected" : "Select" }}
                     </button>
                   </td>
                 </tr>
@@ -419,11 +470,14 @@
         </div>
 
         <!-- Tab: Attributes -->
-        <div v-if="activeTab === 'attributes'" class="bg-primary bg-opacity-10 p-4 rounded-lg mb-5">
+        <div
+          v-if="activeTab === 'attributes'"
+          class="bg-primary bg-opacity-10 p-4 rounded-lg mb-5"
+        >
           <div class="flex justify-between items-center mb-3">
             <p class="font-medium">Customize attributes:</p>
             <div
-              v-if="customAttributes.filter(a => a.field && a.value).length > 0"
+              v-if="customAttributes.filter((a) => a.field && a.value).length > 0"
               class="badge badge-primary badge-sm gap-1"
             >
               <svg
@@ -440,15 +494,22 @@
                   d="M9.568 3H5.25A2.25 2.25 0 003 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581c.699.699 1.78.872 2.607.33a18.095 18.095 0 005.223-5.223c.542-.827.369-1.908-.33-2.607L11.16 3.66A2.25 2.25 0 009.568 3z"
                 />
               </svg>
-              {{ customAttributes.filter(a => a.field && a.value).length }} Fields
+              {{ customAttributes.filter((a) => a.field && a.value).length }}
+              Fields
             </div>
           </div>
 
-          <div v-if="isLoadingTableColumns" class="flex justify-center my-4">
+          <div
+            v-if="isLoadingTableColumns"
+            class="flex justify-center my-4"
+          >
             <span class="loading loading-spinner loading-md" />
           </div>
 
-          <div v-else-if="tableColumns.length === 0" class="alert alert-info shadow-lg mb-4">
+          <div
+            v-else-if="tableColumns.length === 0"
+            class="alert alert-info shadow-lg mb-4"
+          >
             <svg
               xmlns="http://www.w3.org/2000/svg"
               fill="none"
@@ -467,7 +528,10 @@
 
           <div v-else>
             <div class="mb-4">
-              <button class="btn btn-sm btn-outline" @click="addCustomAttribute">
+              <button
+                class="btn btn-sm btn-outline"
+                @click="addCustomAttribute"
+              >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
                   fill="none"
@@ -476,15 +540,31 @@
                   stroke="currentColor"
                   class="w-4 h-4 mr-1"
                 >
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    d="M12 4.5v15m7.5-7.5h-15"
+                  />
                 </svg>
                 Add Attribute
               </button>
             </div>
 
-            <div v-for="(attr, index) in customAttributes" :key="index" class="mb-2 flex gap-2">
-              <select v-model="attr.field" class="select select-bordered select-sm w-1/3">
-                <option value="" disabled>Select field</option>
+            <div
+              v-for="(attr, index) in customAttributes"
+              :key="index"
+              class="mb-2 flex gap-2"
+            >
+              <select
+                v-model="attr.field"
+                class="select select-bordered select-sm w-1/3"
+              >
+                <option
+                  value=""
+                  disabled
+                >
+                  Select field
+                </option>
                 <option
                   v-for="col in tableColumns"
                   :key="col.name"
@@ -500,7 +580,10 @@
                 :placeholder="getPlaceholderForField(attr.field)"
                 class="input input-bordered input-sm flex-grow"
               />
-              <button class="btn btn-sm btn-square btn-error" @click="removeCustomAttribute(index)">
+              <button
+                class="btn btn-sm btn-square btn-error"
+                @click="removeCustomAttribute(index)"
+              >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
                   fill="none"
@@ -509,7 +592,11 @@
                   stroke="currentColor"
                   class="w-4 h-4"
                 >
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    d="M6 18L18 6M6 6l12 12"
+                  />
                 </svg>
               </button>
             </div>
@@ -524,30 +611,41 @@
         </div>
 
         <div class="flex gap-2 justify-end">
-          <button class="btn" @click="showGenerateDataModal = false">Cancel</button>
+          <button
+            class="btn"
+            @click="showGenerateDataModal = false"
+          >
+            Cancel
+          </button>
           <button
             class="btn btn-primary"
             :disabled="isGenerating || recordCount < 1 || recordCount > 1000"
             @click="generateFactoryData"
           >
-            <span v-if="isGenerating" class="loading loading-spinner loading-xs mr-1" />
+            <span
+              v-if="isGenerating"
+              class="loading loading-spinner loading-xs mr-1"
+            />
             Generate
           </button>
         </div>
       </div>
-      <div class="modal-backdrop" @click="showGenerateDataModal = false" />
+      <div
+        class="modal-backdrop"
+        @click="showGenerateDataModal = false"
+      />
     </div>
   </div>
 </template>
 
 <script setup>
-import { inject, onMounted, ref, computed, watch } from 'vue';
-import { useDatabaseStore } from '@/store/database';
-import { useConnectionsStore } from '@/store/connections';
-import { useCommandsStore } from '@/store/commands';
-import PhpViewer from '@/components/PhpViewer.vue';
+import { inject, onMounted, ref, computed, watch } from "vue";
+import { useDatabaseStore } from "@/store/database";
+import { useConnectionsStore } from "@/store/connections";
+import { useCommandsStore } from "@/store/commands";
+import PhpViewer from "@/components/PhpViewer.vue";
 
-const showAlert = inject('showAlert');
+const showAlert = inject("showAlert");
 
 const props = defineProps({
   connectionId: {
@@ -571,15 +669,15 @@ const props = defineProps({
 
 const isLoading = ref(true);
 const factory = ref(null);
-const factoryContent = ref('');
+const factoryContent = ref("");
 
 // Factory data generation state
 const showGenerateDataModal = ref(false);
 const isGenerating = ref(false);
 const recordCount = ref(10);
-const activeTab = ref('relationships');
-const selectedRelation = ref('');
-const relatedModelId = ref('');
+const activeTab = ref("relationships");
+const selectedRelation = ref("");
+const relatedModelId = ref("");
 const relatedRecords = ref([]);
 const isLoadingRelatedRecords = ref(false);
 const customAttributes = ref([]);
@@ -594,7 +692,7 @@ const databaseStore = useDatabaseStore();
 const connectionsStore = useConnectionsStore();
 const commandsStore = useCommandsStore();
 
-const emit = defineEmits(['open-database-switcher']);
+const emit = defineEmits(["open-database-switcher"]);
 
 const connection = computed(() => {
   return connectionsStore.getConnection(props.connectionId);
@@ -616,11 +714,7 @@ async function loadFactory() {
     await databaseStore.loadModelsForTables(props.connectionId, connection.value.projectPath);
     const model = databaseStore.getModelForTable(props.connectionId, props.tableName);
 
-    const foundFactory = await findFactoryFile(
-      connection.value.projectPath,
-      props.tableName,
-      model
-    );
+    const foundFactory = await findFactoryFile(connection.value.projectPath, props.tableName, model);
 
     if (foundFactory) {
       factory.value = foundFactory;
@@ -633,8 +727,8 @@ async function loadFactory() {
       factoryFound: factory.value !== null
     });
   } catch (error) {
-    console.error('Failed to load factory:', error);
-    showAlert(`Error loading factory: ${error.message}`, 'error');
+    console.error("Failed to load factory:", error);
+    showAlert(`Error loading factory: ${error.message}`, "error");
     factory.value = null;
   } finally {
     isLoading.value = false;
@@ -645,7 +739,7 @@ async function findFactoryFile(projectPath, tableName, model) {
   try {
     const pluralize = await window.api.getPluralizeFunction();
 
-    let modelName = '';
+    let modelName = "";
 
     if (model) {
       // If we found a model, use its name
@@ -657,9 +751,9 @@ async function findFactoryFile(projectPath, tableName, model) {
 
       // Convert to PascalCase
       modelName = singularTableName
-        .split('_')
-        .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-        .join('');
+        .split("_")
+        .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+        .join("");
     }
 
     // Common patterns for factory filenames
@@ -677,7 +771,7 @@ async function findFactoryFile(projectPath, tableName, model) {
     ];
 
     // Common directories for factories in Laravel projects
-    const factoryDirs = ['database/factories', 'database/Factory', 'app/database/factories'];
+    const factoryDirs = ["database/factories", "database/Factory", "app/database/factories"];
 
     const allFactoryFiles = [];
 
@@ -694,7 +788,7 @@ async function findFactoryFile(projectPath, tableName, model) {
 
         const entries = result.files;
         for (const entry of entries) {
-          if (entry.name.endsWith('.php')) {
+          if (entry.name.endsWith(".php")) {
             allFactoryFiles.push({
               name: entry.name,
               path: `${fullDirPath}/${entry.name}`,
@@ -708,13 +802,11 @@ async function findFactoryFile(projectPath, tableName, model) {
     }
 
     for (const factoryPattern of factoryPatterns) {
-      const exactMatch = allFactoryFiles.find(
-        file => file.name.toLowerCase() === factoryPattern.toLowerCase()
-      );
+      const exactMatch = allFactoryFiles.find((file) => file.name.toLowerCase() === factoryPattern.toLowerCase());
 
       if (exactMatch) {
         return {
-          name: exactMatch.name.replace(/\.php$/, ''),
+          name: exactMatch.name.replace(/\.php$/, ""),
           path: exactMatch.path,
           relativePath: exactMatch.relativePath
         };
@@ -722,18 +814,15 @@ async function findFactoryFile(projectPath, tableName, model) {
     }
 
     // Method 2: Look for partial name matches
-    const partialMatches = allFactoryFiles.filter(file => {
+    const partialMatches = allFactoryFiles.filter((file) => {
       const filename = file.name.toLowerCase();
       // Check if filename contains both the model name and 'factory'
-      return (
-        (filename.includes(modelName.toLowerCase()) && filename.includes('factory')) ||
-        (filename.includes(tableName.toLowerCase()) && filename.includes('factory'))
-      );
+      return (filename.includes(modelName.toLowerCase()) && filename.includes("factory")) || (filename.includes(tableName.toLowerCase()) && filename.includes("factory"));
     });
 
     if (partialMatches.length > 0) {
       return {
-        name: partialMatches[0].name.replace(/\.php$/, ''),
+        name: partialMatches[0].name.replace(/\.php$/, ""),
         path: partialMatches[0].path,
         relativePath: partialMatches[0].relativePath
       };
@@ -761,7 +850,7 @@ async function findFactoryFile(projectPath, tableName, model) {
         content.includes(`"${singularTable}"`)
       ) {
         return {
-          name: file.name.replace(/\.php$/, ''),
+          name: file.name.replace(/\.php$/, ""),
           path: file.path,
           relativePath: file.relativePath
         };
@@ -771,7 +860,7 @@ async function findFactoryFile(projectPath, tableName, model) {
     // No factory found after all attempts
     return null;
   } catch (error) {
-    console.error('Error finding factory file:', error);
+    console.error("Error finding factory file:", error);
     return null;
   }
 }
@@ -780,10 +869,10 @@ async function findFactoryFile(projectPath, tableName, model) {
 async function loadFileContent(filePath) {
   try {
     const result = await window.api.readModelFile(filePath);
-    return result.success ? result.content : '';
+    return result.success ? result.content : "";
   } catch (error) {
-    console.error('Error reading file:', error);
-    return '';
+    console.error("Error reading file:", error);
+    return "";
   }
 }
 
@@ -796,12 +885,12 @@ async function loadFactoryContent(filePath) {
     if (result.success) {
       factoryContent.value = result.content;
     } else {
-      console.error('Error loading factory content:', result.message);
-      factoryContent.value = 'Error loading factory content: ' + result.message;
+      console.error("Error loading factory content:", result.message);
+      factoryContent.value = "Error loading factory content: " + result.message;
     }
   } catch (error) {
-    console.error('Error reading factory file:', error);
-    factoryContent.value = 'Unable to load factory content';
+    console.error("Error reading factory file:", error);
+    factoryContent.value = "Unable to load factory content";
   }
 }
 
@@ -818,12 +907,12 @@ async function selectProjectPath() {
     const isLaravel = await window.api.validateLaravelProject(projectPath);
 
     if (!isLaravel) {
-      showAlert('Selected directory is not a valid Laravel project', 'error');
+      showAlert("Selected directory is not a valid Laravel project", "error");
       return;
     }
 
     if (connection.value) {
-      const updatedConnections = connectionsStore.connections.map(conn => {
+      const updatedConnections = connectionsStore.connections.map((conn) => {
         if (conn.id === connection.value.id) {
           return { ...conn, projectPath };
         }
@@ -831,12 +920,12 @@ async function selectProjectPath() {
       });
 
       await connectionsStore.saveConnections(updatedConnections);
-      showAlert('Laravel project path set successfully', 'success');
+      showAlert("Laravel project path set successfully", "success");
       await loadFactory();
     }
   } catch (error) {
-    console.error('Error selecting directory:', error);
-    showAlert('Failed to select project directory', 'error');
+    console.error("Error selecting directory:", error);
+    showAlert("Failed to select project directory", "error");
   }
 }
 
@@ -844,8 +933,8 @@ async function openFileInEditor(filePath) {
   try {
     await window.api.openFile(filePath);
   } catch (error) {
-    console.error('Error opening file:', error);
-    showAlert('Failed to open file', 'error');
+    console.error("Error opening file:", error);
+    showAlert("Failed to open file", "error");
   }
 }
 
@@ -859,15 +948,15 @@ async function loadTableColumns() {
     const columns = await databaseStore.getTableStructure(props.connectionId, props.tableName);
 
     // Filtrar colunas, remover as que não queremos personalizar
-    tableColumns.value = columns.filter(col => {
+    tableColumns.value = columns.filter((col) => {
       // Ignorar colunas que normalmente não queremos personalizar em factories
-      return !['id', 'created_at', 'updated_at', 'deleted_at'].includes(col.name);
+      return !["id", "created_at", "updated_at", "deleted_at"].includes(col.name);
     });
 
-    console.log('Table columns loaded:', tableColumns.value);
+    console.log("Table columns loaded:", tableColumns.value);
   } catch (error) {
-    console.error('Error loading table columns:', error);
-    showAlert('Failed to load table structure', 'error');
+    console.error("Error loading table columns:", error);
+    showAlert("Failed to load table structure", "error");
     tableColumns.value = [];
   } finally {
     isLoadingTableColumns.value = false;
@@ -876,54 +965,47 @@ async function loadTableColumns() {
 
 function isColumnSelected(columnName, currentIndex) {
   // Verificar se a coluna já está selecionada em outro atributo
-  return customAttributes.value.some(
-    (attr, index) => index !== currentIndex && attr.field === columnName
-  );
+  return customAttributes.value.some((attr, index) => index !== currentIndex && attr.field === columnName);
 }
 
 function getPlaceholderForField(fieldName) {
-  if (!fieldName) return 'Value';
+  if (!fieldName) return "Value";
 
   // Encontrar o tipo da coluna
-  const column = tableColumns.value.find(col => col.name === fieldName);
-  if (!column) return 'Value';
+  const column = tableColumns.value.find((col) => col.name === fieldName);
+  if (!column) return "Value";
 
   // Baseado no tipo, retornar um placeholder adequado
-  const type = column.type?.toLowerCase() || '';
+  const type = column.type?.toLowerCase() || "";
 
-  if (type.includes('varchar') || type.includes('text') || type.includes('char')) {
-    return 'Text value';
-  } else if (
-    type.includes('int') ||
-    type.includes('float') ||
-    type.includes('double') ||
-    type.includes('decimal')
-  ) {
-    return 'Numeric value';
-  } else if (type.includes('date')) {
-    return 'YYYY-MM-DD';
-  } else if (type.includes('datetime') || type.includes('timestamp')) {
-    return 'YYYY-MM-DD HH:MM:SS';
-  } else if (type.includes('boolean') || type.includes('tinyint(1)')) {
-    return 'true/false';
-  } else if (type.includes('json')) {
-    return 'JSON value';
+  if (type.includes("varchar") || type.includes("text") || type.includes("char")) {
+    return "Text value";
+  } else if (type.includes("int") || type.includes("float") || type.includes("double") || type.includes("decimal")) {
+    return "Numeric value";
+  } else if (type.includes("date")) {
+    return "YYYY-MM-DD";
+  } else if (type.includes("datetime") || type.includes("timestamp")) {
+    return "YYYY-MM-DD HH:MM:SS";
+  } else if (type.includes("boolean") || type.includes("tinyint(1)")) {
+    return "true/false";
+  } else if (type.includes("json")) {
+    return "JSON value";
   }
 
-  return 'Value';
+  return "Value";
 }
 
 function formatRecordPreview(record) {
-  if (!record) return '';
+  if (!record) return "";
 
   // Cria um objeto simplificado com no máximo as três primeiras propriedades
   const preview = {};
   const keys = Object.keys(record).slice(0, 3);
 
-  keys.forEach(key => {
-    if (typeof record[key] === 'string') {
+  keys.forEach((key) => {
+    if (typeof record[key] === "string") {
       // Limita o tamanho das strings
-      preview[key] = record[key].length > 20 ? record[key].substring(0, 20) + '...' : record[key];
+      preview[key] = record[key].length > 20 ? record[key].substring(0, 20) + "..." : record[key];
     } else {
       preview[key] = record[key];
     }
@@ -955,12 +1037,10 @@ async function fetchRelatedRecords() {
 
   try {
     // Encontrar a tabela correspondente ao modelo selecionado
-    const relationTable = availableRelations.value.find(
-      r => r.model === selectedRelation.value
-    )?.table;
+    const relationTable = availableRelations.value.find((r) => r.model === selectedRelation.value)?.table;
 
     if (!relationTable) {
-      throw new Error('Related table not found');
+      throw new Error("Related table not found");
     }
 
     // Obter os primeiros 10 registros da tabela relacionada
@@ -975,11 +1055,11 @@ async function fetchRelatedRecords() {
       relatedRecords.value = result.data;
       showRelatedRecords.value = true; // Mostrar a lista após carregar
     } else {
-      throw new Error('No records found');
+      throw new Error("No records found");
     }
   } catch (error) {
-    console.error('Error fetching related records:', error);
-    showAlert(`Failed to fetch records: ${error.message}`, 'error');
+    console.error("Error fetching related records:", error);
+    showAlert(`Failed to fetch records: ${error.message}`, "error");
   } finally {
     isLoadingRelatedRecords.value = false;
   }
@@ -987,8 +1067,8 @@ async function fetchRelatedRecords() {
 
 function addCustomAttribute() {
   customAttributes.value.push({
-    field: '',
-    value: ''
+    field: "",
+    value: ""
   });
 }
 
@@ -998,7 +1078,7 @@ function removeCustomAttribute(index) {
 
 function generateCommandPreview() {
   const model = databaseStore.getModelForTable(props.connectionId, props.tableName);
-  if (!model || !factory.value) return 'No model or factory found';
+  if (!model || !factory.value) return "No model or factory found";
 
   const modelName = model.fullName;
   const count = recordCount.value || 10;
@@ -1008,42 +1088,41 @@ function generateCommandPreview() {
   let factoryChain = `${modelName}::factory(${count})`;
 
   // Adicionar atributos personalizados
-  const validAttributes = customAttributes.value.filter(attr => attr.field && attr.value !== '');
+  const validAttributes = customAttributes.value.filter((attr) => attr.field && attr.value !== "");
   if (validAttributes.length > 0) {
-    const attributesArray = validAttributes.map(attr => {
+    const attributesArray = validAttributes.map((attr) => {
       // Tenta converter para número ou booleano quando possível
       let value = attr.value;
 
-      if (value === 'true') value = true;
-      else if (value === 'false') value = false;
+      if (value === "true") value = true;
+      else if (value === "false") value = false;
       else if (!isNaN(parseFloat(value)) && isFinite(value)) value = parseFloat(value);
       else value = `'${value}'`; // String com aspas simples
 
       return `'${attr.field}' => ${value}`;
     });
 
-    factoryChain += `->state([${attributesArray.join(', ')}])`;
+    factoryChain += `->state([${attributesArray.join(", ")}])`;
   }
 
   // Adicionar relacionamento
   if (selectedRelation.value && relatedModelId.value) {
     // Converte o nome do modelo para snake_case e adiciona _id
-    const foreignKey =
-      selectedRelation.value.replace(/([a-z])([A-Z])/g, '$1_$2').toLowerCase() + '_id';
+    const foreignKey = selectedRelation.value.replace(/([a-z])([A-Z])/g, "$1_$2").toLowerCase() + "_id";
     factoryChain += `->state(['${foreignKey}' => ${relatedModelId.value}])`;
   }
 
   // Finalizar o comando
   factoryChain += `->create();`;
 
-  const escapedFactoryChain = factoryChain.replace(/\\/g, '\\\\');
-  return `${usingSail ? 'sail' : 'php'} artisan tinker --execute="${escapedFactoryChain}"`;
+  const escapedFactoryChain = factoryChain.replace(/\\/g, "\\\\");
+  return `${usingSail ? "sail" : "php"} artisan tinker --execute="${escapedFactoryChain}"`;
 }
 
 async function showDatabaseMismatchDialog(projectDb, connectionDb) {
-  return new Promise(resolve => {
-    const modal = document.createElement('div');
-    modal.className = 'modal modal-open z-50';
+  return new Promise((resolve) => {
+    const modal = document.createElement("div");
+    modal.className = "modal modal-open z-50";
     modal.innerHTML = `
       <div class="modal-box bg-base-100 w-11/12 max-w-md">
         <h3 class="font-bold text-lg mb-3 text-center">Database Mismatch</h3>
@@ -1085,25 +1164,25 @@ async function showDatabaseMismatchDialog(projectDb, connectionDb) {
 
     document.body.appendChild(modal);
 
-    const useConnectionBtn = modal.querySelector('#useConnection');
-    const switchDatabaseBtn = modal.querySelector('#switchDatabase');
-    const cancelBtn = modal.querySelector('#cancel');
-    const backdrop = modal.querySelector('.modal-backdrop');
+    const useConnectionBtn = modal.querySelector("#useConnection");
+    const switchDatabaseBtn = modal.querySelector("#switchDatabase");
+    const cancelBtn = modal.querySelector("#cancel");
+    const backdrop = modal.querySelector(".modal-backdrop");
 
-    useConnectionBtn.addEventListener('click', () => {
+    useConnectionBtn.addEventListener("click", () => {
       document.body.removeChild(modal);
-      resolve('useConnection');
+      resolve("useConnection");
     });
 
-    switchDatabaseBtn.addEventListener('click', () => {
+    switchDatabaseBtn.addEventListener("click", () => {
       document.body.removeChild(modal);
-      resolve('switchDatabase');
+      resolve("switchDatabase");
     });
 
-    [cancelBtn, backdrop].forEach(el => {
-      el.addEventListener('click', () => {
+    [cancelBtn, backdrop].forEach((el) => {
+      el.addEventListener("click", () => {
         document.body.removeChild(modal);
-        resolve('cancel');
+        resolve("cancel");
       });
     });
   });
@@ -1111,10 +1190,10 @@ async function showDatabaseMismatchDialog(projectDb, connectionDb) {
 
 function openGenerateDataModal() {
   // Resetar valores
-  activeTab.value = 'relationships';
+  activeTab.value = "relationships";
   customAttributes.value = [];
-  selectedRelation.value = '';
-  relatedModelId.value = '';
+  selectedRelation.value = "";
+  relatedModelId.value = "";
   relatedRecords.value = [];
   showRelatedRecords.value = false;
 
@@ -1134,12 +1213,12 @@ async function generateFactoryData() {
 
   try {
     if (!connection.value?.projectPath) {
-      throw new Error('No project path is set');
+      throw new Error("No project path is set");
     }
 
     const model = databaseStore.getModelForTable(props.connectionId, props.tableName);
     if (!model) {
-      throw new Error('No model found for this table');
+      throw new Error("No model found for this table");
     }
 
     const modelName = model.fullName;
@@ -1149,31 +1228,25 @@ async function generateFactoryData() {
     const envConfig = await window.api.readEnvFile(projectPath);
 
     if (envConfig && envConfig.DB_DATABASE !== connection.value.database) {
-      const confirmResult = await showDatabaseMismatchDialog(
-        envConfig.DB_DATABASE,
-        connection.value.database
-      );
+      const confirmResult = await showDatabaseMismatchDialog(envConfig.DB_DATABASE, connection.value.database);
 
-      if (confirmResult === 'cancel') {
+      if (confirmResult === "cancel") {
         isGenerating.value = false;
         return;
       }
 
-      if (confirmResult === 'useConnection') {
-        showAlert(`Modifying .env to use database: ${connection.value.database}`, 'info');
+      if (confirmResult === "useConnection") {
+        showAlert(`Modifying .env to use database: ${connection.value.database}`, "info");
 
         const updateResult = await updateEnvDatabase(projectPath, connection.value.database);
         if (!updateResult) {
-          showAlert('Failed to modify .env file, operation aborted', 'error');
+          showAlert("Failed to modify .env file, operation aborted", "error");
           isGenerating.value = false;
           return;
         }
 
-        showAlert(
-          `Successfully updated .env file to use database: ${connection.value.database}`,
-          'success'
-        );
-      } else if (confirmResult === 'switchDatabase') {
+        showAlert(`Successfully updated .env file to use database: ${connection.value.database}`, "success");
+      } else if (confirmResult === "switchDatabase") {
         isGenerating.value = false;
         openDatabaseSwitcher();
         return;
@@ -1184,28 +1257,27 @@ async function generateFactoryData() {
     let factoryChain = `${modelName}::factory(${count})`;
 
     // Adicionar atributos personalizados
-    const validAttributes = customAttributes.value.filter(attr => attr.field && attr.value !== '');
+    const validAttributes = customAttributes.value.filter((attr) => attr.field && attr.value !== "");
     if (validAttributes.length > 0) {
-      const attributesArray = validAttributes.map(attr => {
+      const attributesArray = validAttributes.map((attr) => {
         // Tenta converter para número ou booleano quando possível
         let value = attr.value;
 
-        if (value === 'true') value = true;
-        else if (value === 'false') value = false;
+        if (value === "true") value = true;
+        else if (value === "false") value = false;
         else if (!isNaN(parseFloat(value)) && isFinite(value)) value = parseFloat(value);
         else value = `'${value}'`; // String com aspas simples
 
         return `'${attr.field}' => ${value}`;
       });
 
-      factoryChain += `->state([${attributesArray.join(', ')}])`;
+      factoryChain += `->state([${attributesArray.join(", ")}])`;
     }
 
     // Adicionar relacionamento
     if (selectedRelation.value && relatedModelId.value) {
       // Converte o nome do modelo para snake_case e adiciona _id
-      const foreignKey =
-        selectedRelation.value.replace(/([a-z])([A-Z])/g, '$1_$2').toLowerCase() + '_id';
+      const foreignKey = selectedRelation.value.replace(/([a-z])([A-Z])/g, "$1_$2").toLowerCase() + "_id";
       factoryChain += `->state(['${foreignKey}' => ${relatedModelId.value}])`;
     }
 
@@ -1222,11 +1294,11 @@ async function generateFactoryData() {
       projectPath: projectPath,
       command: tinkerCommand,
       useSail: usingSail,
-      displayCommand: `${usingSail ? 'sail' : 'php'} artisan ${tinkerCommand}`
+      displayCommand: `${usingSail ? "sail" : "php"} artisan ${tinkerCommand}`
     });
 
     if (commandResult && commandResult.success) {
-      showAlert(`Generating ${count} records for ${props.tableName} table`, 'success');
+      showAlert(`Generating ${count} records for ${props.tableName} table`, "success");
 
       // Abrir a tabela de dados para mostrar os registros criados
       setTimeout(() => {
@@ -1235,11 +1307,11 @@ async function generateFactoryData() {
 
       recordCount.value = 10;
     } else {
-      throw new Error((commandResult && commandResult.message) || 'Failed to start command');
+      throw new Error((commandResult && commandResult.message) || "Failed to start command");
     }
   } catch (error) {
-    console.error('Error generating factory data:', error);
-    showAlert(`Failed to generate factory data: ${error.message}`, 'error');
+    console.error("Error generating factory data:", error);
+    showAlert(`Failed to generate factory data: ${error.message}`, "error");
   } finally {
     isGenerating.value = false;
   }
@@ -1247,32 +1319,32 @@ async function generateFactoryData() {
 
 async function updateEnvDatabase(projectPath, database) {
   try {
-    console.log('Updating .env database at path:', projectPath, 'to database:', database);
+    console.log("Updating .env database at path:", projectPath, "to database:", database);
 
     const result = await window.api.updateEnvDatabase(projectPath, database);
 
     if (!result.success) {
-      throw new Error(result.message || 'Failed to update .env file');
+      throw new Error(result.message || "Failed to update .env file");
     }
 
-    console.log('Update .env result:', result);
+    console.log("Update .env result:", result);
 
-    showAlert(`Successfully updated project's .env file to use database: ${database}`, 'success');
+    showAlert(`Successfully updated project's .env file to use database: ${database}`, "success");
     return true;
   } catch (error) {
-    console.error('Error updating .env database:', error);
-    showAlert('Failed to update project database configuration: ' + error.message, 'error');
+    console.error("Error updating .env database:", error);
+    showAlert("Failed to update project database configuration: " + error.message, "error");
     return false;
   }
 }
 
 async function openDatabaseSwitcher() {
   try {
-    emit('open-database-switcher', props.connectionId);
-    showAlert('Opening database switcher...', 'info');
+    emit("open-database-switcher", props.connectionId);
+    showAlert("Opening database switcher...", "info");
   } catch (error) {
-    console.error('Error opening database switcher:', error);
-    showAlert('Failed to open database switcher: ' + error.message, 'error');
+    console.error("Error opening database switcher:", error);
+    showAlert("Failed to open database switcher: " + error.message, "error");
   }
 }
 
@@ -1280,8 +1352,8 @@ async function refreshData() {
   try {
     await loadFactory();
   } catch (error) {
-    console.error('Error refreshing data:', error);
-    showAlert('Failed to refresh factory data', 'error');
+    console.error("Error refreshing data:", error);
+    showAlert("Failed to refresh factory data", "error");
   }
 }
 
@@ -1290,17 +1362,17 @@ function openDataTab() {
     const newTab = {
       id: `data-${props.connectionId}-${props.tableName}-${Date.now()}`,
       title: props.tableName,
-      type: 'data',
+      type: "data",
       data: {
         connectionId: props.connectionId,
         tableName: props.tableName
       },
-      icon: 'table'
+      icon: "table"
     };
 
     props.onOpenTab(newTab);
   } catch (error) {
-    console.error('Error opening data tab:', error);
+    console.error("Error opening data tab:", error);
   }
 }
 
@@ -1330,10 +1402,10 @@ async function loadAvailableRelations() {
       }
     }
 
-    console.log('Available relations:', availableRelations.value);
+    console.log("Available relations:", availableRelations.value);
   } catch (error) {
-    console.error('Error loading available relations:', error);
-    showAlert('Failed to load available relations', 'error');
+    console.error("Error loading available relations:", error);
+    showAlert("Failed to load available relations", "error");
   }
 }
 

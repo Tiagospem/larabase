@@ -16,7 +16,12 @@
         />
       </svg>
       <p>{{ props.message }}</p>
-      <button class="btn btn-sm btn-primary mt-4" @click="emit('retry')">Try again</button>
+      <button
+        class="btn btn-sm btn-primary mt-4"
+        @click="emit('retry')"
+      >
+        Try again
+      </button>
     </div>
   </div>
 </template>
@@ -25,9 +30,9 @@
 const props = defineProps({
   message: {
     type: String,
-    default: 'An error occurred while loading the data.'
+    default: "An error occurred while loading the data."
   }
 });
 
-const emit = defineEmits(['retry']);
+const emit = defineEmits(["retry"]);
 </script>

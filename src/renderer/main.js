@@ -1,18 +1,18 @@
-import { createApp } from 'vue';
-import { createPinia } from 'pinia';
-import { createRouter, createWebHashHistory } from 'vue-router';
-import App from './App.vue';
-import './style.css';
-import tooltip from './directives/tooltip';
+import { createApp } from "vue";
+import { createPinia } from "pinia";
+import { createRouter, createWebHashHistory } from "vue-router";
+import App from "./App.vue";
+import "./style.css";
+import tooltip from "./directives/tooltip";
 
-import Home from './views/Home.vue';
-import DatabaseView from './views/DatabaseView.vue';
-import SQLEditorView from './views/SQLEditorView.vue';
+import Home from "./views/Home.vue";
+import DatabaseView from "./views/DatabaseView.vue";
+import SQLEditorView from "./views/SQLEditorView.vue";
 
 const routes = [
-  { path: '/', component: Home },
-  { path: '/database/:id', component: DatabaseView },
-  { path: '/sql-editor/:id', component: SQLEditorView }
+  { path: "/", component: Home },
+  { path: "/database/:id", component: DatabaseView },
+  { path: "/sql-editor/:id", component: SQLEditorView }
 ];
 
 const router = createRouter({
@@ -26,4 +26,4 @@ const app = createApp(App);
 app.use(router);
 app.use(pinia);
 app.use(tooltip);
-app.mount('#app');
+app.mount("#app");

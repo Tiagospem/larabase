@@ -2,7 +2,10 @@
   <div class="h-full flex flex-col">
     <div class="bg-base-200 p-2 border-b border-neutral flex items-center justify-between">
       <div class="flex items-center space-x-2">
-        <button class="btn btn-sm btn-ghost" @click="loadForeignKeys">
+        <button
+          class="btn btn-sm btn-ghost"
+          @click="loadForeignKeys"
+        >
           <svg
             xmlns="http://www.w3.org/2000/svg"
             fill="none"
@@ -23,11 +26,17 @@
     </div>
 
     <div class="flex-1 overflow-auto">
-      <div v-if="isLoading" class="flex items-center justify-center h-full">
+      <div
+        v-if="isLoading"
+        class="flex items-center justify-center h-full"
+      >
         <span class="loading loading-spinner loading-lg" />
       </div>
 
-      <div v-else-if="loadError" class="flex items-center justify-center h-full text-error">
+      <div
+        v-else-if="loadError"
+        class="flex items-center justify-center h-full text-error"
+      >
         <div class="text-center">
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -44,7 +53,12 @@
             />
           </svg>
           <p>{{ loadError }}</p>
-          <button class="btn btn-sm btn-primary mt-4" @click="loadForeignKeys">Try again</button>
+          <button
+            class="btn btn-sm btn-primary mt-4"
+            @click="loadForeignKeys"
+          >
+            Try again
+          </button>
         </div>
       </div>
 
@@ -68,13 +82,24 @@
             />
           </svg>
           <p>No foreign keys found in this table</p>
-          <button class="btn btn-sm btn-ghost mt-4" @click="loadForeignKeys">Reload</button>
+          <button
+            class="btn btn-sm btn-ghost mt-4"
+            @click="loadForeignKeys"
+          >
+            Reload
+          </button>
         </div>
       </div>
 
-      <div v-else class="p-4 pb-16 h-full overflow-auto">
+      <div
+        v-else
+        class="p-4 pb-16 h-full overflow-auto"
+      >
         <!-- Outgoing Foreign Keys -->
-        <div v-if="outgoingRelations.length > 0" class="mb-6">
+        <div
+          v-if="outgoingRelations.length > 0"
+          class="mb-6"
+        >
           <h3 class="text-lg font-bold mb-3">References to Other Tables</h3>
           <div class="overflow-x-auto">
             <table class="table table-sm w-full min-w-full">
@@ -169,19 +194,16 @@
       v-if="foreignKeys.length > 0"
       class="bg-base-200 px-4 py-2 border-t border-neutral flex justify-between items-center text-xs text-gray-400 sticky bottom-0 left-0 right-0 min-h-[40px] z-20"
     >
-      <div>
-        {{ tableName }} | {{ outgoingRelations.length }} outgoing |
-        {{ incomingRelations.length }} incoming
-      </div>
+      <div>{{ tableName }} | {{ outgoingRelations.length }} outgoing | {{ incomingRelations.length }} incoming</div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted, inject } from 'vue';
-import { useDatabaseStore } from '@/store/database';
+import { ref, computed, onMounted, inject } from "vue";
+import { useDatabaseStore } from "@/store/database";
 
-const showAlert = inject('showAlert');
+const showAlert = inject("showAlert");
 
 const props = defineProps({
   connectionId: {
@@ -205,25 +227,25 @@ const loadError = ref(null);
 const databaseStore = useDatabaseStore();
 
 const outgoingRelations = computed(() => {
-  return foreignKeys.value.filter(fk => fk.type === 'outgoing');
+  return foreignKeys.value.filter((fk) => fk.type === "outgoing");
 });
 
 const incomingRelations = computed(() => {
-  return foreignKeys.value.filter(fk => fk.type === 'incoming');
+  return foreignKeys.value.filter((fk) => fk.type === "incoming");
 });
 
 function getConstraintBadgeClass(action) {
   switch (action) {
-    case 'CASCADE':
-      return 'badge-warning';
-    case 'RESTRICT':
-      return 'badge-error';
-    case 'SET NULL':
-      return 'badge-info';
-    case 'NO ACTION':
-      return 'badge-ghost';
+    case "CASCADE":
+      return "badge-warning";
+    case "RESTRICT":
+      return "badge-error";
+    case "SET NULL":
+      return "badge-info";
+    case "NO ACTION":
+      return "badge-ghost";
     default:
-      return 'badge-neutral';
+      return "badge-neutral";
   }
 }
 
@@ -232,12 +254,8 @@ async function loadForeignKeys() {
   loadError.value = null;
 
   try {
-    const tableForeignKeys = await databaseStore.getTableForeignKeys(
-      props.connectionId,
-      props.tableName,
-      true
-    );
-    console.log('Loaded foreign keys:', tableForeignKeys);
+    const tableForeignKeys = await databaseStore.getTableForeignKeys(props.connectionId, props.tableName, true);
+    console.log("Loaded foreign keys:", tableForeignKeys);
 
     foreignKeys.value = tableForeignKeys;
 
@@ -246,9 +264,9 @@ async function loadForeignKeys() {
       incomingCount: incomingRelations.value.length
     });
   } catch (error) {
-    console.error('Error loading foreign keys:', error);
-    loadError.value = 'Failed to load foreign keys: ' + (error.message || 'Unknown error');
-    showAlert(`Error loading foreign keys: ${error.message}`, 'error');
+    console.error("Error loading foreign keys:", error);
+    loadError.value = "Failed to load foreign keys: " + (error.message || "Unknown error");
+    showAlert(`Error loading foreign keys: ${error.message}`, "error");
   } finally {
     isLoading.value = false;
   }

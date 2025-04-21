@@ -1,10 +1,17 @@
 <template>
-  <div class="modal" :class="{ 'modal-open': isOpen }">
+  <div
+    class="modal"
+    :class="{ 'modal-open': isOpen }"
+  >
     <div class="modal-box max-w-4xl bg-base-300">
       <div class="flex justify-between items-center mb-4">
         <h3 class="font-bold text-lg">Project Logs</h3>
         <div class="flex gap-2">
-          <button v-if="props.projectPath" class="btn btn-sm" @click="refreshLogs">
+          <button
+            v-if="props.projectPath"
+            class="btn btn-sm"
+            @click="refreshLogs"
+          >
             <svg
               xmlns="http://www.w3.org/2000/svg"
               fill="none"
@@ -52,7 +59,10 @@
       </div>
 
       <!-- Project Path Missing Message -->
-      <div v-if="!props.projectPath" class="py-8 text-center">
+      <div
+        v-if="!props.projectPath"
+        class="py-8 text-center"
+      >
         <svg
           xmlns="http://www.w3.org/2000/svg"
           fill="none"
@@ -68,14 +78,20 @@
           />
         </svg>
         <p class="text-lg font-semibold mb-2">No Laravel Project Path Set</p>
-        <p class="text-gray-400 mb-4">
-          To view logs, you need to set a Laravel project path for this connection.
-        </p>
-        <button class="btn btn-primary" @click="selectProject">Select Laravel Project</button>
+        <p class="text-gray-400 mb-4">To view logs, you need to set a Laravel project path for this connection.</p>
+        <button
+          class="btn btn-primary"
+          @click="selectProject"
+        >
+          Select Laravel Project
+        </button>
       </div>
 
       <!-- Debugging Info when file exists but no logs parsed -->
-      <div v-else-if="props.projectPath && logs.length === 0" class="py-8 text-center">
+      <div
+        v-else-if="props.projectPath && logs.length === 0"
+        class="py-8 text-center"
+      >
         <svg
           xmlns="http://www.w3.org/2000/svg"
           fill="none"
@@ -98,7 +114,10 @@
       <div v-else-if="logs.length > 0">
         <!-- Log filters -->
         <div class="flex mb-4 gap-2">
-          <select v-model="logTypeFilter" class="select select-sm select-bordered">
+          <select
+            v-model="logTypeFilter"
+            class="select select-sm select-bordered"
+          >
             <option value="all">All Log Types</option>
             <option value="info">Info</option>
             <option value="warning">Warning</option>
@@ -125,20 +144,33 @@
               </tr>
             </thead>
             <tbody>
-              <tr v-for="(log, index) in filteredLogs" :key="index" class="hover:bg-base-200">
+              <tr
+                v-for="(log, index) in filteredLogs"
+                :key="index"
+                class="hover:bg-base-200"
+              >
                 <td class="text-xs">
                   {{ formatTimestamp(log.timestamp) }}
                 </td>
                 <td>
-                  <span class="badge" :class="getLogTypeBadgeClass(log.type)">
+                  <span
+                    class="badge"
+                    :class="getLogTypeBadgeClass(log.type)"
+                  >
                     {{ log.type }}
                   </span>
                 </td>
-                <td class="truncate max-w-md" :title="log.message">
+                <td
+                  class="truncate max-w-md"
+                  :title="log.message"
+                >
                   {{ log.message }}
                 </td>
                 <td class="text-right">
-                  <button class="btn btn-xs btn-ghost" @click="viewLogDetails(log)">
+                  <button
+                    class="btn btn-xs btn-ghost"
+                    @click="viewLogDetails(log)"
+                  >
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
                       fill="none"
@@ -162,7 +194,12 @@
                 </td>
               </tr>
               <tr v-if="filteredLogs.length === 0">
-                <td colspan="4" class="text-center py-4 text-gray-500">No logs found</td>
+                <td
+                  colspan="4"
+                  class="text-center py-4 text-gray-500"
+                >
+                  No logs found
+                </td>
               </tr>
             </tbody>
           </table>
@@ -170,40 +207,60 @@
       </div>
 
       <div class="modal-action">
-        <button class="btn btn-primary" @click="close">Close</button>
+        <button
+          class="btn btn-primary"
+          @click="close"
+        >
+          Close
+        </button>
       </div>
     </div>
   </div>
 
   <!-- Log details modal -->
-  <div class="modal" :class="{ 'modal-open': showLogDetails }">
+  <div
+    class="modal"
+    :class="{ 'modal-open': showLogDetails }"
+  >
     <div class="modal-box bg-base-300">
       <h3 class="font-bold text-lg flex items-center">
         Log Details
-        <span v-if="selectedLog" class="badge ml-2" :class="getLogTypeBadgeClass(selectedLog.type)">
+        <span
+          v-if="selectedLog"
+          class="badge ml-2"
+          :class="getLogTypeBadgeClass(selectedLog.type)"
+        >
           {{ selectedLog?.type }}
         </span>
       </h3>
-      <div v-if="selectedLog" class="py-4">
+      <div
+        v-if="selectedLog"
+        class="py-4"
+      >
         <!-- Log details section - collapsible -->
-        <div v-if="!hideLogDetails || !analysisResult" class="mb-4">
+        <div
+          v-if="!hideLogDetails || !analysisResult"
+          class="mb-4"
+        >
           <div class="flex justify-between items-center mb-2">
             <p class="text-sm">
               <span class="font-semibold">Timestamp:</span>
               {{ formatTimestamp(selectedLog.timestamp, true) }}
             </p>
-            <p class="text-sm"><span class="font-semibold">File:</span> {{ selectedLog.file }}</p>
+            <p class="text-sm">
+              <span class="font-semibold">File:</span>
+              {{ selectedLog.file }}
+            </p>
           </div>
-          <div
-            class="bg-base-200 p-3 rounded-lg overflow-auto max-h-80 whitespace-pre-wrap font-mono text-sm"
-          >
+          <div class="bg-base-200 p-3 rounded-lg overflow-auto max-h-80 whitespace-pre-wrap font-mono text-sm">
             {{ selectedLog.message }}
           </div>
-          <div v-if="selectedLog.stack" class="mt-4">
+          <div
+            v-if="selectedLog.stack"
+            class="mt-4"
+          >
             <p class="font-semibold mb-1">Stack Trace:</p>
-            <div
-              class="bg-base-200 p-3 rounded-lg overflow-auto max-h-80 whitespace-pre-wrap font-mono text-xs"
-            >
+            <div class="bg-base-200 p-3 rounded-lg overflow-auto max-h-80 whitespace-pre-wrap font-mono text-xs">
               {{ selectedLog.stack }}
             </div>
           </div>
@@ -214,7 +271,10 @@
           v-if="hasOpenAIConfig && !isAnalyzing && !analysisResult"
           class="mt-4 flex justify-between items-center"
         >
-          <button class="btn btn-accent btn-sm" @click="performLogAnalysis">
+          <button
+            class="btn btn-accent btn-sm"
+            @click="performLogAnalysis"
+          >
             <svg
               xmlns="http://www.w3.org/2000/svg"
               fill="none"
@@ -233,18 +293,31 @@
           </button>
         </div>
 
-        <div v-if="isAnalyzing" class="flex justify-center items-center mt-4 py-4">
+        <div
+          v-if="isAnalyzing"
+          class="flex justify-center items-center mt-4 py-4"
+        >
           <div class="loading loading-spinner text-primary" />
           <span class="ml-3">Analyzing log with AI...</span>
         </div>
 
-        <div v-if="analysisResult" class="mt-4">
+        <div
+          v-if="analysisResult"
+          class="mt-4"
+        >
           <div class="flex justify-between items-center mb-2">
             <h4 class="font-semibold flex items-center gap-2">
               AI Analysis
-              <span v-if="loadedFromCache" class="badge badge-sm badge-accent">Cached</span>
-              <button class="btn btn-xs btn-outline" @click="toggleLogDetails">
-                {{ hideLogDetails ? 'Show Log' : 'Hide Log' }}
+              <span
+                v-if="loadedFromCache"
+                class="badge badge-sm badge-accent"
+                >Cached</span
+              >
+              <button
+                class="btn btn-xs btn-outline"
+                @click="toggleLogDetails"
+              >
+                {{ hideLogDetails ? "Show Log" : "Hide Log" }}
               </button>
             </h4>
             <div class="flex gap-2">
@@ -291,38 +364,57 @@
               </button>
             </div>
           </div>
-          <div
-            class="bg-base-200 p-4 rounded-lg overflow-auto max-h-96 prose prose-sm prose-invert"
-          >
+          <div class="bg-base-200 p-4 rounded-lg overflow-auto max-h-96 prose prose-sm prose-invert">
             <div v-html="markdownToHtml(analysisResult)" />
           </div>
         </div>
       </div>
       <div class="modal-action">
-        <button class="btn btn-primary" @click="showLogDetails = false">Close</button>
+        <button
+          class="btn btn-primary"
+          @click="showLogDetails = false"
+        >
+          Close
+        </button>
       </div>
     </div>
-    <div class="modal-backdrop" @click="showLogDetails = false" />
+    <div
+      class="modal-backdrop"
+      @click="showLogDetails = false"
+    />
   </div>
 
   <!-- Confirm delete modal -->
-  <div class="modal" :class="{ 'modal-open': showDeleteConfirm }">
+  <div
+    class="modal"
+    :class="{ 'modal-open': showDeleteConfirm }"
+  >
     <div class="modal-box bg-base-300">
       <h3 class="font-bold text-lg">Confirm Action</h3>
       <p class="py-4">Are you sure you want to delete all logs? This action cannot be undone.</p>
       <div class="modal-action">
-        <button class="btn btn-error" @click="deleteAllLogs">Delete All</button>
-        <button class="btn" @click="showDeleteConfirm = false">Cancel</button>
+        <button
+          class="btn btn-error"
+          @click="deleteAllLogs"
+        >
+          Delete All
+        </button>
+        <button
+          class="btn"
+          @click="showDeleteConfirm = false"
+        >
+          Cancel
+        </button>
       </div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch, inject } from 'vue';
-import { useSettingsStore } from '@/store/settings';
-import { analyzeLogWithAI } from '@/services/ai/LogAnalysisService';
-import { marked } from 'marked';
+import { ref, computed, onMounted, watch, inject } from "vue";
+import { useSettingsStore } from "@/store/settings";
+import { analyzeLogWithAI } from "@/services/ai/LogAnalysisService";
+import { marked } from "marked";
 
 // Configure marked for security
 marked.setOptions({
@@ -346,24 +438,24 @@ const props = defineProps({
   },
   projectPath: {
     type: String,
-    default: ''
+    default: ""
   }
 });
 
-const emit = defineEmits(['close', 'select-project']);
-const showAlert = inject('showAlert');
+const emit = defineEmits(["close", "select-project"]);
+const showAlert = inject("showAlert");
 const settingsStore = useSettingsStore();
 
 const logs = ref([]);
-const searchQuery = ref('');
-const logTypeFilter = ref('all');
+const searchQuery = ref("");
+const logTypeFilter = ref("all");
 const showLogDetails = ref(false);
 const selectedLog = ref(null);
 const showDeleteConfirm = ref(false);
 
 // New refs for AI analysis
 const isAnalyzing = ref(false);
-const analysisResult = ref('');
+const analysisResult = ref("");
 const hideLogDetails = ref(false);
 const loadedFromCache = ref(false);
 const hasOpenAIConfig = computed(() => {
@@ -376,30 +468,26 @@ const analysisCache = ref({});
 // Carregar análises do localStorage
 function loadAnalysisCache() {
   try {
-    console.log('Loading analysis cache for connection ID:', props.connectionId);
+    console.log("Loading analysis cache for connection ID:", props.connectionId);
     const cacheKey = `analysis_cache_${props.connectionId}`;
     const savedCache = localStorage.getItem(cacheKey);
 
     if (savedCache) {
       try {
         const parsedCache = JSON.parse(savedCache);
-        console.log(
-          'Loaded analysis cache from localStorage:',
-          Object.keys(parsedCache).length,
-          'entries'
-        );
-        console.log('Cache contents sample:', Object.keys(parsedCache).slice(0, 3));
+        console.log("Loaded analysis cache from localStorage:", Object.keys(parsedCache).length, "entries");
+        console.log("Cache contents sample:", Object.keys(parsedCache).slice(0, 3));
         analysisCache.value = parsedCache;
       } catch (parseError) {
-        console.error('Error parsing analysis cache:', parseError);
+        console.error("Error parsing analysis cache:", parseError);
         analysisCache.value = {};
       }
     } else {
-      console.log('No cache found with key:', cacheKey);
+      console.log("No cache found with key:", cacheKey);
       analysisCache.value = {};
     }
   } catch (error) {
-    console.error('Error loading analysis cache:', error);
+    console.error("Error loading analysis cache:", error);
     // Em caso de erro, iniciar com um cache vazio
     analysisCache.value = {};
   }
@@ -411,29 +499,22 @@ function saveAnalysisCache() {
     const cacheKey = `analysis_cache_${props.connectionId}`;
     const cacheJson = JSON.stringify(analysisCache.value);
     localStorage.setItem(cacheKey, cacheJson);
-    console.log(
-      'Saved analysis cache with key:',
-      cacheKey,
-      'entries:',
-      Object.keys(analysisCache.value).length
-    );
+    console.log("Saved analysis cache with key:", cacheKey, "entries:", Object.keys(analysisCache.value).length);
   } catch (error) {
-    console.error('Error saving analysis cache:', error);
+    console.error("Error saving analysis cache:", error);
   }
 }
 
 const filteredLogs = computed(() => {
   let filtered = [...logs.value];
 
-  if (logTypeFilter.value !== 'all') {
-    filtered = filtered.filter(log => log.type === logTypeFilter.value);
+  if (logTypeFilter.value !== "all") {
+    filtered = filtered.filter((log) => log.type === logTypeFilter.value);
   }
 
   if (searchQuery.value) {
     const query = searchQuery.value.toLowerCase();
-    filtered = filtered.filter(
-      log => log.message.toLowerCase().includes(query) || log.type.toLowerCase().includes(query)
-    );
+    filtered = filtered.filter((log) => log.message.toLowerCase().includes(query) || log.type.toLowerCase().includes(query));
   }
 
   return filtered.sort((a, b) => b.timestamp - a.timestamp);
@@ -449,16 +530,16 @@ function formatTimestamp(timestamp, detailed = false) {
 
 function getLogTypeBadgeClass(type) {
   switch (type.toLowerCase()) {
-    case 'error':
-      return 'badge-error';
-    case 'warning':
-      return 'badge-warning';
-    case 'info':
-      return 'badge-info';
-    case 'debug':
-      return 'badge-ghost';
+    case "error":
+      return "badge-error";
+    case "warning":
+      return "badge-warning";
+    case "info":
+      return "badge-info";
+    case "debug":
+      return "badge-ghost";
     default:
-      return 'badge-secondary';
+      return "badge-secondary";
   }
 }
 
@@ -466,7 +547,7 @@ function viewLogDetails(log) {
   selectedLog.value = log;
 
   // Debug para entender a estrutura do log
-  console.log('Log being viewed:', {
+  console.log("Log being viewed:", {
     id: log.id,
     timestamp: log.timestamp,
     type: log.type,
@@ -479,13 +560,13 @@ function viewLogDetails(log) {
 
   // Verificar se já existe uma análise em cache para este log
   if (analysisCache.value[stableId]) {
-    console.log('Analysis found in cache for log ID:', stableId);
+    console.log("Analysis found in cache for log ID:", stableId);
     analysisResult.value = analysisCache.value[stableId];
     hideLogDetails.value = true; // Auto-hide log details if analysis exists
     loadedFromCache.value = true; // Indica que a análise foi carregada do cache
   } else {
-    console.log('No analysis in cache for log ID:', stableId);
-    analysisResult.value = '';
+    console.log("No analysis in cache for log ID:", stableId);
+    analysisResult.value = "";
     hideLogDetails.value = false; // Show log details if no analysis
     loadedFromCache.value = false;
   }
@@ -519,7 +600,9 @@ async function deleteAllLogs() {
   try {
     if (!props.projectPath) return;
 
-    const result = await window.api.clearAllProjectLogs({ projectPath: props.projectPath });
+    const result = await window.api.clearAllProjectLogs({
+      projectPath: props.projectPath
+    });
 
     if (result.success) {
       logs.value = [];
@@ -527,18 +610,18 @@ async function deleteAllLogs() {
       analysisCache.value = {};
       saveAnalysisCache();
       showDeleteConfirm.value = false;
-      showAlert(`Cleared ${result.clearedFiles || 'all'} log files`, 'success');
+      showAlert(`Cleared ${result.clearedFiles || "all"} log files`, "success");
     } else {
-      console.error('Failed to clear log files:', result.message);
-      showAlert(`Failed to clear logs: ${result.message}`, 'error');
+      console.error("Failed to clear log files:", result.message);
+      showAlert(`Failed to clear logs: ${result.message}`, "error");
     }
   } catch (error) {
-    console.error('Error clearing log files:', error);
+    console.error("Error clearing log files:", error);
   }
 }
 
 function selectProject() {
-  emit('select-project');
+  emit("select-project");
 }
 
 async function openLogFile() {
@@ -547,14 +630,14 @@ async function openLogFile() {
 
     let logFilePath = `${props.projectPath}/storage/logs/laravel.log`;
 
-    if (logs.value.length > 0 && logs.value[0].file && logs.value[0].file !== 'error') {
+    if (logs.value.length > 0 && logs.value[0].file && logs.value[0].file !== "error") {
       logFilePath = `${props.projectPath}/storage/logs/${logs.value[0].file}`;
     }
 
-    console.log('Opening log file:', logFilePath);
+    console.log("Opening log file:", logFilePath);
     await window.api.openFile(logFilePath);
   } catch (error) {
-    console.error('Error opening log file:', error);
+    console.error("Error opening log file:", error);
   }
 }
 
@@ -565,15 +648,17 @@ async function refreshLogs() {
       return;
     }
 
-    console.log('Refreshing logs with project path:', props.projectPath);
-    const response = await window.api.getProjectLogs({ projectPath: props.projectPath });
-    console.log('Got logs response:', response);
+    console.log("Refreshing logs with project path:", props.projectPath);
+    const response = await window.api.getProjectLogs({
+      projectPath: props.projectPath
+    });
+    console.log("Got logs response:", response);
     logs.value = response || [];
 
     // Limpar análises obsoletas - manter apenas para logs existentes
     cleanupObsoleteAnalyses();
   } catch (error) {
-    console.error('Failed to load logs:', error);
+    console.error("Failed to load logs:", error);
     logs.value = [];
   }
 }
@@ -585,41 +670,41 @@ function cleanupObsoleteAnalyses() {
   }
 
   // Criar um conjunto de IDs estáveis de logs existentes
-  const logStableIds = new Set(logs.value.map(log => createStableLogId(log)));
+  const logStableIds = new Set(logs.value.map((log) => createStableLogId(log)));
 
   // Extrair IDs do cache
   const cachedIds = Object.keys(analysisCache.value);
   console.log(`Checking ${cachedIds.length} cached analyses against ${logStableIds.size} logs`);
 
   // Filtrar o cache para manter apenas análises de logs existentes
-  const obsoleteIds = cachedIds.filter(id => !logStableIds.has(id));
+  const obsoleteIds = cachedIds.filter((id) => !logStableIds.has(id));
 
   if (obsoleteIds.length > 0) {
     console.log(`Removing ${obsoleteIds.length} obsolete analyses from cache:`, obsoleteIds);
 
     // Remover análises obsoletas
-    obsoleteIds.forEach(id => {
+    obsoleteIds.forEach((id) => {
       delete analysisCache.value[id];
     });
 
     // Salvar o cache atualizado
     saveAnalysisCache();
   } else {
-    console.log('No obsolete analyses found in cache');
+    console.log("No obsolete analyses found in cache");
   }
 }
 
 function close() {
   // Reset analysis results when closing
-  analysisResult.value = '';
+  analysisResult.value = "";
   hideLogDetails.value = false;
   loadedFromCache.value = false;
-  emit('close');
+  emit("close");
 }
 
 // Function to convert markdown to HTML
 function markdownToHtml(markdown) {
-  if (!markdown) return '';
+  if (!markdown) return "";
   return marked.parse(markdown);
 }
 
@@ -628,14 +713,14 @@ async function performLogAnalysis() {
   if (!selectedLog.value) return;
 
   isAnalyzing.value = true;
-  analysisResult.value = '';
+  analysisResult.value = "";
   loadedFromCache.value = false; // Reset cache indicator
 
   try {
     await settingsStore.loadSettings();
 
     if (!settingsStore.settings.openai.apiKey) {
-      showAlert('OpenAI API key is not configured. Please set it in the Settings.', 'error');
+      showAlert("OpenAI API key is not configured. Please set it in the Settings.", "error");
       return;
     }
 
@@ -645,15 +730,15 @@ async function performLogAnalysis() {
     // Salvar a análise no cache usando a chave estável
     if (selectedLog.value) {
       const stableId = createStableLogId(selectedLog.value);
-      console.log('Saving analysis to cache with stable ID:', stableId);
+      console.log("Saving analysis to cache with stable ID:", stableId);
       analysisCache.value[stableId] = result;
       saveAnalysisCache();
     }
 
     hideLogDetails.value = true; // Auto-hide log details when analysis is ready
   } catch (error) {
-    console.error('Error analyzing log with AI:', error);
-    showAlert(`Failed to analyze log: ${error.message}`, 'error');
+    console.error("Error analyzing log with AI:", error);
+    showAlert(`Failed to analyze log: ${error.message}`, "error");
   } finally {
     isAnalyzing.value = false;
   }
@@ -663,9 +748,9 @@ async function performLogAnalysis() {
 async function copyAnalysisToClipboard() {
   try {
     await navigator.clipboard.writeText(analysisResult.value);
-    showAlert('Analysis copied to clipboard', 'success');
+    showAlert("Analysis copied to clipboard", "success");
   } catch (error) {
-    showAlert('Failed to copy to clipboard', 'error');
+    showAlert("Failed to copy to clipboard", "error");
   }
 }
 
@@ -676,7 +761,7 @@ function toggleLogDetails() {
 
 watch(
   () => props.projectPath,
-  newPath => {
+  (newPath) => {
     if (newPath) {
       refreshLogs();
     }
@@ -685,7 +770,7 @@ watch(
 
 watch(
   () => props.isOpen,
-  newValue => {
+  (newValue) => {
     if (newValue && props.projectPath) {
       refreshLogs();
     }
@@ -697,26 +782,20 @@ onMounted(async () => {
 
   // Verificar se o localStorage está funcionando
   try {
-    const testKey = 'larabase_storage_test';
-    localStorage.setItem(testKey, 'test');
+    const testKey = "larabase_storage_test";
+    localStorage.setItem(testKey, "test");
     const testValue = localStorage.getItem(testKey);
     localStorage.removeItem(testKey);
 
-    if (testValue === 'test') {
-      console.log('localStorage is working correctly');
+    if (testValue === "test") {
+      console.log("localStorage is working correctly");
     } else {
-      console.error('localStorage test failed: set value not retrieved');
-      showAlert(
-        'Warning: Browser storage is not working properly. Analysis cache may not persist.',
-        'warning'
-      );
+      console.error("localStorage test failed: set value not retrieved");
+      showAlert("Warning: Browser storage is not working properly. Analysis cache may not persist.", "warning");
     }
   } catch (storageError) {
-    console.error('localStorage test error:', storageError);
-    showAlert(
-      'Warning: Browser storage is not available. Analysis cache will not persist.',
-      'warning'
-    );
+    console.error("localStorage test error:", storageError);
+    showAlert("Warning: Browser storage is not available. Analysis cache will not persist.", "warning");
   }
 
   loadAnalysisCache();

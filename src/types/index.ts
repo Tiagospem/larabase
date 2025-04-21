@@ -10,7 +10,7 @@ export interface ApiResponse<T> {
 export interface DbConnection {
   id: string;
   name: string;
-  type: 'mysql' | 'postgresql' | 'sqlite' | 'mongodb';
+  type: "mysql" | "postgresql" | "sqlite" | "mongodb";
   host: string;
   port: number;
   username: string;

@@ -1,17 +1,15 @@
 /** @type {import('tailwindcss').Config} */
 module.exports = {
-  content: [
-    "./src/renderer/**/*.{vue,js,ts,jsx,tsx}",
-  ],
+  content: ["./src/renderer/**/*.{vue,js,ts,jsx,tsx}"],
   theme: {
     extend: {
       colors: {
-        'app-bg': '#1e1e1e',
-        'sidebar': '#252526',
-        'editor': '#1e1e1e',
-        'accent': '#FF2D20',
+        "app-bg": "#1e1e1e",
+        sidebar: "#252526",
+        editor: "#1e1e1e",
+        accent: "#FF2D20"
       }
-    },
+    }
   },
   plugins: [require("daisyui")],
   daisyui: {
@@ -25,9 +23,9 @@ module.exports = {
           neutral: "#252526",
           "base-100": "#1e1e1e",
           "base-200": "#2d2d30",
-          "base-300": "#333333",
-        },
-      },
-    ],
-  },
-} 
+          "base-300": "#333333"
+        }
+      }
+    ]
+  }
+};

@@ -1,5 +1,5 @@
-const { ipcMain } = require('electron');
-const mysql = require('mysql2/promise');
+const { ipcMain } = require("electron");
+const mysql = require("mysql2/promise");
 
 const _LIST_TABLES_SQL = `
   SELECT table_name AS name, COUNT(*) AS columnCount
@@ -77,7 +77,7 @@ function _applySortingAndPagination(baseSql, connection, config) {
   let sql = baseSql;
   if (config.sortColumn) {
     const sortCol = connection.escapeId(config.sortColumn);
-    const dir = config.sortDirection === 'desc' ? 'DESC' : 'ASC';
+    const dir = config.sortDirection === "desc" ? "DESC" : "ASC";
     sql += ` ORDER BY ${sortCol} ${dir}`;
   }
   sql += ` LIMIT ? OFFSET ?`;
@@ -85,17 +85,13 @@ function _applySortingAndPagination(baseSql, connection, config) {
 }
 
 async function _getDbConnection({ store, dbMonitoringConnections }, config) {
-  if (
-    store &&
-    config.connectionId &&
-    (!config.host || !config.port || !config.username || !config.database)
-  ) {
-    const saved = (store.get('connections') || []).find(c => c.id === config.connectionId);
-    if (!saved) return { error: 'Connection not found' };
+  if (store && config.connectionId && (!config.host || !config.port || !config.username || !config.database)) {
+    const saved = (store.get("connections") || []).find((c) => c.id === config.connectionId);
+    if (!saved) return { error: "Connection not found" };
     Object.assign(config, saved);
   }
-  const { host, port, username, password = '', database, connectionId } = config;
-  if (!host || !port || !username || !database) return { error: 'Missing parameters' };
+  const { host, port, username, password = "", database, connectionId } = config;
+  if (!host || !port || !username || !database) return { error: "Missing parameters" };
   let connection,
     isMonitored = false;
   if (dbMonitoringConnections && connectionId) {
@@ -139,149 +135,136 @@ function _createConnection(cfg) {
 }
 
 function registerTableHandlers(store, dbMonitoringConnections) {
-  ipcMain.handle('list-tables', async (_e, config = {}) => {
-    const { error, connection, isMonitored } = await _getDbConnection(
-      { store, dbMonitoringConnections },
-      config
-    );
-    if (error) return _error('tables', error);
+  ipcMain.handle("list-tables", async (_e, config = {}) => {
+    const { error, connection, isMonitored } = await _getDbConnection({ store, dbMonitoringConnections }, config);
+    if (error) return _error("tables", error);
     try {
       const [rows] = await connection.query(_LIST_TABLES_SQL, [config.database]);
       return { success: true, tables: rows };
     } catch (err) {
-      return _error('tables', err.message || 'Failed to list tables');
+      return _error("tables", err.message || "Failed to list tables");
     } finally {
       _closeConnection(connection, isMonitored);
     }
   });
 
-  ipcMain.handle('get-table-record-count', async (_e, config = {}) => {
+  ipcMain.handle("get-table-record-count", async (_e, config = {}) => {
     const { error, connection, isMonitored } = await _getDbConnection({ store }, config);
-    if (error) return _error('count', error);
+    if (error) return _error("count", error);
     try {
       const escaped = connection.escapeId(config.tableName);
       const [rows] = await connection.query(`SELECT COUNT(*) AS count FROM ${escaped}`);
-      return rows.length
-        ? { success: true, count: rows[0].count || 0 }
-        : _error('count', 'Failed to count records');
+      return rows.length ? { success: true, count: rows[0].count || 0 } : _error("count", "Failed to count records");
     } catch (err) {
-      return _error('count', err.message || 'Failed to count records');
+      return _error("count", err.message || "Failed to count records");
     } finally {
       _closeConnection(connection, isMonitored);
     }
   });
 
-  ipcMain.handle('get-table-structure', async (_e, config = {}) => {
-    const { error, connection, isMonitored } = await _getDbConnection(
-      { store, dbMonitoringConnections },
-      config
-    );
-    if (error) return _error('structure', error);
+  ipcMain.handle("get-table-structure", async (_e, config = {}) => {
+    const { error, connection, isMonitored } = await _getDbConnection({ store, dbMonitoringConnections }, config);
+    if (error) return _error("structure", error);
     try {
       const [cols] = await connection.query(_COLUMN_SQL, [config.database, config.tableName]);
       const [fks] = await connection.query(_FK_SQL, [config.database, config.tableName]);
-      const fkSet = new Set(fks.map(f => f.column_name));
-      return { success: true, columns: cols.map(c => ({ ...c, foreign_key: fkSet.has(c.name) })) };
+      const fkSet = new Set(fks.map((f) => f.column_name));
+      return {
+        success: true,
+        columns: cols.map((c) => ({
+          ...c,
+          foreign_key: fkSet.has(c.name)
+        }))
+      };
     } catch (err) {
-      return _error('structure', err.message || 'Failed to fetch table structure');
+      return _error("structure", err.message || "Failed to fetch table structure");
     } finally {
       _closeConnection(connection, isMonitored);
     }
   });
 
-  ipcMain.handle('get-table-foreign-keys', async (_e, config = {}) => {
+  ipcMain.handle("get-table-foreign-keys", async (_e, config = {}) => {
     const { error, connection, isMonitored } = await _getDbConnection({}, config);
-    if (error) return _error('foreign', error);
+    if (error) return _error("foreign", error);
     try {
       const [out] = await connection.query(_OUTGOING_SQL, [config.database, config.tableName]);
       const [inc] = await connection.query(_INCOMING_SQL, [config.database, config.tableName]);
       return {
         success: true,
-        foreignKeys: [
-          ...out.map(fk => ({ ...fk, type: 'outgoing' })),
-          ...inc.map(fk => ({ ...fk, type: 'incoming' }))
-        ]
+        foreignKeys: [...out.map((fk) => ({ ...fk, type: "outgoing" })), ...inc.map((fk) => ({ ...fk, type: "incoming" }))]
       };
     } catch (err) {
-      return _error('foreign', err.message || 'Failed to fetch foreign keys');
+      return _error("foreign", err.message || "Failed to fetch foreign keys");
     } finally {
       _closeConnection(connection, isMonitored);
     }
   });
 
-  ipcMain.handle('update-table-record', async (_e, { connection, tableName, record } = {}) => {
-    if (!connection) return _error('default', 'Connection details are required');
-    if (!tableName) return _error('default', 'Table name is required');
-    if (!record || !Object.keys(record).length) return _error('default', 'Record data is required');
-    if (record.id == null) return _error('default', 'Record must have an ID field to update');
+  ipcMain.handle("update-table-record", async (_e, { connection, tableName, record } = {}) => {
+    if (!connection) return _error("default", "Connection details are required");
+    if (!tableName) return _error("default", "Table name is required");
+    if (!record || !Object.keys(record).length) return _error("default", "Record data is required");
+    if (record.id == null) return _error("default", "Record must have an ID field to update");
     let conn;
     try {
       conn = await _createConnection({
         host: connection.host,
         port: connection.port || 3306,
         user: connection.username,
-        password: connection.password || '',
+        password: connection.password || "",
         database: connection.database
       });
       const processed = Object.fromEntries(
         Object.entries(record).map(([k, v]) => {
-          if (typeof v === 'string' && /^\\d{4}-\\d{2}-\\d{2}T/.test(v)) {
+          if (typeof v === "string" && /^\\d{4}-\\d{2}-\\d{2}T/.test(v)) {
             const d = new Date(v);
-            if (!isNaN(d)) v = d.toISOString().slice(0, 19).replace('T', ' ');
+            if (!isNaN(d)) v = d.toISOString().slice(0, 19).replace("T", " ");
           }
           return [k, v];
         })
       );
-      const fields = Object.keys(processed).filter(k => k !== 'id');
-      const assignments = fields.map(f => `\`${f}\` = ?`).join(', ');
-      const values = fields.map(f => processed[f]).concat(processed.id);
-      const [res] = await conn.execute(
-        `UPDATE \`${tableName}\` SET ${assignments} WHERE \`id\` = ?`,
-        values
-      );
+      const fields = Object.keys(processed).filter((k) => k !== "id");
+      const assignments = fields.map((f) => `\`${f}\` = ?`).join(", ");
+      const values = fields.map((f) => processed[f]).concat(processed.id);
+      const [res] = await conn.execute(`UPDATE \`${tableName}\` SET ${assignments} WHERE \`id\` = ?`, values);
       return {
         success: true,
-        message: 'Record updated successfully',
+        message: "Record updated successfully",
         affectedRows: res.affectedRows
       };
     } catch (err) {
-      return _error('default', err.message || 'Failed to update record');
+      return _error("default", err.message || "Failed to update record");
     } finally {
       if (conn) {
         try {
           await conn.end();
         } catch (e) {
-          console.error('Error closing connection:', e);
+          console.error("Error closing connection:", e);
         }
       }
     }
   });
 
-  ipcMain.handle('delete-table-records', async (_e, { connection, tableName, ids } = {}) => {
-    if (!connection) throw new Error('Connection details are required');
-    if (!tableName) throw new Error('Table name is required');
-    if (!Array.isArray(ids) || !ids.length) throw new Error('At least one record ID is required');
+  ipcMain.handle("delete-table-records", async (_e, { connection, tableName, ids } = {}) => {
+    if (!connection) throw new Error("Connection details are required");
+    if (!tableName) throw new Error("Table name is required");
+    if (!Array.isArray(ids) || !ids.length) throw new Error("At least one record ID is required");
     let conn;
     try {
       conn = await _createConnection({
         host: connection.host,
         port: connection.port || 3306,
         user: connection.username,
-        password: connection.password || '',
+        password: connection.password || "",
         database: connection.database
       });
-      const valIds = ids.map(id =>
-        typeof id === 'string' && !isNaN(Number(id)) ? Number(id) : id
-      );
+      const valIds = ids.map((id) => (typeof id === "string" && !isNaN(Number(id)) ? Number(id) : id));
       const [cRes] = await conn.query(_REFERENCE_CONSTRAINTS_SQL, [tableName, connection.database]);
-      const restricts = cRes.filter(c => ['RESTRICT', 'NO ACTION'].includes(c.on_delete));
+      const restricts = cRes.filter((c) => ["RESTRICT", "NO ACTION"].includes(c.on_delete));
       const problematic = [];
       for (const id of valIds) {
         for (const c of restricts) {
-          const [r] = await conn.query(
-            `SELECT 1 FROM ${conn.escapeId(c.child_table)} WHERE ${conn.escapeId(c.child_column)} = ? LIMIT 1`,
-            [id]
-          );
+          const [r] = await conn.query(`SELECT 1 FROM ${conn.escapeId(c.child_table)} WHERE ${conn.escapeId(c.child_column)} = ? LIMIT 1`, [id]);
           if (r.length) {
             problematic.push(id);
             break;
@@ -291,24 +274,21 @@ function registerTableHandlers(store, dbMonitoringConnections) {
       if (problematic.length)
         return {
           success: false,
-          message: `Cannot delete records with IDs ${problematic.join(', ')} because they are referenced by other tables`,
+          message: `Cannot delete records with IDs ${problematic.join(", ")} because they are referenced by other tables`,
           problematicIds: problematic
         };
-      const placeholders = valIds.map(() => '?').join(',');
-      const [delRes] = await conn.execute(
-        `DELETE FROM ${conn.escapeId(tableName)} WHERE id IN (${placeholders})`,
-        valIds
-      );
+      const placeholders = valIds.map(() => "?").join(",");
+      const [delRes] = await conn.execute(`DELETE FROM ${conn.escapeId(tableName)} WHERE id IN (${placeholders})`, valIds);
       return {
         success: true,
         message: `${delRes.affectedRows} record(s) deleted successfully`,
         affectedRows: delRes.affectedRows
       };
     } catch (err) {
-      if (err.code === 'ER_ROW_IS_REFERENCED_2')
+      if (err.code === "ER_ROW_IS_REFERENCED_2")
         return {
           success: false,
-          message: 'Cannot delete these records because they are referenced by other tables',
+          message: "Cannot delete these records because they are referenced by other tables",
           constraintError: true
         };
       return { success: false, message: err.message };
@@ -317,36 +297,39 @@ function registerTableHandlers(store, dbMonitoringConnections) {
         try {
           await conn.end();
         } catch (e) {
-          console.error('Error closing connection:', e);
+          console.error("Error closing connection:", e);
         }
       }
     }
   });
 
-  ipcMain.handle('truncate-table', async (_e, { connection, tableName } = {}) => {
-    if (!connection) throw new Error('Connection details are required');
-    if (!tableName) throw new Error('Table name is required');
+  ipcMain.handle("truncate-table", async (_e, { connection, tableName } = {}) => {
+    if (!connection) throw new Error("Connection details are required");
+    if (!tableName) throw new Error("Table name is required");
     let conn;
     try {
       conn = await _createConnection({
         host: connection.host,
         port: connection.port || 3306,
         user: connection.username,
-        password: connection.password || '',
+        password: connection.password || "",
         database: connection.database
       });
       const [fkRes] = await conn.query(_HAS_FK_USAGE_SQL, [tableName, connection.database]);
       const disable = fkRes.length > 0;
       await conn.beginTransaction();
-      if (disable) await conn.query('SET FOREIGN_KEY_CHECKS = 0');
+      if (disable) await conn.query("SET FOREIGN_KEY_CHECKS = 0");
       await conn.query(`TRUNCATE TABLE ${conn.escapeId(tableName)}`);
-      if (disable) await conn.query('SET FOREIGN_KEY_CHECKS = 1');
+      if (disable) await conn.query("SET FOREIGN_KEY_CHECKS = 1");
       await conn.commit();
-      return { success: true, message: `Table ${tableName} truncated successfully` };
+      return {
+        success: true,
+        message: `Table ${tableName} truncated successfully`
+      };
     } catch (err) {
       if (conn) {
         await conn.rollback().catch(() => {});
-        await conn.query('SET FOREIGN_KEY_CHECKS = 1').catch(() => {});
+        await conn.query("SET FOREIGN_KEY_CHECKS = 1").catch(() => {});
       }
       return { success: false, message: err.message };
     } finally {
@@ -354,19 +337,21 @@ function registerTableHandlers(store, dbMonitoringConnections) {
         try {
           await conn.end();
         } catch (e) {
-          console.error('Error closing connection:', e);
+          console.error("Error closing connection:", e);
         }
       }
     }
   });
 
-  ipcMain.handle('get-table-data', async (_e, config = {}) => {
-    const { error, connection, isMonitored } = await _getDbConnection(
-      { store, dbMonitoringConnections },
-      config
-    );
+  ipcMain.handle("get-table-data", async (_e, config = {}) => {
+    const { error, connection, isMonitored } = await _getDbConnection({ store, dbMonitoringConnections }, config);
     if (error) {
-      return { success: false, message: error, data: [], totalRecords: 0 };
+      return {
+        success: false,
+        message: error,
+        data: [],
+        totalRecords: 0
+      };
     }
 
     try {
@@ -375,9 +360,7 @@ function registerTableHandlers(store, dbMonitoringConnections) {
       const limit = parseInt(config.limit, 10) || 100;
       const offset = (page - 1) * limit;
 
-      const [countRows] = await connection.query(
-        `SELECT COUNT(*) AS totalRecords FROM ${tableName}`
-      );
+      const [countRows] = await connection.query(`SELECT COUNT(*) AS totalRecords FROM ${tableName}`);
       const totalRecords = countRows[0]?.totalRecords || 0;
 
       const baseSql = `SELECT * FROM ${tableName}`;
@@ -394,7 +377,7 @@ function registerTableHandlers(store, dbMonitoringConnections) {
     } catch (err) {
       return {
         success: false,
-        message: err.message || 'Failed to fetch table data',
+        message: err.message || "Failed to fetch table data",
         data: [],
         totalRecords: 0
       };
@@ -403,19 +386,21 @@ function registerTableHandlers(store, dbMonitoringConnections) {
     }
   });
 
-  ipcMain.handle('get-filtered-table-data', async (_e, config = {}) => {
-    const { error, connection, isMonitored } = await _getDbConnection(
-      { store, dbMonitoringConnections },
-      config
-    );
+  ipcMain.handle("get-filtered-table-data", async (_e, config = {}) => {
+    const { error, connection, isMonitored } = await _getDbConnection({ store, dbMonitoringConnections }, config);
     if (error) {
-      return { success: false, message: error, data: [], totalRecords: 0 };
+      return {
+        success: false,
+        message: error,
+        data: [],
+        totalRecords: 0
+      };
     }
 
     try {
       const tableName = connection.escapeId(config.tableName);
-      let filter = (config.filter || '').trim();
-      if (filter.toLowerCase().startsWith('where')) {
+      let filter = (config.filter || "").trim();
+      if (filter.toLowerCase().startsWith("where")) {
         filter = filter.slice(5).trim();
       }
 
@@ -423,9 +408,7 @@ function registerTableHandlers(store, dbMonitoringConnections) {
       const limit = parseInt(config.limit, 10) || 100;
       const offset = (page - 1) * limit;
 
-      const [countRows] = await connection.query(
-        `SELECT COUNT(*) AS totalRecords FROM ${tableName} WHERE ${filter}`
-      );
+      const [countRows] = await connection.query(`SELECT COUNT(*) AS totalRecords FROM ${tableName} WHERE ${filter}`);
       const totalRecords = countRows[0]?.totalRecords || 0;
 
       const baseSql = `SELECT * FROM ${tableName} WHERE ${filter}`;
@@ -442,7 +425,7 @@ function registerTableHandlers(store, dbMonitoringConnections) {
     } catch (err) {
       return {
         success: false,
-        message: err.message || 'Failed to fetch filtered table data',
+        message: err.message || "Failed to fetch filtered table data",
         data: [],
         totalRecords: 0
       };
@@ -451,11 +434,11 @@ function registerTableHandlers(store, dbMonitoringConnections) {
     }
   });
 
-  ipcMain.handle('list-databases', async (_e, config = {}) => {
+  ipcMain.handle("list-databases", async (_e, config = {}) => {
     if (!config.host || !config.port || !config.username) {
       return {
         success: false,
-        message: 'Missing connection parameters',
+        message: "Missing connection parameters",
         databases: []
       };
     }
@@ -466,22 +449,20 @@ function registerTableHandlers(store, dbMonitoringConnections) {
         host: config.host,
         port: config.port,
         user: config.username,
-        password: config.password || '',
+        password: config.password || "",
         connectTimeout: 10000
       });
 
-      const [rows] = await conn.query('SHOW DATABASES');
-      const databases = rows
-        .map(r => r.Database || r.database)
-        .filter(db => !['information_schema', 'performance_schema', 'mysql', 'sys'].includes(db));
+      const [rows] = await conn.query("SHOW DATABASES");
+      const databases = rows.map((r) => r.Database || r.database).filter((db) => !["information_schema", "performance_schema", "mysql", "sys"].includes(db));
 
       return { success: true, databases };
     } catch (err) {
       let msg = err.message;
-      if (err.code === 'ER_ACCESS_DENIED_ERROR') {
-        msg = 'Access denied with the provided credentials';
-      } else if (err.code === 'ECONNREFUSED') {
-        msg = 'Connection refused - check host and port';
+      if (err.code === "ER_ACCESS_DENIED_ERROR") {
+        msg = "Access denied with the provided credentials";
+      } else if (err.code === "ECONNREFUSED") {
+        msg = "Connection refused - check host and port";
       }
       return {
         success: false,
@@ -493,7 +474,7 @@ function registerTableHandlers(store, dbMonitoringConnections) {
         try {
           await conn.end();
         } catch (e) {
-          console.error('Error closing connection:', e);
+          console.error("Error closing connection:", e);
         }
       }
     }

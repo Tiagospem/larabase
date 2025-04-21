@@ -1,18 +1,18 @@
-import { defineStore } from 'pinia';
-import { ref, computed, onMounted } from 'vue';
+import { defineStore } from "pinia";
+import { ref, computed, onMounted } from "vue";
 
-export const useSettingsStore = defineStore('settings', () => {
+export const useSettingsStore = defineStore("settings", () => {
   const settings = ref({
-    aiProvider: 'openai', // Default to OpenAI
+    aiProvider: "openai", // Default to OpenAI
     openai: {
-      apiKey: '',
-      model: 'gpt-3.5-turbo'
+      apiKey: "",
+      model: "gpt-3.5-turbo"
     },
     gemini: {
-      apiKey: '',
-      model: 'gemini-2.0-flash' // Make sure this is consistent with the v1beta API
+      apiKey: "",
+      model: "gemini-2.0-flash" // Make sure this is consistent with the v1beta API
     },
-    language: 'en',
+    language: "en",
     devMode: false
   });
 
@@ -29,28 +29,28 @@ export const useSettingsStore = defineStore('settings', () => {
           if (savedSettings) {
             // Initialize new settings properties if they don't exist
             if (!savedSettings.aiProvider) {
-              savedSettings.aiProvider = 'openai';
+              savedSettings.aiProvider = "openai";
             }
 
             if (!savedSettings.gemini) {
               savedSettings.gemini = {
-                apiKey: '',
-                model: 'gemini-2.0-flash'
+                apiKey: "",
+                model: "gemini-2.0-flash"
               };
             }
 
             settings.value = savedSettings;
           }
         } catch (err) {
-          console.error('Error loading settings from API:', err);
+          console.error("Error loading settings from API:", err);
         }
       } else {
-        console.warn('API not available, unable to load settings');
+        console.warn("API not available, unable to load settings");
       }
 
       return settings.value;
     } catch (error) {
-      console.error('Error in loadSettings:', error);
+      console.error("Error in loadSettings:", error);
       return settings.value;
     } finally {
       isLoading.value = false;
@@ -64,7 +64,7 @@ export const useSettingsStore = defineStore('settings', () => {
         await window.api.saveSettings(serializableSettings);
       }
     } catch (error) {
-      console.error('Error saving settings:', error);
+      console.error("Error saving settings:", error);
     }
   }
 
@@ -75,15 +75,15 @@ export const useSettingsStore = defineStore('settings', () => {
 
   const languageOptions = computed(() => {
     return [
-      { value: 'en', label: 'English' },
-      { value: 'pt', label: 'Portuguese' },
-      { value: 'es', label: 'Spanish' }
+      { value: "en", label: "English" },
+      { value: "pt", label: "Portuguese" },
+      { value: "es", label: "Spanish" }
     ];
   });
 
   const getLanguageLabel = computed(() => {
-    return code => {
-      const option = languageOptions.value.find(opt => opt.value === code);
+    return (code) => {
+      const option = languageOptions.value.find((opt) => opt.value === code);
       return option ? option.label : code;
     };
   });
@@ -91,9 +91,9 @@ export const useSettingsStore = defineStore('settings', () => {
   // Check if AI provider is configured
   const isAIConfigured = computed(() => {
     const provider = settings.value.aiProvider;
-    if (provider === 'openai') {
+    if (provider === "openai") {
       return !!settings.value.openai.apiKey;
-    } else if (provider === 'gemini') {
+    } else if (provider === "gemini") {
       return !!settings.value.gemini.apiKey;
     }
     return false;

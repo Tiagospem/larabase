@@ -7,14 +7,14 @@
 </template>
 
 <script setup>
-import { ref, watch, onMounted } from 'vue';
-import hljs from 'highlight.js/lib/core';
-import php from 'highlight.js/lib/languages/php';
-import json from 'highlight.js/lib/languages/json';
-import 'highlight.js/styles/atom-one-dark.css';
+import { ref, watch, onMounted } from "vue";
+import hljs from "highlight.js/lib/core";
+import php from "highlight.js/lib/languages/php";
+import json from "highlight.js/lib/languages/json";
+import "highlight.js/styles/atom-one-dark.css";
 
-hljs.registerLanguage('php', php);
-hljs.registerLanguage('json', json);
+hljs.registerLanguage("php", php);
+hljs.registerLanguage("json", json);
 
 const props = defineProps({
   code: {
@@ -23,16 +23,16 @@ const props = defineProps({
   },
   language: {
     type: String,
-    default: 'php',
-    validator: value => ['php', 'json'].includes(value)
+    default: "php",
+    validator: (value) => ["php", "json"].includes(value)
   },
   height: {
     type: String,
-    default: '64'
+    default: "64"
   }
 });
 
-const highlightedCode = ref('');
+const highlightedCode = ref("");
 
 function highlightCode() {
   try {
@@ -44,37 +44,37 @@ function highlightCode() {
       }).value;
 
       // Add line numbers to the highlighted code
-      const lines = highlighted.split('\n');
-      let processedCode = '';
+      const lines = highlighted.split("\n");
+      let processedCode = "";
 
       lines.forEach((line, index) => {
         const lineNumber = index + 1;
-        const lineNumberPadded = String(lineNumber).padStart(3, ' ');
+        const lineNumberPadded = String(lineNumber).padStart(3, " ");
         processedCode += `<span class="line-number">${lineNumberPadded}</span>${line}\n`;
       });
 
       highlightedCode.value = processedCode;
     } else {
-      highlightedCode.value = '';
+      highlightedCode.value = "";
     }
   } catch (error) {
-    console.error('Error highlighting code:', error);
+    console.error("Error highlighting code:", error);
     // Fallback to plain code with line numbers if highlighting fails
     if (props.code) {
-      const lines = props.code.split('\n');
-      let processedCode = '';
+      const lines = props.code.split("\n");
+      let processedCode = "";
 
       lines.forEach((line, index) => {
         const lineNumber = index + 1;
-        const lineNumberPadded = String(lineNumber).padStart(3, ' ');
+        const lineNumberPadded = String(lineNumber).padStart(3, " ");
         // Escape HTML entities
-        const escapedLine = line.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        const escapedLine = line.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
         processedCode += `<span class="line-number">${lineNumberPadded}</span>${escapedLine}\n`;
       });
 
       highlightedCode.value = processedCode;
     } else {
-      highlightedCode.value = '';
+      highlightedCode.value = "";
     }
   }
 }
@@ -130,7 +130,7 @@ watch(() => props.code, highlightCode, { immediate: true });
   display: inline-block;
   width: 2.5em;
   color: #606366;
-  font-family: Consolas, Monaco, 'Andale Mono', monospace;
+  font-family: Consolas, Monaco, "Andale Mono", monospace;
   text-align: right;
   padding-right: 0.5em;
   margin-right: 0.5em;
@@ -143,12 +143,12 @@ watch(() => props.code, highlightCode, { immediate: true });
 
 :deep(pre) {
   margin: 0;
-  font-family: Consolas, Monaco, 'Andale Mono', monospace;
+  font-family: Consolas, Monaco, "Andale Mono", monospace;
   line-height: 1.5;
 }
 
 :deep(code) {
-  font-family: Consolas, Monaco, 'Andale Mono', monospace;
+  font-family: Consolas, Monaco, "Andale Mono", monospace;
   white-space: pre;
 }
 </style>

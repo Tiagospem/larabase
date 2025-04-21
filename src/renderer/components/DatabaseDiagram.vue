@@ -1,16 +1,26 @@
 <template>
-  <div class="modal" :class="{ 'modal-open': isOpen }" @transitionend="onModalFullyOpen">
+  <div
+    class="modal"
+    :class="{ 'modal-open': isOpen }"
+    @transitionend="onModalFullyOpen"
+  >
     <div class="modal-box max-w-4xl bg-base-300">
       <div class="flex justify-between items-center mb-4">
         <h3 class="font-bold text-lg">
-          {{ hasRelationships ? 'Database Schema Diagram' : 'Database Relationship Explorer' }}
+          {{ hasRelationships ? "Database Schema Diagram" : "Database Relationship Explorer" }}
         </h3>
         <div class="flex gap-2">
-          <div class="badge" :class="hasRelationships ? 'badge-success' : 'badge-warning'">
-            {{ hasRelationships ? `${relationships.length} Relations Found` : 'No Relations' }}
+          <div
+            class="badge"
+            :class="hasRelationships ? 'badge-success' : 'badge-warning'"
+          >
+            {{ hasRelationships ? `${relationships.length} Relations Found` : "No Relations" }}
           </div>
 
-          <button class="btn btn-sm btn-ghost" @click="onRefreshClick">
+          <button
+            class="btn btn-sm btn-ghost"
+            @click="onRefreshClick"
+          >
             <svg
               xmlns="http://www.w3.org/2000/svg"
               fill="none"
@@ -30,15 +40,19 @@
       </div>
 
       <!-- Loading indicator -->
-      <div v-if="loading" class="flex justify-center items-center py-8">
-        <div
-          class="animate-spin rounded-full h-12 w-12 border-4 border-primary border-t-transparent"
-        />
+      <div
+        v-if="loading"
+        class="flex justify-center items-center py-8"
+      >
+        <div class="animate-spin rounded-full h-12 w-12 border-4 border-primary border-t-transparent" />
         <span class="ml-3 text-sm">Analyzing database schema...</span>
       </div>
 
       <!-- No relationships found -->
-      <div v-else-if="!loading && !hasRelationships" class="alert alert-warning mb-4">
+      <div
+        v-else-if="!loading && !hasRelationships"
+        class="alert alert-warning mb-4"
+      >
         <svg
           xmlns="http://www.w3.org/2000/svg"
           fill="none"
@@ -52,29 +66,55 @@
             d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
           />
         </svg>
-        <span
-          >No relationships found between tables. The database schema might not have defined foreign
-          key constraints.</span
-        >
+        <span>No relationships found between tables. The database schema might not have defined foreign key constraints.</span>
       </div>
 
       <!-- Diagram visualization area -->
-      <div v-else ref="diagramContainer" class="diagram-container bg-base-200 rounded-lg p-4">
+      <div
+        v-else
+        ref="diagramContainer"
+        class="diagram-container bg-base-200 rounded-lg p-4"
+      >
         <div class="diagram-controls mb-2 flex justify-between">
           <div>
-            <button class="btn btn-xs" @click="zoomIn">Zoom In</button>
-            <button class="btn btn-xs ml-1" @click="zoomOut">Zoom Out</button>
-            <button class="btn btn-xs ml-1" @click="resetZoom">Reset</button>
+            <button
+              class="btn btn-xs"
+              @click="zoomIn"
+            >
+              Zoom In
+            </button>
+            <button
+              class="btn btn-xs ml-1"
+              @click="zoomOut"
+            >
+              Zoom Out
+            </button>
+            <button
+              class="btn btn-xs ml-1"
+              @click="resetZoom"
+            >
+              Reset
+            </button>
           </div>
-          <select v-model="focusTable" class="select select-xs select-bordered">
+          <select
+            v-model="focusTable"
+            class="select select-xs select-bordered"
+          >
             <option value="">Show All Tables</option>
-            <option v-for="table in tablesList" :key="table" :value="table">
+            <option
+              v-for="table in tablesList"
+              :key="table"
+              :value="table"
+            >
               {{ table }}
             </option>
           </select>
         </div>
 
-        <div ref="svgContainer" class="diagram-svg-container">
+        <div
+          ref="svgContainer"
+          class="diagram-svg-container"
+        >
           <!-- SVG diagram will be rendered here -->
         </div>
 
@@ -96,15 +136,20 @@
       </div>
 
       <div class="modal-action">
-        <button class="btn btn-primary" @click="close">Close</button>
+        <button
+          class="btn btn-primary"
+          @click="close"
+        >
+          Close
+        </button>
       </div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue';
-import { useDatabaseStore } from '@/store/database';
+import { ref, computed, watch, onMounted, onUnmounted, nextTick } from "vue";
+import { useDatabaseStore } from "@/store/database";
 
 const props = defineProps({
   isOpen: {
@@ -117,13 +162,13 @@ const props = defineProps({
   }
 });
 
-const emit = defineEmits(['close']);
+const emit = defineEmits(["close"]);
 const databaseStore = useDatabaseStore();
 
 const loading = ref(false);
 const relationships = ref([]);
 const tablesList = ref([]);
-const focusTable = ref('');
+const focusTable = ref("");
 const diagramContainer = ref(null);
 const svgContainer = ref(null);
 const zoomLevel = ref(1);
@@ -139,14 +184,14 @@ const isPanning = ref(false);
 const lastMousePosition = ref({ x: 0, y: 0 });
 
 function close() {
-  emit('close');
+  emit("close");
 }
 
 async function loadD3() {
   if (!window.d3) {
     return new Promise((resolve, reject) => {
-      const script = document.createElement('script');
-      script.src = 'https://d3js.org/d3.v7.min.js';
+      const script = document.createElement("script");
+      script.src = "https://d3js.org/d3.v7.min.js";
       script.onload = () => resolve(window.d3);
       script.onerror = reject;
       document.head.appendChild(script);
@@ -163,19 +208,19 @@ async function refreshDiagram() {
       await databaseStore.loadTables(props.connectionId);
     }
 
-    tablesList.value = databaseStore.tablesList.map(t => t.name);
+    tablesList.value = databaseStore.tablesList.map((t) => t.name);
 
     const relationshipsData = await window.api.getDatabaseRelationships(props.connectionId);
 
     if (relationshipsData && relationshipsData.success === false) {
-      console.error('Error fetching relationships:', relationshipsData.message);
+      console.error("Error fetching relationships:", relationshipsData.message);
       relationships.value = [];
     } else {
       if (Array.isArray(relationshipsData)) {
         relationships.value = relationshipsData;
         console.log(`Loaded ${relationshipsData.length} relationships for diagram`);
       } else {
-        console.error('Invalid relationships data format:', relationshipsData);
+        console.error("Invalid relationships data format:", relationshipsData);
         relationships.value = [];
       }
     }
@@ -184,7 +229,7 @@ async function refreshDiagram() {
       d3 = await loadD3();
     }
   } catch (error) {
-    console.error('Error fetching database relationships:', error);
+    console.error("Error fetching database relationships:", error);
     relationships.value = [];
   }
 }
@@ -192,69 +237,50 @@ async function refreshDiagram() {
 function renderDiagram() {
   if (!d3 || !svgContainer.value) return;
 
-  svgContainer.value.innerHTML = '';
+  svgContainer.value.innerHTML = "";
 
   const width = svgContainer.value.clientWidth;
   const height = 500;
 
   // Filter relationships based on the selected focus table
-  const filteredRelationships = focusTable.value
-    ? relationships.value.filter(
-        rel => rel.sourceTable === focusTable.value || rel.targetTable === focusTable.value
-      )
-    : relationships.value;
+  const filteredRelationships = focusTable.value ? relationships.value.filter((rel) => rel.sourceTable === focusTable.value || rel.targetTable === focusTable.value) : relationships.value;
 
   // Extract unique tables from relationships
-  const tables = [
-    ...new Set([
-      ...filteredRelationships.map(r => r.sourceTable),
-      ...filteredRelationships.map(r => r.targetTable)
-    ])
-  ];
+  const tables = [...new Set([...filteredRelationships.map((r) => r.sourceTable), ...filteredRelationships.map((r) => r.targetTable)])];
 
   // Create SVG
-  const svg = d3
-    .select(svgContainer.value)
-    .append('svg')
-    .attr('width', width)
-    .attr('height', height)
-    .attr('viewBox', [0, 0, width, height]);
+  const svg = d3.select(svgContainer.value).append("svg").attr("width", width).attr("height", height).attr("viewBox", [0, 0, width, height]);
 
   svg
-    .append('rect')
-    .attr('width', width)
-    .attr('height', height)
-    .attr('fill', 'transparent')
-    .style('cursor', 'move')
-    .on('mousedown', startPan)
-    .on('mousemove', pan)
-    .on('mouseup', endPan)
-    .on('mouseleave', endPan);
+    .append("rect")
+    .attr("width", width)
+    .attr("height", height)
+    .attr("fill", "transparent")
+    .style("cursor", "move")
+    .on("mousedown", startPan)
+    .on("mousemove", pan)
+    .on("mouseup", endPan)
+    .on("mouseleave", endPan);
 
-  const mainGroup = svg
-    .append('g')
-    .attr(
-      'transform',
-      `translate(${panPosition.value.x}, ${panPosition.value.y}) scale(${zoomLevel.value})`
-    );
+  const mainGroup = svg.append("g").attr("transform", `translate(${panPosition.value.x}, ${panPosition.value.y}) scale(${zoomLevel.value})`);
 
   const simulation = d3
     .forceSimulation()
     .force(
-      'link',
+      "link",
       d3
         .forceLink()
-        .id(d => d.id)
+        .id((d) => d.id)
         .distance(180)
     )
-    .force('charge', d3.forceManyBody().strength(-500))
-    .force('center', d3.forceCenter(width / 2, height / 2))
-    .force('collision', d3.forceCollide().radius(80));
+    .force("charge", d3.forceManyBody().strength(-500))
+    .force("center", d3.forceCenter(width / 2, height / 2))
+    .force("collision", d3.forceCollide().radius(80));
 
   const tableInfo = {};
 
   if (databaseStore.tablesList.length > 0) {
-    databaseStore.tablesList.forEach(tableData => {
+    databaseStore.tablesList.forEach((tableData) => {
       if (tables.includes(tableData.name)) {
         tableInfo[tableData.name] = {
           columnCount: tableData.columnCount || 0
@@ -263,16 +289,15 @@ function renderDiagram() {
     });
   }
 
-  const nodes = tables.map(table => ({
+  const nodes = tables.map((table) => ({
     id: table,
     table,
-    columnCount: tableInfo[table]?.columnCount || '?',
+    columnCount: tableInfo[table]?.columnCount || "?",
     isFocused: table === focusTable.value,
-    relCount: filteredRelationships.filter(r => r.sourceTable === table || r.targetTable === table)
-      .length
+    relCount: filteredRelationships.filter((r) => r.sourceTable === table || r.targetTable === table).length
   }));
 
-  const links = filteredRelationships.map(rel => ({
+  const links = filteredRelationships.map((rel) => ({
     source: rel.sourceTable,
     target: rel.targetTable,
     relation: `${rel.sourceColumn} → ${rel.targetColumn}`,
@@ -280,136 +305,134 @@ function renderDiagram() {
   }));
 
   const relationshipCounts = {};
-  tables.forEach(table => {
+  tables.forEach((table) => {
     relationshipCounts[table] = {
-      incoming: filteredRelationships.filter(r => r.targetTable === table).length,
-      outgoing: filteredRelationships.filter(r => r.sourceTable === table).length
+      incoming: filteredRelationships.filter((r) => r.targetTable === table).length,
+      outgoing: filteredRelationships.filter((r) => r.sourceTable === table).length
     };
   });
 
   mainGroup
-    .append('defs')
-    .append('marker')
-    .attr('id', 'arrowhead')
-    .attr('viewBox', '0 -5 10 10')
-    .attr('refX', 28)
-    .attr('refY', 0)
-    .attr('orient', 'auto')
-    .attr('markerWidth', 6)
-    .attr('markerHeight', 6)
-    .append('path')
-    .attr('d', 'M0,-5L10,0L0,5')
-    .attr('fill', '#666');
+    .append("defs")
+    .append("marker")
+    .attr("id", "arrowhead")
+    .attr("viewBox", "0 -5 10 10")
+    .attr("refX", 28)
+    .attr("refY", 0)
+    .attr("orient", "auto")
+    .attr("markerWidth", 6)
+    .attr("markerHeight", 6)
+    .append("path")
+    .attr("d", "M0,-5L10,0L0,5")
+    .attr("fill", "#666");
 
   mainGroup
-    .append('defs')
-    .append('marker')
-    .attr('id', 'arrowhead-inferred')
-    .attr('viewBox', '0 -5 10 10')
-    .attr('refX', 28)
-    .attr('refY', 0)
-    .attr('orient', 'auto')
-    .attr('markerWidth', 6)
-    .attr('markerHeight', 6)
-    .append('path')
-    .attr('d', 'M0,-5L10,0L0,5')
-    .attr('fill', '#999')
-    .attr('stroke-dasharray', '2,2');
+    .append("defs")
+    .append("marker")
+    .attr("id", "arrowhead-inferred")
+    .attr("viewBox", "0 -5 10 10")
+    .attr("refX", 28)
+    .attr("refY", 0)
+    .attr("orient", "auto")
+    .attr("markerWidth", 6)
+    .attr("markerHeight", 6)
+    .append("path")
+    .attr("d", "M0,-5L10,0L0,5")
+    .attr("fill", "#999")
+    .attr("stroke-dasharray", "2,2");
 
   const link = mainGroup
-    .append('g')
-    .selectAll('line')
+    .append("g")
+    .selectAll("line")
     .data(links)
     .enter()
-    .append('line')
-    .attr('stroke', d => (d.isInferred ? '#999' : '#666'))
-    .attr('stroke-width', 1.5)
-    .attr('stroke-dasharray', d => (d.isInferred ? '3,3' : null))
-    .attr('marker-end', d => (d.isInferred ? 'url(#arrowhead-inferred)' : 'url(#arrowhead)'));
+    .append("line")
+    .attr("stroke", (d) => (d.isInferred ? "#999" : "#666"))
+    .attr("stroke-width", 1.5)
+    .attr("stroke-dasharray", (d) => (d.isInferred ? "3,3" : null))
+    .attr("marker-end", (d) => (d.isInferred ? "url(#arrowhead-inferred)" : "url(#arrowhead)"));
 
   const linkText = mainGroup
-    .append('g')
-    .selectAll('text')
+    .append("g")
+    .selectAll("text")
     .data(links)
     .enter()
-    .append('text')
-    .attr('font-size', '8px')
-    .attr('fill', d => (d.isInferred ? '#999' : '#aaa'))
-    .attr('text-anchor', 'middle')
-    .text(d => d.relation);
+    .append("text")
+    .attr("font-size", "8px")
+    .attr("fill", (d) => (d.isInferred ? "#999" : "#aaa"))
+    .attr("text-anchor", "middle")
+    .text((d) => d.relation);
 
   const node = mainGroup
-    .append('g')
-    .selectAll('g')
+    .append("g")
+    .selectAll("g")
     .data(nodes)
     .enter()
-    .append('g')
-    .attr('class', d => (d.isFocused ? 'node-focused' : 'node'));
+    .append("g")
+    .attr("class", (d) => (d.isFocused ? "node-focused" : "node"));
 
   node
-    .append('rect')
-    .attr('width', 140)
-    .attr('height', 60)
-    .attr('rx', 5)
-    .attr('ry', 5)
-    .attr('fill', d => (d.isFocused ? '#2a4365' : '#333'))
-    .attr('stroke', d => (d.isFocused ? '#4b9afa' : '#666'))
-    .attr('stroke-width', d => (d.isFocused ? 2 : 1));
+    .append("rect")
+    .attr("width", 140)
+    .attr("height", 60)
+    .attr("rx", 5)
+    .attr("ry", 5)
+    .attr("fill", (d) => (d.isFocused ? "#2a4365" : "#333"))
+    .attr("stroke", (d) => (d.isFocused ? "#4b9afa" : "#666"))
+    .attr("stroke-width", (d) => (d.isFocused ? 2 : 1));
 
   node
-    .append('text')
-    .attr('dx', 70)
-    .attr('dy', 20)
-    .attr('text-anchor', 'middle')
-    .attr('fill', 'white')
-    .attr('font-size', '12px')
-    .attr('font-weight', 'bold')
-    .text(d => d.table);
+    .append("text")
+    .attr("dx", 70)
+    .attr("dy", 20)
+    .attr("text-anchor", "middle")
+    .attr("fill", "white")
+    .attr("font-size", "12px")
+    .attr("font-weight", "bold")
+    .text((d) => d.table);
 
   node
-    .append('text')
-    .attr('dx', 70)
-    .attr('dy', 38)
-    .attr('text-anchor', 'middle')
-    .attr('fill', '#bbb')
-    .attr('font-size', '10px')
-    .text(d => `Columns: ${d.columnCount}`);
+    .append("text")
+    .attr("dx", 70)
+    .attr("dy", 38)
+    .attr("text-anchor", "middle")
+    .attr("fill", "#bbb")
+    .attr("font-size", "10px")
+    .text((d) => `Columns: ${d.columnCount}`);
 
   node
-    .append('text')
-    .attr('dx', 70)
-    .attr('dy', 52)
-    .attr('text-anchor', 'middle')
-    .attr('fill', '#bbb')
-    .attr('font-size', '9px')
-    .text(d => {
+    .append("text")
+    .attr("dx", 70)
+    .attr("dy", 52)
+    .attr("text-anchor", "middle")
+    .attr("fill", "#bbb")
+    .attr("font-size", "9px")
+    .text((d) => {
       const counts = relationshipCounts[d.id];
       return `Rel: ${counts.incoming} in, ${counts.outgoing} out`;
     });
 
-  node
-    .call(d3.drag().on('start', dragstarted).on('drag', dragged).on('end', dragended))
-    .on('click', (event, d) => {
-      focusTable.value = d.id === focusTable.value ? '' : d.id;
-    });
+  node.call(d3.drag().on("start", dragstarted).on("drag", dragged).on("end", dragended)).on("click", (event, d) => {
+    focusTable.value = d.id === focusTable.value ? "" : d.id;
+  });
 
   // Position nodes and links initially before simulation
   // This prevents the diagram from being invisible until interaction
   link
-    .attr('x1', d => {
-      const sourceNode = nodes.find(n => n.id === d.source);
+    .attr("x1", (d) => {
+      const sourceNode = nodes.find((n) => n.id === d.source);
       return sourceNode ? width / 2 : 0;
     })
-    .attr('y1', d => {
-      const sourceNode = nodes.find(n => n.id === d.source);
+    .attr("y1", (d) => {
+      const sourceNode = nodes.find((n) => n.id === d.source);
       return sourceNode ? height / 2 : 0;
     })
-    .attr('x2', d => {
-      const targetNode = nodes.find(n => n.id === d.target);
+    .attr("x2", (d) => {
+      const targetNode = nodes.find((n) => n.id === d.target);
       return targetNode ? width / 2 + 100 : 0;
     })
-    .attr('y2', d => {
-      const targetNode = nodes.find(n => n.id === d.target);
+    .attr("y2", (d) => {
+      const targetNode = nodes.find((n) => n.id === d.target);
       return targetNode ? height / 2 : 0;
     });
 
@@ -420,47 +443,43 @@ function renderDiagram() {
     node.y = height / 2 + radius * Math.sin(angleStep * i);
   });
 
-  node.attr('transform', d => `translate(${d.x - 70}, ${d.y - 30})`);
+  node.attr("transform", (d) => `translate(${d.x - 70}, ${d.y - 30})`);
 
-  linkText.attr('x', d => width / 2).attr('y', d => height / 2);
+  linkText.attr("x", (d) => width / 2).attr("y", (d) => height / 2);
 
-  simulation.nodes(nodes).on('tick', () => {
+  simulation.nodes(nodes).on("tick", () => {
     link
-      .attr('x1', d => d.source.x)
-      .attr('y1', d => d.source.y)
-      .attr('x2', d => d.target.x)
-      .attr('y2', d => d.target.y);
+      .attr("x1", (d) => d.source.x)
+      .attr("y1", (d) => d.source.y)
+      .attr("x2", (d) => d.target.x)
+      .attr("y2", (d) => d.target.y);
 
-    node.attr('transform', d => `translate(${d.x - 70}, ${d.y - 30})`);
+    node.attr("transform", (d) => `translate(${d.x - 70}, ${d.y - 30})`);
 
-    linkText
-      .attr('x', d => (d.source.x + d.target.x) / 2)
-      .attr('y', d => (d.source.y + d.target.y) / 2);
+    linkText.attr("x", (d) => (d.source.x + d.target.x) / 2).attr("y", (d) => (d.source.y + d.target.y) / 2);
   });
 
-  simulation.force('link').links(links);
+  simulation.force("link").links(links);
 
   for (let i = 0; i < 20; i++) {
     simulation.tick();
   }
 
   link
-    .attr('x1', d => d.source.x)
-    .attr('y1', d => d.source.y)
-    .attr('x2', d => d.target.x)
-    .attr('y2', d => d.target.y);
+    .attr("x1", (d) => d.source.x)
+    .attr("y1", (d) => d.source.y)
+    .attr("x2", (d) => d.target.x)
+    .attr("y2", (d) => d.target.y);
 
-  node.attr('transform', d => `translate(${d.x - 70}, ${d.y - 30})`);
+  node.attr("transform", (d) => `translate(${d.x - 70}, ${d.y - 30})`);
 
-  linkText
-    .attr('x', d => (d.source.x + d.target.x) / 2)
-    .attr('y', d => (d.source.y + d.target.y) / 2);
+  linkText.attr("x", (d) => (d.source.x + d.target.x) / 2).attr("y", (d) => (d.source.y + d.target.y) / 2);
 
   function startPan(event) {
     if (event.button === 0) {
       isPanning.value = true;
       lastMousePosition.value = { x: event.clientX, y: event.clientY };
-      svg.style('cursor', 'grabbing');
+      svg.style("cursor", "grabbing");
     }
   }
 
@@ -474,17 +493,14 @@ function renderDiagram() {
         y: panPosition.value.y + dy
       };
 
-      mainGroup.attr(
-        'transform',
-        `translate(${panPosition.value.x}, ${panPosition.value.y}) scale(${zoomLevel.value})`
-      );
+      mainGroup.attr("transform", `translate(${panPosition.value.x}, ${panPosition.value.y}) scale(${zoomLevel.value})`);
       lastMousePosition.value = { x: event.clientX, y: event.clientY };
     }
   }
 
   function endPan() {
     isPanning.value = false;
-    svg.style('cursor', 'move');
+    svg.style("cursor", "move");
   }
 
   function dragstarted(event) {
@@ -523,7 +539,7 @@ function resetZoom() {
 
 watch(
   () => props.isOpen,
-  async newValue => {
+  async (newValue) => {
     if (newValue) {
       loading.value = true;
       await refreshDiagram();
@@ -539,7 +555,7 @@ watch(
       });
     } else {
       if (svgContainer.value) {
-        svgContainer.value.removeEventListener('wheel', handleWheel);
+        svgContainer.value.removeEventListener("wheel", handleWheel);
       }
     }
   }
@@ -561,7 +577,7 @@ onMounted(() => {
 
   watch(
     () => svgContainer.value,
-    newVal => {
+    (newVal) => {
       if (newVal) {
         resizeObserver.observe(newVal);
       }
@@ -571,7 +587,7 @@ onMounted(() => {
   onUnmounted(() => {
     if (svgContainer.value) {
       resizeObserver.unobserve(svgContainer.value);
-      svgContainer.value.removeEventListener('wheel', handleWheel);
+      svgContainer.value.removeEventListener("wheel", handleWheel);
     }
     resizeObserver.disconnect();
   });
@@ -580,9 +596,9 @@ onMounted(() => {
 function setupWheelZoom() {
   if (!svgContainer.value) return;
 
-  svgContainer.value.removeEventListener('wheel', handleWheel);
+  svgContainer.value.removeEventListener("wheel", handleWheel);
 
-  svgContainer.value.addEventListener('wheel', handleWheel);
+  svgContainer.value.addEventListener("wheel", handleWheel);
 }
 
 function handleWheel(event) {
@@ -601,7 +617,7 @@ function handleWheel(event) {
 
 function onModalFullyOpen() {
   if (relationships.value.length > 0 && svgContainer.value) {
-    console.log('Modal fully opened, rendering diagram');
+    console.log("Modal fully opened, rendering diagram");
     renderDiagram();
     setupWheelZoom();
   }

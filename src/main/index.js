@@ -1,16 +1,16 @@
-const { app, BrowserWindow, ipcMain, shell } = require('electron');
-const path = require('path');
-const Store = require('electron-store');
-const fs = require('fs');
-const mysql = require('mysql2/promise');
-const { spawn, execSync, exec } = require('child_process');
-const pluralize = require('pluralize');
+const { app, BrowserWindow, ipcMain, shell } = require("electron");
+const path = require("path");
+const Store = require("electron-store");
+const fs = require("fs");
+const mysql = require("mysql2/promise");
+const { spawn, execSync, exec } = require("child_process");
+const pluralize = require("pluralize");
 
-const { createWindow, getMainWindow } = require('./modules/window');
-const { registerRestoreDumpHandlers } = require('./modules/restore-dump');
-const { registerConnectionHandlers } = require('./modules/connections');
-const { registerProjectHandlers } = require('./modules/project');
-const { registerTableHandlers } = require('./modules/tables');
+const { createWindow, getMainWindow } = require("./modules/window");
+const { registerRestoreDumpHandlers } = require("./modules/restore-dump");
+const { registerConnectionHandlers } = require("./modules/connections");
+const { registerProjectHandlers } = require("./modules/project");
+const { registerTableHandlers } = require("./modules/tables");
 
 const store = new Store();
 const dbMonitoringConnections = new Map();
@@ -35,12 +35,12 @@ app.whenReady().then(async () => {
   setupGlobalMonitoring();
 
   if (mainWindow) {
-    mainWindow.webContents.on('before-input-event', (event, input) => {
+    mainWindow.webContents.on("before-input-event", (event, input) => {
       if (!mainWindow.isFocused()) {
         return;
       }
 
-      if (input.key === 'F12' && !input.alt && !input.control && !input.meta && !input.shift) {
+      if (input.key === "F12" && !input.alt && !input.control && !input.meta && !input.shift) {
         if (mainWindow.webContents.isDevToolsOpened()) {
           mainWindow.webContents.closeDevTools();
         } else {
@@ -48,7 +48,7 @@ app.whenReady().then(async () => {
         }
       }
 
-      if (input.key === 'I' && !input.alt && input.shift && (input.control || input.meta)) {
+      if (input.key === "I" && !input.alt && input.shift && (input.control || input.meta)) {
         if (mainWindow.webContents.isDevToolsOpened()) {
           mainWindow.webContents.closeDevTools();
         } else {
@@ -56,13 +56,13 @@ app.whenReady().then(async () => {
         }
       }
 
-      if (input.key === 'r' && !input.alt && !input.shift && (input.control || input.meta)) {
+      if (input.key === "r" && !input.alt && !input.shift && (input.control || input.meta)) {
         mainWindow.reload();
       }
     });
   }
 
-  app.on('activate', () => {
+  app.on("activate", () => {
     if (BrowserWindow.getAllWindows().length === 0) {
       createWindow();
     }
@@ -71,41 +71,21 @@ app.whenReady().then(async () => {
 
 function enhancePath() {
   const platform = process.platform;
-  const sep = platform === 'win32' ? ';' : ':';
-  const envPath = process.env.PATH || '';
+  const sep = platform === "win32" ? ";" : ":";
+  const envPath = process.env.PATH || "";
 
   const config = {
     darwin: {
-      additional: [
-        '/usr/local/bin',
-        '/opt/homebrew/bin',
-        '/Applications/Docker.app/Contents/Resources/bin'
-      ],
-      defaults: [
-        '/usr/local/bin',
-        '/usr/bin',
-        '/bin',
-        '/usr/sbin',
-        '/sbin',
-        '/opt/homebrew/bin',
-        '/Applications/Docker.app/Contents/Resources/bin'
-      ]
+      additional: ["/usr/local/bin", "/opt/homebrew/bin", "/Applications/Docker.app/Contents/Resources/bin"],
+      defaults: ["/usr/local/bin", "/usr/bin", "/bin", "/usr/sbin", "/sbin", "/opt/homebrew/bin", "/Applications/Docker.app/Contents/Resources/bin"]
     },
     linux: {
-      additional: ['/usr/bin', '/usr/local/bin', '/snap/bin'],
-      defaults: ['/usr/local/bin', '/usr/bin', '/bin', '/usr/sbin', '/sbin', '/snap/bin']
+      additional: ["/usr/bin", "/usr/local/bin", "/snap/bin"],
+      defaults: ["/usr/local/bin", "/usr/bin", "/bin", "/usr/sbin", "/sbin", "/snap/bin"]
     },
     win32: {
-      additional: [
-        'C:\\Program Files\\Docker\\Docker\\resources\\bin',
-        'C:\\Program Files\\Docker Desktop\\resources\\bin'
-      ],
-      defaults: [
-        'C:\\Windows\\System32',
-        'C:\\Windows',
-        'C:\\Program Files\\Docker\\Docker\\resources\\bin',
-        'C:\\Program Files\\Docker Desktop\\resources\\bin'
-      ]
+      additional: ["C:\\Program Files\\Docker\\Docker\\resources\\bin", "C:\\Program Files\\Docker Desktop\\resources\\bin"],
+      defaults: ["C:\\Windows\\System32", "C:\\Windows", "C:\\Program Files\\Docker\\Docker\\resources\\bin", "C:\\Program Files\\Docker Desktop\\resources\\bin"]
     }
   };
 
@@ -113,7 +93,7 @@ function enhancePath() {
   let parts = envPath ? envPath.split(sep) : [];
 
   if (envPath) {
-    additional.forEach(p => {
+    additional.forEach((p) => {
       if (!parts.includes(p)) parts.unshift(p);
     });
 
@@ -128,14 +108,14 @@ function enhancePath() {
     console.log(`Set default PATH for ${platform}: ${process.env.PATH}`);
   }
 
-  const whichCmd = platform === 'win32' ? 'where docker' : 'which docker';
+  const whichCmd = platform === "win32" ? "where docker" : "which docker";
 
   try {
     const dockerPath = execSync(whichCmd, {
       timeout: 2000,
       shell: true,
       windowsHide: true,
-      encoding: 'utf8'
+      encoding: "utf8"
     }).trim();
     console.log(`Docker binary found at: ${dockerPath}`);
   } catch (err) {
@@ -152,23 +132,18 @@ function setupGlobalMonitoring() {
     const connection = await originalCreateConnection.call(this, config, ...rest);
     const { host, database } = config;
 
-    const match = [...dbMonitoringConnections.entries()].find(
-      ([, monitored]) =>
-        monitored._config?.host === host && monitored._config?.database === database
-    );
+    const match = [...dbMonitoringConnections.entries()].find(([, monitored]) => monitored._config?.host === host && monitored._config?.database === database);
 
     if (match) {
       const [connectionId] = match;
-      console.log(
-        `Auto-monitoring new connection to ${database} (from monitored connection ${connectionId})`
-      );
+      console.log(`Auto-monitoring new connection to ${database} (from monitored connection ${connectionId})`);
       setupMonitoring(connection, database);
     }
 
     return connection;
   };
 
-  console.log('Global MySQL monitoring configured');
+  console.log("Global MySQL monitoring configured");
 }
 // function setupGlobalMonitoring() {
 //   mysql.createConnection = async function (...args) {
@@ -198,19 +173,19 @@ function setupGlobalMonitoring() {
 //   console.log('Global MySQL monitoring configured');
 // }
 
-if (process.env.NODE_ENV === 'development') {
+if (process.env.NODE_ENV === "development") {
   try {
-    require('electron-reload')(path.join(__dirname, '../renderer'), {
-      electron: path.join(__dirname, '../../node_modules', '.bin', 'electron'),
-      hardResetMethod: 'exit'
+    require("electron-reload")(path.join(__dirname, "../renderer"), {
+      electron: path.join(__dirname, "../../node_modules", ".bin", "electron"),
+      hardResetMethod: "exit"
     });
   } catch (err) {
-    console.error('electron-reload:', err);
+    console.error("electron-reload:", err);
   }
 }
 
-app.on('will-quit', () => {
-  console.log('Application is quitting, performing cleanup...');
+app.on("will-quit", () => {
+  console.log("Application is quitting, performing cleanup...");
 
   for (const [connectionId, connection] of dbMonitoringConnections.entries()) {
     try {
@@ -222,101 +197,96 @@ app.on('will-quit', () => {
   dbMonitoringConnections.clear();
 });
 
-app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') {
+app.on("window-all-closed", () => {
+  if (process.platform !== "darwin") {
     app.quit();
   }
 });
 
-ipcMain.handle('save-connections', (event, connections) => {
+ipcMain.handle("save-connections", (event, connections) => {
   try {
-    store.set('connections', connections);
+    store.set("connections", connections);
     return true;
   } catch (error) {
-    console.error('Error saving connections:', error);
+    console.error("Error saving connections:", error);
     throw error;
   }
 });
 
-ipcMain.handle('get-open-tabs', () => {
-  return store.get('openTabs') || { tabs: [], activeTabId: null };
+ipcMain.handle("get-open-tabs", () => {
+  return store.get("openTabs") || { tabs: [], activeTabId: null };
 });
 
-ipcMain.handle('save-open-tabs', (event, tabData) => {
-  store.set('openTabs', tabData);
+ipcMain.handle("save-open-tabs", (event, tabData) => {
+  store.set("openTabs", tabData);
   return true;
 });
 
-ipcMain.handle('get-settings', () => {
+ipcMain.handle("get-settings", () => {
   try {
     return (
-      store.get('settings') || {
-        aiProvider: 'openai',
+      store.get("settings") || {
+        aiProvider: "openai",
         openai: {
-          apiKey: '',
-          model: 'gpt-3.5-turbo'
+          apiKey: "",
+          model: "gpt-3.5-turbo"
         },
         gemini: {
-          apiKey: '',
-          model: 'gemini-2.0-flash' // Ensure this matches the v1beta API endpoint
+          apiKey: "",
+          model: "gemini-2.0-flash" // Ensure this matches the v1beta API endpoint
         },
-        language: 'en'
+        language: "en"
       }
     );
   } catch (error) {
-    console.error('Error retrieving settings:', error);
+    console.error("Error retrieving settings:", error);
     return {
-      aiProvider: 'openai',
-      openai: { apiKey: '', model: 'gpt-3.5-turbo' },
-      gemini: { apiKey: '', model: 'gemini-2.0-flash' }, // Ensure this matches the v1beta API endpoint
-      language: 'en'
+      aiProvider: "openai",
+      openai: { apiKey: "", model: "gpt-3.5-turbo" },
+      gemini: { apiKey: "", model: "gemini-2.0-flash" }, // Ensure this matches the v1beta API endpoint
+      language: "en"
     };
   }
 });
 
-ipcMain.handle('save-settings', (event, settings) => {
+ipcMain.handle("save-settings", (event, settings) => {
   try {
-    store.set('settings', settings);
+    store.set("settings", settings);
     return true;
   } catch (error) {
-    console.error('Error saving settings:', error);
+    console.error("Error saving settings:", error);
     throw error;
   }
 });
 
 // getTableData and getFilteredTableData handlers moved to tables.js module
 
-ipcMain.handle('openFile', async (event, filePath) => {
+ipcMain.handle("openFile", async (event, filePath) => {
   try {
     const editors = [
       {
-        name: 'PHPStorm',
+        name: "PHPStorm",
         paths: [
-          '/Applications/PhpStorm.app/Contents/MacOS/phpstorm',
-          '/usr/local/bin/phpstorm',
-          'C:\\Program Files\\JetBrains\\PhpStorm\\bin\\phpstorm64.exe',
-          'C:\\Program Files (x86)\\JetBrains\\PhpStorm\\bin\\phpstorm.exe'
+          "/Applications/PhpStorm.app/Contents/MacOS/phpstorm",
+          "/usr/local/bin/phpstorm",
+          "C:\\Program Files\\JetBrains\\PhpStorm\\bin\\phpstorm64.exe",
+          "C:\\Program Files (x86)\\JetBrains\\PhpStorm\\bin\\phpstorm.exe"
         ]
       },
       {
-        name: 'VSCode',
+        name: "VSCode",
         paths: [
-          '/Applications/Visual Studio Code.app/Contents/Resources/app/bin/code',
-          '/usr/bin/code',
-          '/usr/local/bin/code',
-          'C:\\Program Files\\Microsoft VS Code\\bin\\code.cmd',
-          'C:\\Program Files (x86)\\Microsoft VS Code\\bin\\code.cmd',
-          'C:\\Users\\%USERNAME%\\AppData\\Local\\Programs\\Microsoft VS Code\\bin\\code.cmd'
+          "/Applications/Visual Studio Code.app/Contents/Resources/app/bin/code",
+          "/usr/bin/code",
+          "/usr/local/bin/code",
+          "C:\\Program Files\\Microsoft VS Code\\bin\\code.cmd",
+          "C:\\Program Files (x86)\\Microsoft VS Code\\bin\\code.cmd",
+          "C:\\Users\\%USERNAME%\\AppData\\Local\\Programs\\Microsoft VS Code\\bin\\code.cmd"
         ]
       },
       {
-        name: 'Sublime Text',
-        paths: [
-          '/Applications/Sublime Text.app/Contents/SharedSupport/bin/subl',
-          '/usr/local/bin/subl',
-          'C:\\Program Files\\Sublime Text\\subl.exe',
-          'C:\\Program Files (x86)\\Sublime Text\\subl.exe'
-        ]
+        name: "Sublime Text",
+        paths: ["/Applications/Sublime Text.app/Contents/SharedSupport/bin/subl", "/usr/local/bin/subl", "C:\\Program Files\\Sublime Text\\subl.exe", "C:\\Program Files (x86)\\Sublime Text\\subl.exe"]
       }
     ];
 
@@ -325,9 +295,9 @@ ipcMain.handle('openFile', async (event, filePath) => {
         try {
           if (fs.existsSync(editorPath)) {
             console.log(`Opening file with ${editor.name} at ${editorPath}`);
-            const child = require('child_process').spawn(editorPath, [filePath], {
+            const child = require("child_process").spawn(editorPath, [filePath], {
               detached: true,
-              stdio: 'ignore'
+              stdio: "ignore"
             });
             child.unref();
             return { success: true, editor: editor.name };
@@ -338,42 +308,42 @@ ipcMain.handle('openFile', async (event, filePath) => {
       }
     }
 
-    console.log('No specific IDE found, using default application');
+    console.log("No specific IDE found, using default application");
     await shell.openPath(filePath);
-    return { success: true, editor: 'default' };
+    return { success: true, editor: "default" };
   } catch (error) {
-    console.error('Failed to open file:', error);
+    console.error("Failed to open file:", error);
     return { success: false, error: error.message };
   }
 });
 
 // Project logs handlers
-ipcMain.handle('get-project-logs', async (event, config) => {
+ipcMain.handle("get-project-logs", async (event, config) => {
   try {
-    console.log('Getting project logs with config:', config);
+    console.log("Getting project logs with config:", config);
 
     if (!config || !config.projectPath) {
-      console.log('No project path provided');
+      console.log("No project path provided");
       return [];
     }
 
-    const logsPath = path.join(config.projectPath, 'storage', 'logs');
-    console.log('Looking for logs in:', logsPath);
+    const logsPath = path.join(config.projectPath, "storage", "logs");
+    console.log("Looking for logs in:", logsPath);
 
     if (!fs.existsSync(logsPath)) {
-      console.error('Logs directory not found at:', logsPath);
+      console.error("Logs directory not found at:", logsPath);
       return [];
     }
 
     // Get all files
     const allFiles = fs.readdirSync(logsPath);
-    console.log('All files in logs directory:', allFiles);
+    console.log("All files in logs directory:", allFiles);
 
-    const logFiles = allFiles.filter(file => file.endsWith('.log'));
-    console.log('Log files found:', logFiles);
+    const logFiles = allFiles.filter((file) => file.endsWith(".log"));
+    console.log("Log files found:", logFiles);
 
     if (logFiles.length === 0) {
-      console.log('No log files found');
+      console.log("No log files found");
       return [];
     }
 
@@ -381,44 +351,44 @@ ipcMain.handle('get-project-logs', async (event, config) => {
     let logFilePath;
     let logFileName;
 
-    if (logFiles.includes('laravel.log')) {
-      logFileName = 'laravel.log';
+    if (logFiles.includes("laravel.log")) {
+      logFileName = "laravel.log";
       logFilePath = path.join(logsPath, logFileName);
-      console.log('Using laravel.log file');
+      console.log("Using laravel.log file");
     } else {
       // Check for daily log files (Laravel can be configured to use daily logs)
       const dailyLogPattern = /laravel-\d{4}-\d{2}-\d{2}\.log/;
-      const dailyLogFiles = logFiles.filter(file => dailyLogPattern.test(file));
+      const dailyLogFiles = logFiles.filter((file) => dailyLogPattern.test(file));
 
       if (dailyLogFiles.length > 0) {
         // Sort by date descending to get the most recent
         dailyLogFiles.sort().reverse();
         logFileName = dailyLogFiles[0];
         logFilePath = path.join(logsPath, logFileName);
-        console.log('Using daily log file:', logFileName);
+        console.log("Using daily log file:", logFileName);
       } else {
         // Fallback to any log file
         logFileName = logFiles[0];
         logFilePath = path.join(logsPath, logFileName);
-        console.log('Using first available log file:', logFileName);
+        console.log("Using first available log file:", logFileName);
       }
     }
 
-    console.log('Reading log file from:', logFilePath);
-    const logContent = fs.readFileSync(logFilePath, 'utf8');
+    console.log("Reading log file from:", logFilePath);
+    const logContent = fs.readFileSync(logFilePath, "utf8");
 
-    if (!logContent || logContent.trim() === '') {
-      console.log('Log file is empty');
+    if (!logContent || logContent.trim() === "") {
+      console.log("Log file is empty");
       return [];
     }
 
-    console.log('Log content length:', logContent.length);
+    console.log("Log content length:", logContent.length);
 
     // Very simple parsing approach - just split by lines and parse each line
-    const lines = logContent.split('\n');
+    const lines = logContent.split("\n");
     console.log(`Found ${lines.length} lines in log file`);
 
-    console.log('First 5 lines of log:');
+    console.log("First 5 lines of log:");
     for (let i = 0; i < Math.min(5, lines.length); i++) {
       console.log(`Line ${i + 1}: "${lines[i]}"`);
     }
@@ -430,24 +400,22 @@ ipcMain.handle('get-project-logs', async (event, config) => {
       const line = lines[i].trim();
       if (!line) continue;
 
-      const timestampMatch = line.match(
-        /^\[(\d{4}-\d{2}-\d{2}[T\s]\d{2}:\d{2}:\d{2}\.?\d*(?:[\+-]\d{4})?)\]/
-      );
+      const timestampMatch = line.match(/^\[(\d{4}-\d{2}-\d{2}[T\s]\d{2}:\d{2}:\d{2}\.?\d*(?:[\+-]\d{4})?)\]/);
 
       if (timestampMatch) {
         if (currentEntry) {
           logEntries.push(currentEntry);
         }
 
-        let type = 'info';
-        if (line.toLowerCase().includes('error') || line.toLowerCase().includes('exception')) {
-          type = 'error';
-        } else if (line.toLowerCase().includes('warning')) {
-          type = 'warning';
-        } else if (line.toLowerCase().includes('debug')) {
-          type = 'debug';
-        } else if (line.toLowerCase().includes('info')) {
-          type = 'info';
+        let type = "info";
+        if (line.toLowerCase().includes("error") || line.toLowerCase().includes("exception")) {
+          type = "error";
+        } else if (line.toLowerCase().includes("warning")) {
+          type = "warning";
+        } else if (line.toLowerCase().includes("debug")) {
+          type = "debug";
+        } else if (line.toLowerCase().includes("info")) {
+          type = "info";
         }
 
         currentEntry = {
@@ -459,12 +427,12 @@ ipcMain.handle('get-project-logs', async (event, config) => {
           file: logFileName
         };
       } else if (currentEntry) {
-        if (line.includes('Stack trace:')) {
-          currentEntry.stack = '';
+        if (line.includes("Stack trace:")) {
+          currentEntry.stack = "";
         } else if (currentEntry.stack !== null) {
-          currentEntry.stack += line + '\n';
+          currentEntry.stack += line + "\n";
         } else {
-          currentEntry.message += '\n' + line;
+          currentEntry.message += "\n" + line;
         }
       }
     }
@@ -476,15 +444,15 @@ ipcMain.handle('get-project-logs', async (event, config) => {
     console.log(`Parsed ${logEntries.length} log entries`);
 
     if (logEntries.length === 0) {
-      console.log('No parsable log entries found, providing raw sample');
+      console.log("No parsable log entries found, providing raw sample");
 
       const sampleContent = logContent.substring(0, Math.min(500, logContent.length));
       return [
         {
           id: `log_raw_${Date.now()}`,
           timestamp: Date.now(),
-          type: 'info',
-          message: 'Raw log content sample:\n\n' + sampleContent,
+          type: "info",
+          message: "Raw log content sample:\n\n" + sampleContent,
           stack: null,
           file: logFileName
         }
@@ -493,41 +461,41 @@ ipcMain.handle('get-project-logs', async (event, config) => {
 
     return logEntries;
   } catch (error) {
-    console.error('Error reading project logs:', error);
+    console.error("Error reading project logs:", error);
     return [
       {
         id: `log_error_${Date.now()}`,
         timestamp: Date.now(),
-        type: 'error',
+        type: "error",
         message: `Error reading logs: ${error.message}`,
         stack: error.stack,
-        file: 'error'
+        file: "error"
       }
     ];
   }
 });
 
-ipcMain.handle('delete-project-log', async (event, logId) => {
-  console.log('Delete log requested for:', logId);
+ipcMain.handle("delete-project-log", async (event, logId) => {
+  console.log("Delete log requested for:", logId);
   return { success: true };
 });
 
-ipcMain.handle('clear-all-project-logs', async (event, config) => {
+ipcMain.handle("clear-all-project-logs", async (event, config) => {
   try {
     if (!config || !config.projectPath) {
-      return { success: false, message: 'No project path provided' };
+      return { success: false, message: "No project path provided" };
     }
 
-    const logsPath = path.join(config.projectPath, 'storage', 'logs');
+    const logsPath = path.join(config.projectPath, "storage", "logs");
 
     if (!fs.existsSync(logsPath)) {
-      return { success: false, message: 'Logs directory not found' };
+      return { success: false, message: "Logs directory not found" };
     }
 
-    const logFiles = fs.readdirSync(logsPath).filter(file => file.endsWith('.log'));
+    const logFiles = fs.readdirSync(logsPath).filter((file) => file.endsWith(".log"));
 
     if (logFiles.length === 0) {
-      return { success: true, message: 'No log files found' };
+      return { success: true, message: "No log files found" };
     }
 
     console.log(`Clearing ${logFiles.length} log files in ${logsPath}`);
@@ -537,7 +505,7 @@ ipcMain.handle('clear-all-project-logs', async (event, config) => {
       try {
         const logFilePath = path.join(logsPath, logFile);
         console.log(`Clearing log file: ${logFilePath}`);
-        fs.writeFileSync(logFilePath, '', 'utf8');
+        fs.writeFileSync(logFilePath, "", "utf8");
         clearedCount++;
       } catch (fileError) {
         console.error(`Error clearing log file ${logFile}:`, fileError);
@@ -550,7 +518,7 @@ ipcMain.handle('clear-all-project-logs', async (event, config) => {
       clearedFiles: clearedCount
     };
   } catch (error) {
-    console.error('Error clearing project logs:', error);
+    console.error("Error clearing project logs:", error);
     return { success: false, message: error.message };
   }
 });
@@ -559,7 +527,7 @@ function setupMonitoring(connection, monitoredTables) {
   if (!connection) return false;
 
   if (connection._isMonitored) {
-    console.log('[MONITOR] This connection is already being monitored');
+    console.log("[MONITOR] This connection is already being monitored");
     return true;
   }
 
@@ -572,7 +540,7 @@ function setupMonitoring(connection, monitoredTables) {
 
 async function startProcessListPolling(connection) {
   if (!connection || !connection._config) {
-    console.error('[MONITOR] Invalid connection for process list polling');
+    console.error("[MONITOR] Invalid connection for process list polling");
     return false;
   }
 
@@ -614,10 +582,7 @@ async function startProcessListPolling(connection) {
 
         const sql = process.info;
 
-        const queryHash = require('crypto')
-          .createHash('md5')
-          .update(`${process.id}-${sql}`)
-          .digest('hex');
+        const queryHash = require("crypto").createHash("md5").update(`${process.id}-${sql}`).digest("hex");
 
         if (connection._processedQueries.has(queryHash)) {
           continue;
@@ -632,50 +597,46 @@ async function startProcessListPolling(connection) {
           }
         }
 
-        let operation = 'QUERY';
-        let tableName = 'unknown';
+        let operation = "QUERY";
+        let tableName = "unknown";
 
-        const firstWord = sql.trim().split(' ')[0].toUpperCase();
+        const firstWord = sql.trim().split(" ")[0].toUpperCase();
 
-        if (
-          ['SELECT', 'INSERT', 'UPDATE', 'DELETE', 'CREATE', 'ALTER', 'DROP', 'TRUNCATE'].includes(
-            firstWord
-          )
-        ) {
+        if (["SELECT", "INSERT", "UPDATE", "DELETE", "CREATE", "ALTER", "DROP", "TRUNCATE"].includes(firstWord)) {
           operation = firstWord;
 
-          if (operation === 'SELECT') {
+          if (operation === "SELECT") {
             const match = sql.match(/FROM\s+`?([a-zA-Z0-9_]+)`?/i);
             if (match && match[1]) {
-              tableName = match[1].replace(/`/g, '');
+              tableName = match[1].replace(/`/g, "");
             }
-          } else if (operation === 'INSERT') {
+          } else if (operation === "INSERT") {
             // INSERT INTO table
             const match = sql.match(/INSERT\s+INTO\s+`?([a-zA-Z0-9_]+)`?/i);
             if (match && match[1]) {
-              tableName = match[1].replace(/`/g, '');
+              tableName = match[1].replace(/`/g, "");
             }
-          } else if (operation === 'UPDATE') {
+          } else if (operation === "UPDATE") {
             const match = sql.match(/UPDATE\s+`?([a-zA-Z0-9_]+)`?/i);
             if (match && match[1]) {
-              tableName = match[1].replace(/`/g, '');
+              tableName = match[1].replace(/`/g, "");
             }
-          } else if (operation === 'DELETE') {
+          } else if (operation === "DELETE") {
             // DELETE FROM table
             const match = sql.match(/DELETE\s+FROM\s+`?([a-zA-Z0-9_]+)`?/i);
             if (match && match[1]) {
-              tableName = match[1].replace(/`/g, '');
+              tableName = match[1].replace(/`/g, "");
             }
-          } else if (['CREATE', 'ALTER', 'DROP', 'TRUNCATE'].includes(operation)) {
+          } else if (["CREATE", "ALTER", "DROP", "TRUNCATE"].includes(operation)) {
             const match = sql.match(/(CREATE|ALTER|DROP|TRUNCATE)\s+TABLE\s+`?([a-zA-Z0-9_]+)`?/i);
             if (match && match[2]) {
-              tableName = match[2].replace(/`/g, '');
+              tableName = match[2].replace(/`/g, "");
             }
           }
         }
 
         // Verificar se devemos ignorar esta tabela (tabelas do sistema)
-        const systemTables = ['information_schema', 'performance_schema', 'mysql'];
+        const systemTables = ["information_schema", "performance_schema", "mysql"];
         if (systemTables.includes(tableName.toLowerCase())) {
           continue;
         }
@@ -705,7 +666,7 @@ async function startProcessListPolling(connection) {
         }
       }
     } catch (error) {
-      console.error('[MONITOR] Error polling process list:', error);
+      console.error("[MONITOR] Error polling process list:", error);
     }
   };
 
@@ -713,7 +674,7 @@ async function startProcessListPolling(connection) {
   try {
     await pollProcessList();
   } catch (error) {
-    console.error('[MONITOR] Error during initial process list polling:', error);
+    console.error("[MONITOR] Error during initial process list polling:", error);
   }
 
   // Configurar intervalo de polling (a cada 1 segundo)
@@ -723,17 +684,17 @@ async function startProcessListPolling(connection) {
   return true;
 }
 
-ipcMain.handle('start-db-monitoring', async (event, connectionId) => {
+ipcMain.handle("start-db-monitoring", async (event, connectionId) => {
   let connection = null;
-  const activityLogTable = 'larabase_db_activity_log';
+  const activityLogTable = "larabase_db_activity_log";
 
   try {
     console.log(`Starting database monitoring for connection ${connectionId}`);
 
     // Validate connectionId
     if (!connectionId) {
-      console.error('Invalid connectionId or not provided');
-      return { success: false, message: 'Invalid connection ID' };
+      console.error("Invalid connectionId or not provided");
+      return { success: false, message: "Invalid connection ID" };
     }
 
     // Clear previous connection if it exists
@@ -751,26 +712,29 @@ ipcMain.handle('start-db-monitoring', async (event, connectionId) => {
     }
 
     // Get connection details
-    const connections = store.get('connections') || [];
-    const connection = connections.find(conn => conn.id === connectionId);
+    const connections = store.get("connections") || [];
+    const connection = connections.find((conn) => conn.id === connectionId);
 
     if (!connection) {
       console.error(`Connection ID ${connectionId} not found`);
-      return { success: false, message: 'Connection not found' };
+      return { success: false, message: "Connection not found" };
     }
 
     console.log(`Connection found: ${connection.name}`);
     console.log(`Details: ${connection.host}:${connection.port}/${connection.database}`);
 
     if (!connection.host || !connection.port || !connection.username || !connection.database) {
-      return { success: false, message: 'Incomplete connection information' };
+      return {
+        success: false,
+        message: "Incomplete connection information"
+      };
     }
 
     const dbConnection = await mysql.createConnection({
       host: connection.host,
       port: connection.port,
       user: connection.username,
-      password: connection.password || '',
+      password: connection.password || "",
       database: connection.database,
       dateStrings: true,
       multipleStatements: true // Enable multiple statements for creating complex triggers
@@ -779,9 +743,9 @@ ipcMain.handle('start-db-monitoring', async (event, connectionId) => {
     console.log(`Connection established to ${connection.database}`);
 
     // Testar a conexão
-    console.log('Testing connection...');
-    await dbConnection.query('SELECT 1');
-    console.log('Connection test successful');
+    console.log("Testing connection...");
+    await dbConnection.query("SELECT 1");
+    console.log("Connection test successful");
 
     await dbConnection.query(`
       CREATE TABLE IF NOT EXISTS ${activityLogTable} (
@@ -833,13 +797,9 @@ ipcMain.handle('start-db-monitoring', async (event, connectionId) => {
           [connection.database, tableName]
         );
 
-        const columnNames = columns.map(col => col.COLUMN_NAME || col.column_name);
+        const columnNames = columns.map((col) => col.COLUMN_NAME || col.column_name);
 
-        const primaryKeyColumn = columns.find(
-          col =>
-            col.COLUMN_KEY === 'PRI' ||
-            ['id', 'uuid', 'key'].includes(col.COLUMN_NAME.toLowerCase())
-        );
+        const primaryKeyColumn = columns.find((col) => col.COLUMN_KEY === "PRI" || ["id", "uuid", "key"].includes(col.COLUMN_NAME.toLowerCase()));
 
         let idRef, oldIdRef;
 
@@ -860,12 +820,10 @@ ipcMain.handle('start-db-monitoring', async (event, connectionId) => {
 
         const previewColumns = columnNames.slice(0, 5);
 
-        const insertPreview = previewColumns
-          .map(col => `'${col}: ', COALESCE(NEW.\`${col}\`, 'null')`)
-          .join(", ' | ', ");
+        const insertPreview = previewColumns.map((col) => `'${col}: ', COALESCE(NEW.\`${col}\`, 'null')`).join(", ' | ', ");
 
         const updatePreviewParts = previewColumns.map(
-          col =>
+          (col) =>
             `IF(
             (OLD.\`${col}\` IS NULL AND NEW.\`${col}\` IS NOT NULL) OR 
             (OLD.\`${col}\` IS NOT NULL AND NEW.\`${col}\` IS NULL) OR 
@@ -874,11 +832,9 @@ ipcMain.handle('start-db-monitoring', async (event, connectionId) => {
             NULL
           )`
         );
-        const updatePreview = `CONCAT_WS(', ', ${updatePreviewParts.join(', ')})`;
+        const updatePreview = `CONCAT_WS(', ', ${updatePreviewParts.join(", ")})`;
 
-        const deletePreview = previewColumns
-          .map(col => `'${col}: ', COALESCE(OLD.\`${col}\`, 'null')`)
-          .join(", ' | ', ");
+        const deletePreview = previewColumns.map((col) => `'${col}: ', COALESCE(OLD.\`${col}\`, 'null')`).join(", ' | ', ");
 
         await dbConnection.query(`
           CREATE TRIGGER ${tableName}_after_insert
@@ -975,34 +931,37 @@ ipcMain.handle('start-db-monitoring', async (event, connectionId) => {
     dbMonitoringConnections.set(connectionId, dbConnection);
 
     if (mainWindow) {
-      initialActivities.forEach(activity => {
+      initialActivities.forEach((activity) => {
         mainWindow.webContents.send(`db-operation-${connectionId}`, activity);
       });
 
       mainWindow.webContents.send(`db-operation-${connectionId}`, {
         timestamp: Date.now(),
-        type: 'INFO',
-        table: 'system',
-        message: 'Database monitoring started successfully'
+        type: "INFO",
+        table: "system",
+        message: "Database monitoring started successfully"
       });
     }
 
     const lastId = initialActivities.length > 0 ? initialActivities[0].id : 0;
     startActivityPolling(connectionId, dbConnection, activityLogTable, lastId);
 
-    return { success: true, message: 'Monitoring started successfully' };
+    return { success: true, message: "Monitoring started successfully" };
   } catch (error) {
-    console.error('Error setting up database monitoring:', error);
+    console.error("Error setting up database monitoring:", error);
 
     if (connection) {
       try {
         await connection.end();
       } catch (err) {
-        console.error('Error closing connection:', err);
+        console.error("Error closing connection:", err);
       }
     }
 
-    return { success: false, message: error.message || 'Unknown error setting up monitoring' };
+    return {
+      success: false,
+      message: error.message || "Unknown error setting up monitoring"
+    };
   }
 });
 
@@ -1040,19 +999,17 @@ function startActivityPolling(connectionId, connection, activityLogTable, lastId
       );
 
       if (activities.length > 0) {
-        console.log(
-          `Found ${activities.length} new activities, types: ${activities.map(a => a.type).join(', ')}`
-        );
+        console.log(`Found ${activities.length} new activities, types: ${activities.map((a) => a.type).join(", ")}`);
 
         connection._lastActivityId = activities[activities.length - 1].id;
 
         if (mainWindow) {
-          activities.forEach(activity => {
+          activities.forEach((activity) => {
             const formattedActivity = {
               ...activity,
               timestamp: activity.timestamp || new Date().toISOString(),
-              recordId: activity.recordId || 'unknown',
-              details: activity.details || 'No details available'
+              recordId: activity.recordId || "unknown",
+              details: activity.details || "No details available"
             };
 
             mainWindow.webContents.send(`db-operation-${connectionId}`, formattedActivity);
@@ -1060,7 +1017,7 @@ function startActivityPolling(connectionId, connection, activityLogTable, lastId
         }
       }
     } catch (error) {
-      console.error('Error polling activities:', error);
+      console.error("Error polling activities:", error);
     }
   };
 
@@ -1068,14 +1025,17 @@ function startActivityPolling(connectionId, connection, activityLogTable, lastId
   connection._pollingInterval = setInterval(pollActivities, 1000);
 }
 
-ipcMain.handle('stop-db-monitoring', async (event, connectionId) => {
+ipcMain.handle("stop-db-monitoring", async (event, connectionId) => {
   try {
     console.log(`Stopping database monitoring for ${connectionId}`);
 
     const connection = dbMonitoringConnections.get(connectionId);
 
     if (!connection) {
-      return { success: false, message: 'Not monitoring this connection' };
+      return {
+        success: false,
+        message: "Not monitoring this connection"
+      };
     }
 
     if (connection._pollingInterval) {
@@ -1087,25 +1047,25 @@ ipcMain.handle('stop-db-monitoring', async (event, connectionId) => {
 
     dbMonitoringConnections.delete(connectionId);
 
-    return { success: true, message: 'Monitoring stopped' };
+    return { success: true, message: "Monitoring stopped" };
   } catch (error) {
-    console.error('Error stopping database monitoring:', error);
+    console.error("Error stopping database monitoring:", error);
     return { success: false, message: error.message };
   }
 });
 
-ipcMain.handle('monitor-database-changes', async (event, connectionDetails) => {
+ipcMain.handle("monitor-database-changes", async (event, connectionDetails) => {
   let connection = null;
   let triggerConnection = null;
-  const activityLogTable = 'larabase_db_activity_log';
+  const activityLogTable = "larabase_db_activity_log";
   const connectionId = connectionDetails.id || connectionDetails.connectionId;
 
   try {
     console.log(`Setting up trigger-based monitoring for connection ${connectionId}`);
 
     if (!connectionDetails || !connectionDetails.database) {
-      console.error('Database name is required for monitoring');
-      return { success: false, message: 'Database name is required' };
+      console.error("Database name is required for monitoring");
+      return { success: false, message: "Database name is required" };
     }
 
     if (dbActivityConnections.has(connectionId)) {
@@ -1126,31 +1086,29 @@ ipcMain.handle('monitor-database-changes', async (event, connectionDetails) => {
 
     const database = String(connectionDetails.database);
 
-    console.log(
-      `Creating connection to ${connectionDetails.host}:${connectionDetails.port}/${database}`
-    );
+    console.log(`Creating connection to ${connectionDetails.host}:${connectionDetails.port}/${database}`);
 
     let host, port, user, password;
 
     if (connectionDetails.host) {
-      host = String(connectionDetails.host || '');
+      host = String(connectionDetails.host || "");
       port = Number(connectionDetails.port || 3306);
-      user = String(connectionDetails.username || connectionDetails.user || '');
-      password = String(connectionDetails.password || '');
+      user = String(connectionDetails.username || connectionDetails.user || "");
+      password = String(connectionDetails.password || "");
     } else {
       // Se apenas o ID foi fornecido, buscar os detalhes do store
-      const connections = store.get('connections') || [];
-      const storedConnection = connections.find(conn => conn.id === connectionId);
+      const connections = store.get("connections") || [];
+      const storedConnection = connections.find((conn) => conn.id === connectionId);
 
       if (!storedConnection) {
         console.error(`Connection ID ${connectionId} not found in stored connections`);
-        return { success: false, message: 'Connection not found' };
+        return { success: false, message: "Connection not found" };
       }
 
-      host = String(storedConnection.host || '');
+      host = String(storedConnection.host || "");
       port = Number(storedConnection.port || 3306);
-      user = String(storedConnection.username || '');
-      password = String(storedConnection.password || '');
+      user = String(storedConnection.username || "");
+      password = String(storedConnection.password || "");
     }
 
     const connOptions = {
@@ -1216,21 +1174,16 @@ ipcMain.handle('monitor-database-changes', async (event, connectionDetails) => {
           [database, tableName]
         );
 
-        const columnNames = columns.map(col => col.COLUMN_NAME || col.column_name);
-        const hasId = columnNames.some(
-          name =>
-            name.toLowerCase() === 'id' ||
-            name.toLowerCase() === 'uuid' ||
-            name.toLowerCase() === 'key'
-        );
+        const columnNames = columns.map((col) => col.COLUMN_NAME || col.column_name);
+        const hasId = columnNames.some((name) => name.toLowerCase() === "id" || name.toLowerCase() === "uuid" || name.toLowerCase() === "key");
 
-        let idRef = '';
+        let idRef = "";
         if (hasId) {
           idRef = `CONCAT_WS('', 
             ${columnNames
-              .filter(c => ['id', 'uuid', 'key'].includes(c.toLowerCase()))
-              .map(c => `NEW.${c}`)
-              .join(', ')}
+              .filter((c) => ["id", "uuid", "key"].includes(c.toLowerCase()))
+              .map((c) => `NEW.${c}`)
+              .join(", ")}
           )`;
         } else if (columnNames.length > 0) {
           idRef = `CONCAT('Row with ${columnNames[0]}=', NEW.${columnNames[0]})`;
@@ -1239,13 +1192,13 @@ ipcMain.handle('monitor-database-changes', async (event, connectionDetails) => {
         }
 
         // Referência para OLD em operações DELETE
-        let oldIdRef = '';
+        let oldIdRef = "";
         if (hasId) {
           oldIdRef = `CONCAT_WS('', 
             ${columnNames
-              .filter(c => ['id', 'uuid', 'key'].includes(c.toLowerCase()))
-              .map(c => `OLD.${c}`)
-              .join(', ')}
+              .filter((c) => ["id", "uuid", "key"].includes(c.toLowerCase()))
+              .map((c) => `OLD.${c}`)
+              .join(", ")}
           )`;
         } else if (columnNames.length > 0) {
           oldIdRef = `CONCAT('Row with ${columnNames[0]}=', OLD.${columnNames[0]})`;
@@ -1257,21 +1210,14 @@ ipcMain.handle('monitor-database-changes', async (event, connectionDetails) => {
         const previewColumns = columnNames.slice(0, 4);
 
         // Preview strings para inserções
-        const insertPreview = previewColumns
-          .map(col => `'${col}: ', NEW.\`${col}\``)
-          .join(", ', | ', ");
+        const insertPreview = previewColumns.map((col) => `'${col}: ', NEW.\`${col}\``).join(", ', | ', ");
 
         // Preview strings para atualizações
-        const updatePreviewParts = previewColumns.map(
-          col =>
-            `IF(OLD.\`${col}\` <> NEW.\`${col}\`, CONCAT('${col}: ', OLD.\`${col}\`, ' → ', NEW.\`${col}\`), NULL)`
-        );
-        const updatePreview = `CONCAT_WS(', ', ${updatePreviewParts.join(', ')})`;
+        const updatePreviewParts = previewColumns.map((col) => `IF(OLD.\`${col}\` <> NEW.\`${col}\`, CONCAT('${col}: ', OLD.\`${col}\`, ' → ', NEW.\`${col}\`), NULL)`);
+        const updatePreview = `CONCAT_WS(', ', ${updatePreviewParts.join(", ")})`;
 
         // Preview strings para exclusões
-        const deletePreview = previewColumns
-          .map(col => `'${col}: ', OLD.\`${col}\``)
-          .join(", ', | ', ");
+        const deletePreview = previewColumns.map((col) => `'${col}: ', OLD.\`${col}\``).join(", ', | ', ");
 
         // Criar trigger para INSERT
         await connection.query(`
@@ -1319,13 +1265,13 @@ ipcMain.handle('monitor-database-changes', async (event, connectionDetails) => {
       }
     }
 
-    console.log('Creating secondary connection for polling');
+    console.log("Creating secondary connection for polling");
 
     // Criar uma conexão secundária para consultar mudanças
     triggerConnection = await mysql.createConnection(connOptions);
 
     // Obter atividades iniciais
-    console.log('Fetching initial activities');
+    console.log("Fetching initial activities");
     const [initialActivities] = await connection.query(`
       SELECT 
         id,
@@ -1352,25 +1298,25 @@ ipcMain.handle('monitor-database-changes', async (event, connectionDetails) => {
       mainWindow.webContents.send(`db-activity-${connectionId}`, {
         connectionId: connectionId,
         success: true,
-        message: 'Trigger-based monitoring started',
+        message: "Trigger-based monitoring started",
         activities: initialActivities || []
       });
     }
 
     return {
       success: true,
-      message: 'Monitoring setup successfully',
+      message: "Monitoring setup successfully",
       activityLogTable,
       activities: initialActivities || []
     };
   } catch (error) {
-    console.error('Error setting up database monitoring:', error);
+    console.error("Error setting up database monitoring:", error);
 
     if (connection) {
       try {
         await connection.end();
       } catch (err) {
-        console.error('Error closing monitoring setup connection:', err);
+        console.error("Error closing monitoring setup connection:", err);
       }
     }
 
@@ -1378,18 +1324,18 @@ ipcMain.handle('monitor-database-changes', async (event, connectionDetails) => {
       try {
         await triggerConnection.end();
       } catch (err) {
-        console.error('Error closing trigger connection:', err);
+        console.error("Error closing trigger connection:", err);
       }
     }
 
     return {
       success: false,
-      message: error.message || 'Unknown error setting up monitoring'
+      message: error.message || "Unknown error setting up monitoring"
     };
   }
 });
 
-ipcMain.handle('get-database-changes', async (event, connectionId, lastId = 0) => {
+ipcMain.handle("get-database-changes", async (event, connectionId, lastId = 0) => {
   try {
     console.log(`Getting database changes for connection ${connectionId}, lastId: ${lastId}`);
 
@@ -1397,7 +1343,10 @@ ipcMain.handle('get-database-changes', async (event, connectionId, lastId = 0) =
 
     if (!connectionData || !connectionData.triggerConnection) {
       console.error(`No active monitoring connection found for ${connectionId}`);
-      return { success: false, message: 'No active monitoring for this connection' };
+      return {
+        success: false,
+        message: "No active monitoring for this connection"
+      };
     }
 
     const { triggerConnection, activityLogTable } = connectionData;
@@ -1428,7 +1377,7 @@ ipcMain.handle('get-database-changes', async (event, connectionId, lastId = 0) =
     console.log(`Found ${activities.length} new activities`);
 
     if (activities.length > 0) {
-      connectionData.lastId = Math.max(...activities.map(a => a.id));
+      connectionData.lastId = Math.max(...activities.map((a) => a.id));
       console.log(`Updated lastId to ${connectionData.lastId}`);
     }
 
@@ -1437,15 +1386,15 @@ ipcMain.handle('get-database-changes', async (event, connectionId, lastId = 0) =
       activities: activities || []
     };
   } catch (error) {
-    console.error('Error getting database changes:', error);
+    console.error("Error getting database changes:", error);
     return {
       success: false,
-      message: error.message || 'Unknown error getting changes'
+      message: error.message || "Unknown error getting changes"
     };
   }
 });
 
-ipcMain.handle('stop-trigger-monitoring', async (event, connectionId) => {
+ipcMain.handle("stop-trigger-monitoring", async (event, connectionId) => {
   try {
     console.log(`Stopping trigger-based monitoring for connection ${connectionId}`);
 
@@ -1453,7 +1402,10 @@ ipcMain.handle('stop-trigger-monitoring', async (event, connectionId) => {
 
     if (!connectionData) {
       console.log(`No monitoring data found for connection ${connectionId}`);
-      return { success: false, message: 'Not monitoring this connection' };
+      return {
+        success: false,
+        message: "Not monitoring this connection"
+      };
     }
 
     if (connectionData.connection) {
@@ -1468,14 +1420,14 @@ ipcMain.handle('stop-trigger-monitoring', async (event, connectionId) => {
 
     console.log(`Trigger-based monitoring stopped for ${connectionId}`);
 
-    return { success: true, message: 'Monitoring stopped' };
+    return { success: true, message: "Monitoring stopped" };
   } catch (error) {
     console.error(`Error stopping trigger-based monitoring for ${connectionId}:`, error);
     return { success: false, message: error.message };
   }
 });
 
-app.on('before-quit', async () => {
+app.on("before-quit", async () => {
   for (const [connectionId, connection] of dbMonitoringConnections.entries()) {
     try {
       await connection.end();
@@ -1497,32 +1449,32 @@ app.on('before-quit', async () => {
       }
       console.log(`Closed trigger-based monitoring connections for ${connectionId}`);
     } catch (error) {
-      console.error(
-        `Error closing trigger-based monitoring connections for ${connectionId}:`,
-        error
-      );
+      console.error(`Error closing trigger-based monitoring connections for ${connectionId}:`, error);
     }
   }
 
   dbActivityConnections.clear();
 });
 
-ipcMain.handle('execute-test-operations', async (event, connectionId) => {
+ipcMain.handle("execute-test-operations", async (event, connectionId) => {
   try {
     console.log(`Executing test operations for connection ${connectionId}`);
 
     if (!connectionId) {
-      return { success: false, message: 'Connection ID is required' };
+      return { success: false, message: "Connection ID is required" };
     }
 
     if (!dbMonitoringConnections.has(connectionId)) {
       console.error(`No active monitoring connection for ${connectionId}`);
-      return { success: false, message: 'No active monitoring connection' };
+      return {
+        success: false,
+        message: "No active monitoring connection"
+      };
     }
 
     const connection = dbMonitoringConnections.get(connectionId);
 
-    console.log('Creating temporary test table');
+    console.log("Creating temporary test table");
     await connection.query(`
       CREATE TABLE IF NOT EXISTS _larabase_test_table (
         id INT AUTO_INCREMENT PRIMARY KEY,
@@ -1533,7 +1485,7 @@ ipcMain.handle('execute-test-operations', async (event, connectionId) => {
       )
     `);
 
-    console.log('Executing INSERT test');
+    console.log("Executing INSERT test");
     const [insertResult] = await connection.query(`
       INSERT INTO _larabase_test_table (title, description)
       VALUES ('Test Title', 'This is a test description')
@@ -1542,9 +1494,9 @@ ipcMain.handle('execute-test-operations', async (event, connectionId) => {
     const insertId = insertResult.insertId;
     console.log(`Inserted record with ID ${insertId}`);
 
-    await new Promise(resolve => setTimeout(resolve, 500));
+    await new Promise((resolve) => setTimeout(resolve, 500));
 
-    console.log('Executing UPDATE test');
+    console.log("Executing UPDATE test");
     await connection.query(
       `
       UPDATE _larabase_test_table
@@ -1558,9 +1510,9 @@ ipcMain.handle('execute-test-operations', async (event, connectionId) => {
 
     console.log(`Updated record with ID ${insertId}`);
 
-    await new Promise(resolve => setTimeout(resolve, 500));
+    await new Promise((resolve) => setTimeout(resolve, 500));
 
-    console.log('Executing DELETE test');
+    console.log("Executing DELETE test");
     await connection.query(
       `
       DELETE FROM _larabase_test_table
@@ -1579,42 +1531,39 @@ ipcMain.handle('execute-test-operations', async (event, connectionId) => {
       LIMIT 10
     `);
 
-    console.log('Activity logs:', activityLogs);
+    console.log("Activity logs:", activityLogs);
 
     return {
       success: true,
-      message: 'Test operations executed successfully',
+      message: "Test operations executed successfully",
       operations: {
         insertId,
         activities: activityLogs.length,
-        activityTypes: activityLogs.map(log => log.action_type)
+        activityTypes: activityLogs.map((log) => log.action_type)
       }
     };
   } catch (error) {
-    console.error('Error executing test operations:', error);
+    console.error("Error executing test operations:", error);
     return { success: false, message: error.message };
   }
 });
 
-ipcMain.handle('get-database-relationships', async (event, config) => {
+ipcMain.handle("get-database-relationships", async (event, config) => {
   let connection;
   try {
     function getConnectionDetails(connectionId) {
       console.log(`Getting connection details for diagram, ID: ${connectionId}`);
-      const connections = store.get('connections') || [];
-      return connections.find(conn => conn.id === connectionId);
+      const connections = store.get("connections") || [];
+      return connections.find((conn) => conn.id === connectionId);
     }
 
-    if (
-      config.connectionId &&
-      (!config.host || !config.port || !config.username || !config.database)
-    ) {
+    if (config.connectionId && (!config.host || !config.port || !config.username || !config.database)) {
       const connectionDetails = getConnectionDetails(config.connectionId);
       if (!connectionDetails) {
         console.error(`Connection details not found for ID: ${config.connectionId}`);
         return {
           success: false,
-          message: 'Connection details not found'
+          message: "Connection details not found"
         };
       }
       config.host = connectionDetails.host;
@@ -1625,10 +1574,10 @@ ipcMain.handle('get-database-relationships', async (event, config) => {
     }
 
     if (!config.host || !config.port || !config.username || !config.database) {
-      console.error('Missing connection parameters for diagram:', config);
+      console.error("Missing connection parameters for diagram:", config);
       return {
         success: false,
-        message: 'Missing required connection parameters'
+        message: "Missing required connection parameters"
       };
     }
 
@@ -1642,7 +1591,7 @@ ipcMain.handle('get-database-relationships', async (event, config) => {
       multipleStatements: true
     });
 
-    console.log('Connected to database successfully');
+    console.log("Connected to database successfully");
 
     const [rows] = await connection.query(
       `
@@ -1667,9 +1616,7 @@ ipcMain.handle('get-database-relationships', async (event, config) => {
     console.log(`Found ${rows.length} table relationships in ${config.database}`);
 
     if (rows.length === 0) {
-      console.log(
-        'No explicit relationships found. Attempting to infer relationships from naming patterns...'
-      );
+      console.log("No explicit relationships found. Attempting to infer relationships from naming patterns...");
 
       const [tables] = await connection.query(
         `
@@ -1706,31 +1653,25 @@ ipcMain.handle('get-database-relationships', async (event, config) => {
         for (const column of columns) {
           const columnName = column.name;
 
-          if (
-            columnName.endsWith('_id') ||
-            columnName.endsWith('_fk') ||
-            (columnName.startsWith('id_') && columnName !== 'id')
-          ) {
+          if (columnName.endsWith("_id") || columnName.endsWith("_fk") || (columnName.startsWith("id_") && columnName !== "id")) {
             let targetTable = null;
 
-            if (columnName.endsWith('_id')) {
+            if (columnName.endsWith("_id")) {
               targetTable = columnName.substring(0, columnName.length - 3);
-            } else if (columnName.endsWith('_fk')) {
+            } else if (columnName.endsWith("_fk")) {
               targetTable = columnName.substring(0, columnName.length - 3);
-            } else if (columnName.startsWith('id_')) {
+            } else if (columnName.startsWith("id_")) {
               targetTable = columnName.substring(3);
             }
 
-            const targetExists = tables.some(
-              t => (t.table_name || t.TABLE_NAME).toLowerCase() === targetTable.toLowerCase()
-            );
+            const targetExists = tables.some((t) => (t.table_name || t.TABLE_NAME).toLowerCase() === targetTable.toLowerCase());
 
             if (targetExists) {
               inferredRelationships.push({
                 sourceTable: tableName,
                 sourceColumn: columnName,
                 targetTable: targetTable,
-                targetColumn: 'id',
+                targetColumn: "id",
                 constraintName: `inferred_${tableName}_${columnName}`,
                 inferred: true
               });
@@ -1754,31 +1695,31 @@ ipcMain.handle('get-database-relationships', async (event, config) => {
 
     return rows;
   } catch (error) {
-    console.error('Error getting database relationships:', error);
+    console.error("Error getting database relationships:", error);
 
     if (connection) {
       try {
         await connection.end();
       } catch (err) {
-        console.error('Error closing MySQL connection:', err);
+        console.error("Error closing MySQL connection:", err);
       }
     }
 
     return {
       success: false,
-      message: error.message || 'Failed to get database relationships',
+      message: error.message || "Failed to get database relationships",
       error: error.toString()
     };
   }
 });
 
 // Handler to read model file content
-ipcMain.handle('read-model-file', async (event, filePath) => {
+ipcMain.handle("read-model-file", async (event, filePath) => {
   try {
     if (!filePath) {
       return {
         success: false,
-        message: 'Missing file path',
+        message: "Missing file path",
         content: null
       };
     }
@@ -1786,19 +1727,19 @@ ipcMain.handle('read-model-file', async (event, filePath) => {
     if (!fs.existsSync(filePath)) {
       return {
         success: false,
-        message: 'File not found',
+        message: "File not found",
         content: null
       };
     }
 
-    const content = fs.readFileSync(filePath, 'utf8');
+    const content = fs.readFileSync(filePath, "utf8");
 
     return {
       success: true,
       content: content
     };
   } catch (error) {
-    console.error('Error reading model file:', error);
+    console.error("Error reading model file:", error);
     return {
       success: false,
       message: error.message,
@@ -1808,12 +1749,12 @@ ipcMain.handle('read-model-file', async (event, filePath) => {
 });
 
 // Handler to list files in a directory
-ipcMain.handle('list-files', async (event, dirPath) => {
+ipcMain.handle("list-files", async (event, dirPath) => {
   try {
     if (!dirPath) {
       return {
         success: false,
-        message: 'Missing directory path',
+        message: "Missing directory path",
         files: []
       };
     }
@@ -1821,13 +1762,13 @@ ipcMain.handle('list-files', async (event, dirPath) => {
     if (!fs.existsSync(dirPath)) {
       return {
         success: false,
-        message: 'Directory not found',
+        message: "Directory not found",
         files: []
       };
     }
 
     const entries = fs.readdirSync(dirPath, { withFileTypes: true });
-    const files = entries.map(entry => ({
+    const files = entries.map((entry) => ({
       name: entry.name,
       isDirectory: entry.isDirectory()
     }));
@@ -1837,7 +1778,7 @@ ipcMain.handle('list-files', async (event, dirPath) => {
       files: files
     };
   } catch (error) {
-    console.error('Error listing files:', error);
+    console.error("Error listing files:", error);
     return {
       success: false,
       message: error.message,
@@ -1847,30 +1788,30 @@ ipcMain.handle('list-files', async (event, dirPath) => {
 });
 
 // Add the handler for running artisan commands at an appropriate location
-ipcMain.handle('run-artisan-command', async (event, config) => {
+ipcMain.handle("run-artisan-command", async (event, config) => {
   try {
     if (!config.projectPath) {
       return {
         success: false,
-        message: 'Project path is required',
-        output: ''
+        message: "Project path is required",
+        output: ""
       };
     }
 
     if (!config.command) {
       return {
         success: false,
-        message: 'Command is required',
-        output: ''
+        message: "Command is required",
+        output: ""
       };
     }
 
-    const artisanPath = path.join(config.projectPath, 'artisan');
+    const artisanPath = path.join(config.projectPath, "artisan");
     if (!fs.existsSync(artisanPath)) {
       return {
         success: false,
-        message: 'Artisan file not found in project path',
-        output: ''
+        message: "Artisan file not found in project path",
+        output: ""
       };
     }
 
@@ -1879,14 +1820,14 @@ ipcMain.handle('run-artisan-command', async (event, config) => {
 
     // Determine if we're using PHP directly or Sail
     let commandArgs = [];
-    const hasSail = fs.existsSync(path.join(config.projectPath, 'vendor/bin/sail'));
+    const hasSail = fs.existsSync(path.join(config.projectPath, "vendor/bin/sail"));
 
     if (config.useSail && hasSail) {
       // Using Laravel Sail
-      commandArgs = ['vendor/bin/sail', 'artisan', ...config.command.split(' ')];
+      commandArgs = ["vendor/bin/sail", "artisan", ...config.command.split(" ")];
     } else {
       // Using PHP directly
-      commandArgs = ['php', 'artisan', ...config.command.split(' ')];
+      commandArgs = ["php", "artisan", ...config.command.split(" ")];
     }
 
     // Start the command process
@@ -1899,8 +1840,8 @@ ipcMain.handle('run-artisan-command', async (event, config) => {
     const response = {
       success: true,
       commandId: commandId,
-      command: commandArgs.join(' '),
-      output: '',
+      command: commandArgs.join(" "),
+      output: "",
       isComplete: false
     };
 
@@ -1908,42 +1849,42 @@ ipcMain.handle('run-artisan-command', async (event, config) => {
     const outputChannel = `command-output-${commandId}`;
 
     // Stream stdout data
-    process.stdout.on('data', data => {
+    process.stdout.on("data", (data) => {
       const output = data.toString();
       // Send real-time updates to the renderer
       if (event.sender) {
         event.sender.send(outputChannel, {
           commandId,
           output,
-          type: 'stdout',
+          type: "stdout",
           isComplete: false
         });
       }
     });
 
     // Stream stderr data
-    process.stderr.on('data', data => {
+    process.stderr.on("data", (data) => {
       const output = data.toString();
       // Send real-time updates to the renderer
       if (event.sender) {
         event.sender.send(outputChannel, {
           commandId,
           output,
-          type: 'stderr',
+          type: "stderr",
           isComplete: false
         });
       }
     });
 
     // Handle process completion
-    process.on('close', code => {
+    process.on("close", (code) => {
       const success = code === 0;
       // Send completion notification to the renderer
       if (event.sender) {
         event.sender.send(outputChannel, {
           commandId,
-          output: success ? 'Command completed successfully.' : `Command exited with code ${code}`,
-          type: success ? 'stdout' : 'stderr',
+          output: success ? "Command completed successfully." : `Command exited with code ${code}`,
+          type: success ? "stdout" : "stderr",
           isComplete: true,
           success
         });
@@ -1951,12 +1892,12 @@ ipcMain.handle('run-artisan-command', async (event, config) => {
     });
 
     // Handle errors
-    process.on('error', err => {
+    process.on("error", (err) => {
       if (event.sender) {
         event.sender.send(outputChannel, {
           commandId,
           output: `Error: ${err.message}`,
-          type: 'stderr',
+          type: "stderr",
           isComplete: true,
           success: false
         });
@@ -1965,7 +1906,7 @@ ipcMain.handle('run-artisan-command', async (event, config) => {
 
     return response;
   } catch (error) {
-    console.error('Error running artisan command:', error);
+    console.error("Error running artisan command:", error);
     return {
       success: false,
       message: error.message,
@@ -1976,35 +1917,33 @@ ipcMain.handle('run-artisan-command', async (event, config) => {
 });
 
 // Add the handler for getting migration status
-ipcMain.handle('get-migration-status', async (event, config) => {
+ipcMain.handle("get-migration-status", async (event, config) => {
   try {
     if (!config.projectPath) {
       return {
         success: false,
-        message: 'Project path is required',
+        message: "Project path is required",
         pendingMigrations: [],
         batches: []
       };
     }
 
-    const artisanPath = path.join(config.projectPath, 'artisan');
+    const artisanPath = path.join(config.projectPath, "artisan");
     if (!fs.existsSync(artisanPath)) {
       return {
         success: false,
-        message: 'Artisan file not found in project path',
+        message: "Artisan file not found in project path",
         pendingMigrations: [],
         batches: []
       };
     }
 
     // Determine if we're using PHP directly or Sail
-    const hasSail = fs.existsSync(path.join(config.projectPath, 'vendor/bin/sail'));
+    const hasSail = fs.existsSync(path.join(config.projectPath, "vendor/bin/sail"));
     const useSail = config.useSail && hasSail;
 
     // Command to get migration status
-    const statusCommand = useSail
-      ? ['vendor/bin/sail', 'artisan', 'migrate:status', '--no-ansi']
-      : ['php', 'artisan', 'migrate:status', '--no-ansi'];
+    const statusCommand = useSail ? ["vendor/bin/sail", "artisan", "migrate:status", "--no-ansi"] : ["php", "artisan", "migrate:status", "--no-ansi"];
 
     // Run migration status command
     const statusProcess = spawn(statusCommand[0], statusCommand.slice(1), {
@@ -2012,25 +1951,25 @@ ipcMain.handle('get-migration-status', async (event, config) => {
       shell: true
     });
 
-    let statusOutput = '';
-    statusProcess.stdout.on('data', data => {
+    let statusOutput = "";
+    statusProcess.stdout.on("data", (data) => {
       statusOutput += data.toString();
     });
 
-    let errorOutput = '';
-    statusProcess.stderr.on('data', data => {
+    let errorOutput = "";
+    statusProcess.stderr.on("data", (data) => {
       errorOutput += data.toString();
     });
 
-    await new Promise(resolve => {
-      statusProcess.on('close', resolve);
+    await new Promise((resolve) => {
+      statusProcess.on("close", resolve);
     });
 
     if (errorOutput && !statusOutput) {
-      console.error('Migration status command error:', errorOutput);
+      console.error("Migration status command error:", errorOutput);
       return {
         success: false,
-        message: 'Error running migration status command: ' + errorOutput.split('\n')[0],
+        message: "Error running migration status command: " + errorOutput.split("\n")[0],
         pendingMigrations: [],
         batches: []
       };
@@ -2041,17 +1980,17 @@ ipcMain.handle('get-migration-status', async (event, config) => {
     const batches = new Map();
 
     // Split by lines and process
-    const lines = statusOutput.split('\n');
+    const lines = statusOutput.split("\n");
 
     // Debug: Log the output for troubleshooting
-    console.log('Migration status output:', statusOutput);
+    console.log("Migration status output:", statusOutput);
 
     // Primeiro passo: Obter todas as migrações executadas com seus batches
     for (const line of lines) {
       // Check for new Laravel format (Laravel 10+):
       // "2014_10_12_000000_create_users_table ............................... [1] Ran"
 
-      if (line.includes('Pending')) {
+      if (line.includes("Pending")) {
         const match = line.match(/^\s*([^\s].*?)\s+\.+\s+Pending\s*$/);
         if (match && match[1]) {
           const migrationName = match[1].trim();
@@ -2072,22 +2011,18 @@ ipcMain.handle('get-migration-status', async (event, config) => {
         console.log(`Found ran migration: ${migrationName} in batch ${batchNumber}`);
       }
 
-      if (line.includes('| No ')) {
+      if (line.includes("| No ")) {
         const match = line.match(/\|\s*No\s*\|\s*(.*?)\s*\|/);
         if (match && match[1]) {
           const migrationName = match[1].trim();
-          if (
-            migrationName &&
-            !migrationName.includes('Migration') &&
-            !pendingMigrations.includes(migrationName)
-          ) {
+          if (migrationName && !migrationName.includes("Migration") && !pendingMigrations.includes(migrationName)) {
             pendingMigrations.push(migrationName);
             console.log(`Found pending migration (old format): ${migrationName}`);
           }
         }
       }
 
-      if (line.includes('| Yes ')) {
+      if (line.includes("| Yes ")) {
         const match = line.match(/\|\s*Yes\s*\|\s*(.*?)\s*\|\s*(\d+)\s*\|/);
         if (match && match[1] && match[2]) {
           const migrationName = match[1].trim();
@@ -2099,9 +2034,7 @@ ipcMain.handle('get-migration-status', async (event, config) => {
             }
             if (!batches.get(batchNumber).includes(migrationName)) {
               batches.get(batchNumber).push(migrationName);
-              console.log(
-                `Found ran migration (old format): ${migrationName} in batch ${batchNumber}`
-              );
+              console.log(`Found ran migration (old format): ${migrationName} in batch ${batchNumber}`);
             }
           }
         }
@@ -2109,24 +2042,22 @@ ipcMain.handle('get-migration-status', async (event, config) => {
     }
 
     if (batches.size === 0) {
-      console.log('No batches found from migrate:status, trying to get from migration table...');
+      console.log("No batches found from migrate:status, trying to get from migration table...");
 
       try {
-        const envFilePath = path.join(config.projectPath, '.env');
-        const envContent = fs.readFileSync(envFilePath, 'utf8');
+        const envFilePath = path.join(config.projectPath, ".env");
+        const envContent = fs.readFileSync(envFilePath, "utf8");
         const dbConfig = {
-          host: extractEnvValue(envContent, 'DB_HOST') || 'localhost',
-          port: parseInt(extractEnvValue(envContent, 'DB_PORT') || '3306', 10),
-          user: extractEnvValue(envContent, 'DB_USERNAME') || 'root',
-          password: extractEnvValue(envContent, 'DB_PASSWORD') || '',
-          database: extractEnvValue(envContent, 'DB_DATABASE') || 'laravel'
+          host: extractEnvValue(envContent, "DB_HOST") || "localhost",
+          port: parseInt(extractEnvValue(envContent, "DB_PORT") || "3306", 10),
+          user: extractEnvValue(envContent, "DB_USERNAME") || "root",
+          password: extractEnvValue(envContent, "DB_PASSWORD") || "",
+          database: extractEnvValue(envContent, "DB_DATABASE") || "laravel"
         };
 
         const connection = await mysql.createConnection(dbConfig);
 
-        const [rows] = await connection.query(
-          'SELECT * FROM migrations ORDER BY batch DESC, id DESC'
-        );
+        const [rows] = await connection.query("SELECT * FROM migrations ORDER BY batch DESC, id DESC");
 
         if (rows && rows.length > 0) {
           for (const row of rows) {
@@ -2144,17 +2075,17 @@ ipcMain.handle('get-migration-status', async (event, config) => {
 
         await connection.end();
       } catch (dbError) {
-        console.error('Error getting migrations from database:', dbError);
+        console.error("Error getting migrations from database:", dbError);
 
         if (batches.size === 0) {
-          batches.set(1, ['Example migration in batch 1']);
+          batches.set(1, ["Example migration in batch 1"]);
         }
       }
     }
 
     if (batches.size === 0) {
-      console.log('Creating a sample batch for UI...');
-      batches.set(1, ['No migrations found in batch 1']);
+      console.log("Creating a sample batch for UI...");
+      batches.set(1, ["No migrations found in batch 1"]);
     }
 
     const batchesArray = Array.from(batches.entries()).map(([batchNumber, migrations]) => {
@@ -2173,9 +2104,7 @@ ipcMain.handle('get-migration-status', async (event, config) => {
 
     batchesArray.sort((a, b) => b.batch - a.batch);
 
-    console.log(
-      `Found ${pendingMigrations.length} pending migrations and ${batchesArray.length} batches`
-    );
+    console.log(`Found ${pendingMigrations.length} pending migrations and ${batchesArray.length} batches`);
 
     return {
       success: true,
@@ -2185,7 +2114,7 @@ ipcMain.handle('get-migration-status', async (event, config) => {
       output: statusOutput
     };
   } catch (error) {
-    console.error('Error getting migration status:', error);
+    console.error("Error getting migration status:", error);
     return {
       success: false,
       message: error.message,
@@ -2196,16 +2125,16 @@ ipcMain.handle('get-migration-status', async (event, config) => {
 });
 
 function extractEnvValue(content, key) {
-  const regex = new RegExp(`^${key}=(.*)$`, 'm');
+  const regex = new RegExp(`^${key}=(.*)$`, "m");
   const match = content.match(regex);
   if (match && match[1]) {
-    return match[1].trim().replace(/^["']|["']$/g, '');
+    return match[1].trim().replace(/^["']|["']$/g, "");
   }
   return null;
 }
 
 // SQL Editor query execution handler
-ipcMain.handle('execute-sql-query', async (event, config) => {
+ipcMain.handle("execute-sql-query", async (event, config) => {
   let connection;
   let monitoredConnection = null;
 
@@ -2213,18 +2142,18 @@ ipcMain.handle('execute-sql-query', async (event, config) => {
     if (!config.connectionId || !config.query) {
       return {
         success: false,
-        error: 'Missing connectionId or query',
+        error: "Missing connectionId or query",
         results: []
       };
     }
 
-    const connections = store.get('connections') || [];
-    const connectionDetails = connections.find(conn => conn.id === config.connectionId);
+    const connections = store.get("connections") || [];
+    const connectionDetails = connections.find((conn) => conn.id === config.connectionId);
 
     if (!connectionDetails) {
       return {
         success: false,
-        error: 'Connection not found',
+        error: "Connection not found",
         results: []
       };
     }
@@ -2239,7 +2168,7 @@ ipcMain.handle('execute-sql-query', async (event, config) => {
         host: connectionDetails.host,
         port: connectionDetails.port,
         user: connectionDetails.username,
-        password: connectionDetails.password || '',
+        password: connectionDetails.password || "",
         database: connectionDetails.database,
         connectTimeout: 10000,
         multipleStatements: true // Allow multiple statements, but use with caution
@@ -2258,10 +2187,10 @@ ipcMain.handle('execute-sql-query', async (event, config) => {
       results: Array.isArray(results) ? results : [results]
     };
   } catch (error) {
-    console.error('Error executing SQL query:', error);
+    console.error("Error executing SQL query:", error);
     return {
       success: false,
-      error: error.message || 'Failed to execute SQL query',
+      error: error.message || "Failed to execute SQL query",
       results: []
     };
   } finally {
@@ -2269,54 +2198,54 @@ ipcMain.handle('execute-sql-query', async (event, config) => {
       try {
         await connection.end();
       } catch (err) {
-        console.error('Error closing MySQL connection:', err);
+        console.error("Error closing MySQL connection:", err);
       }
     }
   }
 });
 
-ipcMain.handle('get-pluralize-function', () => {
+ipcMain.handle("get-pluralize-function", () => {
   return true;
 });
 
-ipcMain.handle('get-singular-form', (event, word) => {
+ipcMain.handle("get-singular-form", (event, word) => {
   return pluralize.singular(word);
 });
 
-ipcMain.handle('get-plural-form', (event, word) => {
+ipcMain.handle("get-plural-form", (event, word) => {
   return pluralize.plural(word);
 });
 
-ipcMain.handle('update-env-database', async (event, projectPath, database) => {
+ipcMain.handle("update-env-database", async (event, projectPath, database) => {
   try {
     if (!projectPath || !database) {
       return {
         success: false,
-        message: 'Missing project path or database name'
+        message: "Missing project path or database name"
       };
     }
 
-    const envPath = path.join(projectPath, '.env');
+    const envPath = path.join(projectPath, ".env");
     if (!fs.existsSync(envPath)) {
       return {
         success: false,
-        message: '.env file not found in project'
+        message: ".env file not found in project"
       };
     }
 
-    let envContent = fs.readFileSync(envPath, 'utf8');
+    let envContent = fs.readFileSync(envPath, "utf8");
 
-    const lines = envContent.split('\n');
+    const lines = envContent.split("\n");
     let dbLineFound = false;
 
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i];
 
-      if (line.trim().startsWith('#')) {
+      if (line.trim().startsWith("#")) {
         continue;
       }
 
-      if (line.trim().startsWith('DB_DATABASE=')) {
+      if (line.trim().startsWith("DB_DATABASE=")) {
         console.log(`Found active DB_DATABASE line: "${line}"`);
         lines[i] = `DB_DATABASE=${database}`;
         dbLineFound = true;
@@ -2325,11 +2254,11 @@ ipcMain.handle('update-env-database', async (event, projectPath, database) => {
     }
 
     if (!dbLineFound) {
-      console.log('No active DB_DATABASE line found, adding a new one');
+      console.log("No active DB_DATABASE line found, adding a new one");
       lines.push(`DB_DATABASE=${database}`);
     }
 
-    const updatedContent = lines.join('\n');
+    const updatedContent = lines.join("\n");
 
     fs.writeFileSync(envPath, updatedContent);
 
@@ -2340,51 +2269,51 @@ ipcMain.handle('update-env-database', async (event, projectPath, database) => {
       message: `Updated database to ${database} in .env file`
     };
   } catch (error) {
-    console.error('Error updating .env database:', error);
+    console.error("Error updating .env database:", error);
     return {
       success: false,
-      message: error.message || 'Failed to update database in .env file'
+      message: error.message || "Failed to update database in .env file"
     };
   }
 });
 
-ipcMain.handle('remove-connection', async (event, connectionId) => {
+ipcMain.handle("remove-connection", async (event, connectionId) => {
   try {
     if (!connectionId) {
       return {
         success: false,
-        message: 'Connection ID is required'
+        message: "Connection ID is required"
       };
     }
 
-    const connections = store.get('connections') || [];
-    const connectionIndex = connections.findIndex(conn => conn.id === connectionId);
+    const connections = store.get("connections") || [];
+    const connectionIndex = connections.findIndex((conn) => conn.id === connectionId);
 
     if (connectionIndex === -1) {
       return {
         success: false,
-        message: 'Connection not found'
+        message: "Connection not found"
       };
     }
 
     connections.splice(connectionIndex, 1);
 
-    store.set('connections', connections);
+    store.set("connections", connections);
 
-    const openTabs = store.get('openTabs') || { tabs: [], activeTabId: null };
+    const openTabs = store.get("openTabs") || {
+      tabs: [],
+      activeTabId: null
+    };
     const updatedTabs = {
-      tabs: openTabs.tabs.filter(tab => tab.connectionId !== connectionId),
+      tabs: openTabs.tabs.filter((tab) => tab.connectionId !== connectionId),
       activeTabId: openTabs.activeTabId
     };
 
-    if (
-      updatedTabs.tabs.length === 0 ||
-      !updatedTabs.tabs.find(tab => tab.id === updatedTabs.activeTabId)
-    ) {
+    if (updatedTabs.tabs.length === 0 || !updatedTabs.tabs.find((tab) => tab.id === updatedTabs.activeTabId)) {
       updatedTabs.activeTabId = updatedTabs.tabs.length > 0 ? updatedTabs.tabs[0].id : null;
     }
 
-    store.set('openTabs', updatedTabs);
+    store.set("openTabs", updatedTabs);
 
     try {
       if (dbMonitoringConnections.has(connectionId)) {
@@ -2418,13 +2347,13 @@ ipcMain.handle('remove-connection', async (event, connectionId) => {
 
     return {
       success: true,
-      message: 'Connection and related data removed successfully'
+      message: "Connection and related data removed successfully"
     };
   } catch (error) {
-    console.error('Error removing connection:', error);
+    console.error("Error removing connection:", error);
     return {
       success: false,
-      message: error.message || 'Failed to remove connection'
+      message: error.message || "Failed to remove connection"
     };
   }
 });
@@ -2443,29 +2372,29 @@ ipcMain.handle('remove-connection', async (event, connectionId) => {
 //   }
 // });
 
-ipcMain.handle('restore-database', async (event, config) => {
+ipcMain.handle("restore-database", async (event, config) => {
   try {
     if (!config.connectionId || !config.filePath) {
       return {
         success: false,
-        message: 'Missing connection ID or file path'
+        message: "Missing connection ID or file path"
       };
     }
 
-    const connections = store.get('connections') || [];
-    const connection = connections.find(conn => conn.id === config.connectionId);
+    const connections = store.get("connections") || [];
+    const connection = connections.find((conn) => conn.id === config.connectionId);
 
     if (!connection) {
       return {
         success: false,
-        message: 'Connection not found'
+        message: "Connection not found"
       };
     }
 
     const channelId = `restore-progress-${Date.now()}`;
 
-    startDatabaseRestoration(event, connection, config, channelId).catch(error => {
-      console.error('Database restoration failed:', error);
+    startDatabaseRestoration(event, connection, config, channelId).catch((error) => {
+      console.error("Database restoration failed:", error);
       if (event && event.sender) {
         event.sender.send(channelId, {
           progress: 100,
@@ -2479,29 +2408,23 @@ ipcMain.handle('restore-database', async (event, config) => {
 
     return {
       success: true,
-      message: 'Restoration process started',
+      message: "Restoration process started",
       channelId: channelId
     };
   } catch (error) {
-    console.error('Error starting database restoration:', error);
+    console.error("Error starting database restoration:", error);
     return {
       success: false,
-      message: error.message || 'Failed to start restoration process'
+      message: error.message || "Failed to start restoration process"
     };
   }
 });
 
-async function startDatabaseRestoration(
-  event,
-  connection,
-  config,
-  channelId,
-  customSendProgress = null
-) {
-  const sendProgress = data => {
+async function startDatabaseRestoration(event, connection, config, channelId, customSendProgress = null) {
+  const sendProgress = (data) => {
     console.log(`Restoration progress: ${data.progress}% - ${data.status}`);
 
-    if (typeof customSendProgress === 'function') {
+    if (typeof customSendProgress === "function") {
       customSendProgress(data);
       return;
     }
@@ -2514,12 +2437,12 @@ async function startDatabaseRestoration(
   try {
     sendProgress({
       progress: 10,
-      status: 'Preparing to restore database...',
+      status: "Preparing to restore database...",
       complete: false
     });
 
     if (!config.connection && connection) {
-      console.log('Moving connection object from parameter to config.connection');
+      console.log("Moving connection object from parameter to config.connection");
       config.connection = connection;
     }
 
@@ -2530,13 +2453,10 @@ async function startDatabaseRestoration(
       config.filePath = config.sqlFilePath;
     }
 
-    let isGzipped = filePath.toLowerCase().endsWith('.gz');
+    let isGzipped = filePath.toLowerCase().endsWith(".gz");
 
-    const useDocker =
-      connection.usingSail || (connection.dockerInfo && connection.dockerInfo.isDocker);
-    const containerName = useDocker
-      ? connection.dockerInfo && connection.dockerInfo.dockerContainerName
-      : null;
+    const useDocker = connection.usingSail || (connection.dockerInfo && connection.dockerInfo.isDocker);
+    const containerName = useDocker ? connection.dockerInfo && connection.dockerInfo.dockerContainerName : null;
 
     try {
       const stats = fs.statSync(filePath);
@@ -2545,24 +2465,24 @@ async function startDatabaseRestoration(
 
       sendProgress({
         progress: 15,
-        status: `Processing ${fileSizeMB}MB SQL ${isGzipped ? 'gzipped ' : ''}file...`,
+        status: `Processing ${fileSizeMB}MB SQL ${isGzipped ? "gzipped " : ""}file...`,
         complete: false
       });
     } catch (statError) {
-      console.error('Error getting file stats:', statError);
+      console.error("Error getting file stats:", statError);
     }
 
     sendProgress({
       progress: 20,
-      status: `Detected ${useDocker ? 'Docker' : 'local'} MySQL environment...`,
+      status: `Detected ${useDocker ? "Docker" : "local"} MySQL environment...`,
       complete: false
     });
 
-    let command = '';
+    let command = "";
     let commandArgs = [];
 
     // Create a temporary file for filtered SQL if there are tables to ignore
-    let tempFilePath = '';
+    let tempFilePath = "";
     if (ignoredTables.length > 0) {
       sendProgress({
         progress: 30,
@@ -2571,13 +2491,13 @@ async function startDatabaseRestoration(
       });
 
       // Create temp file for filtered content
-      tempFilePath = path.join(app.getPath('temp'), `filtered_dump_${Date.now()}.sql`);
+      tempFilePath = path.join(app.getPath("temp"), `filtered_dump_${Date.now()}.sql`);
 
       await filterSqlDump(filePath, tempFilePath, ignoredTables, isGzipped, sendProgress);
 
       sendProgress({
         progress: 50,
-        status: 'SQL dump filtered successfully, starting restoration...',
+        status: "SQL dump filtered successfully, starting restoration...",
         complete: false
       });
 
@@ -2586,15 +2506,15 @@ async function startDatabaseRestoration(
     } else {
       sendProgress({
         progress: 40,
-        status: 'Preparing SQL dump file for restoration...',
+        status: "Preparing SQL dump file for restoration...",
         complete: false
       });
 
-      await new Promise(resolve => setTimeout(resolve, 500));
+      await new Promise((resolve) => setTimeout(resolve, 500));
 
       sendProgress({
         progress: 50,
-        status: 'SQL dump ready, starting restoration...',
+        status: "SQL dump ready, starting restoration...",
         complete: false
       });
     }
@@ -2612,16 +2532,12 @@ async function startDatabaseRestoration(
 
     sendProgress({
       progress: 60,
-      status: 'Executing database restoration...',
+      status: "Executing database restoration...",
       complete: false
     });
 
     try {
-      const result = await executeRestoreCommand(
-        { command, args: commandArgs },
-        filePath,
-        sendProgress
-      );
+      const result = await executeRestoreCommand({ command, args: commandArgs }, filePath, sendProgress);
 
       if (tempFilePath && fs.existsSync(tempFilePath)) {
         fs.unlinkSync(tempFilePath);
@@ -2630,21 +2546,21 @@ async function startDatabaseRestoration(
 
       sendProgress({
         progress: 100,
-        status: 'Database restored successfully',
+        status: "Database restored successfully",
         complete: true,
         success: true
       });
 
       return result;
     } catch (execError) {
-      console.error('Error executing restore command:', execError);
+      console.error("Error executing restore command:", execError);
 
       if (tempFilePath && fs.existsSync(tempFilePath)) {
         try {
           fs.unlinkSync(tempFilePath);
           console.log(`Temporary file ${tempFilePath} deleted successfully`);
         } catch (cleanupError) {
-          console.error('Error cleaning up temporary file:', cleanupError);
+          console.error("Error cleaning up temporary file:", cleanupError);
         }
       }
 
@@ -2659,13 +2575,13 @@ async function startDatabaseRestoration(
       throw execError;
     }
   } catch (error) {
-    console.error('Error during database restoration:', error);
+    console.error("Error during database restoration:", error);
 
     if (config.tempFilePath && fs.existsSync(config.tempFilePath)) {
       try {
         fs.unlinkSync(config.tempFilePath);
       } catch (cleanupError) {
-        console.error('Error cleaning up temporary file:', cleanupError);
+        console.error("Error cleaning up temporary file:", cleanupError);
       }
     }
 
@@ -2689,11 +2605,11 @@ async function executeRestoreCommand(commandObj, sqlFilePath, progress) {
     console.log(`SQL file size: ${fileSize} bytes`);
 
     progress(0.6);
-    console.log('Starting database restore process');
+    console.log("Starting database restore process");
 
     let command, args;
 
-    if (typeof commandObj === 'string') {
+    if (typeof commandObj === "string") {
       command = commandObj;
     } else {
       ({ command, args } = commandObj);
@@ -2703,22 +2619,22 @@ async function executeRestoreCommand(commandObj, sqlFilePath, progress) {
       console.log(`Executing using spawn with command: ${command} and args:`, args);
       return new Promise((resolve, reject) => {
         const proc = spawn(command, args);
-        let stderr = '';
-        let stdout = '';
+        let stderr = "";
+        let stdout = "";
 
-        proc.stdout.on('data', data => {
+        proc.stdout.on("data", (data) => {
           const chunk = data.toString();
           stdout += chunk;
           console.log(`Restore stdout: ${chunk}`);
         });
 
-        proc.stderr.on('data', data => {
+        proc.stderr.on("data", (data) => {
           const chunk = data.toString();
           stderr += chunk;
           console.log(`Restore stderr: ${chunk}`);
         });
 
-        proc.on('close', code => {
+        proc.on("close", (code) => {
           console.log(`Restore process exited with code ${code}`);
           progress(0.9);
 
@@ -2728,17 +2644,17 @@ async function executeRestoreCommand(commandObj, sqlFilePath, progress) {
             return reject(new Error(`Restore failed with code ${code}: ${stderr}`));
           }
 
-          console.log('Restore completed successfully');
+          console.log("Restore completed successfully");
           resolve();
         });
 
-        proc.on('error', error => {
+        proc.on("error", (error) => {
           console.error(`Restore error: ${error.message}`);
           reject(new Error(`Failed to execute restore command: ${error.message}`));
         });
       });
     } else {
-      console.log('Executing with exec method:', command);
+      console.log("Executing with exec method:", command);
       return new Promise((resolve, reject) => {
         exec(command, (error, stdout, stderr) => {
           if (stderr) {
@@ -2754,7 +2670,7 @@ async function executeRestoreCommand(commandObj, sqlFilePath, progress) {
             return reject(new Error(`Restore failed: ${error.message}`));
           }
 
-          console.log('Restore command completed successfully');
+          console.log("Restore command completed successfully");
           progress(0.9);
           resolve();
         });
@@ -2771,20 +2687,20 @@ async function filterSqlDump(inputFile, outputFile, ignoredTables, isGzipped, se
     try {
       if (!ignoredTables || ignoredTables.length === 0) {
         if (isGzipped) {
-          const gunzip = spawn('gunzip', ['-c', inputFile]);
+          const gunzip = spawn("gunzip", ["-c", inputFile]);
           const writeStream = fs.createWriteStream(outputFile);
 
           gunzip.stdout.pipe(writeStream);
 
-          gunzip.on('error', error => {
+          gunzip.on("error", (error) => {
             reject(new Error(`Error decompressing file: ${error.message}`));
           });
 
-          writeStream.on('finish', () => {
+          writeStream.on("finish", () => {
             resolve();
           });
 
-          writeStream.on('error', error => {
+          writeStream.on("error", (error) => {
             reject(new Error(`Error writing decompressed file: ${error.message}`));
           });
         } else {
@@ -2796,16 +2712,16 @@ async function filterSqlDump(inputFile, outputFile, ignoredTables, isGzipped, se
 
       sendProgress({
         progress: 35,
-        status: 'Reading and filtering SQL dump...',
+        status: "Reading and filtering SQL dump...",
         complete: false
       });
 
       let inputStream;
       if (isGzipped) {
-        const gunzip = spawn('gunzip', ['-c', inputFile]);
+        const gunzip = spawn("gunzip", ["-c", inputFile]);
         inputStream = gunzip.stdout;
 
-        gunzip.on('error', error => {
+        gunzip.on("error", (error) => {
           reject(new Error(`Error decompressing file: ${error.message}`));
         });
       } else {
@@ -2813,21 +2729,18 @@ async function filterSqlDump(inputFile, outputFile, ignoredTables, isGzipped, se
       }
 
       const writeStream = fs.createWriteStream(outputFile);
-      const lineReader = require('readline').createInterface({
+      const lineReader = require("readline").createInterface({
         input: inputStream,
         crlfDelay: Infinity
       });
 
-      const patterns = ignoredTables.map(
-        table =>
-          new RegExp(`^(INSERT INTO|CREATE TABLE|DROP TABLE|ALTER TABLE)\\s+\`?${table}\`?`, 'i')
-      );
+      const patterns = ignoredTables.map((table) => new RegExp(`^(INSERT INTO|CREATE TABLE|DROP TABLE|ALTER TABLE)\\s+\`?${table}\`?`, "i"));
 
       let skipSection = false;
       let linesProcessed = 0;
       const totalLines = 100000;
 
-      lineReader.on('line', line => {
+      lineReader.on("line", (line) => {
         linesProcessed++;
 
         if (linesProcessed % 5000 === 0) {
@@ -2854,19 +2767,19 @@ async function filterSqlDump(inputFile, outputFile, ignoredTables, isGzipped, se
         }
 
         if (!skipSection) {
-          writeStream.write(line + '\n');
+          writeStream.write(line + "\n");
         }
       });
 
-      lineReader.on('close', () => {
+      lineReader.on("close", () => {
         writeStream.end();
       });
 
-      writeStream.on('finish', () => {
+      writeStream.on("finish", () => {
         resolve();
       });
 
-      writeStream.on('error', error => {
+      writeStream.on("error", (error) => {
         reject(new Error(`Error writing filtered SQL: ${error.message}`));
       });
     } catch (error) {
@@ -2875,15 +2788,15 @@ async function filterSqlDump(inputFile, outputFile, ignoredTables, isGzipped, se
   });
 }
 
-ipcMain.handle('set-app-badge', async (_, count) => {
+ipcMain.handle("set-app-badge", async (_, count) => {
   try {
-    if (process.platform === 'darwin' || process.platform === 'linux') {
+    if (process.platform === "darwin" || process.platform === "linux") {
       app.setBadgeCount(count || 0);
     }
 
     return { success: true };
   } catch (error) {
-    console.error('Error setting app badge:', error);
+    console.error("Error setting app badge:", error);
     return { success: false, error: error.message };
   }
 });

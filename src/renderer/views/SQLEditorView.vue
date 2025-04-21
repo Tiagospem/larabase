@@ -3,7 +3,10 @@
     <!-- Header -->
     <header class="bg-neutral px-4 py-2 border-b border-neutral flex items-center justify-between">
       <div class="flex items-center">
-        <button class="btn btn-ghost btn-sm mr-2" @click="goBack">
+        <button
+          class="btn btn-ghost btn-sm mr-2"
+          @click="goBack"
+        >
           <svg
             xmlns="http://www.w3.org/2000/svg"
             fill="none"
@@ -58,7 +61,10 @@
           </svg>
           AI Assistant
         </button>
-        <button class="btn btn-primary btn-sm mr-2" @click="runQuery">
+        <button
+          class="btn btn-primary btn-sm mr-2"
+          @click="runQuery"
+        >
           <svg
             xmlns="http://www.w3.org/2000/svg"
             fill="none"
@@ -75,7 +81,10 @@
           </svg>
           Run Query
         </button>
-        <button class="btn btn-ghost btn-sm" @click="clearQuery">
+        <button
+          class="btn btn-ghost btn-sm"
+          @click="clearQuery"
+        >
           <svg
             xmlns="http://www.w3.org/2000/svg"
             fill="none"
@@ -105,7 +114,10 @@
         <div class="p-2 text-sm font-semibold border-b border-neutral flex justify-between">
           <span>SQL Query Editor</span>
           <div class="flex items-center">
-            <button class="btn btn-xs btn-ghost" @click="toggleEditorFullscreen">
+            <button
+              class="btn btn-xs btn-ghost"
+              @click="toggleEditorFullscreen"
+            >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 fill="none"
@@ -139,23 +151,33 @@
       </div>
 
       <!-- Resizer -->
-      <div class="h-1 bg-neutral cursor-row-resize hover:bg-primary" @mousedown="startResize" />
+      <div
+        class="h-1 bg-neutral cursor-row-resize hover:bg-primary"
+        @mousedown="startResize"
+      />
 
       <!-- Results Preview -->
       <div class="flex-1 bg-base-100 overflow-hidden flex flex-col">
-        <div
-          class="p-2 text-sm font-semibold border-b border-neutral flex justify-between items-center"
-        >
+        <div class="p-2 text-sm font-semibold border-b border-neutral flex justify-between items-center">
           <span>Query Results</span>
           <div class="flex items-center">
-            <div v-if="isLoading" class="loading loading-spinner loading-xs mr-2" />
-            <span v-if="results.length && !isLoading" class="text-xs text-gray-400 mr-2">
+            <div
+              v-if="isLoading"
+              class="loading loading-spinner loading-xs mr-2"
+            />
+            <span
+              v-if="results.length && !isLoading"
+              class="text-xs text-gray-400 mr-2"
+            >
               {{ rowCount }} rows returned in {{ queryTime }}ms
             </span>
           </div>
         </div>
         <div class="flex-1 overflow-auto">
-          <div v-if="errorMessage" class="p-4 text-error">
+          <div
+            v-if="errorMessage"
+            class="p-4 text-error"
+          >
             <div class="font-semibold mb-2">Error:</div>
             <pre class="whitespace-pre-wrap text-sm">{{ errorMessage }}</pre>
           </div>
@@ -183,7 +205,10 @@
             </div>
           </div>
 
-          <div v-else-if="results.length && !isLoading" class="p-0">
+          <div
+            v-else-if="results.length && !isLoading"
+            class="p-0"
+          >
             <div class="relative overflow-x-auto">
               <table class="w-full text-sm text-left border-collapse">
                 <thead>
@@ -238,12 +263,12 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, inject, nextTick } from 'vue';
-import { useRoute, useRouter } from 'vue-router';
-import { useConnectionsStore } from '@/store/connections';
-import { useDatabaseStore } from '@/store/database';
-import { useSettingsStore } from '@/store/settings';
-import SQLAIModal from '../components/SQLAIModal.vue';
+import { ref, computed, onMounted, inject, nextTick } from "vue";
+import { useRoute, useRouter } from "vue-router";
+import { useConnectionsStore } from "@/store/connections";
+import { useDatabaseStore } from "@/store/database";
+import { useSettingsStore } from "@/store/settings";
+import SQLAIModal from "../components/SQLAIModal.vue";
 
 const route = useRoute();
 const router = useRouter();
@@ -251,20 +276,20 @@ const connectionId = computed(() => route.params.id);
 const connectionsStore = useConnectionsStore();
 const databaseStore = useDatabaseStore();
 const settingsStore = useSettingsStore();
-const showAlert = inject('showAlert');
+const showAlert = inject("showAlert");
 
-const sqlQuery = ref('');
+const sqlQuery = ref("");
 const results = ref([]);
 const columns = ref([]);
 const rowCount = ref(0);
 const queryTime = ref(0);
 const isLoading = ref(false);
-const errorMessage = ref('');
+const errorMessage = ref("");
 const editorHeight = ref(window.innerHeight * 0.4); // 40% of window height by default
 const isResizing = ref(false);
 const isEditorFullscreen = ref(false);
 const showAIModal = ref(false);
-const databaseStructure = ref('');
+const databaseStructure = ref("");
 
 const connection = computed(() => {
   return connectionsStore.getConnection(connectionId.value);
@@ -277,7 +302,7 @@ const hasOpenAIConfig = computed(() => {
 
 onMounted(async () => {
   if (!connection.value) {
-    router.push('/');
+    router.push("/");
     return;
   }
 
@@ -285,7 +310,7 @@ onMounted(async () => {
   sqlQuery.value = `SELECT * FROM ${connection.value.database}.users LIMIT 10;`;
 
   // Listen for window resize events to adjust editor height
-  window.addEventListener('resize', handleWindowResize);
+  window.addEventListener("resize", handleWindowResize);
 
   await settingsStore.loadSettings();
 
@@ -298,14 +323,14 @@ function goBack() {
 
 function getConnectionColor(type) {
   switch (type) {
-    case 'mysql':
-      return 'bg-orange-500';
-    case 'pgsql':
-      return 'bg-indigo-600';
-    case 'sqlite':
-      return 'bg-green-600';
+    case "mysql":
+      return "bg-orange-500";
+    case "pgsql":
+      return "bg-indigo-600";
+    case "sqlite":
+      return "bg-green-600";
     default:
-      return 'bg-gray-600';
+      return "bg-gray-600";
   }
 }
 
@@ -327,12 +352,12 @@ function handleWindowResize() {
 
 async function runQuery() {
   if (!sqlQuery.value.trim()) {
-    showAlert('Please enter a SQL query', 'error');
+    showAlert("Please enter a SQL query", "error");
     return;
   }
 
   isLoading.value = true;
-  errorMessage.value = '';
+  errorMessage.value = "";
 
   try {
     const startTime = performance.now();
@@ -353,25 +378,24 @@ async function runQuery() {
       rowCount.value = 0;
     } else {
       results.value = response.results || [];
-      columns.value =
-        response.results && response.results.length > 0 ? Object.keys(response.results[0]) : [];
+      columns.value = response.results && response.results.length > 0 ? Object.keys(response.results[0]) : [];
       rowCount.value = response.results ? response.results.length : 0;
     }
   } catch (error) {
-    console.error('Error executing query:', error);
-    errorMessage.value = error.message || 'An error occurred while executing the query';
+    console.error("Error executing query:", error);
+    errorMessage.value = error.message || "An error occurred while executing the query";
   } finally {
     isLoading.value = false;
   }
 }
 
 function clearQuery() {
-  sqlQuery.value = '';
+  sqlQuery.value = "";
   results.value = [];
   columns.value = [];
   rowCount.value = 0;
   queryTime.value = 0;
-  errorMessage.value = '';
+  errorMessage.value = "";
 }
 
 function handleTab(e) {
@@ -379,7 +403,7 @@ function handleTab(e) {
   const start = e.target.selectionStart;
   const end = e.target.selectionEnd;
 
-  sqlQuery.value = sqlQuery.value.substring(0, start) + '  ' + sqlQuery.value.substring(end);
+  sqlQuery.value = sqlQuery.value.substring(0, start) + "  " + sqlQuery.value.substring(end);
 
   // Move cursor position
   nextTick(() => {
@@ -389,8 +413,8 @@ function handleTab(e) {
 
 function startResize(e) {
   isResizing.value = true;
-  document.addEventListener('mousemove', onResize);
-  document.addEventListener('mouseup', stopResize);
+  document.addEventListener("mousemove", onResize);
+  document.addEventListener("mouseup", stopResize);
 }
 
 function onResize(e) {
@@ -404,8 +428,8 @@ function onResize(e) {
 
 function stopResize() {
   isResizing.value = false;
-  document.removeEventListener('mousemove', onResize);
-  document.removeEventListener('mouseup', stopResize);
+  document.removeEventListener("mousemove", onResize);
+  document.removeEventListener("mouseup", stopResize);
 }
 
 function applySQLFromAI(sql) {
@@ -421,7 +445,7 @@ async function loadDatabaseStructure() {
 
     databaseStructure.value = fullStructure;
   } catch (error) {
-    console.error('Error loading database structure:', error);
+    console.error("Error loading database structure:", error);
 
     databaseStructure.value = '{"tables": []}';
   }

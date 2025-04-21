@@ -6,10 +6,7 @@
       <!-- User Input Section -->
       <div class="form-control mb-4">
         <label class="label">
-          <span class="label-text"
-            >Describe the query you want to generate (e.g., "Show all users with their
-            orders")</span
-          >
+          <span class="label-text">Describe the query you want to generate (e.g., "Show all users with their orders")</span>
         </label>
         <textarea
           v-model="userQuery"
@@ -20,12 +17,18 @@
       </div>
 
       <!-- Response Section -->
-      <div v-if="isLoading" class="flex justify-center items-center my-4 py-8">
+      <div
+        v-if="isLoading"
+        class="flex justify-center items-center my-4 py-8"
+      >
         <div class="loading loading-spinner text-primary" />
         <span class="ml-3">Generating your SQL/Eloquent code...</span>
       </div>
 
-      <div v-if="aiResponse && !isLoading" class="space-y-6">
+      <div
+        v-if="aiResponse && !isLoading"
+        class="space-y-6"
+      >
         <!-- SQL Response -->
         <div class="card bg-neutral shadow-md">
           <div class="card-body">
@@ -55,7 +58,10 @@
             <div class="mockup-code bg-base-300 text-sm overflow-auto max-h-60">
               <pre><code>{{ sqlCode }}</code></pre>
             </div>
-            <button class="btn btn-primary btn-sm mt-2 w-full" @click="applyToEditor">
+            <button
+              class="btn btn-primary btn-sm mt-2 w-full"
+              @click="applyToEditor"
+            >
               Apply to Editor
             </button>
           </div>
@@ -100,19 +106,30 @@
           :disabled="isLoading || !userQuery.trim()"
           @click="generateCode"
         >
-          <span v-if="isLoading" class="loading loading-spinner loading-xs mr-2" />
+          <span
+            v-if="isLoading"
+            class="loading loading-spinner loading-xs mr-2"
+          />
           Generate
         </button>
-        <button class="btn" @click="close">Close</button>
+        <button
+          class="btn"
+          @click="close"
+        >
+          Close
+        </button>
       </div>
     </div>
-    <div class="modal-backdrop" @click="close" />
+    <div
+      class="modal-backdrop"
+      @click="close"
+    />
   </div>
 </template>
 
 <script setup>
-import { ref, inject, onMounted, computed } from 'vue';
-import { useSettingsStore } from '@/store/settings';
+import { ref, inject, onMounted, computed } from "vue";
+import { useSettingsStore } from "@/store/settings";
 
 const props = defineProps({
   databaseStructure: {
@@ -121,16 +138,16 @@ const props = defineProps({
   }
 });
 
-const emit = defineEmits(['close', 'apply-sql']);
+const emit = defineEmits(["close", "apply-sql"]);
 
 const settingsStore = useSettingsStore();
-const showAlert = inject('showAlert');
+const showAlert = inject("showAlert");
 
-const userQuery = ref('');
+const userQuery = ref("");
 const isLoading = ref(false);
 const aiResponse = ref(null);
-const sqlCode = computed(() => aiResponse.value?.sql || '');
-const eloquentCode = computed(() => aiResponse.value?.eloquent || '');
+const sqlCode = computed(() => aiResponse.value?.sql || "");
+const eloquentCode = computed(() => aiResponse.value?.eloquent || "");
 
 // Process database structure to minimize its size
 const optimizedDatabaseStructure = computed(() => {
@@ -147,7 +164,7 @@ const optimizedDatabaseStructure = computed(() => {
 
     // Process each table to keep only essential data
     if (dbStructure.tables && Array.isArray(dbStructure.tables)) {
-      dbStructure.tables.forEach(table => {
+      dbStructure.tables.forEach((table) => {
         const tableInfo = {
           tableName: table.tableName
         };
@@ -172,29 +189,27 @@ const optimizedDatabaseStructure = computed(() => {
     // Return the stringified simplified version
     return JSON.stringify(simplified, null, 2);
   } catch (error) {
-    console.warn('Failed to optimize database structure:', error);
+    console.warn("Failed to optimize database structure:", error);
     // Return a truncated version of the original if parsing fails
-    return props.databaseStructure.length > 4000
-      ? props.databaseStructure.substring(0, 4000) + '...'
-      : props.databaseStructure;
+    return props.databaseStructure.length > 4000 ? props.databaseStructure.substring(0, 4000) + "..." : props.databaseStructure;
   }
 });
 
 async function generateCode() {
   if (!userQuery.value.trim()) {
-    showAlert('Please enter a query first', 'warning');
+    showAlert("Please enter a query first", "warning");
     return;
   }
 
   if (!settingsStore.isAIConfigured) {
-    showAlert('AI API key is not configured. Please set it in the Settings.', 'error');
+    showAlert("AI API key is not configured. Please set it in the Settings.", "error");
     return;
   }
 
   isLoading.value = true;
 
   try {
-    const language = settingsStore.settings.language || 'en';
+    const language = settingsStore.settings.language || "en";
     const systemPrompt = `
 You are a SQL-to-Eloquent converter for Laravel applications.
 Your task is to convert raw SQL queries to their equivalent Laravel Eloquent Query Builder syntax.
@@ -257,7 +272,7 @@ PodcastEpisode::select('podcast_episodes.*', 'podcast_series.title')
 </eloquent>
 
 Use the database structure info provided to ensure correct table names, column names, relationships, and data types.
-All responses must be in ${language === 'en' ? 'English' : language === 'pt' ? 'Portuguese' : 'Spanish'}.
+All responses must be in ${language === "en" ? "English" : language === "pt" ? "Portuguese" : "Spanish"}.
 Be precise and generate production-ready code.`;
 
     const userContent = `Database Structure:
@@ -278,21 +293,21 @@ Request: ${userQuery.value}`;
 
     let content;
 
-    if (settingsStore.settings.aiProvider === 'openai') {
+    if (settingsStore.settings.aiProvider === "openai") {
       // Call OpenAI API
       const messages = [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: userContent }
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userContent }
       ];
 
-      const response = await fetch('https://api.openai.com/v1/chat/completions', {
-        method: 'POST',
+      const response = await fetch("https://api.openai.com/v1/chat/completions", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
           Authorization: `Bearer ${settingsStore.settings.openai.apiKey}`
         },
         body: JSON.stringify({
-          model: settingsStore.settings.openai.model || 'gpt-3.5-turbo',
+          model: settingsStore.settings.openai.model || "gpt-3.5-turbo",
           messages: messages,
           temperature: 0.2,
           max_tokens: 1000
@@ -301,47 +316,44 @@ Request: ${userQuery.value}`;
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error?.message || 'Error calling OpenAI API');
+        throw new Error(errorData.error?.message || "Error calling OpenAI API");
       }
 
       const data = await response.json();
-      content = data.choices[0]?.message?.content || '';
-    } else if (settingsStore.settings.aiProvider === 'gemini') {
+      content = data.choices[0]?.message?.content || "";
+    } else if (settingsStore.settings.aiProvider === "gemini") {
       // Call Gemini API
       const prompt = `${systemPrompt}
       
 ${userContent}`;
 
-      const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/${settingsStore.settings.gemini.model}:generateContent?key=${settingsStore.settings.gemini.apiKey}`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            contents: [
-              {
-                parts: [{ text: prompt }]
-              }
-            ],
-            generationConfig: {
-              temperature: 0.2,
-              maxOutputTokens: 1000
+      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${settingsStore.settings.gemini.model}:generateContent?key=${settingsStore.settings.gemini.apiKey}`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          contents: [
+            {
+              parts: [{ text: prompt }]
             }
-          })
-        }
-      );
+          ],
+          generationConfig: {
+            temperature: 0.2,
+            maxOutputTokens: 1000
+          }
+        })
+      });
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error?.message || 'Error calling Gemini API');
+        throw new Error(errorData.error?.message || "Error calling Gemini API");
       }
 
       const data = await response.json();
-      content = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+      content = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
     } else {
-      throw new Error('No AI provider selected');
+      throw new Error("No AI provider selected");
     }
 
     // Parse the response to extract SQL and Eloquent parts
@@ -349,8 +361,8 @@ ${userContent}`;
     const eloquentMatch = content.match(/<eloquent>([\s\S]*?)<\/eloquent>/);
 
     // Process the matched content
-    let sqlCode = sqlMatch ? sqlMatch[1].trim() : 'No SQL code generated';
-    let eloquentCode = eloquentMatch ? eloquentMatch[1].trim() : 'No Eloquent code generated';
+    let sqlCode = sqlMatch ? sqlMatch[1].trim() : "No SQL code generated";
+    let eloquentCode = eloquentMatch ? eloquentMatch[1].trim() : "No Eloquent code generated";
 
     eloquentCode = cleanEloquentCode(eloquentCode);
 
@@ -359,8 +371,8 @@ ${userContent}`;
       eloquent: eloquentCode
     };
   } catch (error) {
-    console.error('Error generating code:', error);
-    showAlert(`Failed to generate code: ${error.message}`, 'error');
+    console.error("Error generating code:", error);
+    showAlert(`Failed to generate code: ${error.message}`, "error");
     aiResponse.value = null;
   } finally {
     isLoading.value = false;
@@ -370,51 +382,51 @@ ${userContent}`;
 async function copySQLToClipboard() {
   try {
     await navigator.clipboard.writeText(sqlCode.value);
-    showAlert('SQL code copied to clipboard', 'success');
+    showAlert("SQL code copied to clipboard", "success");
   } catch (error) {
-    showAlert('Failed to copy to clipboard', 'error');
+    showAlert("Failed to copy to clipboard", "error");
   }
 }
 
 async function copyEloquentToClipboard() {
   try {
     await navigator.clipboard.writeText(eloquentCode.value);
-    showAlert('Eloquent code copied to clipboard', 'success');
+    showAlert("Eloquent code copied to clipboard", "success");
   } catch (error) {
-    showAlert('Failed to copy to clipboard', 'error');
+    showAlert("Failed to copy to clipboard", "error");
   }
 }
 
 function applyToEditor() {
-  emit('apply-sql', sqlCode.value);
+  emit("apply-sql", sqlCode.value);
 }
 
 function close() {
-  emit('close');
+  emit("close");
 }
 
 function cleanEloquentCode(code) {
-  let cleanCode = code.replace(/^<\?php\s*/i, '').replace(/\s*\?>$/i, '');
+  let cleanCode = code.replace(/^<\?php\s*/i, "").replace(/\s*\?>$/i, "");
 
   // Remove unnecessary imports
   const importLines = [];
   const codeLines = [];
-  const lines = cleanCode.split('\n');
+  const lines = cleanCode.split("\n");
 
   let importSection = true;
 
   for (const line of lines) {
     if (importSection) {
-      if (line.trim().startsWith('use ')) {
+      if (line.trim().startsWith("use ")) {
         if (
-          !line.includes('Illuminate\\Database\\Eloquent\\') &&
-          !line.includes('Illuminate\\Support\\') &&
-          !line.includes('Illuminate\\Database\\Query\\') &&
-          !line.includes('Illuminate\\Database\\Relations\\')
+          !line.includes("Illuminate\\Database\\Eloquent\\") &&
+          !line.includes("Illuminate\\Support\\") &&
+          !line.includes("Illuminate\\Database\\Query\\") &&
+          !line.includes("Illuminate\\Database\\Relations\\")
         ) {
           importLines.push(line);
         }
-      } else if (line.trim() !== '') {
+      } else if (line.trim() !== "") {
         importSection = false;
         codeLines.push(line);
       }
@@ -424,7 +436,7 @@ function cleanEloquentCode(code) {
   }
 
   // Combine imports and code with proper spacing
-  return [...importLines, '', ...codeLines].join('\n').trim();
+  return [...importLines, "", ...codeLines].join("\n").trim();
 }
 </script>
 

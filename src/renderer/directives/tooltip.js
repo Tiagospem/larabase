@@ -12,10 +12,10 @@ let tooltipIdCounter = 0;
 const generateUniqueId = () => `tooltip-${++tooltipIdCounter}`;
 
 const createTooltipElement = (text, position) => {
-  const tooltip = document.createElement('div');
-  tooltip.className = 'v-tooltip';
+  const tooltip = document.createElement("div");
+  tooltip.className = "v-tooltip";
   tooltip.innerHTML = text;
-  tooltip.setAttribute('data-position', position);
+  tooltip.setAttribute("data-position", position);
   return tooltip;
 };
 
@@ -27,14 +27,14 @@ const positionTooltip = (tooltipEl, targetEl, position) => {
   let left = targetRect.left + (targetRect.width - tooltipRect.width) / 2;
 
   switch (position) {
-    case 'bottom':
+    case "bottom":
       top = targetRect.bottom + 8;
       break;
-    case 'left':
+    case "left":
       top = targetRect.top + (targetRect.height - tooltipRect.height) / 2;
       left = targetRect.left - tooltipRect.width - 8;
       break;
-    case 'right':
+    case "right":
       top = targetRect.top + (targetRect.height - tooltipRect.height) / 2;
       left = targetRect.right + 8;
       break;
@@ -56,22 +56,22 @@ const showTooltip = (event, tooltipId, position) => {
   const tooltip = document.getElementById(tooltipId);
   if (!tooltip) return;
 
-  tooltip.classList.add('v-tooltip-visible');
+  tooltip.classList.add("v-tooltip-visible");
   positionTooltip(tooltip, event.currentTarget, position);
 };
 
-const hideTooltip = tooltipId => {
+const hideTooltip = (tooltipId) => {
   const tooltip = document.getElementById(tooltipId);
   if (!tooltip) return;
 
-  tooltip.classList.remove('v-tooltip-visible');
+  tooltip.classList.remove("v-tooltip-visible");
 };
 
 const injectStyles = () => {
-  const styleId = 'v-tooltip-styles';
+  const styleId = "v-tooltip-styles";
   if (document.getElementById(styleId)) return;
 
-  const styleEl = document.createElement('style');
+  const styleEl = document.createElement("style");
   styleEl.id = styleId;
   styleEl.innerHTML = `
     .v-tooltip {
@@ -139,72 +139,72 @@ const injectStyles = () => {
 export default {
   install(app) {
     injectStyles();
-    app.directive('tooltip', this.directive);
+    app.directive("tooltip", this.directive);
   },
 
   directive: {
     mounted(el, binding) {
       let text,
-        position = 'top';
+        position = "top";
 
-      if (typeof binding.value === 'string') {
+      if (typeof binding.value === "string") {
         text = binding.value;
-      } else if (typeof binding.value === 'object') {
-        text = binding.value.text || '';
-        position = binding.value.position || 'top';
+      } else if (typeof binding.value === "object") {
+        text = binding.value.text || "";
+        position = binding.value.position || "top";
       }
 
-      if (binding.modifiers.bottom) position = 'bottom';
-      if (binding.modifiers.left) position = 'left';
-      if (binding.modifiers.right) position = 'right';
+      if (binding.modifiers.bottom) position = "bottom";
+      if (binding.modifiers.left) position = "left";
+      if (binding.modifiers.right) position = "right";
 
       if (binding.arg) {
         position = binding.arg;
       }
 
       const tooltipId = generateUniqueId();
-      el.setAttribute('data-tooltip-id', tooltipId);
+      el.setAttribute("data-tooltip-id", tooltipId);
 
       const tooltip = createTooltipElement(text, position);
       tooltip.id = tooltipId;
       document.body.appendChild(tooltip);
 
-      el.addEventListener('mouseenter', e => showTooltip(e, tooltipId, position));
-      el.addEventListener('mouseleave', () => hideTooltip(tooltipId));
-      el.addEventListener('focus', e => showTooltip(e, tooltipId, position));
-      el.addEventListener('blur', () => hideTooltip(tooltipId));
+      el.addEventListener("mouseenter", (e) => showTooltip(e, tooltipId, position));
+      el.addEventListener("mouseleave", () => hideTooltip(tooltipId));
+      el.addEventListener("focus", (e) => showTooltip(e, tooltipId, position));
+      el.addEventListener("blur", () => hideTooltip(tooltipId));
     },
 
     updated(el, binding) {
-      const tooltipId = el.getAttribute('data-tooltip-id');
+      const tooltipId = el.getAttribute("data-tooltip-id");
       if (!tooltipId) return;
 
       const tooltip = document.getElementById(tooltipId);
       if (!tooltip) return;
 
       let text;
-      if (typeof binding.value === 'string') {
+      if (typeof binding.value === "string") {
         text = binding.value;
-      } else if (typeof binding.value === 'object') {
-        text = binding.value.text || '';
+      } else if (typeof binding.value === "object") {
+        text = binding.value.text || "";
       }
 
       tooltip.innerHTML = text;
 
-      let position = 'top';
-      if (typeof binding.value === 'object') {
-        position = binding.value.position || 'top';
+      let position = "top";
+      if (typeof binding.value === "object") {
+        position = binding.value.position || "top";
       }
-      if (binding.modifiers.bottom) position = 'bottom';
-      if (binding.modifiers.left) position = 'left';
-      if (binding.modifiers.right) position = 'right';
+      if (binding.modifiers.bottom) position = "bottom";
+      if (binding.modifiers.left) position = "left";
+      if (binding.modifiers.right) position = "right";
       if (binding.arg) position = binding.arg;
 
-      tooltip.setAttribute('data-position', position);
+      tooltip.setAttribute("data-position", position);
     },
 
     unmounted(el) {
-      const tooltipId = el.getAttribute('data-tooltip-id');
+      const tooltipId = el.getAttribute("data-tooltip-id");
       if (!tooltipId) return;
 
       const tooltip = document.getElementById(tooltipId);
@@ -212,7 +212,7 @@ export default {
         document.body.removeChild(tooltip);
       }
 
-      el.removeAttribute('data-tooltip-id');
+      el.removeAttribute("data-tooltip-id");
     }
   }
 };

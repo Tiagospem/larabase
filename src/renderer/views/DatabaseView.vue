@@ -123,8 +123,15 @@
               viewBox="0 0 60 60"
               xml:space="preserve"
             >
-              <g id="SVGRepo_bgCarrier" stroke-width="0" />
-              <g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round" />
+              <g
+                id="SVGRepo_bgCarrier"
+                stroke-width="0"
+              />
+              <g
+                id="SVGRepo_tracerCarrier"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
               <g id="SVGRepo_iconCarrier">
                 <path
                   d="M53,41V29H31V19h7V3H22v16h7v10H7v12H0v16h16V41H9V31h20v10h-7v16h16V41h-7V31h20v10h-7v16h16V41H53z M24,5h12v12H24V5z M14,55H2V43h12V55z M36,55H24V43h12V55z M58,55H46V43h12V55z"
@@ -233,7 +240,10 @@
       </div>
     </header>
 
-    <MainTabs ref="mainTabsRef" :connection-id="connectionId" />
+    <MainTabs
+      ref="mainTabsRef"
+      :connection-id="connectionId"
+    />
 
     <div class="flex flex-1 overflow-hidden">
       <TablesSidebar
@@ -247,7 +257,10 @@
       />
 
       <div class="flex-1 bg-base-100 overflow-hidden">
-        <div v-if="!activeTab" class="flex items-center justify-center h-full text-gray-500">
+        <div
+          v-if="!activeTab"
+          class="flex items-center justify-center h-full text-gray-500"
+        >
           <div class="text-center">
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -285,7 +298,10 @@
 
     <footer class="bg-neutral px-4 py-1 text-xs text-gray-400 border-t border-black/20">
       <div class="flex justify-between">
-        <div>{{ connection?.type.toUpperCase() }} | {{ connection?.host || connection?.path }}</div>
+        <div>
+          {{ connection?.type.toUpperCase() }} |
+          {{ connection?.host || connection?.path }}
+        </div>
         <div>Total tables: {{ databaseStore.tablesList.length }}</div>
       </div>
     </footer>
@@ -312,7 +328,10 @@
     @close="showDatabaseDiagram = false"
   />
 
-  <Settings v-if="showSettings" @close="showSettings = false" />
+  <Settings
+    v-if="showSettings"
+    @close="showSettings = false"
+  />
 
   <ArtisanCommands
     v-if="showArtisanCommands"
@@ -325,26 +344,40 @@
 
   <DatabaseSwitcher :connection-id="connectionId" />
 
-  <div v-if="connectionError" class="modal modal-open">
+  <div
+    v-if="connectionError"
+    class="modal modal-open"
+  >
     <div class="modal-box bg-base-300">
       <h3 class="font-bold text-lg">Connection Error</h3>
       <p class="py-4">
         {{ connectionErrorMessage }}
       </p>
       <div class="modal-action">
-        <button class="btn btn-primary" @click="router.push('/')">Back to Home</button>
+        <button
+          class="btn btn-primary"
+          @click="router.push('/')"
+        >
+          Back to Home
+        </button>
       </div>
     </div>
   </div>
 
-  <div v-if="showTablesModelsModal" class="modal modal-open">
+  <div
+    v-if="showTablesModelsModal"
+    class="modal modal-open"
+  >
     <div class="modal-box w-11/12 max-w-5xl max-h-[90vh]">
       <h3 class="font-bold text-lg mb-4">All Tables Models Data</h3>
       <div class="mockup-code bg-neutral mb-4 h-[60vh] overflow-auto">
         <pre><code>{{ allTablesModelsJson }}</code></pre>
       </div>
       <div class="modal-action">
-        <button class="btn btn-sm btn-primary" @click="copyAllTablesJsonToClipboard">
+        <button
+          class="btn btn-sm btn-primary"
+          @click="copyAllTablesJsonToClipboard"
+        >
           <svg
             xmlns="http://www.w3.org/2000/svg"
             fill="none"
@@ -361,30 +394,38 @@
           </svg>
           Copy to Clipboard
         </button>
-        <button class="btn" @click="showTablesModelsModal = false">Close</button>
+        <button
+          class="btn"
+          @click="showTablesModelsModal = false"
+        >
+          Close
+        </button>
       </div>
     </div>
-    <div class="modal-backdrop" @click="showTablesModelsModal = false" />
+    <div
+      class="modal-backdrop"
+      @click="showTablesModelsModal = false"
+    />
   </div>
 </template>
 
 <script setup>
-import { computed, inject, onMounted, ref, markRaw, nextTick, watch, onBeforeMount } from 'vue';
-import { useRoute, useRouter } from 'vue-router';
-import { useConnectionsStore } from '@/store/connections';
-import { useDatabaseStore } from '@/store/database';
-import { useTabsStore } from '@/store/tabs';
-import TableContent from '../components/TableContent.vue';
-import TablesSidebar from '../components/TablesSidebar.vue';
-import ProjectLogs from '../components/ProjectLogs.vue';
-import LiveUpdates from '../components/LiveUpdates.vue';
-import DatabaseDiagram from '../components/DatabaseDiagram.vue';
-import Settings from '../components/Settings.vue';
-import ArtisanCommands from '../components/ArtisanCommands.vue';
-import CommandOutput from '../components/CommandOutput.vue';
-import MainTabs from '../components/database/MainTabs.vue';
-import ShowConnectionInfo from '@/components/database/ShowConnectionInfo.vue';
-import DatabaseSwitcher from '@/components/database/DatabaseSwitcher.vue';
+import { computed, inject, onMounted, ref, markRaw, nextTick, watch, onBeforeMount } from "vue";
+import { useRoute, useRouter } from "vue-router";
+import { useConnectionsStore } from "@/store/connections";
+import { useDatabaseStore } from "@/store/database";
+import { useTabsStore } from "@/store/tabs";
+import TableContent from "../components/TableContent.vue";
+import TablesSidebar from "../components/TablesSidebar.vue";
+import ProjectLogs from "../components/ProjectLogs.vue";
+import LiveUpdates from "../components/LiveUpdates.vue";
+import DatabaseDiagram from "../components/DatabaseDiagram.vue";
+import Settings from "../components/Settings.vue";
+import ArtisanCommands from "../components/ArtisanCommands.vue";
+import CommandOutput from "../components/CommandOutput.vue";
+import MainTabs from "../components/database/MainTabs.vue";
+import ShowConnectionInfo from "@/components/database/ShowConnectionInfo.vue";
+import DatabaseSwitcher from "@/components/database/DatabaseSwitcher.vue";
 
 const TableContentComponent = markRaw(TableContent);
 
@@ -392,7 +433,7 @@ const route = useRoute();
 const router = useRouter();
 const connectionId = computed(() => route.params.id);
 
-const showAlert = inject('showAlert');
+const showAlert = inject("showAlert");
 
 const connectionsStore = useConnectionsStore();
 const databaseStore = useDatabaseStore();
@@ -403,12 +444,12 @@ const sidebarWidth = ref(240);
 const initialSidebarLoaded = ref(false);
 const isResizing = ref(false);
 const connectionError = ref(false);
-const connectionErrorMessage = ref('');
+const connectionErrorMessage = ref("");
 const showProjectLogs = ref(false);
 const showLiveUpdates = ref(false);
 const showDatabaseDiagram = ref(false);
 const showTablesModelsModal = ref(false);
-const allTablesModelsJson = ref('');
+const allTablesModelsJson = ref("");
 const showSettings = ref(false);
 const showArtisanCommands = ref(false);
 
@@ -419,7 +460,7 @@ const connection = computed(() => {
 const activeTab = computed(() => tabsStore.activeTab);
 
 // Global function to expose table model info for AI integration
-window.getTableModelJson = tableName => {
+window.getTableModelJson = (tableName) => {
   if (!tableName || !connectionId.value) return null;
   return databaseStore.getTableModelJson(connectionId.value, tableName);
 };
@@ -432,8 +473,8 @@ window.getAllTablesModelsJson = async () => {
 
 function startResize() {
   isResizing.value = true;
-  document.addEventListener('mousemove', onResize);
-  document.addEventListener('mouseup', stopResize);
+  document.addEventListener("mousemove", onResize);
+  document.addEventListener("mouseup", stopResize);
 }
 
 function onResize(e) {
@@ -444,16 +485,16 @@ function onResize(e) {
 
 function stopResize() {
   isResizing.value = false;
-  document.removeEventListener('mousemove', onResize);
-  document.removeEventListener('mouseup', stopResize);
+  document.removeEventListener("mousemove", onResize);
+  document.removeEventListener("mouseup", stopResize);
 
-  localStorage.setItem('sidebarWidth', sidebarWidth.value.toString());
+  localStorage.setItem("sidebarWidth", sidebarWidth.value.toString());
 }
 
 async function testConnection() {
   if (!connection.value) {
     connectionError.value = true;
-    connectionErrorMessage.value = 'Connection not found';
+    connectionErrorMessage.value = "Connection not found";
     return false;
   }
 
@@ -493,7 +534,7 @@ onMounted(async () => {
 
     if (!connection.value) {
       connectionError.value = true;
-      connectionErrorMessage.value = 'Connection not found';
+      connectionErrorMessage.value = "Connection not found";
       return;
     }
 
@@ -502,7 +543,7 @@ onMounted(async () => {
       return;
     }
 
-    showAlert(`Connected to ${connection.value.name}`, 'success');
+    showAlert(`Connected to ${connection.value.name}`, "success");
     await databaseStore.loadTables(connectionId.value);
 
     databaseStore.clearTableRecordCounts();
@@ -510,43 +551,43 @@ onMounted(async () => {
     // Já carregamos o sidebar width no onBeforeMount
     // então não precisamos fazer novamente aqui
 
-    window.addEventListener('resize', mainTabsRef.value?.checkScrollPosition);
+    window.addEventListener("resize", mainTabsRef.value?.checkScrollPosition);
 
     await nextTick(() => {
       mainTabsRef.value?.scrollToActiveTab();
       mainTabsRef.value?.checkScrollPosition();
     });
 
-    document.querySelector('.flex.flex-col.h-full')?.focus();
+    document.querySelector(".flex.flex-col.h-full")?.focus();
   } catch (error) {
     console.error(error);
     connectionError.value = true;
-    connectionErrorMessage.value = error.message || 'Unknown error occurred';
+    connectionErrorMessage.value = error.message || "Unknown error occurred";
   }
 });
 
 function getConnectionColor(type) {
   switch (type) {
-    case 'mysql':
-      return 'bg-orange-500';
-    case 'redis':
-      return 'bg-red-600';
-    case 'sqlite':
-      return 'bg-purple-600';
-    case 'postgresql':
-      return 'bg-blue-600';
+    case "mysql":
+      return "bg-orange-500";
+    case "redis":
+      return "bg-red-600";
+    case "sqlite":
+      return "bg-purple-600";
+    case "postgresql":
+      return "bg-blue-600";
     default:
-      return 'bg-gray-600';
+      return "bg-gray-600";
   }
 }
 
 //precisa deixar essa funcao de abrir globalmente.
 function handleGotoTable(tableName) {
-  const tableData = databaseStore.tablesList.find(t => t.name === tableName);
+  const tableData = databaseStore.tablesList.find((t) => t.name === tableName);
   if (tableData) {
     mainTabsRef?.value.openTable(tableData);
   } else {
-    showAlert(`Table "${tableName}" not found`, 'error');
+    showAlert(`Table "${tableName}" not found`, "error");
   }
 }
 
@@ -563,7 +604,7 @@ async function selectProjectPath() {
     const isLaravelProject = await window.api.validateLaravelProject(selectedPath);
 
     if (!isLaravelProject) {
-      showAlert('Selected directory is not a valid Laravel project', 'error');
+      showAlert("Selected directory is not a valid Laravel project", "error");
       return;
     }
 
@@ -571,32 +612,32 @@ async function selectProjectPath() {
       projectPath: selectedPath
     });
 
-    showAlert('Laravel project path set successfully', 'success');
+    showAlert("Laravel project path set successfully", "success");
   } catch (error) {
-    console.error('Error selecting project path:', error);
-    showAlert('Failed to select project path: ' + error.message, 'error');
+    console.error("Error selecting project path:", error);
+    showAlert("Failed to select project path: " + error.message, "error");
   }
 }
 
 async function copyAllTablesJsonToClipboard() {
   try {
     await navigator.clipboard.writeText(allTablesModelsJson.value);
-    showAlert('JSON copied to clipboard', 'success');
+    showAlert("JSON copied to clipboard", "success");
   } catch (error) {
-    console.error('Error copying to clipboard:', error);
-    showAlert('Failed to copy to clipboard', 'error');
+    console.error("Error copying to clipboard:", error);
+    showAlert("Failed to copy to clipboard", "error");
   }
 }
 
-watch(showTablesModelsModal, async isOpen => {
+watch(showTablesModelsModal, async (isOpen) => {
   if (isOpen) {
     try {
-      allTablesModelsJson.value = 'Loading table data...';
+      allTablesModelsJson.value = "Loading table data...";
 
       allTablesModelsJson.value = await databaseStore.getAllTablesModelsJson(connectionId.value);
     } catch (error) {
-      console.error('Error loading tables data:', error);
-      allTablesModelsJson.value = JSON.stringify({ error: 'Failed to load table data' }, null, 2);
+      console.error("Error loading tables data:", error);
+      allTablesModelsJson.value = JSON.stringify({ error: "Failed to load table data" }, null, 2);
     }
   }
 });
@@ -610,7 +651,7 @@ function handleDatabaseSwitcherFromChild() {
 }
 
 function loadSidebarWidth() {
-  const savedSidebarWidth = localStorage.getItem('sidebarWidth');
+  const savedSidebarWidth = localStorage.getItem("sidebarWidth");
   if (savedSidebarWidth) {
     sidebarWidth.value = parseInt(savedSidebarWidth, 10);
   }

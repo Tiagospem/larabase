@@ -1,22 +1,39 @@
 <template>
   <div>
-    <div v-if="showDatabaseSwitcher" class="modal modal-open">
+    <div
+      v-if="showDatabaseSwitcher"
+      class="modal modal-open"
+    >
       <div class="modal-box bg-base-300 w-96">
         <h3 class="font-bold text-lg mb-4">Switch Database</h3>
-        <div v-if="loadingDatabases" class="flex justify-center py-4">
+        <div
+          v-if="loadingDatabases"
+          class="flex justify-center py-4"
+        >
           <div class="loading loading-spinner" />
         </div>
-        <div v-else-if="availableDatabases.length === 0" class="text-center py-4">
+        <div
+          v-else-if="availableDatabases.length === 0"
+          class="text-center py-4"
+        >
           No databases found
         </div>
-        <div v-else class="max-h-60 overflow-y-auto">
+        <div
+          v-else
+          class="max-h-60 overflow-y-auto"
+        >
           <ul class="menu bg-base-200 rounded-box">
             <li
               v-for="db in availableDatabases"
               :key="db"
-              :class="{ 'bg-primary bg-opacity-20': db === connection?.database }"
+              :class="{
+                'bg-primary bg-opacity-20': db === connection?.database
+              }"
             >
-              <a class="flex items-center justify-between" @click="switchDatabase(db)">
+              <a
+                class="flex items-center justify-between"
+                @click="switchDatabase(db)"
+              >
                 {{ db }}
                 <svg
                   v-if="db === connection?.database"
@@ -27,14 +44,23 @@
                   stroke="currentColor"
                   class="w-4 h-4"
                 >
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    d="M4.5 12.75l6 6 9-13.5"
+                  />
                 </svg>
               </a>
             </li>
           </ul>
         </div>
         <div class="modal-action">
-          <button class="btn" @click="showDatabaseSwitcher = false">Close</button>
+          <button
+            class="btn"
+            @click="showDatabaseSwitcher = false"
+          >
+            Close
+          </button>
         </div>
       </div>
     </div>
@@ -42,12 +68,12 @@
 </template>
 
 <script setup>
-import { computed, inject, onMounted, onUnmounted, ref } from 'vue';
-import { useConnectionsStore } from '@/store/connections';
-import { useTabsStore } from '@/store/tabs';
-import { useDatabaseStore } from '@/store/database';
+import { computed, inject, onMounted, onUnmounted, ref } from "vue";
+import { useConnectionsStore } from "@/store/connections";
+import { useTabsStore } from "@/store/tabs";
+import { useDatabaseStore } from "@/store/database";
 
-const showAlert = inject('showAlert');
+const showAlert = inject("showAlert");
 
 const tabsStore = useTabsStore();
 const databaseStore = useDatabaseStore();
@@ -90,7 +116,7 @@ async function switchDatabase(databaseName) {
 
     window.location.reload();
   } catch (error) {
-    console.error(`Failed to switch database: ${error.message}`, 'error');
+    console.error(`Failed to switch database: ${error.message}`, "error");
   }
 }
 
@@ -113,12 +139,12 @@ async function loadAvailableDatabases() {
     if (result.success) {
       availableDatabases.value = result.databases;
     } else {
-      showAlert(`Failed to load databases: ${result.message}`, 'error');
+      showAlert(`Failed to load databases: ${result.message}`, "error");
 
       availableDatabases.value = [];
     }
   } catch (error) {
-    showAlert(`Error loading databases: ${error.message}`, 'error');
+    showAlert(`Error loading databases: ${error.message}`, "error");
     availableDatabases.value = [];
   } finally {
     loadingDatabases.value = false;
@@ -126,18 +152,18 @@ async function loadAvailableDatabases() {
 }
 
 function handleGlobalKeydown(event) {
-  if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') {
+  if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k") {
     event.preventDefault();
     openDatabaseSwitcher();
   }
 }
 
 onMounted(() => {
-  window.addEventListener('keydown', handleGlobalKeydown);
+  window.addEventListener("keydown", handleGlobalKeydown);
 });
 
 onUnmounted(() => {
-  window.removeEventListener('keydown', handleGlobalKeydown);
+  window.removeEventListener("keydown", handleGlobalKeydown);
 });
 
 async function openDatabaseSwitcher() {

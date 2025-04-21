@@ -1,8 +1,6 @@
 <template>
   <div class="h-full flex flex-col">
-    <div
-      class="bg-base-200 p-2 border-b border-neutral flex flex-wrap items-center justify-between gap-2"
-    >
+    <div class="bg-base-200 p-2 border-b border-neutral flex flex-wrap items-center justify-between gap-2">
       <div class="flex flex-wrap items-center gap-2">
         <RefreshButton :store-id="storeId" />
         <LiveTableButton :store-id="storeId" />
@@ -11,7 +9,10 @@
       </div>
 
       <div class="flex flex-wrap items-center gap-2">
-        <FilterButton ref="filterButtonRef" :store-id="storeId" />
+        <FilterButton
+          ref="filterButtonRef"
+          :store-id="storeId"
+        />
       </div>
     </div>
 
@@ -34,15 +35,22 @@
         @load-filtered-data="filterButtonRef.loadFilteredData()"
         @navigate-to-foreign-key="(column, row) => navigateToForeignKey(column, row)"
       />
-      <NoRecordState v-else @reload="tableDataStore.loadTableData()" />
+      <NoRecordState
+        v-else
+        @reload="tableDataStore.loadTableData()"
+      />
     </div>
 
-    <PaginatorBar v-if="hasData" :store-id="storeId" @scroll-to-top="dataTableRef.scrollToTop()" />
+    <PaginatorBar
+      v-if="hasData"
+      :store-id="storeId"
+      @scroll-to-top="dataTableRef.scrollToTop()"
+    />
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted, inject, watch } from 'vue';
+import { ref, computed, onMounted, onUnmounted, inject, watch } from "vue";
 
 import {
   RefreshButton,
@@ -56,12 +64,12 @@ import {
   DataTable,
   NoRecordState,
   PaginatorBar
-} from '@/components/tabs/partials';
+} from "@/components/tabs/partials";
 
-import { Helpers } from '../../utils/helpers';
+import { Helpers } from "../../utils/helpers";
 
-import { useTableDataStore, createTableDataStoreId } from '@/store/table-data';
-import { useDatabaseStore } from '@/store/database';
+import { useTableDataStore, createTableDataStoreId } from "@/store/table-data";
+import { useDatabaseStore } from "@/store/database";
 
 const props = defineProps({
   connectionId: {
@@ -78,7 +86,7 @@ const props = defineProps({
   },
   initialFilter: {
     type: String,
-    default: ''
+    default: ""
   },
   onOpenTab: {
     type: Function,
@@ -92,15 +100,11 @@ const storeId = createTableDataStoreId(props.connectionId, props.tableName);
 const tableDataStore = useTableDataStore(storeId);
 const databaseStore = useDatabaseStore();
 
-const showAlert = inject('showAlert');
+const showAlert = inject("showAlert");
 
 const isLoading = computed(() => tableDataStore.isLoading && !tableDataStore.isLiveUpdating);
 const loadError = computed(() => !!tableDataStore.loadError);
-const isFilteredEmpty = computed(
-  () =>
-    (tableDataStore.filterTerm || tableDataStore.activeFilter) &&
-    tableDataStore.filteredData.length === 0
-);
+const isFilteredEmpty = computed(() => (tableDataStore.filterTerm || tableDataStore.activeFilter) && tableDataStore.filteredData.length === 0);
 const hasData = computed(() => tableDataStore.tableData.length > 0);
 const highlightChanges = computed(() => tableDataStore.highlightChanges);
 
@@ -110,7 +114,7 @@ const dataTableRef = ref(null);
 const refreshLiveTableState = () => {
   try {
     const liveTableKey = `liveTable.enabled.${props.connectionId}.${props.tableName}`;
-    const storedState = localStorage.getItem(liveTableKey) === 'true';
+    const storedState = localStorage.getItem(liveTableKey) === "true";
 
     if (tableDataStore.isLiveTableActive !== storedState) {
       tableDataStore.isLiveTableActive = storedState;
@@ -122,7 +126,7 @@ const refreshLiveTableState = () => {
       }
     }
   } catch (e) {
-    console.error('Error refreshing Live Table state:', e);
+    console.error("Error refreshing Live Table state:", e);
   }
 };
 
@@ -131,7 +135,7 @@ function handleStorageChange(event) {
 
   const ourKey = `liveTable.enabled.${props.connectionId}.${props.tableName}`;
   if (event.key === ourKey) {
-    const newValue = event.newValue === 'true';
+    const newValue = event.newValue === "true";
     if (newValue !== tableDataStore.isLiveTableActive) {
       tableDataStore.isLiveTableActive = newValue;
       if (newValue) {
@@ -142,15 +146,10 @@ function handleStorageChange(event) {
     }
   }
 
-  if (
-    event.key.startsWith('liveTable.enabled.') &&
-    event.key !== ourKey &&
-    event.newValue === 'true' &&
-    tableDataStore.isLiveTableActive
-  ) {
+  if (event.key.startsWith("liveTable.enabled.") && event.key !== ourKey && event.newValue === "true" && tableDataStore.isLiveTableActive) {
     tableDataStore.isLiveTableActive = false;
     tableDataStore.stopLiveUpdates();
-    localStorage.setItem(ourKey, 'false');
+    localStorage.setItem(ourKey, "false");
   }
 }
 
@@ -165,23 +164,20 @@ const handleWindowFocus = () => {
 
 async function navigateToForeignKey(column, value) {
   if (value === null || value === undefined) {
-    showAlert('Null or undefined value. Unable to navigate to the related record.', 'error');
+    showAlert("Null or undefined value. Unable to navigate to the related record.", "error");
     return;
   }
 
   try {
     const structure = await databaseStore.getTableStructure(props.connectionId, props.tableName);
-    const columnInfo = structure.find(col => col.name === column);
+    const columnInfo = structure.find((col) => col.name === column);
 
     if (!columnInfo || !columnInfo.foreign_key) {
       return;
     }
 
-    const foreignKeys = await databaseStore.getTableForeignKeys(
-      props.connectionId,
-      props.tableName
-    );
-    const foreignKey = foreignKeys.find(fk => fk.column === column);
+    const foreignKeys = await databaseStore.getTableForeignKeys(props.connectionId, props.tableName);
+    const foreignKey = foreignKeys.find((fk) => fk.column === column);
 
     if (!foreignKey) {
       console.error(`Foreign key information not found for column "${column}"`);
@@ -192,12 +188,12 @@ async function navigateToForeignKey(column, value) {
     const targetColumn = foreignKey.referenced_column;
 
     if (!targetTable || !targetColumn) {
-      console.error('Referenced table or column not found in foreign key');
+      console.error("Referenced table or column not found in foreign key");
       return;
     }
 
     let filterValue = value;
-    if (typeof value === 'string') {
+    if (typeof value === "string") {
       filterValue = `'${value.replace(/'/g, "''")}'`;
     }
 
@@ -208,41 +204,37 @@ async function navigateToForeignKey(column, value) {
     const newTab = {
       id: `data-${props.connectionId}-${targetTable}-${Date.now()}`,
       title: tabTitle,
-      type: 'data',
+      type: "data",
       data: {
         connectionId: props.connectionId,
         tableName: targetTable,
         filter: filter
       },
-      icon: 'table'
+      icon: "table"
     };
 
     props.onOpenTab(newTab);
   } catch (error) {
-    console.error('Error navigating to foreign key:', error);
-    showAlert('Failed to navigate to related record: ' + error.message, 'error');
+    console.error("Error navigating to foreign key:", error);
+    showAlert("Failed to navigate to related record: " + error.message, "error");
   }
 }
 
 async function loadTableStructure() {
   try {
-    const structure = await databaseStore.getTableStructure(
-      props.connectionId,
-      props.tableName,
-      true
-    );
+    const structure = await databaseStore.getTableStructure(props.connectionId, props.tableName, true);
 
     Helpers.setColumnStructure(structure);
   } catch (error) {
-    console.error('Error loading table structure:', error);
-    showAlert(`Error loading table structure: ${error.message}`, 'error');
+    console.error("Error loading table structure:", error);
+    showAlert(`Error loading table structure: ${error.message}`, "error");
   }
 }
 
 onMounted(() => {
-  window.addEventListener('tab-activated', handleTabActivation);
-  window.addEventListener('storage', handleStorageChange);
-  window.addEventListener('focus', handleWindowFocus);
+  window.addEventListener("tab-activated", handleTabActivation);
+  window.addEventListener("storage", handleStorageChange);
+  window.addEventListener("focus", handleWindowFocus);
 
   loadTableStructure().then(() => {
     tableDataStore.loadTableData();
@@ -258,45 +250,39 @@ onMounted(() => {
   }
 
   try {
-    const tableSpecificLiveEnabled = localStorage.getItem(
-      `liveTable.enabled.${props.connectionId}.${props.tableName}`
-    );
+    const tableSpecificLiveEnabled = localStorage.getItem(`liveTable.enabled.${props.connectionId}.${props.tableName}`);
 
     let otherTableLiveActive = false;
 
     const allKeys = Object.keys(localStorage);
-    allKeys.forEach(key => {
-      if (
-        key.startsWith('liveTable.enabled.') &&
-        key !== `liveTable.enabled.${props.connectionId}.${props.tableName}` &&
-        localStorage.getItem(key) === 'true'
-      ) {
+    allKeys.forEach((key) => {
+      if (key.startsWith("liveTable.enabled.") && key !== `liveTable.enabled.${props.connectionId}.${props.tableName}` && localStorage.getItem(key) === "true") {
         otherTableLiveActive = true;
       }
     });
 
-    if (tableSpecificLiveEnabled === 'true' && !otherTableLiveActive) {
+    if (tableSpecificLiveEnabled === "true" && !otherTableLiveActive) {
       tableDataStore.isLiveTableActive = true;
     } else {
       tableDataStore.isLiveTableActive = false;
-      if (tableSpecificLiveEnabled === 'true') {
-        localStorage.setItem(`liveTable.enabled.${props.connectionId}.${props.tableName}`, 'false');
+      if (tableSpecificLiveEnabled === "true") {
+        localStorage.setItem(`liveTable.enabled.${props.connectionId}.${props.tableName}`, "false");
       }
     }
 
-    const savedLiveDelay = localStorage.getItem('liveTable.delay');
+    const savedLiveDelay = localStorage.getItem("liveTable.delay");
 
     if (savedLiveDelay) {
       tableDataStore.liveUpdateDelaySeconds = parseInt(savedLiveDelay, 10) || 3;
       tableDataStore.liveUpdateDelay = tableDataStore.liveUpdateDelaySeconds * 1000;
     }
 
-    const savedHighlightChanges = localStorage.getItem('liveTable.highlight');
+    const savedHighlightChanges = localStorage.getItem("liveTable.highlight");
     if (savedHighlightChanges !== null) {
-      tableDataStore.highlightChanges = savedHighlightChanges === 'true';
+      tableDataStore.highlightChanges = savedHighlightChanges === "true";
     }
   } catch (e) {
-    console.error('Failed to load live table preferences', e);
+    console.error("Failed to load live table preferences", e);
   }
 
   if (tableDataStore.isLiveTableActive) {
@@ -307,7 +293,7 @@ onMounted(() => {
 
   const urlParams = new URLSearchParams(window.location.search);
 
-  const urlFilter = urlParams.get('filter');
+  const urlFilter = urlParams.get("filter");
 
   if (urlFilter) {
     try {
@@ -315,7 +301,7 @@ onMounted(() => {
       tableDataStore.advancedFilterTerm = decodedFilter;
       tableDataStore.activeFilter = decodedFilter;
     } catch (e) {
-      console.error('Error to process URL filter:', e);
+      console.error("Error to process URL filter:", e);
     }
   } else if (!props.initialFilter) {
     const savedFilter = localStorage.getItem(`filter:${props.connectionId}:${props.tableName}`);
@@ -327,89 +313,83 @@ onMounted(() => {
           tableDataStore.activeFilter = parsedFilter.value;
         }
       } catch (e) {
-        console.error('Error to process saved filter:', e);
+        console.error("Error to process saved filter:", e);
       }
     }
   }
 });
 
 onUnmounted(() => {
-  window.removeEventListener('tab-activated', handleTabActivation);
-  window.removeEventListener('storage', handleStorageChange);
-  window.removeEventListener('focus', handleWindowFocus);
+  window.removeEventListener("tab-activated", handleTabActivation);
+  window.removeEventListener("storage", handleStorageChange);
+  window.removeEventListener("focus", handleWindowFocus);
 
   if (tableDataStore.isLiveTableActive) {
     try {
-      localStorage.setItem(`liveTable.enabled.${props.connectionId}.${props.tableName}`, 'false');
+      localStorage.setItem(`liveTable.enabled.${props.connectionId}.${props.tableName}`, "false");
     } catch (e) {
-      console.error('Failed to update localStorage during component unmount', e);
+      console.error("Failed to update localStorage during component unmount", e);
     }
     tableDataStore.isLiveTableActive = false;
     tableDataStore.stopLiveUpdates();
   }
 });
 
-watch(highlightChanges, newValue => {
+watch(highlightChanges, (newValue) => {
   try {
-    localStorage.setItem('liveTable.highlight', String(newValue));
+    localStorage.setItem("liveTable.highlight", String(newValue));
   } catch (e) {
-    console.error('Failed to save highlight preference', e);
+    console.error("Failed to save highlight preference", e);
   }
 });
 
-watch(
-  [() => props.tableName, () => props.connectionId],
-  async ([newTableName, newConnectionId], [oldTableName, oldConnectionId]) => {
-    if (newTableName !== oldTableName || newConnectionId !== oldConnectionId) {
-      await loadTableStructure();
+watch([() => props.tableName, () => props.connectionId], async ([newTableName, newConnectionId], [oldTableName, oldConnectionId]) => {
+  if (newTableName !== oldTableName || newConnectionId !== oldConnectionId) {
+    await loadTableStructure();
 
-      if (oldTableName && oldConnectionId) {
-        const oldLiveTableKey = `liveTable.enabled.${oldConnectionId}.${oldTableName}`;
-        try {
-          localStorage.setItem(oldLiveTableKey, 'false');
-        } catch (e) {
-          console.error('Error deactivating previous tab live table:', e);
-        }
-      }
-
-      if (tableDataStore.isLiveTableActive) {
-        tableDataStore.stopLiveUpdates();
-        tableDataStore.isLiveTableActive = false;
-      }
-
+    if (oldTableName && oldConnectionId) {
+      const oldLiveTableKey = `liveTable.enabled.${oldConnectionId}.${oldTableName}`;
       try {
-        const newLiveTableKey = `liveTable.enabled.${newConnectionId}.${newTableName}`;
-        const isLiveEnabled = localStorage.getItem(newLiveTableKey) === 'true';
-
-        const activeLiveTableKeys = [];
-        const allKeys = Object.keys(localStorage);
-        for (const key of allKeys) {
-          if (key.startsWith('liveTable.enabled.') && localStorage.getItem(key) === 'true') {
-            activeLiveTableKeys.push(key);
-          }
-        }
-
-        if (
-          activeLiveTableKeys.length > 1 ||
-          (activeLiveTableKeys.length === 1 && !isLiveEnabled)
-        ) {
-          activeLiveTableKeys.forEach(key => {
-            if (key !== newLiveTableKey || !isLiveEnabled) {
-              localStorage.setItem(key, 'false');
-            }
-          });
-        }
-
-        tableDataStore.isLiveTableActive = isLiveEnabled;
-
-        if (tableDataStore.isLiveTableActive) {
-          tableDataStore.startLiveUpdates();
-        }
+        localStorage.setItem(oldLiveTableKey, "false");
       } catch (e) {
-        console.error('Error updating live table state during tab switch:', e);
-        tableDataStore.isLiveTableActive = false;
+        console.error("Error deactivating previous tab live table:", e);
       }
     }
+
+    if (tableDataStore.isLiveTableActive) {
+      tableDataStore.stopLiveUpdates();
+      tableDataStore.isLiveTableActive = false;
+    }
+
+    try {
+      const newLiveTableKey = `liveTable.enabled.${newConnectionId}.${newTableName}`;
+      const isLiveEnabled = localStorage.getItem(newLiveTableKey) === "true";
+
+      const activeLiveTableKeys = [];
+      const allKeys = Object.keys(localStorage);
+      for (const key of allKeys) {
+        if (key.startsWith("liveTable.enabled.") && localStorage.getItem(key) === "true") {
+          activeLiveTableKeys.push(key);
+        }
+      }
+
+      if (activeLiveTableKeys.length > 1 || (activeLiveTableKeys.length === 1 && !isLiveEnabled)) {
+        activeLiveTableKeys.forEach((key) => {
+          if (key !== newLiveTableKey || !isLiveEnabled) {
+            localStorage.setItem(key, "false");
+          }
+        });
+      }
+
+      tableDataStore.isLiveTableActive = isLiveEnabled;
+
+      if (tableDataStore.isLiveTableActive) {
+        tableDataStore.startLiveUpdates();
+      }
+    } catch (e) {
+      console.error("Error updating live table state during tab switch:", e);
+      tableDataStore.isLiveTableActive = false;
+    }
   }
-);
+});
 </script>

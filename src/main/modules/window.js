@@ -1,10 +1,10 @@
-const { BrowserWindow } = require('electron');
-const path = require('path');
+const { BrowserWindow } = require("electron");
+const path = require("path");
 
 let mainWindow;
 
 async function createWindow() {
-  const isDev = process.env.NODE_ENV === 'development';
+  const isDev = process.env.NODE_ENV === "development";
 
   const shouldOpenDevTools = false;
 
@@ -16,31 +16,31 @@ async function createWindow() {
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
-      preload: path.join(__dirname, '../preload.js'),
+      preload: path.join(__dirname, "../preload.js"),
       devTools: isDev
     },
-    icon: path.join(__dirname, '../../renderer/assets/icons/png/512x512.png')
+    icon: path.join(__dirname, "../../renderer/assets/icons/png/512x512.png")
   });
 
   if (isDev) {
-    await mainWindow.loadURL('http://localhost:5173');
+    await mainWindow.loadURL("http://localhost:5173");
 
     if (shouldOpenDevTools) {
       mainWindow.webContents.openDevTools();
     }
 
-    mainWindow.webContents.on('did-fail-load', (event, errorCode, errorDescription) => {
-      console.error('Failed to load URL', errorCode, errorDescription);
+    mainWindow.webContents.on("did-fail-load", (event, errorCode, errorDescription) => {
+      console.error("Failed to load URL", errorCode, errorDescription);
 
       setTimeout(() => {
-        mainWindow.loadURL('http://localhost:5173');
+        mainWindow.loadURL("http://localhost:5173");
       }, 1000);
     });
   } else {
-    await mainWindow.loadFile(path.join(__dirname, '../../../dist/renderer/index.html'));
+    await mainWindow.loadFile(path.join(__dirname, "../../../dist/renderer/index.html"));
   }
 
-  mainWindow.on('closed', () => {
+  mainWindow.on("closed", () => {
     mainWindow = null;
   });
 }

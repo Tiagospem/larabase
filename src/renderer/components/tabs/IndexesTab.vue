@@ -2,7 +2,10 @@
   <div class="h-full flex flex-col">
     <div class="bg-base-200 p-2 border-b border-neutral flex items-center justify-between">
       <div class="flex items-center space-x-2">
-        <button class="btn btn-sm btn-ghost" @click="loadIndexes">
+        <button
+          class="btn btn-sm btn-ghost"
+          @click="loadIndexes"
+        >
           <svg
             xmlns="http://www.w3.org/2000/svg"
             fill="none"
@@ -23,11 +26,17 @@
     </div>
 
     <div class="flex-1 overflow-auto">
-      <div v-if="isLoading" class="flex items-center justify-center h-full">
+      <div
+        v-if="isLoading"
+        class="flex items-center justify-center h-full"
+      >
         <span class="loading loading-spinner loading-lg" />
       </div>
 
-      <div v-else-if="loadError" class="flex items-center justify-center h-full text-error">
+      <div
+        v-else-if="loadError"
+        class="flex items-center justify-center h-full text-error"
+      >
         <div class="text-center">
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -44,7 +53,12 @@
             />
           </svg>
           <p>{{ loadError }}</p>
-          <button class="btn btn-sm btn-primary mt-4" @click="loadIndexes">Try again</button>
+          <button
+            class="btn btn-sm btn-primary mt-4"
+            @click="loadIndexes"
+          >
+            Try again
+          </button>
         </div>
       </div>
 
@@ -73,11 +87,19 @@
             />
           </svg>
           <p>No indexes found in this table</p>
-          <button class="btn btn-sm btn-ghost mt-4" @click="loadIndexes">Reload</button>
+          <button
+            class="btn btn-sm btn-ghost mt-4"
+            @click="loadIndexes"
+          >
+            Reload
+          </button>
         </div>
       </div>
 
-      <div v-else class="h-full overflow-auto">
+      <div
+        v-else
+        class="h-full overflow-auto"
+      >
         <div class="overflow-x-auto">
           <table class="table table-sm w-full min-w-full">
             <thead class="bg-base-300 sticky top-0 z-10">
@@ -103,7 +125,7 @@
                   <span :class="['badge', getBadgeClass(index.type)]">{{ index.type }}</span>
                 </td>
                 <td class="px-4 py-3">
-                  {{ index.columns.join(', ') }}
+                  {{ index.columns.join(", ") }}
                 </td>
                 <td class="px-4 py-3">
                   {{ index.algorithm }}
@@ -127,17 +149,17 @@
     >
       <div>{{ tableName }} | {{ indexes.length }} indexes</div>
       <div>
-        <span v-if="hasPrimaryKey">Primary Key: {{ primaryKeyColumns.join(', ') }}</span>
+        <span v-if="hasPrimaryKey">Primary Key: {{ primaryKeyColumns.join(", ") }}</span>
       </div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted, inject } from 'vue';
-import { useDatabaseStore } from '@/store/database';
+import { ref, computed, onMounted, inject } from "vue";
+import { useDatabaseStore } from "@/store/database";
 
-const showAlert = inject('showAlert');
+const showAlert = inject("showAlert");
 
 const props = defineProps({
   connectionId: {
@@ -161,26 +183,26 @@ const loadError = ref(null);
 const databaseStore = useDatabaseStore();
 
 const hasPrimaryKey = computed(() => {
-  return indexes.value.some(index => index.type === 'PRIMARY');
+  return indexes.value.some((index) => index.type === "PRIMARY");
 });
 
 const primaryKeyColumns = computed(() => {
-  const primaryKey = indexes.value.find(index => index.type === 'PRIMARY');
+  const primaryKey = indexes.value.find((index) => index.type === "PRIMARY");
   return primaryKey ? primaryKey.columns : [];
 });
 
 function getBadgeClass(type) {
   switch (type) {
-    case 'PRIMARY':
-      return 'badge-primary';
-    case 'UNIQUE':
-      return 'badge-secondary';
-    case 'FULLTEXT':
-      return 'badge-accent';
-    case 'SPATIAL':
-      return 'badge-neutral';
+    case "PRIMARY":
+      return "badge-primary";
+    case "UNIQUE":
+      return "badge-secondary";
+    case "FULLTEXT":
+      return "badge-accent";
+    case "SPATIAL":
+      return "badge-neutral";
     default:
-      return 'badge-ghost';
+      return "badge-ghost";
   }
 }
 
@@ -189,12 +211,8 @@ async function loadIndexes() {
   loadError.value = null;
 
   try {
-    const tableIndexes = await databaseStore.getTableIndexes(
-      props.connectionId,
-      props.tableName,
-      true
-    );
-    console.log('Loaded indexes:', tableIndexes);
+    const tableIndexes = await databaseStore.getTableIndexes(props.connectionId, props.tableName, true);
+    console.log("Loaded indexes:", tableIndexes);
 
     indexes.value = tableIndexes;
 
@@ -203,9 +221,9 @@ async function loadIndexes() {
       hasPrimaryKey: hasPrimaryKey.value
     });
   } catch (error) {
-    console.error('Error loading indexes:', error);
-    loadError.value = 'Failed to load indexes: ' + (error.message || 'Unknown error');
-    showAlert(`Error loading indexes: ${error.message}`, 'error');
+    console.error("Error loading indexes:", error);
+    loadError.value = "Failed to load indexes: " + (error.message || "Unknown error");
+    showAlert(`Error loading indexes: ${error.message}`, "error");
   } finally {
     isLoading.value = false;
   }

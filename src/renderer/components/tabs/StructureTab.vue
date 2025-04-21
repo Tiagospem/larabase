@@ -2,7 +2,10 @@
   <div class="h-full flex flex-col">
     <div class="bg-base-200 p-2 border-b border-neutral flex items-center justify-between">
       <div class="flex items-center space-x-2">
-        <button class="btn btn-sm btn-ghost" @click="loadStructure">
+        <button
+          class="btn btn-sm btn-ghost"
+          @click="loadStructure"
+        >
           <svg
             xmlns="http://www.w3.org/2000/svg"
             fill="none"
@@ -34,11 +37,17 @@
     </div>
 
     <div class="flex-1 overflow-auto">
-      <div v-if="isLoading" class="flex items-center justify-center h-full">
+      <div
+        v-if="isLoading"
+        class="flex items-center justify-center h-full"
+      >
         <span class="loading loading-spinner loading-lg" />
       </div>
 
-      <div v-else-if="loadError" class="flex items-center justify-center h-full text-error">
+      <div
+        v-else-if="loadError"
+        class="flex items-center justify-center h-full text-error"
+      >
         <div class="text-center">
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -55,11 +64,19 @@
             />
           </svg>
           <p>{{ loadError }}</p>
-          <button class="btn btn-sm btn-primary mt-4" @click="loadStructure">Try again</button>
+          <button
+            class="btn btn-sm btn-primary mt-4"
+            @click="loadStructure"
+          >
+            Try again
+          </button>
         </div>
       </div>
 
-      <div v-else-if="columns.length > 0" class="h-full overflow-auto pb-3">
+      <div
+        v-else-if="columns.length > 0"
+        class="h-full overflow-auto pb-3"
+      >
         <div class="overflow-x-auto">
           <table class="table table-sm w-full min-w-full">
             <thead class="bg-base-300 sticky top-0 z-10">
@@ -80,7 +97,10 @@
               >
                 <td class="px-4 py-2 font-medium">
                   <div class="flex items-center">
-                    <span v-if="column.primary_key" class="mr-2 text-yellow-500">
+                    <span
+                      v-if="column.primary_key"
+                      class="mr-2 text-yellow-500"
+                    >
                       <svg
                         xmlns="http://www.w3.org/2000/svg"
                         viewBox="0 0 20 20"
@@ -128,17 +148,37 @@
                     stroke="currentColor"
                     class="w-5 h-5 mx-auto text-gray-400"
                   >
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      d="M6 18L18 6M6 6l12 12"
+                    />
                   </svg>
                 </td>
                 <td class="px-4 py-2 text-center">
-                  <span v-if="column.primary_key" class="badge badge-ghost badge-sm">PRI</span>
-                  <span v-else-if="column.foreign_key" class="badge badge-ghost badge-sm">FOR</span>
-                  <span v-else-if="column.unique" class="badge badge-ghost badge-sm">UNI</span>
+                  <span
+                    v-if="column.primary_key"
+                    class="badge badge-ghost badge-sm"
+                    >PRI</span
+                  >
+                  <span
+                    v-else-if="column.foreign_key"
+                    class="badge badge-ghost badge-sm"
+                    >FOR</span
+                  >
+                  <span
+                    v-else-if="column.unique"
+                    class="badge badge-ghost badge-sm"
+                    >UNI</span
+                  >
                 </td>
                 <td class="px-4 py-2">
                   <span v-if="column.default !== null">{{ column.default }}</span>
-                  <span v-else class="text-gray-500">NULL</span>
+                  <span
+                    v-else
+                    class="text-gray-500"
+                    >NULL</span
+                  >
                 </td>
                 <td class="px-4 py-2 text-gray-400">
                   {{ column.extra }}
@@ -149,7 +189,10 @@
         </div>
       </div>
 
-      <div v-else class="flex items-center justify-center h-full text-gray-500">
+      <div
+        v-else
+        class="flex items-center justify-center h-full text-gray-500"
+      >
         <div class="text-center">
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -166,7 +209,12 @@
             />
           </svg>
           <p>No structure information available</p>
-          <button class="btn btn-sm btn-primary mt-4" @click="loadStructure">Reload</button>
+          <button
+            class="btn btn-sm btn-primary mt-4"
+            @click="loadStructure"
+          >
+            Reload
+          </button>
         </div>
       </div>
     </div>
@@ -177,19 +225,17 @@
     >
       <div>{{ tableName }} | {{ columns.length }} columns</div>
       <div>
-        <span>{{
-          primaryKeys.length > 0 ? `Primary key: ${primaryKeys.join(', ')}` : 'No primary key'
-        }}</span>
+        <span>{{ primaryKeys.length > 0 ? `Primary key: ${primaryKeys.join(", ")}` : "No primary key" }}</span>
       </div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { computed, inject, onMounted, ref } from 'vue';
-import { useDatabaseStore } from '@/store/database';
+import { computed, inject, onMounted, ref } from "vue";
+import { useDatabaseStore } from "@/store/database";
 
-const showAlert = inject('showAlert');
+const showAlert = inject("showAlert");
 
 const props = defineProps({
   connectionId: {
@@ -208,7 +254,7 @@ const props = defineProps({
 
 const isLoading = ref(true);
 const columns = ref([]);
-const filterTerm = ref('');
+const filterTerm = ref("");
 const loadError = ref(null);
 
 const databaseStore = useDatabaseStore();
@@ -219,13 +265,13 @@ const filteredColumns = computed(() => {
   }
 
   const term = filterTerm.value.toLowerCase();
-  return columns.value.filter(column => {
+  return columns.value.filter((column) => {
     return column.name.toLowerCase().includes(term) || column.type.toLowerCase().includes(term);
   });
 });
 
 const primaryKeys = computed(() => {
-  return columns.value.filter(column => column.primary_key).map(column => column.name);
+  return columns.value.filter((column) => column.primary_key).map((column) => column.name);
 });
 
 async function loadStructure() {
@@ -233,19 +279,15 @@ async function loadStructure() {
   loadError.value = null;
 
   try {
-    columns.value = await databaseStore.getTableStructure(
-      props.connectionId,
-      props.tableName,
-      true
-    );
+    columns.value = await databaseStore.getTableStructure(props.connectionId, props.tableName, true);
 
     props.onLoad({
       columnCount: columns.value.length,
       primaryKeys: primaryKeys.value
     });
   } catch (error) {
-    loadError.value = 'Failed to load table structure: ' + (error.message || 'Unknown error');
-    showAlert(`Error loading structure: ${error.message}`, 'error');
+    loadError.value = "Failed to load table structure: " + (error.message || "Unknown error");
+    showAlert(`Error loading structure: ${error.message}`, "error");
   } finally {
     isLoading.value = false;
   }

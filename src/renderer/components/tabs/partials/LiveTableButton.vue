@@ -10,9 +10,7 @@
           <span class="relative flex h-2 w-2">
             <span
               class="absolute inline-flex h-full w-full rounded-full opacity-75"
-              :class="
-                tableDataStore.isLiveTableActive ? 'animate-ping bg-success' : 'bg-transparent'
-              "
+              :class="tableDataStore.isLiveTableActive ? 'animate-ping bg-success' : 'bg-transparent'"
             />
             <span
               class="relative inline-flex rounded-full h-2 w-2"
@@ -34,9 +32,11 @@
             />
           </svg>
           <span class="hidden sm:inline">Live</span>
-          <span v-if="tableDataStore.updateCounter > 0" class="badge badge-sm badge-accent">{{
-            tableDataStore.updateCounter
-          }}</span>
+          <span
+            v-if="tableDataStore.updateCounter > 0"
+            class="badge badge-sm badge-accent"
+            >{{ tableDataStore.updateCounter }}</span
+          >
         </div>
       </button>
       <div
@@ -84,9 +84,9 @@
 </template>
 
 <script setup>
-import { inject } from 'vue';
+import { inject } from "vue";
 
-import { useTableDataStore } from '@/store/table-data';
+import { useTableDataStore } from "@/store/table-data";
 
 const props = defineProps({
   storeId: {
@@ -95,7 +95,7 @@ const props = defineProps({
   }
 });
 
-const showAlert = inject('showAlert');
+const showAlert = inject("showAlert");
 
 const tableDataStore = useTableDataStore(props.storeId);
 
@@ -104,18 +104,15 @@ function toggleLiveTable() {
     if (!tableDataStore.isLiveTableActive) {
       tableDataStore.startLiveUpdates();
       clearUpdateCounter();
-      showAlert(
-        `Live table updates activated for ${tableDataStore.tableName} - refreshing every ${tableDataStore.liveUpdateDelaySeconds}s`,
-        'success'
-      );
+      showAlert(`Live table updates activated for ${tableDataStore.tableName} - refreshing every ${tableDataStore.liveUpdateDelaySeconds}s`, "success");
     } else {
       tableDataStore.stopLiveUpdates(true);
       clearUpdateCounter();
-      showAlert('Live table updates stopped', 'info');
+      showAlert("Live table updates stopped", "info");
     }
   } catch (e) {
-    console.error('Failed to toggle live table:', e);
-    showAlert('Failed to toggle live table updates', 'error');
+    console.error("Failed to toggle live table:", e);
+    showAlert("Failed to toggle live table updates", "error");
   }
 }
 
@@ -123,18 +120,15 @@ function updateLiveDelay() {
   tableDataStore.liveUpdateDelay = tableDataStore.liveUpdateDelaySeconds * 1000;
 
   try {
-    localStorage.setItem('liveTable.delay', String(tableDataStore.liveUpdateDelaySeconds));
+    localStorage.setItem("liveTable.delay", String(tableDataStore.liveUpdateDelaySeconds));
   } catch (e) {
-    console.error('Failed to save live table delay preference', e);
+    console.error("Failed to save live table delay preference", e);
   }
 
   if (tableDataStore.isLiveTableActive) {
     tableDataStore.stopLiveUpdates();
     tableDataStore.startLiveUpdates();
-    showAlert(
-      `Live update interval changed to ${tableDataStore.liveUpdateDelaySeconds} seconds`,
-      'info'
-    );
+    showAlert(`Live update interval changed to ${tableDataStore.liveUpdateDelaySeconds} seconds`, "info");
   }
 }
 

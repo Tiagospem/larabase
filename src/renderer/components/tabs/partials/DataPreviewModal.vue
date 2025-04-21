@@ -1,9 +1,15 @@
 <template>
-  <div class="modal z-50" :class="{ 'modal-open': show }">
+  <div
+    class="modal z-50"
+    :class="{ 'modal-open': show }"
+  >
     <div class="modal-box max-w-4xl">
       <h3 class="font-bold text-lg mb-4 flex justify-between items-center">
         Data Preview
-        <button class="btn btn-sm btn-circle" @click="$emit('close')">
+        <button
+          class="btn btn-sm btn-circle"
+          @click="$emit('close')"
+        >
           <svg
             xmlns="http://www.w3.org/2000/svg"
             class="h-6 w-6"
@@ -29,8 +35,15 @@
         {{ copyFeedback }}
       </div>
 
-      <div v-if="record" class="overflow-y-auto max-h-[60vh] divide-y divide-base-300">
-        <div v-for="column in columns" :key="column" class="py-3">
+      <div
+        v-if="record"
+        class="overflow-y-auto max-h-[60vh] divide-y divide-base-300"
+      >
+        <div
+          v-for="column in columns"
+          :key="column"
+          class="py-3"
+        >
           <div class="flex items-start mb-2">
             <div class="flex items-center gap-2 w-1/4">
               <button
@@ -65,32 +78,54 @@
               </div>
 
               <!-- JSON/Object data -->
-              <div v-else-if="isJsonObject(record[column])" class="font-mono text-xs">
+              <div
+                v-else-if="isJsonObject(record[column])"
+                class="font-mono text-xs"
+              >
                 <div class="bg-base-300 p-2 rounded-md overflow-x-auto">
                   <pre class="whitespace-pre-wrap">{{ formatJson(record[column]) }}</pre>
                 </div>
               </div>
 
               <!-- Array data -->
-              <div v-else-if="isArray(record[column])" class="font-mono text-xs">
+              <div
+                v-else-if="isArray(record[column])"
+                class="font-mono text-xs"
+              >
                 <div class="bg-base-300 p-2 rounded-md">
-                  <div class="mb-1 text-primary">Array ({{ record[column].length }} items)</div>
+                  <div class="mb-1 text-primary">
+                    Array ({{ record[column].length }}
+                    items)
+                  </div>
                   <div
                     v-for="(item, i) in record[column].slice(0, 5)"
                     :key="i"
                     class="mb-1 pl-2 border-l-2 border-base-content"
                   >
-                    <span class="text-gray-500">[{{ i }}]</span> {{ formatPreviewValue(item) }}
+                    <span class="text-gray-500">[{{ i }}]</span>
+                    {{ formatPreviewValue(item) }}
                   </div>
-                  <div v-if="record[column].length > 5" class="text-gray-500 italic">
-                    ...and {{ record[column].length - 5 }} more items
+                  <div
+                    v-if="record[column].length > 5"
+                    class="text-gray-500 italic"
+                  >
+                    ...and
+                    {{ record[column].length - 5 }} more items
                   </div>
                 </div>
               </div>
 
               <!-- Long text data -->
-              <div v-else-if="isLongText(record[column])" class="relative">
-                <div class="text-sm" :class="{ 'line-clamp-5': !expandedFields[column] }">
+              <div
+                v-else-if="isLongText(record[column])"
+                class="relative"
+              >
+                <div
+                  class="text-sm"
+                  :class="{
+                    'line-clamp-5': !expandedFields[column]
+                  }"
+                >
                   {{ record[column] }}
                 </div>
                 <button
@@ -98,30 +133,49 @@
                   class="btn btn-xs mt-1"
                   @click="toggleFieldExpansion(column)"
                 >
-                  {{ expandedFields[column] ? 'Show less' : 'Show more' }}
+                  {{ expandedFields[column] ? "Show less" : "Show more" }}
                 </button>
               </div>
 
               <!-- Date data -->
-              <div v-else-if="isDateField(column) && record[column]" class="text-sm">
-                <div class="text-primary">{{ formatDateForDisplay(record[column]) }}</div>
-                <div class="text-xs text-gray-500">{{ formatDateAgo(record[column]) }}</div>
+              <div
+                v-else-if="isDateField(column) && record[column]"
+                class="text-sm"
+              >
+                <div class="text-primary">
+                  {{ formatDateForDisplay(record[column]) }}
+                </div>
+                <div class="text-xs text-gray-500">
+                  {{ formatDateAgo(record[column]) }}
+                </div>
               </div>
 
               <!-- Boolean data -->
-              <div v-else-if="typeof record[column] === 'boolean'" class="text-sm">
-                <div class="badge" :class="record[column] ? 'badge-success' : 'badge-error'">
-                  {{ record[column] ? 'true' : 'false' }}
+              <div
+                v-else-if="typeof record[column] === 'boolean'"
+                class="text-sm"
+              >
+                <div
+                  class="badge"
+                  :class="record[column] ? 'badge-success' : 'badge-error'"
+                >
+                  {{ record[column] ? "true" : "false" }}
                 </div>
               </div>
 
               <!-- Number data -->
-              <div v-else-if="typeof record[column] === 'number'" class="text-sm font-mono">
+              <div
+                v-else-if="typeof record[column] === 'number'"
+                class="text-sm font-mono"
+              >
                 {{ record[column].toLocaleString() }}
               </div>
 
               <!-- Default/string data -->
-              <div v-else class="text-sm">
+              <div
+                v-else
+                class="text-sm"
+              >
                 {{ record[column] }}
               </div>
             </div>
@@ -130,15 +184,23 @@
       </div>
 
       <div class="modal-action">
-        <button class="btn" @click="$emit('close')">Close</button>
+        <button
+          class="btn"
+          @click="$emit('close')"
+        >
+          Close
+        </button>
       </div>
     </div>
-    <div class="modal-backdrop" @click="$emit('close')" />
+    <div
+      class="modal-backdrop"
+      @click="$emit('close')"
+    />
   </div>
 </template>
 
 <script setup>
-import { ref, defineProps, defineEmits, watch } from 'vue';
+import { ref, defineProps, defineEmits, watch } from "vue";
 
 const props = defineProps({
   show: {
@@ -155,33 +217,33 @@ const props = defineProps({
   }
 });
 
-const emit = defineEmits(['close']);
+const emit = defineEmits(["close"]);
 
 const expandedFields = ref({});
-const copyFeedback = ref('');
+const copyFeedback = ref("");
 
 function formatPreviewValue(value) {
-  if (typeof value === 'object') {
+  if (typeof value === "object") {
     return JSON.stringify(value);
-  } else if (typeof value === 'string') {
+  } else if (typeof value === "string") {
     return value;
-  } else if (typeof value === 'number') {
+  } else if (typeof value === "number") {
     return value.toString();
-  } else if (typeof value === 'boolean') {
-    return value ? 'true' : 'false';
-  } else if (typeof value === 'function') {
-    return 'function';
-  } else if (typeof value === 'symbol') {
+  } else if (typeof value === "boolean") {
+    return value ? "true" : "false";
+  } else if (typeof value === "function") {
+    return "function";
+  } else if (typeof value === "symbol") {
     return value.toString();
-  } else if (typeof value === 'undefined') {
-    return 'undefined';
+  } else if (typeof value === "undefined") {
+    return "undefined";
   } else {
-    return 'unknown';
+    return "unknown";
   }
 }
 
 function isJsonObject(value) {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 function isArray(value) {
@@ -189,12 +251,12 @@ function isArray(value) {
 }
 
 function isLongText(value) {
-  if (typeof value !== 'string') return false;
+  if (typeof value !== "string") return false;
 
   const hasMultipleLines = (value.match(/\n/g) || []).length > 2;
   const isVeryLong = value.length > 200;
 
-  const lineCount = value.split('\n').length;
+  const lineCount = value.split("\n").length;
   const wordCount = value.split(/\s+/).length;
   const averageCharsPerLine = 80;
   const estimatedLines = Math.max(lineCount, Math.ceil(value.length / averageCharsPerLine));
@@ -218,11 +280,11 @@ function formatDateAgo(date) {
   const diffMinutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
   const diffSeconds = Math.floor((diff % (1000 * 60)) / 1000);
 
-  if (diffDays > 0) return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
-  if (diffHours > 0) return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;
-  if (diffMinutes > 0) return `${diffMinutes} minute${diffMinutes > 1 ? 's' : ''} ago`;
-  if (diffSeconds > 0) return `${diffSeconds} second${diffSeconds > 1 ? 's' : ''} ago`;
-  return 'just now';
+  if (diffDays > 0) return `${diffDays} day${diffDays > 1 ? "s" : ""} ago`;
+  if (diffHours > 0) return `${diffHours} hour${diffHours > 1 ? "s" : ""} ago`;
+  if (diffMinutes > 0) return `${diffMinutes} minute${diffMinutes > 1 ? "s" : ""} ago`;
+  if (diffSeconds > 0) return `${diffSeconds} second${diffSeconds > 1 ? "s" : ""} ago`;
+  return "just now";
 }
 
 function toggleFieldExpansion(column) {
@@ -231,26 +293,26 @@ function toggleFieldExpansion(column) {
 
 function formatJson(value) {
   try {
-    if (typeof value === 'string') {
+    if (typeof value === "string") {
       const parsed = JSON.parse(value);
       return JSON.stringify(parsed, null, 2);
     } else {
       return JSON.stringify(value, null, 2);
     }
   } catch (e) {
-    return typeof value === 'string' ? value : JSON.stringify(value);
+    return typeof value === "string" ? value : JSON.stringify(value);
   }
 }
 
 function copyToClipboard(value) {
-  let textToCopy = '';
+  let textToCopy = "";
 
   if (value === null || value === undefined) {
-    textToCopy = '';
-  } else if (typeof value === 'object') {
+    textToCopy = "";
+  } else if (typeof value === "object") {
     textToCopy = JSON.stringify(value, null, 2);
-  } else if (typeof value === 'boolean') {
-    textToCopy = value ? 'true' : 'false';
+  } else if (typeof value === "boolean") {
+    textToCopy = value ? "true" : "false";
   } else {
     textToCopy = String(value);
   }
@@ -258,28 +320,28 @@ function copyToClipboard(value) {
   navigator.clipboard
     .writeText(textToCopy)
     .then(() => {
-      copyFeedback.value = 'Copied!';
+      copyFeedback.value = "Copied!";
 
       setTimeout(() => {
-        copyFeedback.value = '';
+        copyFeedback.value = "";
       }, 2000);
     })
-    .catch(err => {
-      console.error('Error copying text:', err);
-      copyFeedback.value = 'Error!';
+    .catch((err) => {
+      console.error("Error copying text:", err);
+      copyFeedback.value = "Error!";
       setTimeout(() => {
-        copyFeedback.value = '';
+        copyFeedback.value = "";
       }, 2000);
     });
 }
 
 function shouldShowExpandButton(value) {
-  if (typeof value !== 'string') return false;
+  if (typeof value !== "string") return false;
 
   const hasMultipleLines = (value.match(/\n/g) || []).length > 3;
   const isVeryLong = value.length > 250;
 
-  const lineCount = value.split('\n').length;
+  const lineCount = value.split("\n").length;
   const averageCharsPerLine = 80;
   const estimatedLines = Math.max(lineCount, Math.ceil(value.length / averageCharsPerLine));
 

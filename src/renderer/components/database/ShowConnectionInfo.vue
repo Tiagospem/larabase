@@ -5,7 +5,10 @@
     </h1>
     <div class="text-xs text-gray-400 flex items-center">
       <span>{{ connection?.database || connection?.path }}</span>
-      <button class="ml-1 text-gray-400 hover:text-gray-300" @click="showConnectionInfo = true">
+      <button
+        class="ml-1 text-gray-400 hover:text-gray-300"
+        @click="showConnectionInfo = true"
+      >
         <svg
           xmlns="http://www.w3.org/2000/svg"
           fill="none"
@@ -24,40 +27,62 @@
     </div>
   </div>
 
-  <div v-if="showConnectionInfo" class="modal modal-open">
+  <div
+    v-if="showConnectionInfo"
+    class="modal modal-open"
+  >
     <div class="modal-box bg-base-300">
       <h3 class="font-bold text-lg">Connection Details</h3>
       <div class="py-4 text-sm">
-        <div v-if="connection" class="space-y-2">
-          <p><span class="font-semibold">Name:</span> {{ connection.name }}</p>
-          <p><span class="font-semibold">Type:</span> {{ connection.type }}</p>
+        <div
+          v-if="connection"
+          class="space-y-2"
+        >
+          <p>
+            <span class="font-semibold">Name:</span>
+            {{ connection.name }}
+          </p>
+          <p>
+            <span class="font-semibold">Type:</span>
+            {{ connection.type }}
+          </p>
           <p v-if="connection.host">
-            <span class="font-semibold">Host:</span> {{ connection.host }}
+            <span class="font-semibold">Host:</span>
+            {{ connection.host }}
           </p>
           <p v-if="connection.port">
-            <span class="font-semibold">Port:</span> {{ connection.port }}
+            <span class="font-semibold">Port:</span>
+            {{ connection.port }}
           </p>
           <p v-if="connection.database">
-            <span class="font-semibold">Database:</span> {{ connection.database }}
+            <span class="font-semibold">Database:</span>
+            {{ connection.database }}
           </p>
           <p v-if="connection.username">
-            <span class="font-semibold">Username:</span> {{ connection.username }}
+            <span class="font-semibold">Username:</span>
+            {{ connection.username }}
           </p>
           <p v-if="connection.path">
-            <span class="font-semibold">Path:</span> {{ connection.path }}
+            <span class="font-semibold">Path:</span>
+            {{ connection.path }}
           </p>
         </div>
       </div>
       <div class="modal-action">
-        <button class="btn btn-primary" @click="showConnectionInfo = false">Close</button>
+        <button
+          class="btn btn-primary"
+          @click="showConnectionInfo = false"
+        >
+          Close
+        </button>
       </div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { computed, ref } from 'vue';
-import { useConnectionsStore } from '@/store/connections';
+import { computed, ref } from "vue";
+import { useConnectionsStore } from "@/store/connections";
 
 const props = defineProps({
   connectionId: {

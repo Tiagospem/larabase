@@ -1,7 +1,7 @@
-import { defineStore } from 'pinia';
-import { ref, computed } from 'vue';
+import { defineStore } from "pinia";
+import { ref, computed } from "vue";
 
-export const useCommandsStore = defineStore('commands', () => {
+export const useCommandsStore = defineStore("commands", () => {
   const isLoading = ref(false);
   const lastCommand = ref(null);
   const commandHistory = ref([]);
@@ -17,10 +17,10 @@ export const useCommandsStore = defineStore('commands', () => {
       const commandResult = {
         id: result.commandId || Date.now().toString(),
         command: config.displayCommand || result.command || config.command,
-        output: result.output || '',
+        output: result.output || "",
         success: result.success,
         isComplete: false,
-        message: result.message || '',
+        message: result.message || "",
         timestamp: new Date().toISOString(),
         projectPath: config.projectPath
       };
@@ -45,7 +45,7 @@ export const useCommandsStore = defineStore('commands', () => {
         }
 
         // Set up the new listener
-        const channel = window.api.listenCommandOutput(result.commandId, data => {
+        const channel = window.api.listenCommandOutput(result.commandId, (data) => {
           // Append to output
           if (lastCommand.value && lastCommand.value.id === data.commandId) {
             // If the command is not complete, append to the output
@@ -67,16 +67,16 @@ export const useCommandsStore = defineStore('commands', () => {
 
       return commandResult;
     } catch (error) {
-      console.error('Error running artisan command:', error);
+      console.error("Error running artisan command:", error);
 
       // Create an error result
       const errorResult = {
         id: Date.now().toString(),
         command: config.command,
-        output: '',
+        output: "",
         success: false,
         isComplete: true,
-        message: error.message || 'Failed to run command',
+        message: error.message || "Failed to run command",
         timestamp: new Date().toISOString(),
         projectPath: config.projectPath
       };

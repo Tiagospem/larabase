@@ -14,12 +14,7 @@
     "publish-win": "npm run build && electron-builder --publish always --win",
     "publish-mac": "npm run build && electron-builder --publish always --mac --universal",
     "publish-linux": "npm run build && electron-builder --publish always --linux",
-    "lint:check": "eslint --ext .js,.vue,.ts src",
-    "lint:fix-style": "eslint --ext .js,.vue,.ts --fix --fix-type layout,suggestion,problem src",
-    "format": "prettier --write \"src/**/*.{js,vue,css,scss,html,ts,tsx}\"",
-    "format:check": "prettier --check \"src/**/*.{js,vue,css,scss,html,ts,tsx}\"",
-    "type-check": "vue-tsc --noEmit",
-    "ts:compile": "tsc --noEmit"
+    "format": "prettier . --write --single-attribute-per-line"
   },
   "keywords": [],
   "author": "",
@@ -27,6 +22,7 @@
   "dependencies": {
     "daisyui": "^3.9.3",
     "electron-store": "^8.1.0",
+    "eslint-config-prettier": "10.1.1",
     "highlight.js": "^11.11.1",
     "marked": "^15.0.8",
     "mysql2": "^3.14.0",
@@ -38,35 +34,28 @@
     "vue-router": "^4.2.4"
   },
   "devDependencies": {
-    "@eslint/js": "^9.24.0",
     "@types/node": "^22.14.1",
-    "@typescript-eslint/eslint-plugin": "^8.30.1",
-    "@typescript-eslint/parser": "^8.30.1",
     "@vitejs/plugin-vue": "^4.3.4",
-    "@vue/eslint-config-standard": "^9.0.1",
     "@vue/tsconfig": "^0.7.0",
     "autoprefixer": "^10.4.15",
     "concurrently": "^8.2.2",
     "cross-env": "^7.0.3",
-    "electron": "^26.1.0",
+    "electron": "^32.1.0",
     "electron-builder": "^24.6.4",
     "electron-reload": "^2.0.0-alpha.1",
-    "eslint": "^9.24.0",
-    "eslint-config-prettier": "^10.1.2",
-    "eslint-config-typescript": "^3.0.0",
-    "eslint-plugin-import": "^2.31.0",
-    "eslint-plugin-node": "^11.1.0",
-    "eslint-plugin-prettier": "^5.2.6",
-    "eslint-plugin-promise": "^7.2.1",
-    "eslint-plugin-vue": "^10.0.0",
     "globals": "^16.0.0",
     "postcss": "^8.4.29",
+    "eslint-plugin-prettier": "5.2.5",
     "prettier": "^3.5.3",
     "ts-node": "^10.9.2",
     "typescript": "^5.8.3",
     "vite": "^4.4.9",
     "vue-tsc": "^2.2.8",
     "wait-on": "^8.0.3"
+  },
+  "prettier": {
+    "trailingComma": "none",
+    "printWidth": 200
   },
   "build": {
     "appId": "com.larabase.app",

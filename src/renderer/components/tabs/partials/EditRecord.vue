@@ -1,9 +1,15 @@
 <template>
-  <div class="modal z-50" :class="{ 'modal-open': tableDataStore.showEditModal }">
+  <div
+    class="modal z-50"
+    :class="{ 'modal-open': tableDataStore.showEditModal }"
+  >
     <div class="modal-box max-w-4xl">
       <h3 class="font-bold text-lg mb-4 flex justify-between items-center">
         Edit Record
-        <button class="btn btn-sm btn-circle" @click="closeEditModal">
+        <button
+          class="btn btn-sm btn-circle"
+          @click="closeEditModal"
+        >
           <svg
             xmlns="http://www.w3.org/2000/svg"
             class="h-6 w-6"
@@ -21,8 +27,15 @@
         </button>
       </h3>
 
-      <div v-if="editingRecord" class="overflow-y-auto max-h-[60vh]">
-        <div v-for="column in getEditableColumns()" :key="column" class="form-control mb-4">
+      <div
+        v-if="editingRecord"
+        class="overflow-y-auto max-h-[60vh]"
+      >
+        <div
+          v-for="column in getEditableColumns()"
+          :key="column"
+          class="form-control mb-4"
+        >
           <label class="label">
             <span class="label-text font-medium">{{ column }}</span>
             <span class="label-text-alt text-xs bg-base-300 px-2 py-1 rounded-md">
@@ -60,7 +73,12 @@
           >
             <option :value="true">True</option>
             <option :value="false">False</option>
-            <option v-if="editingRecord[column] === null" :value="null">NULL</option>
+            <option
+              v-if="editingRecord[column] === null"
+              :value="null"
+            >
+              NULL
+            </option>
           </select>
 
           <input
@@ -73,21 +91,34 @@
       </div>
 
       <div class="modal-action">
-        <button class="btn btn-error" @click="closeEditModal">Cancel</button>
-        <button class="btn btn-primary" @click="saveRecord">Save Changes</button>
+        <button
+          class="btn btn-error"
+          @click="closeEditModal"
+        >
+          Cancel
+        </button>
+        <button
+          class="btn btn-primary"
+          @click="saveRecord"
+        >
+          Save Changes
+        </button>
       </div>
     </div>
-    <div class="modal-backdrop" @click="closeEditModal" />
+    <div
+      class="modal-backdrop"
+      @click="closeEditModal"
+    />
   </div>
 </template>
 
 <script setup>
-import { Helpers } from '@/utils/helpers';
-import { useTableDataStore } from '@/store/table-data';
-import { inject, ref } from 'vue';
-import { useDatabaseStore } from '@/store/database';
+import { Helpers } from "@/utils/helpers";
+import { useTableDataStore } from "@/store/table-data";
+import { inject, ref } from "vue";
+import { useDatabaseStore } from "@/store/database";
 
-const showAlert = inject('showAlert');
+const showAlert = inject("showAlert");
 
 const originalRecord = ref(null);
 const editingRecord = ref(null);
@@ -110,10 +141,10 @@ function openEditModal(row) {
 
   for (const key in processedRecord) {
     if (Helpers.isDateField(key) && processedRecord[key]) {
-      if (typeof processedRecord[key] === 'string') {
+      if (typeof processedRecord[key] === "string") {
         try {
-          if (processedRecord[key].includes(' ')) {
-            processedRecord[key] = processedRecord[key].replace(' ', 'T');
+          if (processedRecord[key].includes(" ")) {
+            processedRecord[key] = processedRecord[key].replace(" ", "T");
           }
 
           const date = new Date(processedRecord[key]);
@@ -139,7 +170,7 @@ function closeEditModal() {
 
 async function saveRecord() {
   if (!editingRecord.value) {
-    showAlert('No record to save', 'error');
+    showAlert("No record to save", "error");
     return;
   }
 
@@ -150,10 +181,10 @@ async function saveRecord() {
       let value = editingRecord.value[key];
 
       if (value && Helpers.isDateField(key)) {
-        if (typeof value === 'string' && value.includes('T')) {
+        if (typeof value === "string" && value.includes("T")) {
           const date = new Date(value);
           if (!isNaN(date.getTime())) {
-            value = date.toISOString().slice(0, 19).replace('Z', '');
+            value = date.toISOString().slice(0, 19).replace("Z", "");
           }
         }
       }
@@ -162,11 +193,11 @@ async function saveRecord() {
     }
 
     if (!recordToSave.id) {
-      showAlert('Record must have an ID field to update', 'error');
+      showAlert("Record must have an ID field to update", "error");
       return;
     }
 
-    const index = tableDataStore.tableData.findIndex(row => {
+    const index = tableDataStore.tableData.findIndex((row) => {
       if (row.id && originalRecord.value.id) {
         return row.id === originalRecord.value.id;
       }
@@ -174,33 +205,29 @@ async function saveRecord() {
     });
 
     if (index === -1) {
-      showAlert('Could not find record to update', 'error');
+      showAlert("Could not find record to update", "error");
       return;
     }
 
-    const result = await databaseStore.updateRecord(
-      tableDataStore.connectionId,
-      tableDataStore.tableName,
-      recordToSave
-    );
+    const result = await databaseStore.updateRecord(tableDataStore.connectionId, tableDataStore.tableName, recordToSave);
 
     if (result) {
       tableDataStore.tableData[index] = { ...recordToSave };
-      showAlert('Record updated successfully', 'success');
+      showAlert("Record updated successfully", "success");
       closeEditModal();
     } else {
-      showAlert('Failed to update record. Unknown error.', 'error');
+      showAlert("Failed to update record. Unknown error.", "error");
     }
   } catch (error) {
-    console.error('Error saving record:', error);
-    showAlert(`Error updating record: ${error.message}`, 'error');
+    console.error("Error saving record:", error);
+    showAlert(`Error updating record: ${error.message}`, "error");
   }
 }
 
 function getEditableColumns() {
   if (!editingRecord.value) return [];
-  return Object.keys(editingRecord.value).filter(column => {
-    return !['id'].includes(column);
+  return Object.keys(editingRecord.value).filter((column) => {
+    return !["id"].includes(column);
   });
 }
 

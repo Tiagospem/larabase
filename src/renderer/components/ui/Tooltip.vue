@@ -1,5 +1,8 @@
 <template>
-  <div :id="tooltipId" class="tooltip-wrapper">
+  <div
+    :id="tooltipId"
+    class="tooltip-wrapper"
+  >
     <slot />
     <div
       class="tooltip-content"
@@ -13,17 +16,17 @@
 </template>
 
 <script setup>
-import { ref, defineProps, onMounted, onUnmounted, computed } from 'vue';
+import { ref, defineProps, onMounted, onUnmounted, computed } from "vue";
 
 const props = defineProps({
   text: {
     type: String,
-    default: ''
+    default: ""
   },
   position: {
     type: String,
-    default: 'top',
-    validator: value => ['top', 'bottom', 'left', 'right'].includes(value)
+    default: "top",
+    validator: (value) => ["top", "bottom", "left", "right"].includes(value)
   },
   delay: {
     type: Number,
@@ -64,7 +67,7 @@ const positionTooltip = () => {
     const wrapper = document.getElementById(tooltipId);
     if (!wrapper) return;
 
-    const content = wrapper.querySelector('.tooltip-content');
+    const content = wrapper.querySelector(".tooltip-content");
     if (!content) return;
 
     const wrapperRect = wrapper.getBoundingClientRect();
@@ -72,23 +75,23 @@ const positionTooltip = () => {
     const windowWidth = window.innerWidth;
     const windowHeight = window.innerHeight;
 
-    if (props.position === 'top' || props.position === 'bottom') {
+    if (props.position === "top" || props.position === "bottom") {
       if (contentRect.left < 0) {
         contentStyle.value.left = `${Math.abs(contentRect.left) + 10}px`;
-        contentStyle.value.transform = 'translateY(-100%)';
+        contentStyle.value.transform = "translateY(-100%)";
       } else if (contentRect.right > windowWidth) {
         const overflowRight = contentRect.right - windowWidth;
         contentStyle.value.left = `calc(50% - ${overflowRight + 10}px)`;
-        contentStyle.value.transform = 'translateX(-50%) translateY(-100%)';
+        contentStyle.value.transform = "translateX(-50%) translateY(-100%)";
       }
-    } else if (props.position === 'left' || props.position === 'right') {
+    } else if (props.position === "left" || props.position === "right") {
       if (contentRect.top < 0) {
         contentStyle.value.top = `${Math.abs(contentRect.top) + 10}px`;
-        contentStyle.value.transform = 'translateY(0)';
+        contentStyle.value.transform = "translateY(0)";
       } else if (contentRect.bottom > windowHeight) {
         const overflowBottom = contentRect.bottom - windowHeight;
         contentStyle.value.top = `calc(50% - ${overflowBottom + 10}px)`;
-        contentStyle.value.transform = 'translateY(-50%)';
+        contentStyle.value.transform = "translateY(-50%)";
       }
     }
   }, 0);
@@ -97,26 +100,26 @@ const positionTooltip = () => {
 onMounted(() => {
   const wrapper = document.getElementById(tooltipId);
   if (wrapper) {
-    wrapper.addEventListener('mouseenter', showTooltip);
-    wrapper.addEventListener('mouseleave', hideTooltip);
-    wrapper.addEventListener('focus', showTooltip);
-    wrapper.addEventListener('blur', hideTooltip);
+    wrapper.addEventListener("mouseenter", showTooltip);
+    wrapper.addEventListener("mouseleave", hideTooltip);
+    wrapper.addEventListener("focus", showTooltip);
+    wrapper.addEventListener("blur", hideTooltip);
   }
 
-  window.addEventListener('resize', positionTooltip);
+  window.addEventListener("resize", positionTooltip);
 });
 
 onUnmounted(() => {
   const wrapper = document.getElementById(tooltipId);
   if (wrapper) {
-    wrapper.removeEventListener('mouseenter', showTooltip);
-    wrapper.removeEventListener('mouseleave', hideTooltip);
-    wrapper.removeEventListener('focus', showTooltip);
-    wrapper.removeEventListener('blur', hideTooltip);
+    wrapper.removeEventListener("mouseenter", showTooltip);
+    wrapper.removeEventListener("mouseleave", hideTooltip);
+    wrapper.removeEventListener("focus", showTooltip);
+    wrapper.removeEventListener("blur", hideTooltip);
   }
   clearTimeout(showTimeout);
   clearTimeout(hideTimeout);
-  window.removeEventListener('resize', positionTooltip);
+  window.removeEventListener("resize", positionTooltip);
 });
 </script>
 
@@ -160,7 +163,7 @@ onUnmounted(() => {
 }
 
 .tooltip-wrapper .tooltip-content::after {
-  content: '';
+  content: "";
   position: absolute;
   top: 100%;
   left: 50%;
@@ -170,7 +173,7 @@ onUnmounted(() => {
   border-color: rgba(0, 0, 0, 0.8) transparent transparent transparent;
 }
 
-.tooltip-wrapper .tooltip-content[data-position='bottom'] {
+.tooltip-wrapper .tooltip-content[data-position="bottom"] {
   top: 100%;
   bottom: auto;
   transform: translateX(-50%);
@@ -178,13 +181,13 @@ onUnmounted(() => {
   margin-bottom: 0;
 }
 
-.tooltip-wrapper .tooltip-content[data-position='bottom']::after {
+.tooltip-wrapper .tooltip-content[data-position="bottom"]::after {
   top: -10px;
   bottom: auto;
   border-color: transparent transparent rgba(0, 0, 0, 0.8) transparent;
 }
 
-.tooltip-wrapper .tooltip-content[data-position='left'] {
+.tooltip-wrapper .tooltip-content[data-position="left"] {
   top: 50%;
   right: 100%;
   bottom: auto;
@@ -194,7 +197,7 @@ onUnmounted(() => {
   margin-bottom: 0;
 }
 
-.tooltip-wrapper .tooltip-content[data-position='left']::after {
+.tooltip-wrapper .tooltip-content[data-position="left"]::after {
   top: 50%;
   left: 100%;
   margin-top: -5px;
@@ -202,7 +205,7 @@ onUnmounted(() => {
   border-color: transparent transparent transparent rgba(0, 0, 0, 0.8);
 }
 
-.tooltip-wrapper .tooltip-content[data-position='right'] {
+.tooltip-wrapper .tooltip-content[data-position="right"] {
   top: 50%;
   right: auto;
   bottom: auto;
@@ -212,7 +215,7 @@ onUnmounted(() => {
   margin-bottom: 0;
 }
 
-.tooltip-wrapper .tooltip-content[data-position='right']::after {
+.tooltip-wrapper .tooltip-content[data-position="right"]::after {
   top: 50%;
   left: -10px;
   margin-top: -5px;

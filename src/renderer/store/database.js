@@ -1,8 +1,8 @@
-import { defineStore } from 'pinia';
-import { ref, computed } from 'vue';
-import { useConnectionsStore } from './connections';
+import { defineStore } from "pinia";
+import { ref, computed } from "vue";
+import { useConnectionsStore } from "./connections";
 
-export const useDatabaseStore = defineStore('database', () => {
+export const useDatabaseStore = defineStore("database", () => {
   const tables = ref({});
   const isLoading = ref(false);
   const connectionStore = useConnectionsStore();
@@ -13,15 +13,20 @@ export const useDatabaseStore = defineStore('database', () => {
   const tableMigrations = ref({});
   const tableModels = ref({});
 
-  const _EMPTY_RESULT = (page, limit) => ({ data: [], totalRecords: 0, page, limit });
+  const _EMPTY_RESULT = (page, limit) => ({
+    data: [],
+    totalRecords: 0,
+    page,
+    limit
+  });
 
-  const _getConnection = id => {
+  const _getConnection = (id) => {
     const conn = connectionStore.getConnection(id);
-    if (!conn) throw new Error('Connection not found');
+    if (!conn) throw new Error("Connection not found");
     return conn;
   };
 
-  const _buildPayload = conn => ({
+  const _buildPayload = (conn) => ({
     host: conn.host,
     port: conn.port,
     username: conn.username,
@@ -34,11 +39,11 @@ export const useDatabaseStore = defineStore('database', () => {
     Object.assign(cache, { data, totalRecords, page, limit }, extra);
   };
 
-  const _prepare = record =>
+  const _prepare = (record) =>
     Object.fromEntries(
       Object.entries(record).map(([k, v]) => {
         if (v instanceof Date) return [k, v.toISOString().slice(0, 19)];
-        if (v && typeof v === 'object') {
+        if (v && typeof v === "object") {
           try {
             return [k, JSON.stringify(v)];
           } catch {
@@ -49,13 +54,13 @@ export const useDatabaseStore = defineStore('database', () => {
       })
     );
 
-  const _sanitize = ids => ids.map(id => (id && typeof id === 'object' ? String(id) : id));
+  const _sanitize = (ids) => ids.map((id) => (id && typeof id === "object" ? String(id) : id));
 
   async function loadTableData(id, tableName, limit = 100, page = 1, sortOptions = {}) {
     try {
       const conn = _getConnection(id);
 
-      console.log('loadTableData chamado com:', {
+      console.log("loadTableData chamado com:", {
         tableName,
         limit,
         page,
@@ -71,11 +76,11 @@ export const useDatabaseStore = defineStore('database', () => {
         sortDirection: sortOptions.sortDirection
       };
 
-      console.log('Enviando para getTableData:', JSON.stringify(payload));
+      console.log("Enviando para getTableData:", JSON.stringify(payload));
 
       const result = await window.api.getTableData(payload);
 
-      console.log('Resultado de getTableData:', {
+      console.log("Resultado de getTableData:", {
         success: result.success,
         totalRecords: result.totalRecords,
         dataLength: result.data?.length
@@ -84,27 +89,25 @@ export const useDatabaseStore = defineStore('database', () => {
       if (result.success) {
         const key = `${id}:${tableName}`;
         _updateCache(key, result, page, limit);
-        return { data: result.data || [], totalRecords: result.totalRecords || 0, page, limit };
+        return {
+          data: result.data || [],
+          totalRecords: result.totalRecords || 0,
+          page,
+          limit
+        };
       }
       return _EMPTY_RESULT(page, limit);
     } catch (error) {
-      console.error('Erro em loadTableData:', error);
+      console.error("Erro em loadTableData:", error);
       return _EMPTY_RESULT(page, limit);
     }
   }
 
-  async function loadFilteredTableData(
-    id,
-    tableName,
-    filter,
-    limit = 100,
-    page = 1,
-    sortOptions = {}
-  ) {
+  async function loadFilteredTableData(id, tableName, filter, limit = 100, page = 1, sortOptions = {}) {
     try {
       const conn = _getConnection(id);
 
-      console.log('loadFilteredTableData chamado com:', {
+      console.log("loadFilteredTableData chamado com:", {
         tableName,
         filter,
         limit,
@@ -122,11 +125,11 @@ export const useDatabaseStore = defineStore('database', () => {
         sortDirection: sortOptions.sortDirection
       };
 
-      console.log('Enviando para getFilteredTableData:', JSON.stringify(payload));
+      console.log("Enviando para getFilteredTableData:", JSON.stringify(payload));
 
       const result = await window.api.getFilteredTableData(payload);
 
-      console.log('Resultado de getFilteredTableData:', {
+      console.log("Resultado de getFilteredTableData:", {
         success: result.success,
         totalRecords: result.totalRecords,
         dataLength: result.data?.length
@@ -135,11 +138,16 @@ export const useDatabaseStore = defineStore('database', () => {
       if (result.success) {
         const key = `${id}:${tableName}:filtered`;
         _updateCache(key, result, page, limit, { filter });
-        return { data: result.data || [], totalRecords: result.totalRecords || 0, page, limit };
+        return {
+          data: result.data || [],
+          totalRecords: result.totalRecords || 0,
+          page,
+          limit
+        };
       }
       return _EMPTY_RESULT(page, limit);
     } catch (error) {
-      console.error('Erro em loadFilteredTableData:', error);
+      console.error("Erro em loadFilteredTableData:", error);
       return _EMPTY_RESULT(page, limit);
     }
   }
@@ -161,7 +169,9 @@ export const useDatabaseStore = defineStore('database', () => {
   async function loadModelsForTables(id, path) {
     if (!path) return;
     try {
-      const { success, models } = await window.api.findModelsForTables({ projectPath: path });
+      const { success, models } = await window.api.findModelsForTables({
+        projectPath: path
+      });
       if (success) tableModels.value[id] = models;
     } catch {}
   }
@@ -175,8 +185,8 @@ export const useDatabaseStore = defineStore('database', () => {
     const model = getModelForTable(id, name);
     return JSON.stringify(
       {
-        connectionName: conn.name || 'Unknown',
-        database: conn.database || 'Unknown',
+        connectionName: conn.name || "Unknown",
+        database: conn.database || "Unknown",
         tableName: name,
         model: model
           ? {
@@ -195,8 +205,8 @@ export const useDatabaseStore = defineStore('database', () => {
   async function getAllTablesModelsJson(id) {
     const conn = connectionStore.getConnection(id) || {};
     const result = {
-      connectionName: conn.name || 'Unknown',
-      database: conn.database || 'Unknown',
+      connectionName: conn.name || "Unknown",
+      database: conn.database || "Unknown",
       tables: []
     };
     for (const { name, recordCount } of tables.value.tables || []) {
@@ -205,7 +215,7 @@ export const useDatabaseStore = defineStore('database', () => {
         const model = getModelForTable(id, name);
         result.tables.push({
           tableName: name,
-          columns: cols.map(c => ({
+          columns: cols.map((c) => ({
             name: c.name,
             type: c.type,
             nullable: c.nullable,
@@ -217,7 +227,12 @@ export const useDatabaseStore = defineStore('database', () => {
         });
       } catch {
         const model = getModelForTable(id, name);
-        result.tables.push({ tableName: name, recordCount, columns: [], model });
+        result.tables.push({
+          tableName: name,
+          recordCount,
+          columns: [],
+          model
+        });
       }
     }
     return JSON.stringify(result, null, 2);
@@ -259,15 +274,15 @@ export const useDatabaseStore = defineStore('database', () => {
   async function getTableIndexes(id, name, force = false) {
     const key = `${id}:${name}:indexes`;
     if (!force && tableIndexes.value[key]) return tableIndexes.value[key];
-    await new Promise(r => setTimeout(r, 500));
+    await new Promise((r) => setTimeout(r, 500));
     const indexes = [
       {
-        name: 'PRIMARY',
-        type: 'PRIMARY',
-        columns: ['id'],
-        algorithm: 'BTREE',
+        name: "PRIMARY",
+        type: "PRIMARY",
+        columns: ["id"],
+        algorithm: "BTREE",
         cardinality: 0,
-        comment: ''
+        comment: ""
       }
     ];
     tableIndexes.value[key] = indexes;
@@ -347,7 +362,10 @@ export const useDatabaseStore = defineStore('database', () => {
 
   async function truncateTable(id, tableName) {
     const conn = _getConnection(id);
-    const result = await window.api.truncateTable({ connection: _buildPayload(conn), tableName });
+    const result = await window.api.truncateTable({
+      connection: _buildPayload(conn),
+      tableName
+    });
     if (!result.success) throw new Error(result.message);
     clearTableCache(`${id}:${tableName}`);
     return result;

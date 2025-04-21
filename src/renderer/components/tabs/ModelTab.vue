@@ -2,7 +2,10 @@
   <div class="h-full flex flex-col">
     <div class="bg-base-200 p-2 border-b border-neutral flex items-center justify-between">
       <div class="flex items-center space-x-2">
-        <button class="btn btn-sm btn-ghost" @click="loadModel">
+        <button
+          class="btn btn-sm btn-ghost"
+          @click="loadModel"
+        >
           <svg
             xmlns="http://www.w3.org/2000/svg"
             fill="none"
@@ -21,10 +24,11 @@
         </button>
       </div>
 
-      <div v-if="!isLoading" class="flex items-center space-x-2">
-        <span class="text-xs text-gray-400">{{
-          modelFound ? 'Model found' : 'No model found'
-        }}</span>
+      <div
+        v-if="!isLoading"
+        class="flex items-center space-x-2"
+      >
+        <span class="text-xs text-gray-400">{{ modelFound ? "Model found" : "No model found" }}</span>
 
         <button
           v-if="!connection?.projectPath"
@@ -51,7 +55,10 @@
     </div>
 
     <div class="flex-1 overflow-auto">
-      <div v-if="isLoading" class="flex items-center justify-center h-full">
+      <div
+        v-if="isLoading"
+        class="flex items-center justify-center h-full"
+      >
         <span class="loading loading-spinner loading-lg" />
       </div>
 
@@ -75,13 +82,19 @@
             />
           </svg>
           <p>No Laravel project path is associated with this connection</p>
-          <button class="btn btn-sm btn-primary mt-4" @click="selectProjectPath">
+          <button
+            class="btn btn-sm btn-primary mt-4"
+            @click="selectProjectPath"
+          >
             Select Project
           </button>
         </div>
       </div>
 
-      <div v-else-if="!modelFound" class="flex items-center justify-center h-full text-gray-500">
+      <div
+        v-else-if="!modelFound"
+        class="flex items-center justify-center h-full text-gray-500"
+      >
         <div class="text-center">
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -98,9 +111,7 @@
             />
           </svg>
           <p>No Laravel model found for {{ tableName }} table</p>
-          <p class="text-xs mt-2 text-gray-500">
-            Models are typically named using singular form or with different naming conventions
-          </p>
+          <p class="text-xs mt-2 text-gray-500">Models are typically named using singular form or with different naming conventions</p>
           <button
             v-if="connection?.projectPath"
             class="btn btn-sm btn-ghost mt-4"
@@ -111,7 +122,10 @@
         </div>
       </div>
 
-      <div v-else class="p-4">
+      <div
+        v-else
+        class="p-4"
+      >
         <div class="card bg-base-200">
           <div class="card-body">
             <h3 class="card-title flex items-center gap-2">
@@ -137,7 +151,7 @@
                 <div class="flex items-start">
                   <div class="w-28 font-medium text-gray-400">Namespace</div>
                   <div class="flex-1">
-                    {{ model.namespace || 'Not specified' }}
+                    {{ model.namespace || "Not specified" }}
                   </div>
                 </div>
 
@@ -186,13 +200,23 @@
 
             <div class="divider" />
 
-            <div v-if="modelContent" class="mb-4">
+            <div
+              v-if="modelContent"
+              class="mb-4"
+            >
               <h4 class="text-sm font-medium text-gray-400 mb-2">Model Code</h4>
-              <PhpViewer :code="modelContent" language="php" height="64" />
+              <PhpViewer
+                :code="modelContent"
+                language="php"
+                height="64"
+              />
             </div>
 
             <div class="flex justify-between">
-              <button class="btn btn-sm btn-primary" @click="viewModelJson">
+              <button
+                class="btn btn-sm btn-primary"
+                @click="viewModelJson"
+              >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
                   fill="none"
@@ -210,7 +234,10 @@
                 View Model JSON
               </button>
 
-              <button class="btn btn-sm btn-ghost" @click="openFileInEditor(model.path)">
+              <button
+                class="btn btn-sm btn-ghost"
+                @click="openFileInEditor(model.path)"
+              >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
                   fill="none"
@@ -242,12 +269,22 @@
     </div>
 
     <!-- Model JSON Modal -->
-    <div v-if="showJsonModal" class="modal modal-open">
+    <div
+      v-if="showJsonModal"
+      class="modal modal-open"
+    >
       <div class="modal-box w-11/12 max-w-5xl max-h-[90vh]">
         <h3 class="font-bold text-lg mb-4">Model JSON for {{ tableName }}</h3>
-        <PhpViewer :code="formattedJson" language="json" height="60" />
+        <PhpViewer
+          :code="formattedJson"
+          language="json"
+          height="60"
+        />
         <div class="modal-action">
-          <button class="btn btn-sm btn-primary" @click="copyJsonToClipboard">
+          <button
+            class="btn btn-sm btn-primary"
+            @click="copyJsonToClipboard"
+          >
             <svg
               xmlns="http://www.w3.org/2000/svg"
               fill="none"
@@ -264,21 +301,29 @@
             </svg>
             Copy to Clipboard
           </button>
-          <button class="btn" @click="showJsonModal = false">Close</button>
+          <button
+            class="btn"
+            @click="showJsonModal = false"
+          >
+            Close
+          </button>
         </div>
       </div>
-      <div class="modal-backdrop" @click="showJsonModal = false" />
+      <div
+        class="modal-backdrop"
+        @click="showJsonModal = false"
+      />
     </div>
   </div>
 </template>
 
 <script setup>
-import { inject, onMounted, ref, computed, watch } from 'vue';
-import { useDatabaseStore } from '@/store/database';
-import { useConnectionsStore } from '@/store/connections';
-import PhpViewer from '@/components/PhpViewer.vue';
+import { inject, onMounted, ref, computed, watch } from "vue";
+import { useDatabaseStore } from "@/store/database";
+import { useConnectionsStore } from "@/store/connections";
+import PhpViewer from "@/components/PhpViewer.vue";
 
-const showAlert = inject('showAlert');
+const showAlert = inject("showAlert");
 
 const props = defineProps({
   connectionId: {
@@ -297,8 +342,8 @@ const props = defineProps({
 
 const isLoading = ref(true);
 const model = ref(null);
-const modelJson = ref('');
-const modelContent = ref('');
+const modelJson = ref("");
+const modelContent = ref("");
 const showJsonModal = ref(false);
 
 const databaseStore = useDatabaseStore();
@@ -315,13 +360,11 @@ const modelFound = computed(() => {
 // Adicionar variável computada para o JSON formatado
 const formattedJson = computed(() => {
   try {
-    if (!modelJson.value) return '';
+    if (!modelJson.value) return "";
 
-    return typeof modelJson.value === 'string'
-      ? JSON.stringify(JSON.parse(modelJson.value), null, 2)
-      : JSON.stringify(modelJson.value, null, 2);
+    return typeof modelJson.value === "string" ? JSON.stringify(JSON.parse(modelJson.value), null, 2) : JSON.stringify(modelJson.value, null, 2);
   } catch (error) {
-    console.error('Error formatting JSON:', error);
+    console.error("Error formatting JSON:", error);
     return String(modelJson.value);
   }
 });
@@ -349,8 +392,8 @@ async function loadModel() {
       modelFound: model.value !== null
     });
   } catch (error) {
-    console.error('Failed to load model:', error);
-    showAlert(`Error loading model: ${error.message}`, 'error');
+    console.error("Failed to load model:", error);
+    showAlert(`Error loading model: ${error.message}`, "error");
     model.value = null;
   } finally {
     isLoading.value = false;
@@ -364,12 +407,12 @@ async function loadModelContent(filePath) {
     if (result.success) {
       modelContent.value = result.content;
     } else {
-      console.error('Error loading model content:', result.message);
-      modelContent.value = '// Unable to load model content: ' + result.message;
+      console.error("Error loading model content:", result.message);
+      modelContent.value = "// Unable to load model content: " + result.message;
     }
   } catch (error) {
-    console.error('Error reading model file:', error);
-    modelContent.value = '// Unable to load model content';
+    console.error("Error reading model file:", error);
+    modelContent.value = "// Unable to load model content";
   }
 }
 
@@ -386,12 +429,12 @@ async function selectProjectPath() {
     const isLaravel = await window.api.validateLaravelProject(projectPath);
 
     if (!isLaravel) {
-      showAlert('Selected directory is not a valid Laravel project', 'error');
+      showAlert("Selected directory is not a valid Laravel project", "error");
       return;
     }
 
     if (connection.value) {
-      const updatedConnections = connectionsStore.connections.map(conn => {
+      const updatedConnections = connectionsStore.connections.map((conn) => {
         if (conn.id === connection.value.id) {
           return { ...conn, projectPath };
         }
@@ -399,12 +442,12 @@ async function selectProjectPath() {
       });
 
       await connectionsStore.saveConnections(updatedConnections);
-      showAlert('Laravel project path set successfully', 'success');
+      showAlert("Laravel project path set successfully", "success");
       await loadModel();
     }
   } catch (error) {
-    console.error('Error selecting directory:', error);
-    showAlert('Failed to select project directory', 'error');
+    console.error("Error selecting directory:", error);
+    showAlert("Failed to select project directory", "error");
   }
 }
 
@@ -412,8 +455,8 @@ async function openFileInEditor(filePath) {
   try {
     await window.api.openFile(filePath);
   } catch (error) {
-    console.error('Error opening file:', error);
-    showAlert('Failed to open file', 'error');
+    console.error("Error opening file:", error);
+    showAlert("Failed to open file", "error");
   }
 }
 
@@ -424,10 +467,10 @@ function viewModelJson() {
 async function copyJsonToClipboard() {
   try {
     await navigator.clipboard.writeText(formattedJson.value);
-    showAlert('JSON copied to clipboard', 'success');
+    showAlert("JSON copied to clipboard", "success");
   } catch (error) {
-    console.error('Error copying to clipboard:', error);
-    showAlert('Failed to copy to clipboard', 'error');
+    console.error("Error copying to clipboard:", error);
+    showAlert("Failed to copy to clipboard", "error");
   }
 }
 

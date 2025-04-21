@@ -19,16 +19,16 @@
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true,
-    
+
     /* Paths */
     "baseUrl": ".",
     "paths": {
       "@/*": ["src/*"]
     },
-    
+
     /* For Electron */
     "esModuleInterop": true
   },
   "include": ["src/**/*.ts", "src/**/*.tsx", "src/**/*.vue"],
   "exclude": ["node_modules"]
-} 
+}

@@ -6,7 +6,7 @@ export class Helpers {
   }
 
   static getColumnInfo(column) {
-    return this.columnStructure.find(col => col.name === column) || null;
+    return this.columnStructure.find((col) => col.name === column) || null;
   }
 
   static isDateField(column) {
@@ -14,7 +14,7 @@ export class Helpers {
 
     if (colInfo && colInfo.type) {
       const type = colInfo.type.toLowerCase();
-      return type.includes('date') || type.includes('time') || type.includes('timestamp');
+      return type.includes("date") || type.includes("time") || type.includes("timestamp");
     }
 
     return false;
@@ -26,19 +26,19 @@ export class Helpers {
     if (colInfo && colInfo.type) {
       const type = colInfo.type.toLowerCase();
 
-      if (type.includes('enum')) {
+      if (type.includes("enum")) {
         return false;
       }
 
       return (
-        type.includes('int') ||
-        type.includes('decimal') ||
-        type.includes('float') ||
-        type.includes('double') ||
-        type.includes('numeric') ||
-        type.includes('real') ||
-        type.includes('bit') ||
-        type.includes('serial')
+        type.includes("int") ||
+        type.includes("decimal") ||
+        type.includes("float") ||
+        type.includes("double") ||
+        type.includes("numeric") ||
+        type.includes("real") ||
+        type.includes("bit") ||
+        type.includes("serial")
       );
     }
 
@@ -49,14 +49,7 @@ export class Helpers {
     const colInfo = this.getColumnInfo(column);
     if (colInfo && colInfo.type) {
       const type = colInfo.type.toLowerCase();
-      if (
-        type.includes('text') ||
-        type.includes('json') ||
-        type.includes('mediumtext') ||
-        type.includes('longtext') ||
-        type.includes('blob') ||
-        type.includes('clob')
-      ) {
+      if (type.includes("text") || type.includes("json") || type.includes("mediumtext") || type.includes("longtext") || type.includes("blob") || type.includes("clob")) {
         return true;
       }
     }
@@ -68,7 +61,7 @@ export class Helpers {
     const colInfo = this.getColumnInfo(column);
     if (colInfo && colInfo.type) {
       const type = colInfo.type.toLowerCase();
-      return type.includes('bool') || type.includes('tinyint(1)');
+      return type.includes("bool") || type.includes("tinyint(1)");
     }
 
     return false;
@@ -81,7 +74,7 @@ export class Helpers {
       return colInfo.type;
     }
 
-    return 'Unknown';
+    return "Unknown";
   }
 
   static formatCellValue(column, value) {
@@ -92,7 +85,7 @@ export class Helpers {
     let dateObj = new Date(value);
 
     if (dateObj instanceof Date && !isNaN(dateObj.getTime())) {
-      const pad = n => String(n).padStart(2, '0');
+      const pad = (n) => String(n).padStart(2, "0");
       const Y = dateObj.getFullYear();
       const m = pad(dateObj.getMonth() + 1);
       const d = pad(dateObj.getDate());

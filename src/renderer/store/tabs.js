@@ -1,29 +1,19 @@
-import { defineStore } from 'pinia';
-import { ref, computed } from 'vue';
+import { defineStore } from "pinia";
+import { ref, computed } from "vue";
 
-export const useTabsStore = defineStore('tabs', () => {
+export const useTabsStore = defineStore("tabs", () => {
   const openTabs = ref([]);
   const activeTabId = ref(null);
 
   async function addTab(tableData) {
-    const isFiltered = tableData.filter && tableData.filter.trim() !== '';
+    const isFiltered = tableData.filter && tableData.filter.trim() !== "";
 
     let existingTab;
 
     if (isFiltered) {
-      existingTab = openTabs.value.find(
-        tab =>
-          tab.connectionId === tableData.connectionId &&
-          tab.tableName === tableData.tableName &&
-          tab.filter === tableData.filter
-      );
+      existingTab = openTabs.value.find((tab) => tab.connectionId === tableData.connectionId && tab.tableName === tableData.tableName && tab.filter === tableData.filter);
     } else {
-      existingTab = openTabs.value.find(
-        tab =>
-          tab.connectionId === tableData.connectionId &&
-          tab.tableName === tableData.tableName &&
-          (!tab.filter || tab.filter.trim() === '')
-      );
+      existingTab = openTabs.value.find((tab) => tab.connectionId === tableData.connectionId && tab.tableName === tableData.tableName && (!tab.filter || tab.filter.trim() === ""));
     }
 
     if (existingTab) {
@@ -33,8 +23,7 @@ export const useTabsStore = defineStore('tabs', () => {
 
     let tabTitle = tableData.tableName;
     if (isFiltered) {
-      const shortFilter =
-        tableData.filter.length > 20 ? tableData.filter.substring(0, 20) + '...' : tableData.filter;
+      const shortFilter = tableData.filter.length > 20 ? tableData.filter.substring(0, 20) + "..." : tableData.filter;
       tabTitle = `${tableData.tableName} (${shortFilter})`;
     }
 
@@ -43,7 +32,7 @@ export const useTabsStore = defineStore('tabs', () => {
       connectionId: tableData.connectionId,
       tableName: tableData.tableName,
       title: tableData.title || tabTitle,
-      filter: tableData.filter || '',
+      filter: tableData.filter || "",
       data: null,
       isLoading: true,
       columnCount: tableData.columnCount || 0
@@ -58,7 +47,7 @@ export const useTabsStore = defineStore('tabs', () => {
   }
 
   async function removeTab(tabId) {
-    const index = openTabs.value.findIndex(tab => tab.id === tabId);
+    const index = openTabs.value.findIndex((tab) => tab.id === tabId);
 
     if (index !== -1) {
       const tabToRemove = openTabs.value[index];
@@ -66,19 +55,16 @@ export const useTabsStore = defineStore('tabs', () => {
       if (tabToRemove.connectionId && tabToRemove.tableName) {
         try {
           const liveTableKey = `liveTable.enabled.${tabToRemove.connectionId}.${tabToRemove.tableName}`;
-          localStorage.setItem(liveTableKey, 'false');
+          localStorage.setItem(liveTableKey, "false");
         } catch (e) {
-          console.error('Error deactivating live table during tab removal:', e);
+          console.error("Error deactivating live table during tab removal:", e);
         }
       }
 
       openTabs.value.splice(index, 1);
 
       if (activeTabId.value === tabId) {
-        activeTabId.value =
-          openTabs.value.length > 0
-            ? openTabs.value[Math.min(index, openTabs.value.length - 1)].id
-            : null;
+        activeTabId.value = openTabs.value.length > 0 ? openTabs.value[Math.min(index, openTabs.value.length - 1)].id : null;
       }
 
       await saveOpenTabs();
@@ -86,7 +72,7 @@ export const useTabsStore = defineStore('tabs', () => {
   }
 
   async function updateTabData(tabId, data) {
-    const tab = openTabs.value.find(tab => tab.id === tabId);
+    const tab = openTabs.value.find((tab) => tab.id === tabId);
     if (tab) {
       tab.data = data;
       tab.isLoading = false;
@@ -95,30 +81,30 @@ export const useTabsStore = defineStore('tabs', () => {
   }
 
   function activateTab(tabId) {
-    if (openTabs.value.some(tab => tab.id === tabId)) {
-      const currentActiveTab = openTabs.value.find(tab => tab.id === activeTabId.value);
-      const newActiveTab = openTabs.value.find(tab => tab.id === tabId);
+    if (openTabs.value.some((tab) => tab.id === tabId)) {
+      const currentActiveTab = openTabs.value.find((tab) => tab.id === activeTabId.value);
+      const newActiveTab = openTabs.value.find((tab) => tab.id === tabId);
 
       if (currentActiveTab && currentActiveTab.id !== tabId) {
         if (currentActiveTab.connectionId && currentActiveTab.tableName) {
           try {
             const currentLiveKey = `liveTable.enabled.${currentActiveTab.connectionId}.${currentActiveTab.tableName}`;
-            const currentLiveEnabled = localStorage.getItem(currentLiveKey) === 'true';
+            const currentLiveEnabled = localStorage.getItem(currentLiveKey) === "true";
 
             if (currentLiveEnabled) {
-              localStorage.setItem(currentLiveKey, 'false');
+              localStorage.setItem(currentLiveKey, "false");
 
               if (newActiveTab && newActiveTab.connectionId && newActiveTab.tableName) {
                 const newLiveKey = `liveTable.enabled.${newActiveTab.connectionId}.${newActiveTab.tableName}`;
-                const newLiveEnabled = localStorage.getItem(newLiveKey) === 'true';
+                const newLiveEnabled = localStorage.getItem(newLiveKey) === "true";
 
                 if (newLiveEnabled) {
-                  localStorage.setItem(currentLiveKey, 'false');
+                  localStorage.setItem(currentLiveKey, "false");
                 }
               }
             }
           } catch (e) {
-            console.error('Error handling Live Table state during tab activation:', e);
+            console.error("Error handling Live Table state during tab activation:", e);
           }
         }
       }
@@ -135,12 +121,12 @@ export const useTabsStore = defineStore('tabs', () => {
   async function saveOpenTabs() {
     try {
       if (window.api) {
-        const simplifiedTabs = openTabs.value.map(tab => ({
+        const simplifiedTabs = openTabs.value.map((tab) => ({
           id: tab.id,
           connectionId: tab.connectionId,
           tableName: tab.tableName,
           title: tab.title,
-          filter: tab.filter || '',
+          filter: tab.filter || "",
           rowCount: tab.data?.rowCount || 0,
           columnCount: tab.data?.columns?.length || 0
         }));
@@ -151,18 +137,18 @@ export const useTabsStore = defineStore('tabs', () => {
         });
       }
 
-      const simplifiedTabs = openTabs.value.map(tab => ({
+      const simplifiedTabs = openTabs.value.map((tab) => ({
         id: tab.id,
         connectionId: tab.connectionId,
         tableName: tab.tableName,
         title: tab.title,
-        filter: tab.filter || '',
+        filter: tab.filter || "",
         columnCount: tab.columnCount || 0,
         rowCount: tab.data?.rowCount || 0
       }));
 
       localStorage.setItem(
-        'openTabs',
+        "openTabs",
         JSON.stringify({
           tabs: simplifiedTabs,
           activeTabId: activeTabId.value
@@ -184,7 +170,7 @@ export const useTabsStore = defineStore('tabs', () => {
         }
       }
 
-      const savedTabsStr = localStorage.getItem('openTabs');
+      const savedTabsStr = localStorage.getItem("openTabs");
       if (savedTabsStr) {
         const savedTabsData = JSON.parse(savedTabsStr);
         openTabs.value = savedTabsData.tabs || [];
@@ -196,14 +182,14 @@ export const useTabsStore = defineStore('tabs', () => {
   }
 
   async function closeAllTabs() {
-    openTabs.value.forEach(tab => {
+    openTabs.value.forEach((tab) => {
       try {
         if (tab.connectionId && tab.tableName) {
           const liveTableKey = `liveTable.enabled.${tab.connectionId}.${tab.tableName}`;
-          localStorage.setItem(liveTableKey, 'false');
+          localStorage.setItem(liveTableKey, "false");
         }
       } catch (e) {
-        console.error('Error deactivating live table during all tabs removal:', e);
+        console.error("Error deactivating live table during all tabs removal:", e);
       }
     });
 
@@ -217,23 +203,23 @@ export const useTabsStore = defineStore('tabs', () => {
 
     const initialTabsCount = openTabs.value.length;
 
-    const tabsToClose = openTabs.value.filter(tab => tab.connectionId === connectionId);
+    const tabsToClose = openTabs.value.filter((tab) => tab.connectionId === connectionId);
 
-    tabsToClose.forEach(tab => {
+    tabsToClose.forEach((tab) => {
       try {
         if (tab.tableName) {
           const liveTableKey = `liveTable.enabled.${connectionId}.${tab.tableName}`;
-          localStorage.setItem(liveTableKey, 'false');
+          localStorage.setItem(liveTableKey, "false");
         }
       } catch (e) {
-        console.error('Error deactivating live table during connection tabs removal:', e);
+        console.error("Error deactivating live table during connection tabs removal:", e);
       }
     });
 
-    openTabs.value = openTabs.value.filter(tab => tab.connectionId !== connectionId);
+    openTabs.value = openTabs.value.filter((tab) => tab.connectionId !== connectionId);
 
     if (initialTabsCount > openTabs.value.length) {
-      if (!openTabs.value.some(tab => tab.id === activeTabId.value)) {
+      if (!openTabs.value.some((tab) => tab.id === activeTabId.value)) {
         activeTabId.value = openTabs.value.length > 0 ? openTabs.value[0].id : null;
       }
       await saveOpenTabs();
@@ -243,7 +229,7 @@ export const useTabsStore = defineStore('tabs', () => {
   }
 
   const activeTab = computed(() => {
-    return openTabs.value.find(tab => tab.id === activeTabId.value) || null;
+    return openTabs.value.find((tab) => tab.id === activeTabId.value) || null;
   });
 
   return {

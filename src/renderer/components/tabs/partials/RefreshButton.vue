@@ -1,5 +1,8 @@
 <template>
-  <button class="btn btn-sm btn-ghost" @click="tableDataStore.loadTableData()">
+  <button
+    class="btn btn-sm btn-ghost"
+    @click="tableDataStore.loadTableData()"
+  >
     <svg
       xmlns="http://www.w3.org/2000/svg"
       fill="none"
@@ -19,7 +22,7 @@
 </template>
 
 <script setup>
-import { useTableDataStore } from '@/store/table-data';
+import { useTableDataStore } from "@/store/table-data";
 
 const props = defineProps({
   storeId: {

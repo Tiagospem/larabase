@@ -1,6 +1,13 @@
 <template>
-  <div v-if="openTabs.length > 0" class="tabs-container border-b border-neutral bg-base-300">
-    <button v-if="hasScrollLeft" class="tab-scroll-button tab-scroll-left" @click="scrollLeft">
+  <div
+    v-if="openTabs.length > 0"
+    class="tabs-container border-b border-neutral bg-base-300"
+  >
+    <button
+      v-if="hasScrollLeft"
+      class="tab-scroll-button tab-scroll-left"
+      @click="scrollLeft"
+    >
       <svg
         xmlns="http://www.w3.org/2000/svg"
         fill="none"
@@ -9,11 +16,19 @@
         stroke="currentColor"
         class="w-4 h-4"
       >
-        <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
+        <path
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          d="M15.75 19.5L8.25 12l7.5-7.5"
+        />
       </svg>
     </button>
 
-    <div ref="tabsScrollRef" class="tabs-scroll" @scroll="checkScrollPosition">
+    <div
+      ref="tabsScrollRef"
+      class="tabs-scroll"
+      @scroll="checkScrollPosition"
+    >
       <div
         v-for="tab in openTabs"
         :key="tab.id"
@@ -25,7 +40,10 @@
         @drop="handleDrop($event, tab.id)"
       >
         <span class="tab-title">{{ tab.title }}</span>
-        <button class="close-icon" @click.stop="closeTab(tab.id)">
+        <button
+          class="close-icon"
+          @click.stop="closeTab(tab.id)"
+        >
           <svg
             xmlns="http://www.w3.org/2000/svg"
             fill="none"
@@ -34,13 +52,21 @@
             stroke="currentColor"
             class="w-4 h-4"
           >
-            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              d="M6 18L18 6M6 6l12 12"
+            />
           </svg>
         </button>
       </div>
     </div>
 
-    <button v-if="hasScrollRight" class="tab-scroll-button tab-scroll-right" @click="scrollRight">
+    <button
+      v-if="hasScrollRight"
+      class="tab-scroll-button tab-scroll-right"
+      @click="scrollRight"
+    >
       <svg
         xmlns="http://www.w3.org/2000/svg"
         fill="none"
@@ -49,16 +75,20 @@
         stroke="currentColor"
         class="w-4 h-4"
       >
-        <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+        <path
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          d="M8.25 4.5l7.5 7.5-7.5 7.5"
+        />
       </svg>
     </button>
   </div>
 </template>
 
 <script setup>
-import { computed, nextTick, ref, watch } from 'vue';
-import { useTabsStore } from '@/store/tabs';
-import { useDatabaseStore } from '@/store/database';
+import { computed, nextTick, ref, watch } from "vue";
+import { useTabsStore } from "@/store/tabs";
+import { useDatabaseStore } from "@/store/database";
 
 const props = defineProps({
   connectionId: {
@@ -95,7 +125,7 @@ function scrollLeft() {
   const scrollAmount = Math.min(container.clientWidth * 0.75, 300);
   container.scrollBy({
     left: -scrollAmount,
-    behavior: 'smooth'
+    behavior: "smooth"
   });
 }
 
@@ -110,20 +140,20 @@ function scrollRight() {
   const scrollAmount = Math.min(container.clientWidth * 0.75, 300);
   container.scrollBy({
     left: scrollAmount,
-    behavior: 'smooth'
+    behavior: "smooth"
   });
 }
 
 function handleDragStart(event, tabId) {
   draggingTabId.value = tabId;
-  event.dataTransfer.effectAllowed = 'move';
+  event.dataTransfer.effectAllowed = "move";
 }
 
 function handleDrop(event, targetTabId) {
   if (draggingTabId.value === null) return;
 
-  const draggedTabIndex = openTabs.value.findIndex(tab => tab.id === draggingTabId.value);
-  const targetTabIndex = openTabs.value.findIndex(tab => tab.id === targetTabId);
+  const draggedTabIndex = openTabs.value.findIndex((tab) => tab.id === draggingTabId.value);
+  const targetTabIndex = openTabs.value.findIndex((tab) => tab.id === targetTabId);
 
   if (draggedTabIndex === -1 || targetTabIndex === -1) return;
 
@@ -152,7 +182,7 @@ function activateTab(tabId) {
 
   nextTick(() => {
     window.dispatchEvent(
-      new CustomEvent('tab-activated', {
+      new CustomEvent("tab-activated", {
         detail: { tabId }
       })
     );
@@ -171,7 +201,7 @@ function scrollToActiveTab() {
   /**
    * @type {HTMLElement}
    */
-  const activeTabElement = tabsScrollRef.value.querySelector('.tab.active');
+  const activeTabElement = tabsScrollRef.value.querySelector(".tab.active");
 
   if (!activeTabElement) return;
 
@@ -187,12 +217,12 @@ function scrollToActiveTab() {
   if (tabLeft + tabWidth > scrollContainer.scrollLeft + containerWidth) {
     scrollContainer.scrollTo({
       left: tabLeft + tabWidth - containerWidth + 20,
-      behavior: 'smooth'
+      behavior: "smooth"
     });
   } else if (tabLeft < scrollContainer.scrollLeft) {
     scrollContainer.scrollTo({
       left: tabLeft - 20,
-      behavior: 'smooth'
+      behavior: "smooth"
     });
   }
 
@@ -202,24 +232,24 @@ function scrollToActiveTab() {
 function handleOpenTab(tabData) {
   try {
     if (!tabData.data || !tabData.data.connectionId || !tabData.data.tableName) {
-      showAlert('Failed to open tabs', 'error');
+      showAlert("Failed to open tabs", "error");
       return;
     }
 
-    const targetTable = databaseStore.tablesList.find(t => t.name === tabData.data.tableName);
+    const targetTable = databaseStore.tablesList.find((t) => t.name === tabData.data.tableName);
 
     if (!targetTable) {
-      showAlert(`Table "${tabData.data.tableName}" not found`, 'error');
+      showAlert(`Table "${tabData.data.tableName}" not found`, "error");
 
       return;
     }
 
-    const filter = tabData.data.filter || '';
+    const filter = tabData.data.filter || "";
 
     const newTab = {
       id: tabData.id || `data-${tabData.data.connectionId}-${tabData.data.tableName}-${Date.now()}`,
       title: tabData.title || tabData.data.tableName,
-      type: 'data',
+      type: "data",
       connectionId: tabData.data.connectionId,
       tableName: tabData.data.tableName,
       filter: filter,
@@ -232,12 +262,12 @@ function handleOpenTab(tabData) {
       scrollToActiveTab();
     });
   } catch (error) {
-    showAlert(`Failed to open tab: ${error.message}`, 'error');
+    showAlert(`Failed to open tab: ${error.message}`, "error");
   }
 }
 
 function handleUpdateTabData(tabName, data) {
-  const tab = openTabs.value.find(t => t.tableName === tabName);
+  const tab = openTabs.value.find((t) => t.tableName === tabName);
   if (tab) {
     tabsStore.updateTabData(tab.id, data);
   }
@@ -249,7 +279,7 @@ function openTable(table, filter) {
       connectionId: props.connectionId,
       tableName: table.name,
       columnCount: table.columnCount,
-      filter: filter || ''
+      filter: filter || ""
     });
     nextTick(() => {
       scrollToActiveTab();

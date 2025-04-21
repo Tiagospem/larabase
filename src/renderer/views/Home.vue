@@ -1,10 +1,12 @@
 <template>
   <div class="flex h-full">
-    <div
-      class="w-1/3 bg-[#e82b25] flex flex-col items-center justify-between p-6 border-r border-gray-800"
-    >
+    <div class="w-1/3 bg-[#e82b25] flex flex-col items-center justify-between p-6 border-r border-gray-800">
       <div class="flex flex-col items-center">
-        <img src="../assets/icons/png/512x512.png" alt="Larabase" class="h-32 w-32 mb-2" />
+        <img
+          src="../assets/icons/png/512x512.png"
+          alt="Larabase"
+          class="h-32 w-32 mb-2"
+        />
         <h1 class="text-3xl font-bold text-white">Larabase</h1>
         <p class="text-sm text-white">An opinionated MySQL GUI for Laravel developers</p>
       </div>
@@ -21,7 +23,11 @@
           stroke="currentColor"
           class="w-5 h-5"
         >
-          <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            d="M12 4.5v15m7.5-7.5h-15"
+          />
         </svg>
         Create Connection
       </button>
@@ -31,7 +37,10 @@
       <div class="flex-1 overflow-auto p-6">
         <h2 class="text-xl font-bold mb-4 text-white">Your Connections</h2>
 
-        <div v-if="isLoading" class="flex justify-center items-center h-[calc(100vh-150px)]">
+        <div
+          v-if="isLoading"
+          class="flex justify-center items-center h-[calc(100vh-150px)]"
+        >
           <span class="loading loading-spinner loading-lg" />
         </div>
 
@@ -57,7 +66,10 @@
           <p class="text-gray-500 mt-3">Create a new connection to get started</p>
         </div>
 
-        <div v-else class="grid grid-cols-1 gap-3">
+        <div
+          v-else
+          class="grid grid-cols-1 gap-3"
+        >
           <div
             v-for="connection in connectionsStore.connections"
             :key="connection.id"
@@ -74,17 +86,21 @@
                 <div class="flex-1 min-w-0">
                   <h2 class="card-title text-base overflow-hidden whitespace-nowrap text-ellipsis">
                     {{ connection.name }}
-                    <span v-if="connection.isValid" class="text-xs text-green-500 ml-1">{{
-                      connection.status
-                    }}</span>
-                    <span v-else class="text-xs text-red-500 ml-1">Invalid</span>
+                    <span
+                      v-if="connection.isValid"
+                      class="text-xs text-green-500 ml-1"
+                      >{{ connection.status }}</span
+                    >
+                    <span
+                      v-else
+                      class="text-xs text-red-500 ml-1"
+                      >Invalid</span
+                    >
                   </h2>
                   <p class="text-xs text-gray-400 overflow-hidden whitespace-nowrap text-ellipsis">
                     {{ connection.host || connection.path }}
                   </p>
-                  <p
-                    class="text-xs font-medium text-white mt-1 overflow-hidden whitespace-nowrap text-ellipsis"
-                  >
+                  <p class="text-xs font-medium text-white mt-1 overflow-hidden whitespace-nowrap text-ellipsis">
                     {{ connection.database }}
                   </p>
                 </div>
@@ -179,22 +195,25 @@
     </div>
 
     <RestoreDatabase ref="restoreDatabase" />
-    <ManageConnection ref="manageConnection" :is-loading="isLoading" />
+    <ManageConnection
+      ref="manageConnection"
+      :is-loading="isLoading"
+    />
   </div>
 </template>
 
 <script setup>
-import { onMounted, computed, inject, ref } from 'vue';
-import { useRouter } from 'vue-router';
-import { useConnectionsStore } from '@/store/connections';
+import { onMounted, computed, inject, ref } from "vue";
+import { useRouter } from "vue-router";
+import { useConnectionsStore } from "@/store/connections";
 
-import RestoreDatabase from '@/components/home/RestoreDatabase.vue';
-import ManageConnection from '@/components/home/ManageConnection.vue';
+import RestoreDatabase from "@/components/home/RestoreDatabase.vue";
+import ManageConnection from "@/components/home/ManageConnection.vue";
 
 const router = useRouter();
 const connectionsStore = useConnectionsStore();
 
-const showAlert = inject('showAlert');
+const showAlert = inject("showAlert");
 
 const restoreDatabase = ref(null);
 const manageConnection = ref(null);
@@ -222,7 +241,7 @@ onMounted(async () => {
     await connectionsStore.loadConnections();
   } catch (error) {
     console.error(error);
-    showAlert(error, 'error');
+    showAlert(error, "error");
   }
 });
 
@@ -232,16 +251,16 @@ function openConnection(connectionId) {
 
 function getConnectionColor(type) {
   switch (type) {
-    case 'mysql':
-      return 'bg-orange-500';
-    case 'redis':
-      return 'bg-red-600';
-    case 'sqlite':
-      return 'bg-purple-600';
-    case 'postgresql':
-      return 'bg-blue-600';
+    case "mysql":
+      return "bg-orange-500";
+    case "redis":
+      return "bg-red-600";
+    case "sqlite":
+      return "bg-purple-600";
+    case "postgresql":
+      return "bg-blue-600";
     default:
-      return 'bg-gray-600';
+      return "bg-gray-600";
   }
 }
 </script>

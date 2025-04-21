@@ -2,7 +2,10 @@
   <div class="h-full flex flex-col">
     <div class="bg-base-200 p-2 border-b border-neutral flex items-center justify-between">
       <div class="flex items-center space-x-2">
-        <button class="btn btn-sm btn-ghost" @click="loadMigrations">
+        <button
+          class="btn btn-sm btn-ghost"
+          @click="loadMigrations"
+        >
           <svg
             xmlns="http://www.w3.org/2000/svg"
             fill="none"
@@ -21,7 +24,10 @@
         </button>
       </div>
 
-      <div v-if="!isLoading" class="flex items-center space-x-2">
+      <div
+        v-if="!isLoading"
+        class="flex items-center space-x-2"
+      >
         <span class="text-xs text-gray-400">{{ migrations.length }} migrations found</span>
 
         <button
@@ -49,11 +55,17 @@
     </div>
 
     <div class="flex-1 overflow-auto">
-      <div v-if="isLoading" class="flex items-center justify-center h-full">
+      <div
+        v-if="isLoading"
+        class="flex items-center justify-center h-full"
+      >
         <span class="loading loading-spinner loading-lg" />
       </div>
 
-      <div v-else-if="loadError" class="flex items-center justify-center h-full text-error">
+      <div
+        v-else-if="loadError"
+        class="flex items-center justify-center h-full text-error"
+      >
         <div class="text-center">
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -70,7 +82,12 @@
             />
           </svg>
           <p>{{ loadError }}</p>
-          <button class="btn btn-sm btn-primary mt-4" @click="loadMigrations">Try again</button>
+          <button
+            class="btn btn-sm btn-primary mt-4"
+            @click="loadMigrations"
+          >
+            Try again
+          </button>
         </div>
       </div>
 
@@ -94,7 +111,10 @@
             />
           </svg>
           <p>No Laravel project path is associated with this connection</p>
-          <button class="btn btn-sm btn-primary mt-4" @click="selectProjectPath">
+          <button
+            class="btn btn-sm btn-primary mt-4"
+            @click="selectProjectPath"
+          >
             Select Project
           </button>
         </div>
@@ -130,7 +150,10 @@
         </div>
       </div>
 
-      <div v-else class="p-4">
+      <div
+        v-else
+        class="p-4"
+      >
         <div class="collapse-group">
           <div
             v-for="migration in migrations"
@@ -146,7 +169,10 @@
                 />
                 <span>{{ migration.displayName || migration.name }}</span>
               </div>
-              <div class="badge badge-sm" :class="getMigrationStatusClass(migration.status)">
+              <div
+                class="badge badge-sm"
+                :class="getMigrationStatusClass(migration.status)"
+              >
                 {{ migration.status }}
               </div>
             </div>
@@ -164,7 +190,10 @@
                     class="bg-base-300 p-2 rounded-md"
                   >
                     <div class="flex items-center space-x-2">
-                      <div class="badge badge-sm" :class="getActionTypeClass(action.type)">
+                      <div
+                        class="badge badge-sm"
+                        :class="getActionTypeClass(action.type)"
+                      >
                         {{ action.type }}
                       </div>
                       <span class="text-sm">{{ action.description }}</span>
@@ -174,7 +203,10 @@
               </div>
 
               <div class="mt-4 flex justify-end space-x-2">
-                <button class="btn btn-sm btn-ghost" @click="viewMigrationCode(migration)">
+                <button
+                  class="btn btn-sm btn-ghost"
+                  @click="viewMigrationCode(migration)"
+                >
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
                     fill="none"
@@ -229,28 +261,44 @@
       </div>
     </div>
 
-    <div v-if="selectedMigration" class="modal modal-open">
+    <div
+      v-if="selectedMigration"
+      class="modal modal-open"
+    >
       <div class="modal-box w-11/12 max-w-5xl max-h-[90vh]">
         <h3 class="font-bold text-lg mb-4">
-          Migration: {{ selectedMigration.displayName || selectedMigration.name }}
+          Migration:
+          {{ selectedMigration.displayName || selectedMigration.name }}
         </h3>
-        <PhpViewer :code="selectedMigration.code" language="php" height="60" />
+        <PhpViewer
+          :code="selectedMigration.code"
+          language="php"
+          height="60"
+        />
         <div class="modal-action">
-          <button class="btn" @click="selectedMigration = null">Close</button>
+          <button
+            class="btn"
+            @click="selectedMigration = null"
+          >
+            Close
+          </button>
         </div>
       </div>
-      <div class="modal-backdrop" @click="selectedMigration = null" />
+      <div
+        class="modal-backdrop"
+        @click="selectedMigration = null"
+      />
     </div>
   </div>
 </template>
 
 <script setup>
-import { inject, onMounted, ref, computed, watch } from 'vue';
-import { useDatabaseStore } from '@/store/database';
-import { useConnectionsStore } from '@/store/connections';
-import PhpViewer from '@/components/PhpViewer.vue';
+import { inject, onMounted, ref, computed, watch } from "vue";
+import { useDatabaseStore } from "@/store/database";
+import { useConnectionsStore } from "@/store/connections";
+import PhpViewer from "@/components/PhpViewer.vue";
 
-const showAlert = inject('showAlert');
+const showAlert = inject("showAlert");
 
 const props = defineProps({
   connectionId: {
@@ -281,44 +329,44 @@ const connection = computed(() => {
 
 function getMigrationStatusClass(status) {
   switch (status) {
-    case 'APPLIED':
-      return 'badge-success';
-    case 'PENDING':
-      return 'badge-warning';
-    case 'FAILED':
-      return 'badge-error';
+    case "APPLIED":
+      return "badge-success";
+    case "PENDING":
+      return "badge-warning";
+    case "FAILED":
+      return "badge-error";
     default:
-      return 'badge-ghost';
+      return "badge-ghost";
   }
 }
 
 function getMigrationStatusDotClass(status) {
   switch (status) {
-    case 'APPLIED':
-      return 'bg-success';
-    case 'PENDING':
-      return 'bg-warning';
-    case 'FAILED':
-      return 'bg-error';
+    case "APPLIED":
+      return "bg-success";
+    case "PENDING":
+      return "bg-warning";
+    case "FAILED":
+      return "bg-error";
     default:
-      return 'bg-gray-400';
+      return "bg-gray-400";
   }
 }
 
 function getActionTypeClass(type) {
   switch (type) {
-    case 'CREATE':
-      return 'badge-success';
-    case 'ALTER':
-      return 'badge-warning';
-    case 'DROP':
-      return 'badge-error';
-    case 'ADD':
-      return 'badge-info';
-    case 'FOREIGN KEY':
-      return 'badge-primary';
+    case "CREATE":
+      return "badge-success";
+    case "ALTER":
+      return "badge-warning";
+    case "DROP":
+      return "badge-error";
+    case "ADD":
+      return "badge-info";
+    case "FOREIGN KEY":
+      return "badge-primary";
     default:
-      return 'badge-ghost';
+      return "badge-ghost";
   }
 }
 
@@ -339,12 +387,12 @@ async function selectProjectPath() {
     const isLaravel = await window.api.validateLaravelProject(projectPath);
 
     if (!isLaravel) {
-      showAlert('Selected directory is not a valid Laravel project', 'error');
+      showAlert("Selected directory is not a valid Laravel project", "error");
       return;
     }
 
     if (connection.value) {
-      const updatedConnections = connectionsStore.connections.map(conn => {
+      const updatedConnections = connectionsStore.connections.map((conn) => {
         if (conn.id === connection.value.id) {
           return { ...conn, projectPath };
         }
@@ -352,12 +400,12 @@ async function selectProjectPath() {
       });
 
       await connectionsStore.saveConnections(updatedConnections);
-      showAlert('Laravel project path set successfully', 'success');
+      showAlert("Laravel project path set successfully", "success");
       await loadMigrations();
     }
   } catch (error) {
-    console.error('Error selecting directory:', error);
-    showAlert('Failed to select project directory', 'error');
+    console.error("Error selecting directory:", error);
+    showAlert("Failed to select project directory", "error");
   }
 }
 
@@ -365,8 +413,8 @@ async function openFileInEditor(path) {
   try {
     await window.api.openFile(path);
   } catch (error) {
-    console.error('Error opening file:', error);
-    showAlert('Failed to open file', 'error');
+    console.error("Error opening file:", error);
+    showAlert("Failed to open file", "error");
   }
 }
 
@@ -375,18 +423,14 @@ async function loadMigrations() {
   loadError.value = null;
 
   try {
-    migrations.value = await databaseStore.getTableMigrations(
-      props.connectionId,
-      props.tableName,
-      true
-    );
+    migrations.value = await databaseStore.getTableMigrations(props.connectionId, props.tableName, true);
 
     props.onLoad({
       migrationCount: migrations.value.length
     });
   } catch (error) {
-    loadError.value = 'Failed to load migrations: ' + (error.message || 'Unknown error');
-    showAlert(`Error loading migrations: ${error.message}`, 'error');
+    loadError.value = "Failed to load migrations: " + (error.message || "Unknown error");
+    showAlert(`Error loading migrations: ${error.message}`, "error");
   } finally {
     isLoading.value = false;
   }

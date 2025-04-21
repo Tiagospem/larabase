@@ -5,12 +5,8 @@
   >
     <div class="flex items-center mb-2 sm:mb-0">
       <span class="text-gray-400">
-        {{ tableDataStore.tableName }} | {{ tableDataStore.totalRecords }} records{{
-          tableDataStore.selectedRows.length > 0
-            ? ` | ${tableDataStore.selectedRows.length} selected`
-            : ''
-        }}
-        | <span>{{ tableDataStore.columns.length }} columns</span>
+        {{ tableDataStore.tableName }} | {{ tableDataStore.totalRecords }} records{{ tableDataStore.selectedRows.length > 0 ? ` | ${tableDataStore.selectedRows.length} selected` : "" }} |
+        <span>{{ tableDataStore.columns.length }} columns</span>
       </span>
       <div class="ml-4 flex space-x-2">
         <button class="btn btn-ghost btn-xs">
@@ -37,7 +33,9 @@
       <div class="join">
         <button
           class="join-item btn btn-xs"
-          :class="{ 'btn-disabled': tableDataStore.currentPage === 1 }"
+          :class="{
+            'btn-disabled': tableDataStore.currentPage === 1
+          }"
           :disabled="tableDataStore.currentPage === 1"
           @click="goToFirstPage"
         >
@@ -58,7 +56,9 @@
         </button>
         <button
           class="join-item btn btn-xs"
-          :class="{ 'btn-disabled': tableDataStore.currentPage === 1 }"
+          :class="{
+            'btn-disabled': tableDataStore.currentPage === 1
+          }"
           :disabled="tableDataStore.currentPage === 1"
           @click="prevPage"
         >
@@ -70,7 +70,11 @@
             stroke="currentColor"
             class="w-4 h-4"
           >
-            <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              d="M15.75 19.5L8.25 12l7.5-7.5"
+            />
           </svg>
         </button>
 
@@ -80,7 +84,9 @@
 
         <button
           class="join-item btn btn-xs"
-          :class="{ 'btn-disabled': tableDataStore.currentPage === totalPages }"
+          :class="{
+            'btn-disabled': tableDataStore.currentPage === totalPages
+          }"
           :disabled="tableDataStore.currentPage === totalPages"
           @click="nextPage"
         >
@@ -92,12 +98,18 @@
             stroke="currentColor"
             class="w-4 h-4"
           >
-            <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              d="M8.25 4.5l7.5 7.5-7.5 7.5"
+            />
           </svg>
         </button>
         <button
           class="join-item btn btn-xs"
-          :class="{ 'btn-disabled': tableDataStore.currentPage === totalPages }"
+          :class="{
+            'btn-disabled': tableDataStore.currentPage === totalPages
+          }"
           :disabled="tableDataStore.currentPage === totalPages"
           @click="goToLastPage"
         >
@@ -142,20 +154,25 @@
           class="input input-xs input-bordered bg-base-300 w-14"
           @keyup.enter="goToPage"
         />
-        <button class="btn btn-xs btn-ghost" @click="goToPage">Go</button>
+        <button
+          class="btn btn-xs btn-ghost"
+          @click="goToPage"
+        >
+          Go
+        </button>
       </div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { useDatabaseStore } from '@/store/database';
-import { useTableDataStore } from '@/store/table-data';
-import { computed, ref, watch } from 'vue';
+import { useDatabaseStore } from "@/store/database";
+import { useTableDataStore } from "@/store/table-data";
+import { computed, ref, watch } from "vue";
 
 const pageInput = ref(1);
 
-const emit = defineEmits(['scrollToTop']);
+const emit = defineEmits(["scrollToTop"]);
 
 const props = defineProps({
   storeId: {
@@ -178,41 +195,36 @@ const totalPages = computed(() => {
 function prevPage() {
   if (tableDataStore.currentPage > 1) {
     tableDataStore.currentPage--;
-    emit('scrollToTop');
+    emit("scrollToTop");
   }
 }
 
 function nextPage() {
   if (tableDataStore.currentPage < totalPages.value) {
     tableDataStore.currentPage++;
-    emit('scrollToTop');
+    emit("scrollToTop");
   }
 }
 
 function goToFirstPage() {
   if (tableDataStore.currentPage !== 1) {
     tableDataStore.currentPage = 1;
-    emit('scrollToTop');
+    emit("scrollToTop");
   }
 }
 
 function goToLastPage() {
   if (tableDataStore.currentPage !== totalPages.value) {
     tableDataStore.currentPage = totalPages.value;
-    emit('scrollToTop');
+    emit("scrollToTop");
   }
 }
 
 function goToPage() {
   const page = parseInt(pageInput.value);
-  if (
-    !isNaN(page) &&
-    page >= 1 &&
-    page <= totalPages.value &&
-    page !== tableDataStore.currentPage
-  ) {
+  if (!isNaN(page) && page >= 1 && page <= totalPages.value && page !== tableDataStore.currentPage) {
     tableDataStore.currentPage = page;
-    emit('scrollToTop');
+    emit("scrollToTop");
   } else {
     pageInput.value = tableDataStore.currentPage;
   }

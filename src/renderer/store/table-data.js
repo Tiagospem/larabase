@@ -1,12 +1,12 @@
-import { defineStore } from 'pinia';
-import { computed, nextTick, ref } from 'vue';
-import { useDatabaseStore } from '@/store/database';
+import { defineStore } from "pinia";
+import { computed, nextTick, ref } from "vue";
+import { useDatabaseStore } from "@/store/database";
 
 export const createTableDataStoreId = (connectionId, tableName) => {
   return `tableData-${connectionId}-${tableName}`;
 };
 
-export const useTableDataStore = id => {
+export const useTableDataStore = (id) => {
   return defineStore(id, () => {
     const tableData = ref([]);
     const deletingIds = ref([]);
@@ -19,12 +19,12 @@ export const useTableDataStore = id => {
     const loadError = ref(null);
     const isLiveTableActive = ref(false);
     const selectedRows = ref([]);
-    const filterTerm = ref('');
-    const activeFilter = ref('');
+    const filterTerm = ref("");
+    const activeFilter = ref("");
     const rowsPerPage = ref(25);
     const currentPage = ref(1);
     const currentSortColumn = ref(null);
-    const currentSortDirection = ref('asc');
+    const currentSortDirection = ref("asc");
     const lastSelectedId = ref(null);
     const columnWidths = ref({});
     const columnTypes = ref({});
@@ -41,7 +41,7 @@ export const useTableDataStore = id => {
     const showPreviewModal = ref(false);
     const showDeleteConfirm = ref(false);
     const showEditModal = ref(false);
-    const advancedFilterTerm = ref('');
+    const advancedFilterTerm = ref("");
 
     const databaseStore = useDatabaseStore();
 
@@ -81,14 +81,14 @@ export const useTableDataStore = id => {
         try {
           data = applySqlFilter(data, activeFilter.value);
         } catch (error) {
-          console.error('Error applying SQL filter:', error);
+          console.error("Error applying SQL filter:", error);
         }
       }
 
       if (filterTerm.value) {
         const term = filterTerm.value.toLowerCase();
-        data = data.filter(row => {
-          return Object.values(row).some(value => {
+        data = data.filter((row) => {
+          return Object.values(row).some((value) => {
             if (value === null) return false;
             return String(value).toLowerCase().includes(term);
           });
@@ -101,17 +101,17 @@ export const useTableDataStore = id => {
           const valB = b[currentSortColumn.value];
 
           if (valA === null && valB === null) return 0;
-          if (valA === null) return currentSortDirection.value === 'asc' ? -1 : 1;
-          if (valB === null) return currentSortDirection.value === 'asc' ? 1 : -1;
+          if (valA === null) return currentSortDirection.value === "asc" ? -1 : 1;
+          if (valB === null) return currentSortDirection.value === "asc" ? 1 : -1;
 
-          if (typeof valA === 'number' && typeof valB === 'number') {
-            return currentSortDirection.value === 'asc' ? valA - valB : valB - valA;
+          if (typeof valA === "number" && typeof valB === "number") {
+            return currentSortDirection.value === "asc" ? valA - valB : valB - valA;
           }
 
           const strA = String(valA).toLowerCase();
           const strB = String(valB).toLowerCase();
 
-          if (currentSortDirection.value === 'asc') {
+          if (currentSortDirection.value === "asc") {
             return strA.localeCompare(strB);
           } else {
             return strB.localeCompare(strA);
@@ -141,7 +141,7 @@ export const useTableDataStore = id => {
     function updatePreviewData() {
       if (!previewingRecord.value || !previewingRecord.value.id) return;
 
-      const updatedRow = tableData.value.find(row => row.id === previewingRecord.value.id);
+      const updatedRow = tableData.value.find((row) => row.id === previewingRecord.value.id);
 
       if (updatedRow) {
         previewingRecord.value = JSON.parse(JSON.stringify(updatedRow));
@@ -159,10 +159,10 @@ export const useTableDataStore = id => {
     function analyzeColumns() {
       if (tableData.value.length === 0 || columns.value.length === 0) return;
 
-      columns.value.forEach(column => {
+      columns.value.forEach((column) => {
         if (columnWidths.value[column]) return;
 
-        const sampleValue = tableData.value.find(row => row[column] !== null)?.[column];
+        const sampleValue = tableData.value.find((row) => row[column] !== null)?.[column];
         if (sampleValue !== undefined) {
           columnTypes.value[column] = typeof sampleValue;
 
@@ -174,7 +174,7 @@ export const useTableDataStore = id => {
     }
 
     function convertFilterToJs(filter) {
-      if (!filter) return 'true';
+      if (!filter) return "true";
 
       try {
         const idEqualityRegex = /^\s*id\s*=\s*(\d+)\s*$/i;
@@ -192,7 +192,7 @@ export const useTableDataStore = id => {
 
         if (likeMatch) {
           const [_, column, pattern] = likeMatch;
-          const cleanPattern = pattern.replace(/%/g, '');
+          const cleanPattern = pattern.replace(/%/g, "");
           return `row['${column}'] != null && String(row['${column}'] || '').toLowerCase().includes('${cleanPattern.toLowerCase()}')`;
         }
 
@@ -214,7 +214,7 @@ export const useTableDataStore = id => {
         }
 
         if (filter.toLowerCase().match(/^where\s+/)) {
-          filter = filter.replace(/^where\s+/i, '');
+          filter = filter.replace(/^where\s+/i, "");
         }
 
         const stringLiterals = [];
@@ -225,23 +225,15 @@ export const useTableDataStore = id => {
           return placeholder;
         });
 
-        stringReplacedFilter = stringReplacedFilter.replace(
-          /(\w+)\s+LIKE\s+(__STRING_\d+__)/gi,
-          (match, column, placeholder) => {
-            const placeholderIndex = parseInt(placeholder.match(/__STRING_(\d+)__/)[1]);
-            const originalStr = stringLiterals[placeholderIndex].substring(
-              1,
-              stringLiterals[placeholderIndex].length - 1
-            );
-            const cleanPattern = originalStr.replace(/%/g, '');
+        stringReplacedFilter = stringReplacedFilter.replace(/(\w+)\s+LIKE\s+(__STRING_\d+__)/gi, (match, column, placeholder) => {
+          const placeholderIndex = parseInt(placeholder.match(/__STRING_(\d+)__/)[1]);
+          const originalStr = stringLiterals[placeholderIndex].substring(1, stringLiterals[placeholderIndex].length - 1);
+          const cleanPattern = originalStr.replace(/%/g, "");
 
-            return `(row['${column}'] != null && String(row['${column}'] || '').toLowerCase().includes('${cleanPattern.toLowerCase()}'))`;
-          }
-        );
+          return `(row['${column}'] != null && String(row['${column}'] || '').toLowerCase().includes('${cleanPattern.toLowerCase()}'))`;
+        });
 
-        stringReplacedFilter = stringReplacedFilter
-          .replace(/([<>!=]+)/g, ' $1 ')
-          .replace(/\s+/g, ' ');
+        stringReplacedFilter = stringReplacedFilter.replace(/([<>!=]+)/g, " $1 ").replace(/\s+/g, " ");
 
         const inRegex = /(\w+|\[\w+\])\s+IN\s*\(\s*([^)]+)\s*\)/gi;
         stringReplacedFilter = stringReplacedFilter.replace(inRegex, (match, col, values) => {
@@ -249,55 +241,30 @@ export const useTableDataStore = id => {
         });
 
         stringReplacedFilter = stringReplacedFilter
-          .replace(/\bAND\b/gi, ' && ')
-          .replace(/\bOR\b/gi, ' || ')
-          .replace(/\bNOT\b/gi, '!')
-          .replace(/\bIS NULL\b/gi, '=== null')
-          .replace(/\bIS NOT NULL\b/gi, '!== null')
-          .replace(/\s+=\s+/g, ' == ');
+          .replace(/\bAND\b/gi, " && ")
+          .replace(/\bOR\b/gi, " || ")
+          .replace(/\bNOT\b/gi, "!")
+          .replace(/\bIS NULL\b/gi, "=== null")
+          .replace(/\bIS NOT NULL\b/gi, "!== null")
+          .replace(/\s+=\s+/g, " == ");
 
-        const keywords = [
-          'AND',
-          'OR',
-          'NOT',
-          'NULL',
-          'IN',
-          'LIKE',
-          'BETWEEN',
-          'IS',
-          'AS',
-          'TRUE',
-          'FALSE',
-          'true',
-          'false',
-          'null',
-          'undefined',
-          'return',
-          'if',
-          'else',
-          'for',
-          'while',
-          'function'
-        ];
+        const keywords = ["AND", "OR", "NOT", "NULL", "IN", "LIKE", "BETWEEN", "IS", "AS", "TRUE", "FALSE", "true", "false", "null", "undefined", "return", "if", "else", "for", "while", "function"];
 
-        stringReplacedFilter = stringReplacedFilter.replace(
-          /\b([a-zA-Z_]\w*)\b(?!\s*\()/g,
-          (match, column) => {
-            if (match.startsWith('__STRING_')) {
-              return match;
-            }
-
-            if (keywords.includes(match) || keywords.includes(match.toUpperCase())) {
-              return match.toUpperCase();
-            }
-
-            if (!isNaN(Number(match))) {
-              return match;
-            }
-
-            return `row['${column}']`;
+        stringReplacedFilter = stringReplacedFilter.replace(/\b([a-zA-Z_]\w*)\b(?!\s*\()/g, (match, column) => {
+          if (match.startsWith("__STRING_")) {
+            return match;
           }
-        );
+
+          if (keywords.includes(match) || keywords.includes(match.toUpperCase())) {
+            return match.toUpperCase();
+          }
+
+          if (!isNaN(Number(match))) {
+            return match;
+          }
+
+          return `row['${column}']`;
+        });
 
         stringLiterals.forEach((str, index) => {
           const placeholder = `__STRING_${index}__`;
@@ -310,8 +277,8 @@ export const useTableDataStore = id => {
 
         return stringReplacedFilter;
       } catch (e) {
-        console.error('Error converting SQL filter to JS:', e, 'Original filter:', filter);
-        return 'true';
+        console.error("Error converting SQL filter to JS:", e, "Original filter:", filter);
+        return "true";
       }
     }
 
@@ -330,7 +297,7 @@ export const useTableDataStore = id => {
         let filterFn;
         try {
           filterFn = new Function(
-            'row',
+            "row",
             `
                     try {
                       return ${filterCode};
@@ -340,36 +307,33 @@ export const useTableDataStore = id => {
                     }`
           );
         } catch (e) {
-          console.error('Error to create function filter:', e);
+          console.error("Error to create function filter:", e);
 
           return data;
         }
 
-        return dataCopy.filter(row => {
+        return dataCopy.filter((row) => {
           try {
             return filterFn(row);
           } catch (e) {
-            console.error('Error to apply filter:', e, row);
+            console.error("Error to apply filter:", e, row);
             return false;
           }
         });
       } catch (error) {
-        console.error('Error SQL filter:', error, filter);
+        console.error("Error SQL filter:", error, filter);
         return data;
       }
     }
 
     async function loadForeignKeyInfo() {
       try {
-        const structure = await databaseStore.getTableStructure(
-          connectionId.value,
-          tableName.value
-        );
+        const structure = await databaseStore.getTableStructure(connectionId.value, tableName.value);
         if (structure && Array.isArray(structure)) {
-          foreignKeyColumns.value = structure.filter(col => col.foreign_key).map(col => col.name);
+          foreignKeyColumns.value = structure.filter((col) => col.foreign_key).map((col) => col.name);
         }
       } catch (error) {
-        console.error('Error loading foreign key info:', error);
+        console.error("Error loading foreign key info:", error);
       }
     }
 
@@ -394,7 +358,7 @@ export const useTableDataStore = id => {
       const selectedRowIds = [];
 
       if (isLiveTableActive.value && selectedRows.value.length > 0) {
-        selectedRows.value.forEach(rowIndex => {
+        selectedRows.value.forEach((rowIndex) => {
           const row = paginatedData.value[rowIndex];
           if (row && row.id) {
             selectedRowIds.push(row.id);
@@ -415,16 +379,10 @@ export const useTableDataStore = id => {
             }
           : {};
 
-        const result = await databaseStore.loadTableData(
-          connectionId.value,
-          tableName.value,
-          rowsPerPage.value,
-          currentPage.value,
-          sortParams
-        );
+        const result = await databaseStore.loadTableData(connectionId.value, tableName.value, rowsPerPage.value, currentPage.value, sortParams);
 
         if (!result.data || result.data.length === 0) {
-          console.error('No data found for this page');
+          console.error("No data found for this page");
         }
 
         tableData.value = result.data || [];
@@ -491,12 +449,9 @@ export const useTableDataStore = id => {
 
       if (updateLocalStorage) {
         try {
-          localStorage.setItem(
-            `liveTable.enabled.${connectionId.value}.${tableName.value}`,
-            'false'
-          );
+          localStorage.setItem(`liveTable.enabled.${connectionId.value}.${tableName.value}`, "false");
         } catch (e) {
-          console.error('Failed to update localStorage during live table stop', e);
+          console.error("Failed to update localStorage during live table stop", e);
         }
       }
     }
@@ -509,7 +464,7 @@ export const useTableDataStore = id => {
       let changesDetected = 0;
 
       paginatedData.value.forEach((currentRow, index) => {
-        const previousRow = previousDataSnapshot.value.find(row => {
+        const previousRow = previousDataSnapshot.value.find((row) => {
           if (row.id !== undefined && currentRow.id !== undefined) {
             return row.id === currentRow.id;
           }
@@ -539,20 +494,15 @@ export const useTableDataStore = id => {
         const allKeys = Object.keys(localStorage);
         const currentLiveTableKey = `liveTable.enabled.${connectionId.value}.${tableName.value}`;
 
-        const activeLiveTableKeys = allKeys.filter(
-          key =>
-            key.startsWith('liveTable.enabled.') &&
-            key !== currentLiveTableKey &&
-            localStorage.getItem(key) === 'true'
-        );
+        const activeLiveTableKeys = allKeys.filter((key) => key.startsWith("liveTable.enabled.") && key !== currentLiveTableKey && localStorage.getItem(key) === "true");
 
         if (activeLiveTableKeys.length > 0) {
-          activeLiveTableKeys.forEach(key => {
-            localStorage.setItem(key, 'false');
+          activeLiveTableKeys.forEach((key) => {
+            localStorage.setItem(key, "false");
           });
         }
       } catch (e) {
-        console.error('Failed to deactivate other live tables', e);
+        console.error("Failed to deactivate other live tables", e);
       }
     }
 
@@ -562,11 +512,11 @@ export const useTableDataStore = id => {
       isLiveTableActive.value = true;
 
       try {
-        localStorage.setItem(`liveTable.enabled.${connectionId.value}.${tableName.value}`, 'true');
+        localStorage.setItem(`liveTable.enabled.${connectionId.value}.${tableName.value}`, "true");
 
         deactivateAllOtherLiveTables();
       } catch (e) {
-        console.error('Failed to update localStorage during live table start', e);
+        console.error("Failed to update localStorage during live table start", e);
       }
 
       previousDataSnapshot.value = JSON.parse(JSON.stringify(tableData.value));
@@ -588,8 +538,8 @@ export const useTableDataStore = id => {
 
               previousDataSnapshot.value = JSON.parse(JSON.stringify(tableData.value));
             })
-            .catch(error => {
-              console.error('Error during live update:', error);
+            .catch((error) => {
+              console.error("Error during live update:", error);
             })
             .finally(() => {
               isLiveUpdating.value = false;
@@ -601,10 +551,10 @@ export const useTableDataStore = id => {
     function deleteSelected() {
       if (selectedRows.value.length === 0) return;
 
-      deletingIds.value = selectedRows.value.map(index => {
+      deletingIds.value = selectedRows.value.map((index) => {
         const id = paginatedData.value[index].id;
 
-        return typeof id === 'object' ? String(id) : id;
+        return typeof id === "object" ? String(id) : id;
       });
 
       showDeleteConfirm.value = true;

@@ -5,7 +5,10 @@
     class="h-full relative flex flex-col"
     @keydown.prevent="handleKeyDown"
   >
-    <div class="overflow-x-scroll overflow-y-auto flex-grow" style="max-height: calc(100% - 45px)">
+    <div
+      class="overflow-x-scroll overflow-y-auto flex-grow"
+      style="max-height: calc(100% - 45px)"
+    >
       <table class="table table-sm w-[110%] table-fixed min-w-full">
         <thead class="bg-base-300 sticky top-0 z-15">
           <tr class="text-xs select-none">
@@ -17,10 +20,8 @@
               :key="column"
               class="px-4 py-2 border-r border-neutral last:border-r-0 relative whitespace-nowrap top-0 cursor-pointer bg-base-300"
               :style="{
-                width:
-                  tableDataStore.columnWidths[column] || tableDataStore.defaultColumnWidth(column),
-                maxWidth:
-                  tableDataStore.columnWidths[column] || tableDataStore.defaultColumnWidth(column)
+                width: tableDataStore.columnWidths[column] || tableDataStore.defaultColumnWidth(column),
+                maxWidth: tableDataStore.columnWidths[column] || tableDataStore.defaultColumnWidth(column)
               }"
             >
               <div class="flex items-center justify-between">
@@ -38,7 +39,9 @@
                       stroke-width="1.5"
                       stroke="currentColor"
                       class="w-4 h-4"
-                      :class="{ 'rotate-180': tableDataStore.currentSortDirection === 'desc' }"
+                      :class="{
+                        'rotate-180': tableDataStore.currentSortDirection === 'desc'
+                      }"
                     >
                       <path
                         stroke-linecap="round"
@@ -74,9 +77,7 @@
                 class="absolute right-0 top-0 h-full w-2 cursor-col-resize group"
                 @mousedown.stop="startColumnResize($event, column)"
               >
-                <div
-                  class="absolute right-0 top-0 w-[1px] h-full bg-transparent group-hover:bg-primary group-hover:w-[2px] transition-all"
-                />
+                <div class="absolute right-0 top-0 w-[1px] h-full bg-transparent group-hover:bg-primary group-hover:w-[2px] transition-all" />
               </div>
             </th>
           </tr>
@@ -127,25 +128,18 @@
               :key="`${rowIndex}-${column}-${colIndex}`"
               class="px-4 py-2 border-r border-neutral last:border-r-0 truncate whitespace-nowrap overflow-hidden z-[1]"
               :style="{
-                width:
-                  tableDataStore.columnWidths[column] || tableDataStore.defaultColumnWidth(column),
-                maxWidth:
-                  tableDataStore.columnWidths[column] || tableDataStore.defaultColumnWidth(column)
+                width: tableDataStore.columnWidths[column] || tableDataStore.defaultColumnWidth(column),
+                maxWidth: tableDataStore.columnWidths[column] || tableDataStore.defaultColumnWidth(column)
               }"
               @dblclick.stop="editRecordRef.openEditModal(row)"
             >
               <div class="flex items-center justify-between w-full">
                 <span
                   :class="{
-                    'text-gray-500 italic':
-                      row[column] === null && tableDataStore.isForeignKeyColumn(column)
+                    'text-gray-500 italic': row[column] === null && tableDataStore.isForeignKeyColumn(column)
                   }"
                 >
-                  {{
-                    row[column] === null && tableDataStore.isForeignKeyColumn(column)
-                      ? 'Not related'
-                      : Helpers.formatCellValue(column, row[column])
-                  }}
+                  {{ row[column] === null && tableDataStore.isForeignKeyColumn(column) ? "Not related" : Helpers.formatCellValue(column, row[column]) }}
                 </span>
 
                 <button
@@ -197,7 +191,10 @@
     </div>
   </div>
 
-  <EditRecord ref="editRecordRef" :store-id="storeId" />
+  <EditRecord
+    ref="editRecordRef"
+    :store-id="storeId"
+  />
 
   <DataPreviewModal
     v-if="tableDataStore.previewingRecord"
@@ -209,11 +206,11 @@
 </template>
 
 <script setup>
-import { useTableDataStore } from '@/store/table-data';
-import { Helpers } from '@/utils/helpers';
-import { onMounted, onUnmounted, ref } from 'vue';
-import EditRecord from '@/components/tabs/partials/EditRecord.vue';
-import DataPreviewModal from '@/components/tabs/partials/DataPreviewModal.vue';
+import { useTableDataStore } from "@/store/table-data";
+import { Helpers } from "@/utils/helpers";
+import { onMounted, onUnmounted, ref } from "vue";
+import EditRecord from "@/components/tabs/partials/EditRecord.vue";
+import DataPreviewModal from "@/components/tabs/partials/DataPreviewModal.vue";
 
 const props = defineProps({
   storeId: {
@@ -222,7 +219,7 @@ const props = defineProps({
   }
 });
 
-const emit = defineEmits(['navigateToForeignKey', 'loadFilteredData']);
+const emit = defineEmits(["navigateToForeignKey", "loadFilteredData"]);
 
 const tableContainer = ref(null);
 const shiftKeyPressed = ref(false);
@@ -243,8 +240,8 @@ function startColumnResize(event, column) {
   resizingColumn.value = column;
   startX.value = event.clientX;
 
-  if (!tableDataStore.columnWidths[column] || !tableDataStore.columnWidths[column].endsWith('px')) {
-    const headerCells = document.querySelectorAll('th');
+  if (!tableDataStore.columnWidths[column] || !tableDataStore.columnWidths[column].endsWith("px")) {
+    const headerCells = document.querySelectorAll("th");
     const columnIndex = tableDataStore.columns.indexOf(column);
 
     if (columnIndex >= 0 && headerCells[columnIndex]) {
@@ -256,13 +253,13 @@ function startColumnResize(event, column) {
 
   startWidth.value = parseInt(tableDataStore.columnWidths[column]) || 100;
 
-  document.addEventListener('mousemove', handleColumnResize);
-  document.addEventListener('mouseup', stopColumnResize);
+  document.addEventListener("mousemove", handleColumnResize);
+  document.addEventListener("mouseup", stopColumnResize);
 }
 
 function stopColumnResize() {
-  document.removeEventListener('mousemove', handleColumnResize);
-  document.removeEventListener('mouseup', stopColumnResize);
+  document.removeEventListener("mousemove", handleColumnResize);
+  document.removeEventListener("mouseup", stopColumnResize);
 
   resizingColumn.value = null;
 
@@ -283,17 +280,16 @@ function handleColumnResize(event) {
 
 function handleSortClick(column) {
   if (tableDataStore.currentSortColumn === column) {
-    tableDataStore.currentSortDirection =
-      tableDataStore.currentSortDirection === 'asc' ? 'desc' : 'asc';
+    tableDataStore.currentSortDirection = tableDataStore.currentSortDirection === "asc" ? "desc" : "asc";
   } else {
     tableDataStore.currentSortColumn = column;
-    tableDataStore.currentSortDirection = 'asc';
+    tableDataStore.currentSortDirection = "asc";
   }
 
   tableDataStore.currentPage = 1;
 
   if (tableDataStore.activeFilter) {
-    emit('loadFilteredData');
+    emit("loadFilteredData");
   } else {
     tableDataStore.loadTableData();
   }
@@ -305,7 +301,7 @@ function scrollToTop() {
   }
 }
 
-const handleKeyDown = e => {
+const handleKeyDown = (e) => {
   shiftKeyPressed.value = e.shiftKey;
   ctrlKeyPressed.value = e.ctrlKey || e.metaKey;
 
@@ -313,20 +309,20 @@ const handleKeyDown = e => {
   const hasSelection = tableDataStore.selectedRows.length > 0;
 
   switch (e.key) {
-    case 'Escape':
+    case "Escape":
       clearSelection();
       tableDataStore.showDeleteConfirm = false;
       break;
 
-    case 'a':
+    case "a":
       if (isCtrlOrMeta) {
         e.preventDefault();
         tableDataStore.selectedRows = tableDataStore.paginatedData.map((_, index) => index);
       }
       break;
 
-    case 'Delete':
-    case 'Backspace':
+    case "Delete":
+    case "Backspace":
       if (hasSelection) {
         e.preventDefault();
         tableDataStore.deleteSelected();
@@ -348,7 +344,7 @@ function handleMouseDown(event, rowIndex) {
   isDragging.value = true;
   selectionStartId.value = rowIndex;
 
-  window.addEventListener('mouseup', handleMouseUp, { once: true });
+  window.addEventListener("mouseup", handleMouseUp, { once: true });
 }
 
 function handleMouseEnter(rowIndex) {
@@ -378,8 +374,7 @@ function handleMouseUp() {
   }
 
   if (tableDataStore.selectedRows.length > 0) {
-    tableDataStore.lastSelectedId =
-      tableDataStore.selectedRows[tableDataStore.selectedRows.length - 1];
+    tableDataStore.lastSelectedId = tableDataStore.selectedRows[tableDataStore.selectedRows.length - 1];
   }
 
   isDragging.value = false;
@@ -437,30 +432,28 @@ function handleRowClick(event, rowIndex) {
 
 function getRowClasses(rowIndex) {
   const isSelected = tableDataStore.selectedRows?.includes?.(rowIndex) ?? false;
-  const isUpdated =
-    tableDataStore.highlightChanges && (tableDataStore.updatedRows?.includes?.(rowIndex) ?? false);
+  const isUpdated = tableDataStore.highlightChanges && (tableDataStore.updatedRows?.includes?.(rowIndex) ?? false);
 
   return {
-    'selected-row': isSelected,
-    'updated-row': isUpdated && !isSelected,
-    'hover:bg-base-200': !isSelected
+    "selected-row": isSelected,
+    "updated-row": isUpdated && !isSelected,
+    "hover:bg-base-200": !isSelected
   };
 }
 
 function getRowBackgroundClass(rowIndex) {
   const isSelected = tableDataStore.selectedRows?.includes?.(rowIndex) ?? false;
-  const isUpdated =
-    tableDataStore.highlightChanges && (tableDataStore.updatedRows?.includes?.(rowIndex) ?? false);
+  const isUpdated = tableDataStore.highlightChanges && (tableDataStore.updatedRows?.includes?.(rowIndex) ?? false);
 
   if (isSelected) {
-    return 'bg-[#ea4331] text-white';
+    return "bg-[#ea4331] text-white";
   }
 
   if (isUpdated) {
-    return 'bg-[rgba(234,67,49,0.1)]';
+    return "bg-[rgba(234,67,49,0.1)]";
   }
 
-  return 'bg-base-100';
+  return "bg-base-100";
 }
 
 function closePreviewModal() {
@@ -476,15 +469,15 @@ function openPreviewModal(row) {
 }
 
 onMounted(() => {
-  window.addEventListener('keydown', handleKeyDown);
-  window.addEventListener('keyup', handleKeyDown);
-  window.addEventListener('mouseup', handleMouseUp);
+  window.addEventListener("keydown", handleKeyDown);
+  window.addEventListener("keyup", handleKeyDown);
+  window.addEventListener("mouseup", handleMouseUp);
 });
 
 onUnmounted(() => {
-  window.removeEventListener('keydown', handleKeyDown);
-  window.removeEventListener('keyup', handleKeyDown);
-  window.removeEventListener('mouseup', handleMouseUp);
+  window.removeEventListener("keydown", handleKeyDown);
+  window.removeEventListener("keyup", handleKeyDown);
+  window.removeEventListener("mouseup", handleMouseUp);
 });
 
 defineExpose({ scrollToTop });
@@ -495,7 +488,7 @@ defineExpose({ scrollToTop });
   user-select: none;
 }
 
-[tabindex='0']:focus {
+[tabindex="0"]:focus {
   outline: none;
 }
 
@@ -539,7 +532,7 @@ th:has(+ tr td.expanded) {
 }
 
 .group:hover .bg-gray-500 {
-  background-color: theme('colors.primary');
+  background-color: theme("colors.primary");
 }
 
 .h-full.flex.flex-col {
@@ -571,20 +564,20 @@ thead {
 }
 
 tbody tr:not(.selected-row):hover td.sticky,
-tbody tr:not(.selected-row):hover td[class*='sticky'],
+tbody tr:not(.selected-row):hover td[class*="sticky"],
 tbody tr:not(.selected-row).hover td.sticky,
-tbody tr:not(.selected-row).hover td[class*='sticky'] {
+tbody tr:not(.selected-row).hover td[class*="sticky"] {
   background-color: hsl(var(--b2)) !important;
 }
 
-tbody tr:not(.selected-row):hover td[class*='left-10'],
-tbody tr:not(.selected-row).hover td[class*='left-10'] {
+tbody tr:not(.selected-row):hover td[class*="left-10"],
+tbody tr:not(.selected-row).hover td[class*="left-10"] {
   background-color: hsl(var(--b2)) !important;
 }
 
 tbody tr.selected-row:hover td.sticky,
-tbody tr.selected-row:hover td[class*='sticky'],
-tbody tr.selected-row:hover td[class*='left-10'] {
+tbody tr.selected-row:hover td[class*="sticky"],
+tbody tr.selected-row:hover td[class*="left-10"] {
   background-color: #ea4331 !important;
   color: white !important;
 }

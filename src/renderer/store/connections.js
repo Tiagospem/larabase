@@ -1,7 +1,7 @@
-import { defineStore } from 'pinia';
-import { ref, computed, onMounted } from 'vue';
+import { defineStore } from "pinia";
+import { ref, computed, onMounted } from "vue";
 
-export const useConnectionsStore = defineStore('connections', () => {
+export const useConnectionsStore = defineStore("connections", () => {
   const connections = ref([]);
   const isLoading = ref(true);
 
@@ -25,17 +25,17 @@ export const useConnectionsStore = defineStore('connections', () => {
             connections.value = [];
           }
         } catch (err) {
-          console.error('Error loading connections from API:', err);
+          console.error("Error loading connections from API:", err);
           connections.value = [];
         }
       } else {
-        console.warn('API not available, unable to load connections');
+        console.warn("API not available, unable to load connections");
         connections.value = [];
       }
 
       return connections.value;
     } catch (error) {
-      console.error('Error in loadConnections:', error);
+      console.error("Error in loadConnections:", error);
       connections.value = [];
       return connections.value;
     } finally {
@@ -46,14 +46,14 @@ export const useConnectionsStore = defineStore('connections', () => {
   async function saveConnections() {
     try {
       if (window.api) {
-        const serializableConnections = connections.value.map(conn => {
+        const serializableConnections = connections.value.map((conn) => {
           return JSON.parse(JSON.stringify(conn));
         });
 
         await window.api.saveConnections(serializableConnections);
       }
     } catch (error) {
-      console.error('Error saving connections:', error);
+      console.error("Error saving connections:", error);
     }
   }
 
@@ -64,12 +64,12 @@ export const useConnectionsStore = defineStore('connections', () => {
   }
 
   async function removeConnection(id) {
-    connections.value = connections.value.filter(c => c.id !== id);
+    connections.value = connections.value.filter((c) => c.id !== id);
     await saveConnections();
   }
 
   async function updateConnection(id, data) {
-    const index = connections.value.findIndex(c => c.id === id);
+    const index = connections.value.findIndex((c) => c.id === id);
     if (index !== -1) {
       connections.value[index] = { ...connections.value[index], ...data };
       await saveConnections();
@@ -77,7 +77,7 @@ export const useConnectionsStore = defineStore('connections', () => {
   }
 
   const getConnection = computed(() => {
-    return id => connections.value.find(c => c.id === id);
+    return (id) => connections.value.find((c) => c.id === id);
   });
 
   onMounted(async () => {

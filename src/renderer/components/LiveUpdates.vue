@@ -1,20 +1,39 @@
 <template>
-  <div class="modal" :class="{ 'modal-open': isOpen }">
+  <div
+    class="modal"
+    :class="{ 'modal-open': isOpen }"
+  >
     <div class="modal-box max-w-4xl bg-base-300">
       <div class="flex justify-between items-center mb-4">
         <h3 class="font-bold text-lg">Live Database Updates</h3>
         <div class="flex gap-2">
-          <div v-if="connected" class="badge badge-success">
+          <div
+            v-if="connected"
+            class="badge badge-success"
+          >
             <span class="mr-1">●</span> Connected
           </div>
-          <div v-else class="badge badge-error"><span class="mr-1">●</span> Disconnected</div>
+          <div
+            v-else
+            class="badge badge-error"
+          >
+            <span class="mr-1">●</span> Disconnected
+          </div>
 
-          <button class="btn btn-sm btn-ghost" @click="clearUpdates">Clear</button>
+          <button
+            class="btn btn-sm btn-ghost"
+            @click="clearUpdates"
+          >
+            Clear
+          </button>
         </div>
       </div>
 
       <div class="flex mb-4 gap-2">
-        <select v-model="operationTypeFilter" class="select select-sm select-bordered">
+        <select
+          v-model="operationTypeFilter"
+          class="select select-sm select-bordered"
+        >
           <option value="all">All Operations</option>
           <option value="INSERT">Insert</option>
           <option value="UPDATE">Update</option>
@@ -30,15 +49,19 @@
       </div>
 
       <!-- Loading indicator -->
-      <div v-if="loading" class="flex justify-center items-center py-8">
-        <div
-          class="animate-spin rounded-full h-12 w-12 border-4 border-primary border-t-transparent"
-        />
+      <div
+        v-if="loading"
+        class="flex justify-center items-center py-8"
+      >
+        <div class="animate-spin rounded-full h-12 w-12 border-4 border-primary border-t-transparent" />
         <span class="ml-3 text-sm">Initializing monitoring...</span>
       </div>
 
       <!-- No data message -->
-      <div v-else-if="!loading && filteredUpdates.length === 0" class="alert alert-info mb-4">
+      <div
+        v-else-if="!loading && filteredUpdates.length === 0"
+        class="alert alert-info mb-4"
+      >
         <svg
           xmlns="http://www.w3.org/2000/svg"
           fill="none"
@@ -52,14 +75,14 @@
             d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
           />
         </svg>
-        <span
-          >No database operations detected yet. Any changes to the database will appear here
-          automatically.</span
-        >
+        <span>No database operations detected yet. Any changes to the database will appear here automatically.</span>
       </div>
 
       <!-- Data table -->
-      <div v-else class="overflow-x-auto max-h-[60vh]">
+      <div
+        v-else
+        class="overflow-x-auto max-h-[60vh]"
+      >
         <table class="table table-xs w-full">
           <thead>
             <tr>
@@ -72,7 +95,11 @@
             </tr>
           </thead>
           <tbody>
-            <tr v-for="(update, index) in filteredUpdates" :key="index" class="hover:bg-base-200">
+            <tr
+              v-for="(update, index) in filteredUpdates"
+              :key="index"
+              class="hover:bg-base-200"
+            >
               <td class="text-xs">
                 {{ formatTimestamp(update.timestamp) }}
               </td>
@@ -85,12 +112,15 @@
                 </span>
               </td>
               <td>{{ update.table }}</td>
-              <td>{{ update.recordId || '-' }}</td>
+              <td>{{ update.recordId || "-" }}</td>
               <td class="text-xs truncate max-w-[20rem]">
-                {{ update.details || update.message || (update.sql ? 'SQL Query' : '-') }}
+                {{ update.details || update.message || (update.sql ? "SQL Query" : "-") }}
               </td>
               <td class="text-right flex">
-                <button class="btn btn-xs btn-ghost" @click="viewDetails(update)">
+                <button
+                  class="btn btn-xs btn-ghost"
+                  @click="viewDetails(update)"
+                >
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
                     fill="none"
@@ -138,12 +168,20 @@
       </div>
 
       <div class="modal-action">
-        <button class="btn btn-primary" @click="close">Close</button>
+        <button
+          class="btn btn-primary"
+          @click="close"
+        >
+          Close
+        </button>
       </div>
     </div>
   </div>
 
-  <div class="modal" :class="{ 'modal-open': showSqlDetails }">
+  <div
+    class="modal"
+    :class="{ 'modal-open': showSqlDetails }"
+  >
     <div class="modal-box bg-base-300">
       <h3 class="font-bold text-lg">
         <span
@@ -155,32 +193,40 @@
         {{ selectedUpdate?.table }}
       </h3>
 
-      <div v-if="selectedUpdate" class="py-4">
+      <div
+        v-if="selectedUpdate"
+        class="py-4"
+      >
         <div class="mb-4 text-xs flex justify-between">
-          <span class="badge badge-neutral">ID: {{ selectedUpdate.recordId || 'N/A' }}</span>
+          <span class="badge badge-neutral">ID: {{ selectedUpdate.recordId || "N/A" }}</span>
           <span>{{ formatTimestamp(selectedUpdate.timestamp, true) }}</span>
         </div>
 
-        <div v-if="selectedUpdate.sql" class="mt-4">
+        <div
+          v-if="selectedUpdate.sql"
+          class="mt-4"
+        >
           <h4 class="font-semibold text-sm mb-1">SQL Query:</h4>
-          <div
-            class="bg-base-200 p-3 rounded-lg overflow-auto max-h-60 whitespace-pre-wrap font-mono text-sm"
-          >
+          <div class="bg-base-200 p-3 rounded-lg overflow-auto max-h-60 whitespace-pre-wrap font-mono text-sm">
             {{ formatSql(selectedUpdate.sql) }}
           </div>
         </div>
 
-        <div v-if="selectedUpdate.details" class="mt-4">
+        <div
+          v-if="selectedUpdate.details"
+          class="mt-4"
+        >
           <h4 class="font-semibold text-sm mb-1">Details:</h4>
-          <div
-            class="bg-base-200 p-3 rounded-lg overflow-auto max-h-60 font-mono text-sm whitespace-pre-wrap"
-          >
+          <div class="bg-base-200 p-3 rounded-lg overflow-auto max-h-60 font-mono text-sm whitespace-pre-wrap">
             {{ selectedUpdate.details }}
           </div>
         </div>
 
         <!-- System Message -->
-        <div v-if="selectedUpdate.message" class="mt-4">
+        <div
+          v-if="selectedUpdate.message"
+          class="mt-4"
+        >
           <h4 class="font-semibold text-sm mb-1">Message:</h4>
           <div class="bg-base-200 p-3 rounded-lg overflow-auto max-h-60 text-sm">
             {{ selectedUpdate.message }}
@@ -188,7 +234,10 @@
         </div>
 
         <!-- Additional info: Affected Rows, etc. -->
-        <div v-if="selectedUpdate.affectedRows" class="mt-4">
+        <div
+          v-if="selectedUpdate.affectedRows"
+          class="mt-4"
+        >
           <h4 class="font-semibold text-sm mb-1">Affected Rows:</h4>
           <div class="bg-base-200 p-2 rounded-lg text-sm">
             {{ selectedUpdate.affectedRows }}
@@ -198,23 +247,26 @@
         <!-- Raw Update Data -->
         <div class="mt-4">
           <h4 class="font-semibold text-sm mb-1">Raw Data:</h4>
-          <div
-            class="bg-base-200 p-3 rounded-lg overflow-auto max-h-60 whitespace-pre-wrap font-mono text-xs"
-          >
+          <div class="bg-base-200 p-3 rounded-lg overflow-auto max-h-60 whitespace-pre-wrap font-mono text-xs">
             {{ JSON.stringify(selectedUpdate, null, 2) }}
           </div>
         </div>
       </div>
 
       <div class="modal-action">
-        <button class="btn btn-primary" @click="showSqlDetails = false">Close</button>
+        <button
+          class="btn btn-primary"
+          @click="showSqlDetails = false"
+        >
+          Close
+        </button>
       </div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, watch, onMounted, onUnmounted } from 'vue';
+import { ref, computed, watch, onMounted, onUnmounted } from "vue";
 
 const props = defineProps({
   isOpen: {
@@ -227,13 +279,13 @@ const props = defineProps({
   }
 });
 
-const emit = defineEmits(['close', 'goto-table']);
+const emit = defineEmits(["close", "goto-table"]);
 
 const updates = ref([]);
 const connected = ref(false);
 const loading = ref(false);
-const operationTypeFilter = ref('all');
-const tableFilter = ref('');
+const operationTypeFilter = ref("all");
+const tableFilter = ref("");
 const showSqlDetails = ref(false);
 const selectedUpdate = ref(null);
 
@@ -241,25 +293,20 @@ let monitoringChannel = null;
 let initTimeout = null;
 
 const filteredUpdates = computed(() => {
-  let filtered = updates.value.filter(update => {
-    if (update.table === 'system' && (update.operation === 'INFO' || update.type === 'INFO')) {
+  let filtered = updates.value.filter((update) => {
+    if (update.table === "system" && (update.operation === "INFO" || update.type === "INFO")) {
       return true;
     }
 
-    if (
-      (update.table === 'information_schema' ||
-        update.table === 'performance_schema' ||
-        update.table === 'mysql') &&
-      update.table !== 'system'
-    ) {
+    if ((update.table === "information_schema" || update.table === "performance_schema" || update.table === "mysql") && update.table !== "system") {
       return false;
     }
 
     return true;
   });
 
-  if (operationTypeFilter.value !== 'all') {
-    filtered = filtered.filter(update => {
+  if (operationTypeFilter.value !== "all") {
+    filtered = filtered.filter((update) => {
       const op = update.operation || update.type;
       return op === operationTypeFilter.value;
     });
@@ -267,7 +314,7 @@ const filteredUpdates = computed(() => {
 
   if (tableFilter.value) {
     const query = tableFilter.value.toLowerCase();
-    filtered = filtered.filter(update => update.table.toLowerCase().includes(query));
+    filtered = filtered.filter((update) => update.table.toLowerCase().includes(query));
   }
 
   return filtered.sort((a, b) => {
@@ -278,7 +325,7 @@ const filteredUpdates = computed(() => {
 });
 
 function formatTimestamp(timestamp, detailed = false) {
-  if (!timestamp) return 'N/A';
+  if (!timestamp) return "N/A";
 
   const date = new Date(timestamp);
   if (detailed) {
@@ -289,18 +336,18 @@ function formatTimestamp(timestamp, detailed = false) {
 
 function getOperationBadgeClass(operation) {
   switch (operation) {
-    case 'INSERT':
-      return 'badge-success';
-    case 'UPDATE':
-      return 'badge-warning';
-    case 'DELETE':
-      return 'badge-error';
-    case 'SELECT':
-      return 'badge-info';
-    case 'INFO':
-      return 'badge-info';
+    case "INSERT":
+      return "badge-success";
+    case "UPDATE":
+      return "badge-warning";
+    case "DELETE":
+      return "badge-error";
+    case "SELECT":
+      return "badge-info";
+    case "INFO":
+      return "badge-info";
     default:
-      return 'badge-secondary';
+      return "badge-secondary";
   }
 }
 
@@ -310,7 +357,7 @@ function viewDetails(update) {
 }
 
 function goToTable(tableName) {
-  emit('goto-table', tableName);
+  emit("goto-table", tableName);
   close();
 }
 
@@ -321,36 +368,36 @@ function clearUpdates() {
 function parseChanges(details) {
   if (!details) return [];
 
-  const changesText = details.replace(/^(Changed|Updated):\s*/i, '');
+  const changesText = details.replace(/^(Changed|Updated):\s*/i, "");
 
   // Split by comma to get individual changes
-  const changeItems = changesText.split(', ');
+  const changeItems = changesText.split(", ");
 
   // Parse each change
   return changeItems
-    .filter(item => item.includes('→')) // Only include items with a change arrow
-    .map(item => {
-      const [fieldPart, changePart] = item.split(': ');
+    .filter((item) => item.includes("→")) // Only include items with a change arrow
+    .map((item) => {
+      const [fieldPart, changePart] = item.split(": ");
       if (!changePart) return null;
 
-      const [from, to] = changePart.split(' → ');
+      const [from, to] = changePart.split(" → ");
       return {
         field: fieldPart,
-        from: from || '',
-        to: to || ''
+        from: from || "",
+        to: to || ""
       };
     })
-    .filter(item => item !== null);
+    .filter((item) => item !== null);
 }
 
 function startMonitoring() {
   if (connected.value) {
-    console.log('Already connected to database monitoring');
+    console.log("Already connected to database monitoring");
     return;
   }
 
   if (!window.api || !window.api.monitorDatabaseOperations) {
-    console.error('API for monitoring not available');
+    console.error("API for monitoring not available");
     return;
   }
 
@@ -361,8 +408,8 @@ function startMonitoring() {
   updates.value = [];
 
   window.api
-    .monitorDatabaseOperations(props.connectionId, data => {
-      console.log('Received database operation:', data);
+    .monitorDatabaseOperations(props.connectionId, (data) => {
+      console.log("Received database operation:", data);
 
       if (data && data.table) {
         updates.value.unshift(data);
@@ -377,8 +424,8 @@ function startMonitoring() {
         }
       }
     })
-    .then(channel => {
-      console.log('Monitoring started on channel:', channel);
+    .then((channel) => {
+      console.log("Monitoring started on channel:", channel);
       monitoringChannel = channel;
       connected.value = true;
 
@@ -386,15 +433,15 @@ function startMonitoring() {
         loading.value = false;
       }, 5000);
     })
-    .catch(error => {
-      console.error('Error starting monitoring:', error);
+    .catch((error) => {
+      console.error("Error starting monitoring:", error);
       loading.value = false;
     });
 }
 
 function stopMonitoring() {
   if (!connected.value || !monitoringChannel) {
-    console.log('Not monitoring, nothing to stop');
+    console.log("Not monitoring, nothing to stop");
     return;
   }
 
@@ -403,10 +450,10 @@ function stopMonitoring() {
     initTimeout = null;
   }
 
-  console.log('Stopping database monitoring');
+  console.log("Stopping database monitoring");
 
   if (!window.api || !window.api.stopMonitoringDatabaseOperations) {
-    console.error('API for stopping monitoring not available');
+    console.error("API for stopping monitoring not available");
     connected.value = false;
     monitoringChannel = null;
     loading.value = false;
@@ -415,13 +462,13 @@ function stopMonitoring() {
 
   window.api
     .stopMonitoringDatabaseOperations(monitoringChannel)
-    .then(result => {
-      console.log('Monitoring stopped:', result);
+    .then((result) => {
+      console.log("Monitoring stopped:", result);
       connected.value = false;
       monitoringChannel = null;
     })
-    .catch(error => {
-      console.error('Error stopping monitoring:', error);
+    .catch((error) => {
+      console.error("Error stopping monitoring:", error);
       connected.value = false;
       monitoringChannel = null;
     })
@@ -431,12 +478,12 @@ function stopMonitoring() {
 }
 
 function close() {
-  emit('close');
+  emit("close");
 }
 
 watch(
   () => props.isOpen,
-  newValue => {
+  (newValue) => {
     if (newValue) {
       startMonitoring();
     } else {
@@ -459,16 +506,16 @@ onUnmounted(() => {
 });
 
 function formatSql(sql) {
-  if (!sql) return '';
+  if (!sql) return "";
 
   // Simple formatting to make SQL more readable
   return sql
-    .replace(/SELECT/gi, 'SELECT\n  ')
-    .replace(/FROM/gi, '\nFROM\n  ')
-    .replace(/WHERE/gi, '\nWHERE\n  ')
-    .replace(/ORDER BY/gi, '\nORDER BY\n  ')
-    .replace(/GROUP BY/gi, '\nGROUP BY\n  ')
-    .replace(/LIMIT/gi, '\nLIMIT ');
+    .replace(/SELECT/gi, "SELECT\n  ")
+    .replace(/FROM/gi, "\nFROM\n  ")
+    .replace(/WHERE/gi, "\nWHERE\n  ")
+    .replace(/ORDER BY/gi, "\nORDER BY\n  ")
+    .replace(/GROUP BY/gi, "\nGROUP BY\n  ")
+    .replace(/LIMIT/gi, "\nLIMIT ");
 }
 </script>
 

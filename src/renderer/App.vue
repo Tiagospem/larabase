@@ -1,28 +1,35 @@
 <template>
-  <div class="min-h-screen bg-app-bg text-white" data-theme="dark">
+  <div
+    class="min-h-screen bg-app-bg text-white"
+    data-theme="dark"
+  >
     <router-view />
-    <app-alert :type="alertType" :message="alertMessage" @close="clearAlert" />
+    <app-alert
+      :type="alertType"
+      :message="alertMessage"
+      @close="clearAlert"
+    />
   </div>
 </template>
 
 <script setup>
-import { ref, provide } from 'vue';
-import AppAlert from './components/AppAlert.vue';
+import { ref, provide } from "vue";
+import AppAlert from "./components/AppAlert.vue";
 
-const alertMessage = ref('');
-const alertType = ref('info');
+const alertMessage = ref("");
+const alertType = ref("info");
 
-function showAlert(message, type = 'info') {
+function showAlert(message, type = "info") {
   alertMessage.value = message;
   alertType.value = type;
 }
 
 function clearAlert() {
-  alertMessage.value = '';
+  alertMessage.value = "";
 }
 
-provide('showAlert', showAlert);
-provide('clearAlert', clearAlert);
+provide("showAlert", showAlert);
+provide("clearAlert", clearAlert);
 </script>
 
 <style>

@@ -16,11 +16,16 @@
         />
       </svg>
       <p>Records not found</p>
-      <button class="btn btn-sm btn-primary mt-4" @click="emit('reload')">Reload</button>
+      <button
+        class="btn btn-sm btn-primary mt-4"
+        @click="emit('reload')"
+      >
+        Reload
+      </button>
     </div>
   </div>
 </template>
 
 <script setup>
-const emit = defineEmits(['reload']);
+const emit = defineEmits(["reload"]);
 </script>

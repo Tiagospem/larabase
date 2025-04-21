@@ -33,7 +33,9 @@
           <button
             v-tooltip.right="'Sort by name'"
             class="btn btn-xs btn-ghost tooltip tooltip-left"
-            :class="{ 'text-primary bg-neutral': sortBy === 'name' }"
+            :class="{
+              'text-primary bg-neutral': sortBy === 'name'
+            }"
             @click="setSortBy('name')"
           >
             <svg
@@ -42,8 +44,15 @@
               xmlns="http://www.w3.org/2000/svg"
               class="size-4"
             >
-              <g id="SVGRepo_bgCarrier" stroke-width="0" />
-              <g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round" />
+              <g
+                id="SVGRepo_bgCarrier"
+                stroke-width="0"
+              />
+              <g
+                id="SVGRepo_tracerCarrier"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
               <g id="SVGRepo_iconCarrier">
                 <path
                   d="M19.707 14.707A1 1 0 0 0 19 13h-7v2h4.586l-4.293 4.293A1 1 0 0 0 13 21h7v-2h-4.586l4.293-4.293zM7 3.99H5v12H2l4 4 4-4H7zM17 3h-2c-.417 0-.79.259-.937.649l-2.75 7.333h2.137L14.193 9h3.613l.743 1.981h2.137l-2.75-7.333A1 1 0 0 0 17 3zm-2.057 4 .75-2h.613l.75 2h-2.113z"
@@ -54,7 +63,9 @@
           <button
             v-tooltip.right="'Sort by records'"
             class="btn btn-xs btn-ghost tooltip tooltip-left"
-            :class="{ 'text-primary bg-neutral': sortBy === 'records' }"
+            :class="{
+              'text-primary bg-neutral': sortBy === 'records'
+            }"
             @click="setSortBy('records')"
           >
             <svg
@@ -86,7 +97,11 @@
               stroke="currentColor"
               class="w-4 h-4"
             >
-              <path stroke-linecap="round" stroke-linejoin="round" d="m4.5 15.75 7.5-7.5 7.5 7.5" />
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                d="m4.5 15.75 7.5-7.5 7.5 7.5"
+              />
             </svg>
             <svg
               v-else
@@ -97,7 +112,11 @@
               stroke="currentColor"
               class="w-4 h-4"
             >
-              <path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                d="m19.5 8.25-7.5 7.5-7.5-7.5"
+              />
             </svg>
           </button>
         </div>
@@ -105,7 +124,10 @@
     </div>
 
     <div class="overflow-y-auto flex-1">
-      <div v-if="isLoading || isLoadingCounts || !allTablesLoaded" class="p-2">
+      <div
+        v-if="isLoading || isLoadingCounts || !allTablesLoaded"
+        class="p-2"
+      >
         <div
           v-for="i in 10"
           :key="i"
@@ -117,9 +139,19 @@
         </div>
       </div>
 
-      <ul v-else class="menu menu-sm">
-        <li v-for="table in sortedTables" :key="table.name" class="hover:bg-base-300">
-          <a :class="{ 'bg-base-300': isTableActive(table.name) }" @click="openTable(table)">
+      <ul
+        v-else
+        class="menu menu-sm"
+      >
+        <li
+          v-for="table in sortedTables"
+          :key="table.name"
+          class="hover:bg-base-300"
+        >
+          <a
+            :class="{ 'bg-base-300': isTableActive(table.name) }"
+            @click="openTable(table)"
+          >
             <svg
               xmlns="http://www.w3.org/2000/svg"
               fill="none"
@@ -136,13 +168,17 @@
             </svg>
             <div class="flex flex-col table-name-container">
               <span class="table-name">{{ table.name }}</span>
-              <span v-if="getTableModel(table.name)" class="text-xs text-gray-500 table-model">
-                {{ getTableModel(table.name)?.namespace }}\{{
-                  getTableModel(table.name)?.name
-                }}</span
+              <span
+                v-if="getTableModel(table.name)"
+                class="text-xs text-gray-500 table-model"
+              >
+                {{ getTableModel(table.name)?.namespace }}\{{ getTableModel(table.name)?.name }}</span
               >
             </div>
-            <span class="badge badge-sm" :class="{ 'badge-primary': table.recordCount > 0 }">
+            <span
+              class="badge badge-sm"
+              :class="{ 'badge-primary': table.recordCount > 0 }"
+            >
               {{ formatRecordCount(table.recordCount) }}
             </span>
           </a>
@@ -151,12 +187,15 @@
     </div>
   </div>
 
-  <div class="resize-handle cursor-col-resize" @mousedown="startResize" />
+  <div
+    class="resize-handle cursor-col-resize"
+    @mousedown="startResize"
+  />
 </template>
 
 <script setup>
-import { computed, onMounted, ref, watch, onUnmounted } from 'vue';
-import { useDatabaseStore } from '@/store/database';
+import { computed, onMounted, ref, watch, onUnmounted } from "vue";
+import { useDatabaseStore } from "@/store/database";
 
 const props = defineProps({
   connectionId: {
@@ -173,17 +212,17 @@ const props = defineProps({
   }
 });
 
-const emit = defineEmits(['resize-start', 'table-open', 'update:sidebarWidth']);
+const emit = defineEmits(["resize-start", "table-open", "update:sidebarWidth"]);
 
 const databaseStore = useDatabaseStore();
 
 /**
  * @type {import('vue').Ref<string>}
  */
-const searchTerm = ref('');
+const searchTerm = ref("");
 
-const sortBy = ref(localStorage.getItem('tableSort') || 'name');
-const sortOrder = ref(localStorage.getItem('tableSortOrder') || 'asc');
+const sortBy = ref(localStorage.getItem("tableSort") || "name");
+const sortOrder = ref(localStorage.getItem("tableSortOrder") || "asc");
 const isLoadingCounts = ref(false);
 const allTablesLoaded = ref(false);
 
@@ -198,21 +237,19 @@ const tables = computed(() => databaseStore.tablesList);
 const filteredTables = computed(() => {
   if (!searchTerm.value) return tables.value;
   const term = searchTerm.value.toLowerCase();
-  return tables.value.filter(table => table.name.toLowerCase().includes(term));
+  return tables.value.filter((table) => table.name.toLowerCase().includes(term));
 });
 
 const sortedTables = computed(() => {
   const tablesCopy = [...filteredTables.value];
 
   return tablesCopy.sort((a, b) => {
-    if (sortBy.value === 'name') {
-      return sortOrder.value === 'asc'
-        ? a.name.localeCompare(b.name)
-        : b.name.localeCompare(a.name);
+    if (sortBy.value === "name") {
+      return sortOrder.value === "asc" ? a.name.localeCompare(b.name) : b.name.localeCompare(a.name);
     } else {
       const aCount = a.recordCount || 0;
       const bCount = b.recordCount || 0;
-      return sortOrder.value === 'asc' ? aCount - bCount : bCount - aCount;
+      return sortOrder.value === "asc" ? aCount - bCount : bCount - aCount;
     }
   });
 });
@@ -222,11 +259,11 @@ function isTableActive(tableName) {
 }
 
 function openTable(table) {
-  emit('table-open', table);
+  emit("table-open", table);
 }
 
 function startResize(e) {
-  emit('resize-start', e);
+  emit("resize-start", e);
 }
 
 function setSortBy(value) {
@@ -234,13 +271,13 @@ function setSortBy(value) {
     toggleSortOrder();
   } else {
     sortBy.value = value;
-    localStorage.setItem('tableSort', value);
+    localStorage.setItem("tableSort", value);
   }
 }
 
 function toggleSortOrder() {
-  sortOrder.value = sortOrder.value === 'asc' ? 'desc' : 'asc';
-  localStorage.setItem('tableSortOrder', sortOrder.value);
+  sortOrder.value = sortOrder.value === "asc" ? "desc" : "asc";
+  localStorage.setItem("tableSortOrder", sortOrder.value);
 }
 
 function loadTableRecordCounts() {
@@ -254,7 +291,7 @@ function loadTableRecordCounts() {
   }
 
   try {
-    const promises = tables.value.map(async table => {
+    const promises = tables.value.map(async (table) => {
       try {
         table.recordCount = await databaseStore.getTableRecordCount(props.connectionId, table.name);
       } catch (error) {
@@ -270,20 +307,20 @@ function loadTableRecordCounts() {
       }, 300);
     });
   } catch (error) {
-    console.error('Error loading record counts:', error);
+    console.error("Error loading record counts:", error);
     isLoadingCounts.value = false;
     allTablesLoaded.value = true;
   }
 }
 
 function formatRecordCount(count) {
-  if (count === null || count === undefined) return '0';
+  if (count === null || count === undefined) return "0";
 
   if (count >= 1000000) {
-    return (count / 1000000).toFixed(1).replace(/\.0$/, '') + 'M';
+    return (count / 1000000).toFixed(1).replace(/\.0$/, "") + "M";
   }
   if (count >= 1000) {
-    return (count / 1000).toFixed(1).replace(/\.0$/, '') + 'K';
+    return (count / 1000).toFixed(1).replace(/\.0$/, "") + "K";
   }
   return count.toString();
 }
@@ -308,7 +345,7 @@ watch(
 
 watch(
   () => tables.value.length,
-  newLength => {
+  (newLength) => {
     if (newLength > 0) {
       allTablesLoaded.value = false;
 

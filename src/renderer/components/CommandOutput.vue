@@ -1,5 +1,8 @@
 <template>
-  <div v-if="showCommandOutput" class="command-output-panel">
+  <div
+    v-if="showCommandOutput"
+    class="command-output-panel"
+  >
     <div class="command-output-header">
       <div class="flex items-center">
         <svg
@@ -17,7 +20,10 @@
           />
         </svg>
         <span class="font-mono text-sm">{{ command }}</span>
-        <div v-if="!commandResult?.isComplete" class="ml-2">
+        <div
+          v-if="!commandResult?.isComplete"
+          class="ml-2"
+        >
           <span class="loading loading-spinner loading-xs" />
         </div>
       </div>
@@ -36,10 +42,18 @@
             class="w-4 h-4"
             :class="{ 'transform rotate-180': !isExpanded }"
           >
-            <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 15.75l7.5-7.5 7.5 7.5" />
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              d="M4.5 15.75l7.5-7.5 7.5 7.5"
+            />
           </svg>
         </button>
-        <button class="btn btn-xs btn-ghost" title="Clear output" @click="clearOutput">
+        <button
+          class="btn btn-xs btn-ghost"
+          title="Clear output"
+          @click="clearOutput"
+        >
           <svg
             xmlns="http://www.w3.org/2000/svg"
             fill="none"
@@ -48,12 +62,19 @@
             stroke="currentColor"
             class="w-4 h-4"
           >
-            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              d="M6 18L18 6M6 6l12 12"
+            />
           </svg>
         </button>
       </div>
     </div>
-    <div class="command-output-content" :class="{ expanded: isExpanded }">
+    <div
+      class="command-output-content"
+      :class="{ expanded: isExpanded }"
+    >
       <div
         v-if="commandResult"
         ref="outputContainer"
@@ -67,7 +88,10 @@
           }"
         ><code>{{ sanitizedOutput }}</code></pre>
       </div>
-      <div v-else class="flex items-center justify-center h-full text-gray-500">
+      <div
+        v-else
+        class="flex items-center justify-center h-full text-gray-500"
+      >
         <p>No command output</p>
       </div>
     </div>
@@ -75,8 +99,8 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, nextTick } from 'vue';
-import { useCommandsStore } from '@/store/commands';
+import { ref, computed, watch, nextTick } from "vue";
+import { useCommandsStore } from "@/store/commands";
 
 const commandsStore = useCommandsStore();
 const outputContainer = ref(null);
@@ -85,9 +109,9 @@ const isExpanded = ref(true);
 const showCommandOutput = computed(() => commandsStore.showCommandOutput);
 const commandResult = computed(() => commandsStore.lastCommand);
 const command = computed(() => {
-  const cmd = commandResult.value?.command || '';
+  const cmd = commandResult.value?.command || "";
   if (cmd.length > 80) {
-    return cmd.substring(0, 77) + '...';
+    return cmd.substring(0, 77) + "...";
   }
   return cmd;
 });
@@ -95,13 +119,13 @@ const command = computed(() => {
 // Function to remove ANSI color codes and formatting
 const sanitizedOutput = computed(() => {
   if (!commandResult.value?.output) {
-    return commandResult.value?.message || 'No output';
+    return commandResult.value?.message || "No output";
   }
 
   return commandResult.value.output
-    .replace(/\u001b\[\d+(;\d+)?m/g, '') // Remove all ANSI color codes
-    .replace(/\[90m|\[39m|\[32;1m|\[39;22m|\[1m|\[22m/g, '') // Remove specific color format codes
-    .replace(/\u001b/g, '');
+    .replace(/\u001b\[\d+(;\d+)?m/g, "") // Remove all ANSI color codes
+    .replace(/\[90m|\[39m|\[32;1m|\[39;22m|\[1m|\[22m/g, "") // Remove specific color format codes
+    .replace(/\u001b/g, "");
 });
 
 function toggleHeight() {

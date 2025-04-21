@@ -13,7 +13,10 @@
               <label class="label">
                 <span class="label-text">Select AI Provider</span>
               </label>
-              <select v-model="settingsData.aiProvider" class="select select-bordered w-full">
+              <select
+                v-model="settingsData.aiProvider"
+                class="select select-bordered w-full"
+              >
                 <option value="openai">OpenAI</option>
                 <option value="gemini">Google Gemini</option>
               </select>
@@ -22,7 +25,10 @@
         </div>
 
         <!-- OpenAI Settings -->
-        <div v-if="settingsData.aiProvider === 'openai'" class="card bg-neutral shadow-md">
+        <div
+          v-if="settingsData.aiProvider === 'openai'"
+          class="card bg-neutral shadow-md"
+        >
           <div class="card-body space-y-4">
             <h3 class="card-title text-md">OpenAI API</h3>
 
@@ -42,7 +48,10 @@
               <label class="label">
                 <span class="label-text">AI Model</span>
               </label>
-              <select v-model="settingsData.openai.model" class="select select-bordered w-full">
+              <select
+                v-model="settingsData.openai.model"
+                class="select select-bordered w-full"
+              >
                 <option value="gpt-3.5-turbo">GPT-3.5 Turbo</option>
                 <option value="gpt-4">GPT-4</option>
                 <option value="gpt-4-turbo">GPT-4 Turbo</option>
@@ -52,7 +61,10 @@
         </div>
 
         <!-- Gemini Settings -->
-        <div v-if="settingsData.aiProvider === 'gemini'" class="card bg-neutral shadow-md">
+        <div
+          v-if="settingsData.aiProvider === 'gemini'"
+          class="card bg-neutral shadow-md"
+        >
           <div class="card-body space-y-4">
             <h3 class="card-title text-md">Google Gemini API</h3>
 
@@ -72,7 +84,10 @@
               <label class="label">
                 <span class="label-text">AI Model</span>
               </label>
-              <select v-model="settingsData.gemini.model" class="select select-bordered w-full">
+              <select
+                v-model="settingsData.gemini.model"
+                class="select select-bordered w-full"
+              >
                 <option value="gemini-2.5-pro-preview-03-25">Gemini 2.5 Pro (Preview)</option>
                 <option value="gemini-2.0-flash">Gemini 2.0 Flash</option>
                 <option value="gemini-2.0-flash-lite">Gemini 2.0 Flash-Lite</option>
@@ -90,7 +105,10 @@
               <label class="label">
                 <span class="label-text">AI Response Language</span>
               </label>
-              <select v-model="settingsData.language" class="select select-bordered w-full">
+              <select
+                v-model="settingsData.language"
+                class="select select-bordered w-full"
+              >
                 <option
                   v-for="option in settingsStore.languageOptions"
                   :key="option.value"
@@ -104,7 +122,10 @@
         </div>
 
         <!-- Developer Mode (only in development) -->
-        <div v-if="isDevelopment" class="card bg-neutral shadow-md">
+        <div
+          v-if="isDevelopment"
+          class="card bg-neutral shadow-md"
+        >
           <div class="card-body space-y-4">
             <h3 class="card-title text-md">Developer Options</h3>
 
@@ -119,8 +140,14 @@
               </label>
             </div>
 
-            <div v-if="settingsData.devMode" class="mt-4">
-              <button class="btn btn-sm btn-outline" @click="showStorageData = true">
+            <div
+              v-if="settingsData.devMode"
+              class="mt-4"
+            >
+              <button
+                class="btn btn-sm btn-outline"
+                @click="showStorageData = true"
+              >
                 View Electron Storage Data
               </button>
             </div>
@@ -129,22 +156,41 @@
       </div>
 
       <div class="modal-action mt-6">
-        <button class="btn btn-primary" @click="saveAndClose">Save</button>
-        <button class="btn" @click="close">Cancel</button>
+        <button
+          class="btn btn-primary"
+          @click="saveAndClose"
+        >
+          Save
+        </button>
+        <button
+          class="btn"
+          @click="close"
+        >
+          Cancel
+        </button>
       </div>
     </div>
-    <div class="modal-backdrop" @click="close" />
+    <div
+      class="modal-backdrop"
+      @click="close"
+    />
   </div>
 
   <!-- Storage Data Modal (for developer mode) -->
-  <div v-if="showStorageData" class="modal modal-open z-40">
+  <div
+    v-if="showStorageData"
+    class="modal modal-open z-40"
+  >
     <div class="modal-box w-11/12 max-w-5xl max-h-[90vh] bg-base-300">
       <h3 class="font-bold text-lg mb-4">Electron Storage Data</h3>
       <div class="mockup-code bg-neutral mb-4 h-[60vh] overflow-auto">
         <pre><code>{{ JSON.stringify(storageData, null, 2) }}</code></pre>
       </div>
       <div class="modal-action">
-        <button class="btn btn-sm btn-primary" @click="copyStorageDataToClipboard">
+        <button
+          class="btn btn-sm btn-primary"
+          @click="copyStorageDataToClipboard"
+        >
           <svg
             xmlns="http://www.w3.org/2000/svg"
             fill="none"
@@ -161,18 +207,26 @@
           </svg>
           Copy to Clipboard
         </button>
-        <button class="btn" @click="showStorageData = false">Close</button>
+        <button
+          class="btn"
+          @click="showStorageData = false"
+        >
+          Close
+        </button>
       </div>
     </div>
-    <div class="modal-backdrop" @click="showStorageData = false" />
+    <div
+      class="modal-backdrop"
+      @click="showStorageData = false"
+    />
   </div>
 </template>
 
 <script setup>
-import { ref, inject, onMounted, computed, watch } from 'vue';
-import { useSettingsStore } from '@/store/settings';
-import { useConnectionsStore } from '@/store/connections';
-import { useTabsStore } from '@/store/tabs';
+import { ref, inject, onMounted, computed, watch } from "vue";
+import { useSettingsStore } from "@/store/settings";
+import { useConnectionsStore } from "@/store/connections";
+import { useTabsStore } from "@/store/tabs";
 
 const props = defineProps({
   isOpen: {
@@ -181,30 +235,30 @@ const props = defineProps({
   }
 });
 
-const emit = defineEmits(['close']);
+const emit = defineEmits(["close"]);
 
-const showAlert = inject('showAlert');
+const showAlert = inject("showAlert");
 const settingsStore = useSettingsStore();
 const connectionsStore = useConnectionsStore();
 const tabsStore = useTabsStore();
 
 const settingsData = ref({
-  aiProvider: 'openai', // Default to OpenAI
+  aiProvider: "openai", // Default to OpenAI
   openai: {
-    apiKey: '',
-    model: 'gpt-3.5-turbo'
+    apiKey: "",
+    model: "gpt-3.5-turbo"
   },
   gemini: {
-    apiKey: '',
-    model: 'gemini-pro'
+    apiKey: "",
+    model: "gemini-pro"
   },
-  language: 'en',
+  language: "en",
   devMode: false
 });
 
 const showStorageData = ref(false);
 const storageData = ref({});
-const isDevelopment = computed(() => process.env.NODE_ENV === 'development');
+const isDevelopment = computed(() => process.env.NODE_ENV === "development");
 
 onMounted(async () => {
   await settingsStore.loadSettings();
@@ -212,14 +266,14 @@ onMounted(async () => {
   // Initialize gemini settings if they don't exist
   if (!settingsStore.settings.gemini) {
     settingsStore.settings.gemini = {
-      apiKey: '',
-      model: 'gemini-pro'
+      apiKey: "",
+      model: "gemini-pro"
     };
   }
 
   // Initialize aiProvider if it doesn't exist
   if (!settingsStore.settings.aiProvider) {
-    settingsStore.settings.aiProvider = 'openai';
+    settingsStore.settings.aiProvider = "openai";
   }
 
   Object.assign(settingsData.value, settingsStore.settings);
@@ -229,16 +283,16 @@ async function saveAndClose() {
   try {
     const cleanSettings = JSON.parse(JSON.stringify(settingsData.value));
     await settingsStore.updateSettings(cleanSettings);
-    showAlert('Settings saved successfully', 'success');
+    showAlert("Settings saved successfully", "success");
     close();
   } catch (error) {
-    console.error('Error saving settings:', error);
-    showAlert('Failed to save settings', 'error');
+    console.error("Error saving settings:", error);
+    showAlert("Failed to save settings", "error");
   }
 }
 
 function close() {
-  emit('close');
+  emit("close");
 }
 
 async function loadStorageData() {
@@ -253,22 +307,22 @@ async function loadStorageData() {
       settings
     };
   } catch (error) {
-    console.error('Error loading storage data:', error);
-    showAlert('Failed to load storage data', 'error');
+    console.error("Error loading storage data:", error);
+    showAlert("Failed to load storage data", "error");
   }
 }
 
 async function copyStorageDataToClipboard() {
   try {
     await navigator.clipboard.writeText(JSON.stringify(storageData.value, null, 2));
-    showAlert('Storage data copied to clipboard', 'success');
+    showAlert("Storage data copied to clipboard", "success");
   } catch (error) {
-    console.error('Error copying to clipboard:', error);
-    showAlert('Failed to copy to clipboard', 'error');
+    console.error("Error copying to clipboard:", error);
+    showAlert("Failed to copy to clipboard", "error");
   }
 }
 
-watch(showStorageData, newValue => {
+watch(showStorageData, (newValue) => {
   if (newValue) {
     loadStorageData();
   }

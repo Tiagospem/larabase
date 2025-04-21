@@ -18,21 +18,24 @@
     </div>
 
     <keep-alive>
-      <component :is="currentTabComponent" v-bind="currentTabProps" />
+      <component
+        :is="currentTabComponent"
+        v-bind="currentTabProps"
+      />
     </keep-alive>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, markRaw, defineAsyncComponent } from 'vue';
+import { ref, computed, markRaw, defineAsyncComponent } from "vue";
 
-const DataTab = markRaw(defineAsyncComponent(() => import('./tabs/DataTab.vue')));
-const StructureTab = markRaw(defineAsyncComponent(() => import('./tabs/StructureTab.vue')));
-const IndexesTab = markRaw(defineAsyncComponent(() => import('./tabs/IndexesTab.vue')));
-const ForeignKeysTab = markRaw(defineAsyncComponent(() => import('./tabs/ForeignKeysTab.vue')));
-const MigrationsTab = markRaw(defineAsyncComponent(() => import('./tabs/MigrationsTab.vue')));
-const ModelTab = markRaw(defineAsyncComponent(() => import('./tabs/ModelTab.vue')));
-const FactoryTab = markRaw(defineAsyncComponent(() => import('./tabs/FactoryTab.vue')));
+const DataTab = markRaw(defineAsyncComponent(() => import("./tabs/DataTab.vue")));
+const StructureTab = markRaw(defineAsyncComponent(() => import("./tabs/StructureTab.vue")));
+const IndexesTab = markRaw(defineAsyncComponent(() => import("./tabs/IndexesTab.vue")));
+const ForeignKeysTab = markRaw(defineAsyncComponent(() => import("./tabs/ForeignKeysTab.vue")));
+const MigrationsTab = markRaw(defineAsyncComponent(() => import("./tabs/MigrationsTab.vue")));
+const ModelTab = markRaw(defineAsyncComponent(() => import("./tabs/ModelTab.vue")));
+const FactoryTab = markRaw(defineAsyncComponent(() => import("./tabs/FactoryTab.vue")));
 
 const props = defineProps({
   connectionId: {
@@ -45,13 +48,13 @@ const props = defineProps({
   },
   filter: {
     type: String,
-    default: ''
+    default: ""
   }
 });
 
-const emit = defineEmits(['update-tab-data', 'open-tab', 'open-database-switcher']);
+const emit = defineEmits(["update-tab-data", "open-tab", "open-database-switcher"]);
 
-const activeContentTab = ref('data');
+const activeContentTab = ref("data");
 const tabsLoaded = ref({
   data: false,
   structure: false,
@@ -63,30 +66,30 @@ const tabsLoaded = ref({
 });
 
 const contentTabs = [
-  { id: 'data', label: 'Data' },
-  { id: 'structure', label: 'Structure' },
-  { id: 'indexes', label: 'Indexes' },
-  { id: 'foreignKeys', label: 'Foreign Keys' },
-  { id: 'migrations', label: 'Migrations' },
-  { id: 'model', label: 'Model' },
-  { id: 'factory', label: 'Factory' }
+  { id: "data", label: "Data" },
+  { id: "structure", label: "Structure" },
+  { id: "indexes", label: "Indexes" },
+  { id: "foreignKeys", label: "Foreign Keys" },
+  { id: "migrations", label: "Migrations" },
+  { id: "model", label: "Model" },
+  { id: "factory", label: "Factory" }
 ];
 
 const currentTabComponent = computed(() => {
   switch (activeContentTab.value) {
-    case 'data':
+    case "data":
       return DataTab;
-    case 'structure':
+    case "structure":
       return StructureTab;
-    case 'indexes':
+    case "indexes":
       return IndexesTab;
-    case 'foreignKeys':
+    case "foreignKeys":
       return ForeignKeysTab;
-    case 'migrations':
+    case "migrations":
       return MigrationsTab;
-    case 'model':
+    case "model":
       return ModelTab;
-    case 'factory':
+    case "factory":
       return FactoryTab;
     default:
       return DataTab;
@@ -97,13 +100,13 @@ const currentTabProps = computed(() => {
   const baseProps = {
     connectionId: props.connectionId,
     tableName: props.tableName,
-    onLoad: data => handleTabData(activeContentTab.value, data),
-    onOpenTab: tabData => emit('open-tab', tabData),
-    'onOpen-database-switcher': connectionId => emit('open-database-switcher', connectionId)
+    onLoad: (data) => handleTabData(activeContentTab.value, data),
+    onOpenTab: (tabData) => emit("open-tab", tabData),
+    "onOpen-database-switcher": (connectionId) => emit("open-database-switcher", connectionId)
   };
 
-  if (activeContentTab.value === 'data' && props.filter) {
-    console.log('Passando filtro para DataTab:', props.filter);
+  if (activeContentTab.value === "data" && props.filter) {
+    console.log("Passando filtro para DataTab:", props.filter);
     baseProps.initialFilter = props.filter;
   }
 
@@ -113,7 +116,7 @@ const currentTabProps = computed(() => {
 function switchContentTab(tabId) {
   activeContentTab.value = tabId;
 
-  emit('update-tab-data', props.tableName, {
+  emit("update-tab-data", props.tableName, {
     activeContentTab: tabId
   });
 }
@@ -121,8 +124,8 @@ function switchContentTab(tabId) {
 function handleTabData(tabId, data) {
   tabsLoaded.value[tabId] = true;
 
-  if (tabId === 'data') {
-    emit('update-tab-data', props.tableName, {
+  if (tabId === "data") {
+    emit("update-tab-data", props.tableName, {
       columns: data.columns,
       rowCount: data.rowCount,
       activeContentTab: activeContentTab.value
