@@ -237,13 +237,24 @@ function removeConnection(connectionId) {
 }
 
 onMounted(async () => {
+  setTimeout(async () => {
+    await loadConnectionsWithRetry();
+  }, 300);
+});
+
+async function loadConnectionsWithRetry(retries = 3) {
   try {
     await connectionsStore.loadConnections();
   } catch (error) {
-    console.error(error);
-    showAlert(error, "error");
+    console.error("Error loading connections:", error);
+
+    if (retries > 0) {
+      setTimeout(() => loadConnectionsWithRetry(retries - 1), 500);
+    } else {
+      showAlert("Failed to load connections. Please try reloading the application.", "error");
+    }
   }
-});
+}
 
 function openConnection(connectionId) {
   router.push(`/database/${connectionId}`);
