@@ -1,6 +1,6 @@
 <template>
-  <div class="tooltip-wrapper" :id="tooltipId">
-    <slot></slot>
+  <div :id="tooltipId" class="tooltip-wrapper">
+    <slot />
     <div
       class="tooltip-content"
       :class="{ 'tooltip-visible': isVisible }"

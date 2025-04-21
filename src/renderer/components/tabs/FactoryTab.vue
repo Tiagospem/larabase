@@ -268,7 +268,7 @@
             <span
               v-if="selectedRelation && relatedModelId"
               class="badge badge-xs badge-primary absolute -top-1 -right-1"
-            ></span>
+            />
           </a>
           <a
             class="tab relative"
@@ -358,7 +358,7 @@
           </div>
 
           <div v-if="isLoadingRelatedRecords" class="flex justify-center my-2">
-            <span class="loading loading-spinner loading-sm"></span>
+            <span class="loading loading-spinner loading-sm" />
           </div>
 
           <div v-if="showRelatedRecords && relatedRecords.length > 0" class="overflow-x-auto">
@@ -366,8 +366,8 @@
               <span class="text-sm font-medium">Selected records</span>
               <button
                 class="btn btn-xs btn-ghost"
-                @click="showRelatedRecords = false"
                 title="Close"
+                @click="showRelatedRecords = false"
               >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
@@ -445,7 +445,7 @@
           </div>
 
           <div v-if="isLoadingTableColumns" class="flex justify-center my-4">
-            <span class="loading loading-spinner loading-md"></span>
+            <span class="loading loading-spinner loading-md" />
           </div>
 
           <div v-else-if="tableColumns.length === 0" class="alert alert-info shadow-lg mb-4">
@@ -460,7 +460,7 @@
                 stroke-linejoin="round"
                 stroke-width="2"
                 d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-              ></path>
+              />
             </svg>
             <span>No table columns found. Please refresh the factory data.</span>
           </div>

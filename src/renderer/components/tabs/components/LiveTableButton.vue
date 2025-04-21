@@ -13,11 +13,11 @@
               :class="
                 tableDataStore.isLiveTableActive ? 'animate-ping bg-success' : 'bg-transparent'
               "
-            ></span>
+            />
             <span
               class="relative inline-flex rounded-full h-2 w-2"
               :class="tableDataStore.isLiveTableActive ? 'bg-success' : 'bg-transparent'"
-            ></span>
+            />
           </span>
           <svg
             xmlns="http://www.w3.org/2000/svg"

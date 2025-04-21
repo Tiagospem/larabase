@@ -211,8 +211,8 @@
 
         <!-- Add AI Analysis button and result section -->
         <div
-          class="mt-4 flex justify-between items-center"
           v-if="hasOpenAIConfig && !isAnalyzing && !analysisResult"
+          class="mt-4 flex justify-between items-center"
         >
           <button class="btn btn-accent btn-sm" @click="performLogAnalysis">
             <svg
@@ -294,7 +294,7 @@
           <div
             class="bg-base-200 p-4 rounded-lg overflow-auto max-h-96 prose prose-sm prose-invert"
           >
-            <div v-html="markdownToHtml(analysisResult)"></div>
+            <div v-html="markdownToHtml(analysisResult)" />
           </div>
         </div>
       </div>
