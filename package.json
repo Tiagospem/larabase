@@ -64,6 +64,12 @@
     "directories": {
       "output": "dist"
     },
+    "publish": {
+      "provider": "github",
+      "owner": "Tiagospem",
+      "repo": "larabase",
+      "private": false
+    },
     "files": [
       "dist/**/*",
       "src/main/**/*"
