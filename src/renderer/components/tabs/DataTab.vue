@@ -56,7 +56,7 @@ import {
   DataTable,
   NoRecordState,
   PaginatorBar
-} from '@/components/tabs/components';
+} from '@/components/tabs/partials';
 
 import { Helpers } from '../../utils/helpers';
 

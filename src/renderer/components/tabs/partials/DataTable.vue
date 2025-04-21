@@ -212,11 +212,8 @@
 import { useTableDataStore } from '@/store/table-data';
 import { Helpers } from '@/utils/helpers';
 import { onMounted, onUnmounted, ref } from 'vue';
-import { useDatabaseStore } from '@/store/database';
-import EditRecord from '@/components/tabs/components/EditRecord.vue';
-import DataPreviewModal from '@/components/tabs/components/DataPreviewModal.vue';
-
-const databaseStore = useDatabaseStore();
+import EditRecord from '@/components/tabs/partials/EditRecord.vue';
+import DataPreviewModal from '@/components/tabs/partials/DataPreviewModal.vue';
 
 const props = defineProps({
   storeId: {
@@ -225,7 +222,7 @@ const props = defineProps({
   }
 });
 
-const emit = defineEmits(['navigateToForeignKey']);
+const emit = defineEmits(['navigateToForeignKey', 'loadFilteredData']);
 
 const tableContainer = ref(null);
 const shiftKeyPressed = ref(false);
