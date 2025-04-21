@@ -9,3 +9,4 @@ export { default as LoadingState } from './LoadingState.vue';
 export { default as ErrorState } from './ErrorState.vue';
 export { default as EmptyFilterState } from './EmptyFilterState.vue';
 export { default as DataTable } from './DataTable.vue';
+export { default as NoRecordState } from './NoRecordState.vue';

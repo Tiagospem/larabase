@@ -22,12 +22,15 @@
                 maxWidth:
                   tableDataStore.columnWidths[column] || tableDataStore.defaultColumnWidth(column)
               }"
-              @click.stop="handleSortClick(column)"
             >
               <div class="flex items-center justify-between">
                 <span class="truncate">{{ column }}</span>
                 <div class="flex items-center">
-                  <span v-if="tableDataStore.currentSortColumn === column" class="ml-1">
+                  <span
+                    v-if="tableDataStore.currentSortColumn === column"
+                    class="ml-1"
+                    @click.stop="handleSortClick(column, $event)"
+                  >
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
                       fill="none"
@@ -36,6 +39,26 @@
                       stroke="currentColor"
                       class="w-4 h-4"
                       :class="{ 'rotate-180': tableDataStore.currentSortDirection === 'desc' }"
+                    >
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        d="M4.5 15.75l7.5-7.5 7.5 7.5"
+                      />
+                    </svg>
+                  </span>
+                  <span
+                    v-else
+                    class="ml-1 opacity-0 hover:opacity-100"
+                    @click.stop="handleSortClick(column, $event)"
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke-width="1.5"
+                      stroke="currentColor"
+                      class="w-4 h-4"
                     >
                       <path
                         stroke-linecap="round"
@@ -249,10 +272,6 @@ function handleColumnResize(event) {
 }
 
 function handleSortClick(column) {
-  if (resizingColumn.value !== null || recentlyResized.value) {
-    return;
-  }
-
   if (tableDataStore.currentSortColumn === column) {
     tableDataStore.currentSortDirection =
       tableDataStore.currentSortDirection === 'asc' ? 'desc' : 'asc';
