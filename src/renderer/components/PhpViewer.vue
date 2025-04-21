@@ -34,7 +34,7 @@ const props = defineProps({
 
 const highlightedCode = ref('');
 
-function highlightCode () {
+function highlightCode() {
   try {
     if (props.code) {
       // First highlight the code

@@ -65,7 +65,6 @@
     "globals": "^16.0.0",
     "postcss": "^8.4.29",
     "prettier": "^3.5.3",
-    "strip-comments": "^2.0.1",
     "ts-node": "^10.9.2",
     "typescript": "^5.8.3",
     "vite": "^4.4.9",

@@ -240,7 +240,7 @@ const editRecordRef = ref(null);
 
 const tableDataStore = useTableDataStore(props.storeId);
 
-function startColumnResize (event, column) {
+function startColumnResize(event, column) {
   event.preventDefault();
   event.stopPropagation();
   resizingColumn.value = column;
@@ -263,7 +263,7 @@ function startColumnResize (event, column) {
   document.addEventListener('mouseup', stopColumnResize);
 }
 
-function stopColumnResize () {
+function stopColumnResize() {
   document.removeEventListener('mousemove', handleColumnResize);
   document.removeEventListener('mouseup', stopColumnResize);
 
@@ -276,7 +276,7 @@ function stopColumnResize () {
   }, 500);
 }
 
-function handleColumnResize (event) {
+function handleColumnResize(event) {
   if (!resizingColumn.value) return;
 
   const column = resizingColumn.value;
@@ -284,7 +284,7 @@ function handleColumnResize (event) {
   tableDataStore.columnWidths[column] = `${width}px`;
 }
 
-function handleSortClick (column) {
+function handleSortClick(column) {
   if (tableDataStore.currentSortColumn === column) {
     tableDataStore.currentSortDirection =
       tableDataStore.currentSortDirection === 'asc' ? 'desc' : 'asc';
@@ -302,7 +302,7 @@ function handleSortClick (column) {
   }
 }
 
-function scrollToTop () {
+function scrollToTop() {
   if (tableContainer.value) {
     tableContainer.value.scrollTop = 0;
   }
@@ -338,12 +338,12 @@ const handleKeyDown = e => {
   }
 };
 
-function clearSelection () {
+function clearSelection() {
   tableDataStore.selectedRows = [];
   tableDataStore.lastSelectedId = null;
 }
 
-function handleMouseDown (event, rowIndex) {
+function handleMouseDown(event, rowIndex) {
   if (ctrlKeyPressed.value || shiftKeyPressed.value) {
     return;
   }
@@ -354,7 +354,7 @@ function handleMouseDown (event, rowIndex) {
   window.addEventListener('mouseup', handleMouseUp, { once: true });
 }
 
-function handleMouseEnter (rowIndex) {
+function handleMouseEnter(rowIndex) {
   if (!isDragging.value || selectionStartId.value === null) {
     return;
   }
@@ -371,7 +371,7 @@ function handleMouseEnter (rowIndex) {
   tableDataStore.selectedRows = rangeIds;
 }
 
-function handleMouseUp () {
+function handleMouseUp() {
   stopColumnResize();
 
   if (!isDragging.value || !selectionStartId.value) {
@@ -389,7 +389,7 @@ function handleMouseUp () {
   selectionStartId.value = null;
 }
 
-function handleRowClick (event, rowIndex) {
+function handleRowClick(event, rowIndex) {
   if (event) {
     event.preventDefault();
     event.stopPropagation();
@@ -438,7 +438,7 @@ function handleRowClick (event, rowIndex) {
   }
 }
 
-function getRowClasses (rowIndex) {
+function getRowClasses(rowIndex) {
   const isSelected = tableDataStore.selectedRows?.includes?.(rowIndex) ?? false;
   const isUpdated =
     tableDataStore.highlightChanges && (tableDataStore.updatedRows?.includes?.(rowIndex) ?? false);
@@ -450,7 +450,7 @@ function getRowClasses (rowIndex) {
   };
 }
 
-function getRowBackgroundClass (rowIndex) {
+function getRowBackgroundClass(rowIndex) {
   const isSelected = tableDataStore.selectedRows?.includes?.(rowIndex) ?? false;
   const isUpdated =
     tableDataStore.highlightChanges && (tableDataStore.updatedRows?.includes?.(rowIndex) ?? false);
@@ -466,14 +466,14 @@ function getRowBackgroundClass (rowIndex) {
   return 'bg-base-100';
 }
 
-function closePreviewModal () {
+function closePreviewModal() {
   tableDataStore.showPreviewModal = false;
   setTimeout(() => {
     tableDataStore.previewingRecord = null;
   }, 300);
 }
 
-function openPreviewModal (row) {
+function openPreviewModal(row) {
   tableDataStore.previewingRecord = JSON.parse(JSON.stringify(row));
   tableDataStore.showPreviewModal = true;
 }

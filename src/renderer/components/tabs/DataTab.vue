@@ -126,7 +126,7 @@ const refreshLiveTableState = () => {
   }
 };
 
-function handleStorageChange (event) {
+function handleStorageChange(event) {
   if (!event.key) return;
 
   const ourKey = `liveTable.enabled.${props.connectionId}.${props.tableName}`;
@@ -163,7 +163,7 @@ const handleWindowFocus = () => {
   refreshLiveTableState();
 };
 
-async function navigateToForeignKey (column, value) {
+async function navigateToForeignKey(column, value) {
   if (value === null || value === undefined) {
     showAlert('Null or undefined value. Unable to navigate to the related record.', 'error');
     return;
@@ -224,7 +224,7 @@ async function navigateToForeignKey (column, value) {
   }
 }
 
-async function loadTableStructure () {
+async function loadTableStructure() {
   try {
     const structure = await databaseStore.getTableStructure(
       props.connectionId,

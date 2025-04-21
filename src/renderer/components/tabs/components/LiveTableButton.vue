@@ -99,7 +99,7 @@ const showAlert = inject('showAlert');
 
 const tableDataStore = useTableDataStore(props.storeId);
 
-function toggleLiveTable () {
+function toggleLiveTable() {
   try {
     if (!tableDataStore.isLiveTableActive) {
       tableDataStore.startLiveUpdates();
@@ -119,7 +119,7 @@ function toggleLiveTable () {
   }
 }
 
-function updateLiveDelay () {
+function updateLiveDelay() {
   tableDataStore.liveUpdateDelay = tableDataStore.liveUpdateDelaySeconds * 1000;
 
   try {
@@ -138,7 +138,7 @@ function updateLiveDelay () {
   }
 }
 
-function clearUpdateCounter () {
+function clearUpdateCounter() {
   tableDataStore.updateCounter = 0;
   tableDataStore.updateAppIcon(0);
 }

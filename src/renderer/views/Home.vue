@@ -201,19 +201,19 @@ const manageConnection = ref(null);
 
 const isLoading = computed(() => connectionsStore.isLoading);
 
-function restoreDump (connection) {
+function restoreDump(connection) {
   restoreDatabase.value.restoreDatabase(connection);
 }
 
-function openCreateConnectionModal () {
+function openCreateConnectionModal() {
   manageConnection.value.openCreateConnectionModal();
 }
 
-function editConnection (connection) {
+function editConnection(connection) {
   manageConnection.value.editConnection(connection);
 }
 
-function removeConnection (connectionId) {
+function removeConnection(connectionId) {
   manageConnection.value.removeConnection(connectionId);
 }
 
@@ -226,11 +226,11 @@ onMounted(async () => {
   }
 });
 
-function openConnection (connectionId) {
+function openConnection(connectionId) {
   router.push(`/database/${connectionId}`);
 }
 
-function getConnectionColor (type) {
+function getConnectionColor(type) {
   switch (type) {
     case 'mysql':
       return 'bg-orange-500';
