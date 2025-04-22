@@ -84,6 +84,28 @@
           </button>
 
           <button
+            v-tooltip.bottom="'Query Explain Tool'"
+            class="btn btn-ghost btn-sm"
+            title="Query Explain Tool"
+            @click="openExplainTool"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke-width="1.5"
+              stroke="currentColor"
+              class="size-5"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                d="M7.5 14.25v2.25m3-4.5v4.5m3-6.75v6.75m3-9v9M6 20.25h12A2.25 2.25 0 0020.25 18V6A2.25 2.25 0 0018 3.75H6A2.25 2.25 0 003.75 6v12A2.25 2.25 0 006 20.25z"
+              />
+            </svg>
+          </button>
+
+          <button
             v-tooltip.bottom="'DB Live Updates'"
             class="btn btn-ghost btn-sm"
             title="Live Updates"
@@ -209,7 +231,8 @@
 
           <!-- Redis Manager Button -->
           <button
-            v-if="isRedisConnection && isRedisAvailable"
+            :disabled="!isRedisConnection && !isRedisAvailable"
+            :class="{'opacity-20': !isRedisConnection && !isRedisAvailable }"
             v-tooltip.bottom="'Redis Manager'"
             class="btn btn-ghost btn-sm text-white"
             title="Redis Manager"
@@ -689,6 +712,10 @@ watch(showTablesModelsModal, async (isOpen) => {
 
 function openSqlEditor() {
   router.push(`/sql-editor/${connectionId.value}`);
+}
+
+function openExplainTool() {
+  router.push(`/explain/${connectionId.value}`);
 }
 
 function loadSidebarWidth() {

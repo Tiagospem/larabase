@@ -8,11 +8,13 @@ import tooltip from "./directives/tooltip";
 import Home from "./views/Home.vue";
 import DatabaseView from "./views/DatabaseView.vue";
 import SQLEditorView from "./views/SQLEditorView.vue";
+import ExplainView from "./views/ExplainView.vue";
 
 const routes = [
   { path: "/", component: Home },
   { path: "/database/:id", component: DatabaseView },
-  { path: "/sql-editor/:id", component: SQLEditorView }
+  { path: "/sql-editor/:id", component: SQLEditorView },
+  { path: "/explain/:id", component: ExplainView }
 ];
 
 const router = createRouter({
