@@ -33,6 +33,7 @@ try {
     deleteRecords: (config) => safeIpcRenderer.invoke("delete-table-records", config),
     truncateTable: (config) => safeIpcRenderer.invoke("truncate-table", config),
     listDatabases: (config) => safeIpcRenderer.invoke("list-databases", config),
+    dropDatabase: (config) => safeIpcRenderer.invoke("drop-database", config),
     getTableData: (config) => safeIpcRenderer.invoke("get-table-data", config),
     getFilteredTableData: (config) => safeIpcRenderer.invoke("get-filtered-table-data", config),
     checkRedisStatus: (config) => safeIpcRenderer.invoke("check-redis-status", config),
