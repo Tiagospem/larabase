@@ -78,21 +78,38 @@ export class Helpers {
   }
 
   static formatCellValue(column, value) {
-    if (!this.isDateField(column) || value == null) {
-      return String(value);
+    // Handle null values
+    if (value == null) {
+      return '';
+    }
+    
+    // Handle date fields
+    if (this.isDateField(column)) {
+      let dateObj = new Date(value);
+
+      if (dateObj instanceof Date && !isNaN(dateObj.getTime())) {
+        const pad = (n) => String(n).padStart(2, "0");
+        const Y = dateObj.getFullYear();
+        const m = pad(dateObj.getMonth() + 1);
+        const d = pad(dateObj.getDate());
+        const H = pad(dateObj.getHours());
+        const i = pad(dateObj.getMinutes());
+        const s = pad(dateObj.getSeconds());
+        return `${Y}-${m}-${d} ${H}:${i}:${s}`;
+      }
     }
 
-    let dateObj = new Date(value);
-
-    if (dateObj instanceof Date && !isNaN(dateObj.getTime())) {
-      const pad = (n) => String(n).padStart(2, "0");
-      const Y = dateObj.getFullYear();
-      const m = pad(dateObj.getMonth() + 1);
-      const d = pad(dateObj.getDate());
-      const H = pad(dateObj.getHours());
-      const i = pad(dateObj.getMinutes());
-      const s = pad(dateObj.getSeconds());
-      return `${Y}-${m}-${d} ${H}:${i}:${s}`;
+    if (typeof value === 'object' && value !== null) {
+      try {
+        const jsonString = JSON.stringify(value);
+        if (jsonString.length > 100) {
+          return jsonString.substring(0, 100) + '...';
+        }
+        return jsonString;
+      } catch (e) {
+        console.warn('Error stringifying object:', e);
+        return String(value);
+      }
     }
 
     return String(value);
