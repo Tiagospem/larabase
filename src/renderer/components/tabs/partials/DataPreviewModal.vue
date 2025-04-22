@@ -139,7 +139,7 @@
 
               <!-- Date data -->
               <div
-                v-else-if="isDateField(column) && record[column]"
+                v-else-if="Helpers.isDateField(column) && record[column]"
                 class="text-sm"
               >
                 <div class="text-primary">
@@ -201,6 +201,7 @@
 
 <script setup>
 import { ref, defineProps, defineEmits, watch } from "vue";
+import { Helpers } from "@/utils/helpers";
 
 const props = defineProps({
   show: {
@@ -262,10 +263,6 @@ function isLongText(value) {
   const estimatedLines = Math.max(lineCount, Math.ceil(value.length / averageCharsPerLine));
 
   return isVeryLong || hasMultipleLines || estimatedLines > 5 || wordCount > 50;
-}
-
-function isDateField(column) {
-  return /(date|time|at$|created_at|updated_at|deleted_at)/i.test(column);
 }
 
 function formatDateForDisplay(date) {
