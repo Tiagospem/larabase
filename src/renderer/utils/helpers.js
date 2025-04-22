@@ -80,9 +80,9 @@ export class Helpers {
   static formatCellValue(column, value) {
     // Handle null values
     if (value == null) {
-      return '';
+      return "";
     }
-    
+
     // Handle date fields
     if (this.isDateField(column)) {
       let dateObj = new Date(value);
@@ -99,15 +99,15 @@ export class Helpers {
       }
     }
 
-    if (typeof value === 'object' && value !== null) {
+    if (typeof value === "object" && value !== null) {
       try {
         const jsonString = JSON.stringify(value);
         if (jsonString.length > 100) {
-          return jsonString.substring(0, 100) + '...';
+          return jsonString.substring(0, 100) + "...";
         }
         return jsonString;
       } catch (e) {
-        console.warn('Error stringifying object:', e);
+        console.warn("Error stringifying object:", e);
         return String(value);
       }
     }

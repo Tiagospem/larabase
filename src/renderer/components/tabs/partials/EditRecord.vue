@@ -137,26 +137,26 @@ const tableDataStore = useTableDataStore(props.storeId);
 function openEditModal(row) {
   // Reset state first to avoid any stale data
   closeEditModal();
-  
+
   // Wait for the next tick to ensure the modal is fully closed
   nextTick(() => {
     // Store a copy of the original record for comparison
     originalRecord.value = JSON.parse(JSON.stringify(row));
-    
+
     // Create a deep copy to work with
     const processedRecord = JSON.parse(JSON.stringify(row));
-    
+
     // Process all fields systematically
     for (const key in processedRecord) {
       const value = processedRecord[key];
-      
+
       // 1. Handle null values first
       if (value === null) {
         continue;
       }
-      
+
       // 2. Handle object values (convert to JSON string)
-      if (typeof value === 'object') {
+      if (typeof value === "object") {
         try {
           processedRecord[key] = JSON.stringify(value, null, 2);
         } catch (e) {
@@ -165,17 +165,17 @@ function openEditModal(row) {
         }
         continue;
       }
-      
+
       // 3. Handle date fields
       if (Helpers.isDateField(key) && typeof value === "string") {
         try {
           let dateStr = value;
-          
+
           // Standardize format replacing space with T if needed
           if (dateStr.includes(" ")) {
             dateStr = dateStr.replace(" ", "T");
           }
-          
+
           const date = new Date(dateStr);
           if (!isNaN(date.getTime())) {
             processedRecord[key] = date.toISOString().slice(0, 16);
@@ -185,7 +185,7 @@ function openEditModal(row) {
         }
       }
     }
-    
+
     // Set the processed record and open the modal
     editingRecord.value = processedRecord;
     tableDataStore.showEditModal = true;
@@ -211,19 +211,19 @@ async function saveRecord() {
       let value = editingRecord.value[key];
 
       // 1. Process JSON strings back to objects
-      if (typeof value === 'string') {
+      if (typeof value === "string") {
         // Try to parse JSON strings
-        if (value.trim() && (value.trim().startsWith('{') || value.trim().startsWith('['))) {
+        if (value.trim() && (value.trim().startsWith("{") || value.trim().startsWith("["))) {
           try {
             const parsed = JSON.parse(value);
-            if (typeof parsed === 'object') {
+            if (typeof parsed === "object") {
               value = parsed;
             }
           } catch (e) {
             // Not valid JSON, keep as string
           }
         }
-        
+
         // 2. Process date fields
         if (Helpers.isDateField(key) && value.includes("T")) {
           try {
