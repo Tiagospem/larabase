@@ -36,16 +36,14 @@ async function analyzeWithOpenAI(explainData, settingsStore) {
   // Format EXPLAIN results for better readability
   const explainResultsFormatted = explainData.results
     .map((row, index) => {
-      return explainData.columns
-        .map(column => `${column}: ${row[column] || 'N/A'}`)
-        .join('\n  ');
+      return explainData.columns.map((column) => `${column}: ${row[column] || "N/A"}`).join("\n  ");
     })
-    .join('\n\n');
+    .join("\n\n");
 
   // Format insights
   const insightsFormatted = explainData.insights
-    .map(insight => `- ${insight.title}: ${insight.description}${insight.recommendation ? `\n  Recommendation: ${insight.recommendation}` : ''}`)
-    .join('\n');
+    .map((insight) => `- ${insight.title}: ${insight.description}${insight.recommendation ? `\n  Recommendation: ${insight.recommendation}` : ""}`)
+    .join("\n");
 
   // Prepare messages for OpenAI API
   const messages = [
@@ -83,7 +81,7 @@ Please reply in ${language === "pt" ? "Portuguese" : language === "es" ? "Spanis
         model: settingsStore.settings.openai.model || "gpt-3.5-turbo",
         messages: messages,
         temperature: 0.3,
-        max_tokens: 3000  // Increased from 1000 to allow for more complete responses
+        max_tokens: 3000 // Increased from 1000 to allow for more complete responses
       })
     });
 
@@ -114,16 +112,14 @@ async function analyzeWithGemini(explainData, settingsStore) {
   // Format EXPLAIN results for better readability
   const explainResultsFormatted = explainData.results
     .map((row, index) => {
-      return explainData.columns
-        .map(column => `${column}: ${row[column] || 'N/A'}`)
-        .join('\n  ');
+      return explainData.columns.map((column) => `${column}: ${row[column] || "N/A"}`).join("\n  ");
     })
-    .join('\n\n');
+    .join("\n\n");
 
   // Format insights
   const insightsFormatted = explainData.insights
-    .map(insight => `- ${insight.title}: ${insight.description}${insight.recommendation ? `\n  Recommendation: ${insight.recommendation}` : ''}`)
-    .join('\n');
+    .map((insight) => `- ${insight.title}: ${insight.description}${insight.recommendation ? `\n  Recommendation: ${insight.recommendation}` : ""}`)
+    .join("\n");
 
   // Prepare messages for Gemini API
   const prompt = `${getExplainAnalysisPrompt()}
@@ -161,7 +157,7 @@ Please reply in ${language === "pt" ? "Portuguese" : language === "es" ? "Spanis
         ],
         generationConfig: {
           temperature: 0.3,
-          maxOutputTokens: 2500  // Increased from 1000 to allow for more complete responses
+          maxOutputTokens: 2500 // Increased from 1000 to allow for more complete responses
         }
       })
     });
@@ -224,4 +220,4 @@ If suggesting an index, be specific about columns and order.
 If recommending a query rewrite, provide a brief example.
 
 REMEMBER: End users need clear, actionable guidance they can implement immediately. Focus on WHAT to fix and HOW to fix it, not lengthy explanations of WHY. DOT NOT EXCEED 3000 TOKENS.`;
-} 
+}

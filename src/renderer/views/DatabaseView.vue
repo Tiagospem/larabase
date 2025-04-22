@@ -62,6 +62,28 @@
           </button>
 
           <button
+            v-tooltip.bottom="'Switch Database'"
+            class="btn btn-ghost btn-sm text-white"
+            title="Switch Database"
+            @click="databaseSwitchRef?.openDatabaseSwitcher()"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke-width="1.5"
+              stroke="currentColor"
+              class="size-5"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                d="M7.5 21 3 16.5m0 0L7.5 12M3 16.5h13.5m0-13.5L21 7.5m0 0L16.5 12M21 7.5H7.5"
+              />
+            </svg>
+          </button>
+
+          <button
             v-tooltip.bottom="'SQL Editor'"
             class="btn btn-ghost btn-sm"
             title="SQL Editor"
@@ -137,9 +159,7 @@
               id="Capa_1"
               fill="#fff"
               class="size-5"
-              version="1.1"
               xmlns="http://www.w3.org/2000/svg"
-              xmlns:xlink="http://www.w3.org/1999/xlink"
               viewBox="0 0 60 60"
               xml:space="preserve"
             >
@@ -232,7 +252,7 @@
           <!-- Redis Manager Button -->
           <button
             :disabled="!isRedisConnection && !isRedisAvailable"
-            :class="{'opacity-20': !isRedisConnection && !isRedisAvailable }"
+            :class="{ 'opacity-20': !isRedisConnection && !isRedisAvailable }"
             v-tooltip.bottom="'Redis Manager'"
             class="btn btn-ghost btn-sm text-white"
             title="Redis Manager"
@@ -399,7 +419,10 @@
 
   <CommandOutput />
 
-  <DatabaseSwitcher :connection-id="connectionId" />
+  <DatabaseSwitcher
+    :connection-id="connectionId"
+    ref="databaseSwitchRef"
+  />
 
   <RedisManager
     v-if="showRedisManager"
@@ -505,6 +528,7 @@ const connectionsStore = useConnectionsStore();
 const databaseStore = useDatabaseStore();
 const tabsStore = useTabsStore();
 
+const databaseSwitchRef = ref(null);
 const mainTabsRef = ref(null);
 const sidebarWidth = ref(240);
 const initialSidebarLoaded = ref(false);

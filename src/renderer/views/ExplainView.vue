@@ -1,14 +1,33 @@
 <template>
   <div class="flex flex-col h-full">
     <!-- Componente para capturar erros -->
-    <div v-if="hasRenderError" class="p-8 bg-error/10 text-error flex flex-col items-center justify-center h-full">
-      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-16 h-16 mb-4">
-        <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+    <div
+      v-if="hasRenderError"
+      class="p-8 bg-error/10 text-error flex flex-col items-center justify-center h-full"
+    >
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        fill="none"
+        viewBox="0 0 24 24"
+        stroke-width="1.5"
+        stroke="currentColor"
+        class="w-16 h-16 mb-4"
+      >
+        <path
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"
+        />
       </svg>
       <h2 class="text-xl font-bold mb-2">Erro de Renderização</h2>
       <p class="mb-4">Ocorreu um erro ao carregar esta página.</p>
       <pre class="bg-base-300 p-3 rounded text-sm mb-4 max-w-full overflow-auto">{{ renderErrorMessage }}</pre>
-      <button class="btn btn-primary" @click="resetComponent">Tentar Novamente</button>
+      <button
+        class="btn btn-primary"
+        @click="resetComponent"
+      >
+        Tentar Novamente
+      </button>
     </div>
 
     <template v-if="!hasRenderError">
@@ -78,8 +97,19 @@
             class="btn btn-primary btn-sm mr-2"
             @click="newAnalysis"
           >
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4 mr-1">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke-width="1.5"
+              stroke="currentColor"
+              class="w-4 h-4 mr-1"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                d="M12 4.5v15m7.5-7.5h-15"
+              />
             </svg>
             New Analysis
           </button>
@@ -111,7 +141,10 @@
       <!-- Main Content Area -->
       <div class="flex flex-col flex-1 overflow-auto p-6">
         <!-- SQL Input Mode -->
-        <div v-if="!hasResults" class="flex flex-col">
+        <div
+          v-if="!hasResults"
+          class="flex flex-col"
+        >
           <div
             class="bg-base-100 overflow-hidden flex flex-col rounded-lg shadow-md"
             :style="{ height: `${editorHeight}px` }"
@@ -196,18 +229,32 @@
         </div>
 
         <!-- Results Mode -->
-        <div v-else-if="hasResults" class="flex flex-col space-y-6">
+        <div
+          v-else-if="hasResults"
+          class="flex flex-col space-y-6"
+        >
           <!-- Formatted Query -->
           <div class="bg-base-100 rounded-lg shadow-md p-4">
             <div class="flex justify-between items-center mb-2">
               <h2 class="text-lg font-semibold text-base-content">SQL Query</h2>
-              <button 
-                class="btn btn-xs btn-ghost text-base-content" 
+              <button
+                class="btn btn-xs btn-ghost text-base-content"
                 @click="copyToClipboard(queryToAnalyze)"
                 title="Copy SQL to clipboard"
               >
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125h-9.75a1.125 1.125 0 01-1.125-1.125V7.875c0-.621.504-1.125 1.125-1.125H6.75a9.06 9.06 0 011.5.124m7.5 10.376h3.375c.621 0 1.125-.504 1.125-1.125V11.25c0-4.46-3.243-8.161-7.5-8.876a9.06 9.06 0 00-1.5-.124H9.375c-.621 0-1.125.504-1.125 1.125v3.5m7.5 10.375H9.375a1.125 1.125 0 01-1.125-1.125v-9.25m12 6.625v-1.875a3.375 3.375 0 00-3.375-3.375h-1.5a1.125 1.125 0 01-1.125-1.125v-1.5a3.375 3.375 0 00-3.375-3.375H9.75" />
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke-width="1.5"
+                  stroke="currentColor"
+                  class="w-4 h-4"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125h-9.75a1.125 1.125 0 01-1.125-1.125V7.875c0-.621.504-1.125 1.125-1.125H6.75a9.06 9.06 0 011.5.124m7.5 10.376h3.375c.621 0 1.125-.504 1.125-1.125V11.25c0-4.46-3.243-8.161-7.5-8.876a9.06 9.06 0 00-1.5-.124H9.375c-.621 0-1.125.504-1.125 1.125v3.5m7.5 10.375H9.375a1.125 1.125 0 01-1.125-1.125v-9.25m12 6.625v-1.875a3.375 3.375 0 00-3.375-3.375h-1.5a1.125 1.125 0 01-1.125-1.125v-1.5a3.375 3.375 0 00-3.375-3.375H9.75"
+                  />
                 </svg>
               </button>
             </div>
@@ -215,20 +262,35 @@
           </div>
 
           <!-- Execution Plan Results -->
-          <div ref="resultTableRef" class="bg-base-100 rounded-lg shadow-md p-4">
+          <div
+            ref="resultTableRef"
+            class="bg-base-100 rounded-lg shadow-md p-4"
+          >
             <h2 class="text-lg font-semibold text-base-content mb-3">Execution Plan</h2>
             <div class="overflow-x-auto">
               <table class="min-w-full bg-base-100 rounded-lg">
                 <thead>
                   <tr class="bg-base-200">
-                    <th v-for="column in explainColumns" :key="column" class="p-3 text-left text-xs font-semibold text-base-content uppercase tracking-wider">
+                    <th
+                      v-for="column in explainColumns"
+                      :key="column"
+                      class="p-3 text-left text-xs font-semibold text-base-content uppercase tracking-wider"
+                    >
                       {{ column }}
                     </th>
                   </tr>
                 </thead>
                 <tbody>
-                  <tr v-for="(row, index) in explainResults" :key="index" class="border-t border-neutral">
-                    <td v-for="column in explainColumns" :key="`${index}-${column}`" class="p-3 text-sm text-base-content max-w-xs overflow-hidden overflow-ellipsis whitespace-nowrap">
+                  <tr
+                    v-for="(row, index) in explainResults"
+                    :key="index"
+                    class="border-t border-neutral"
+                  >
+                    <td
+                      v-for="column in explainColumns"
+                      :key="`${index}-${column}`"
+                      class="p-3 text-sm text-base-content max-w-xs overflow-hidden overflow-ellipsis whitespace-nowrap"
+                    >
                       {{ row[column] }}
                     </td>
                   </tr>
@@ -236,33 +298,76 @@
               </table>
             </div>
           </div>
-          
+
           <!-- Performance Insights -->
-          <div v-if="performanceInsights.length > 0" class="bg-base-100 rounded-lg shadow-md p-4">
+          <div
+            v-if="performanceInsights.length > 0"
+            class="bg-base-100 rounded-lg shadow-md p-4"
+          >
             <h2 class="text-lg font-semibold text-base-content mb-3">Performance Insights</h2>
             <div class="space-y-4">
-              <div v-for="(insight, index) in performanceInsights" :key="index" class="flex items-start">
+              <div
+                v-for="(insight, index) in performanceInsights"
+                :key="index"
+                class="flex items-start"
+              >
                 <div class="flex-shrink-0">
-                  <div v-if="insight.severity === 'high'" class="w-8 h-8 rounded-full bg-error/10 flex items-center justify-center">
-                    <svg class="h-5 w-5 text-error" fill="currentColor" viewBox="0 0 20 20">
-                      <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+                  <div
+                    v-if="insight.severity === 'high'"
+                    class="w-8 h-8 rounded-full bg-error/10 flex items-center justify-center"
+                  >
+                    <svg
+                      class="h-5 w-5 text-error"
+                      fill="currentColor"
+                      viewBox="0 0 20 20"
+                    >
+                      <path
+                        fill-rule="evenodd"
+                        d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
+                        clip-rule="evenodd"
+                      />
                     </svg>
                   </div>
-                  <div v-else-if="insight.severity === 'medium'" class="w-8 h-8 rounded-full bg-warning/10 flex items-center justify-center">
-                    <svg class="h-5 w-5 text-warning" fill="currentColor" viewBox="0 0 20 20">
-                      <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2h-1V9a1 1 0 00-1-1z" clip-rule="evenodd" />
+                  <div
+                    v-else-if="insight.severity === 'medium'"
+                    class="w-8 h-8 rounded-full bg-warning/10 flex items-center justify-center"
+                  >
+                    <svg
+                      class="h-5 w-5 text-warning"
+                      fill="currentColor"
+                      viewBox="0 0 20 20"
+                    >
+                      <path
+                        fill-rule="evenodd"
+                        d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2h-1V9a1 1 0 00-1-1z"
+                        clip-rule="evenodd"
+                      />
                     </svg>
                   </div>
-                  <div v-else class="w-8 h-8 rounded-full bg-success/10 flex items-center justify-center">
-                    <svg class="h-5 w-5 text-success" fill="currentColor" viewBox="0 0 20 20">
-                      <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+                  <div
+                    v-else
+                    class="w-8 h-8 rounded-full bg-success/10 flex items-center justify-center"
+                  >
+                    <svg
+                      class="h-5 w-5 text-success"
+                      fill="currentColor"
+                      viewBox="0 0 20 20"
+                    >
+                      <path
+                        fill-rule="evenodd"
+                        d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                        clip-rule="evenodd"
+                      />
                     </svg>
                   </div>
                 </div>
                 <div class="ml-4 flex-1">
                   <h3 class="text-base font-medium text-base-content">{{ insight.title }}</h3>
                   <p class="mt-1 text-sm text-base-content opacity-70">{{ insight.description }}</p>
-                  <div v-if="insight.recommendation" class="mt-2 bg-base-300 p-3 rounded-md font-mono text-sm">
+                  <div
+                    v-if="insight.recommendation"
+                    class="mt-2 bg-base-300 p-3 rounded-md font-mono text-sm"
+                  >
                     {{ insight.recommendation }}
                   </div>
                 </div>
@@ -271,24 +376,44 @@
           </div>
 
           <!-- AI Analysis -->
-          <div v-if="aiEnabled && !isAiLoading && aiAnalysis" class="bg-base-100 rounded-lg shadow-md p-4">
+          <div
+            v-if="aiEnabled && !isAiLoading && aiAnalysis"
+            class="bg-base-100 rounded-lg shadow-md p-4"
+          >
             <div class="flex justify-between items-center mb-3">
               <h2 class="text-lg font-semibold text-base-content">AI Analysis</h2>
-              <button 
-                class="btn btn-xs btn-ghost text-base-content" 
+              <button
+                class="btn btn-xs btn-ghost text-base-content"
                 @click="copyToClipboard(aiAnalysis)"
                 title="Copy analysis to clipboard"
               >
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125h-9.75a1.125 1.125 0 01-1.125-1.125V7.875c0-.621.504-1.125 1.125-1.125H6.75a9.06 9.06 0 011.5.124m7.5 10.376h3.375c.621 0 1.125-.504 1.125-1.125V11.25c0-4.46-3.243-8.161-7.5-8.876a9.06 9.06 0 00-1.5-.124H9.375c-.621 0-1.125.504-1.125 1.125v3.5m7.5 10.375H9.375a1.125 1.125 0 01-1.125-1.125v-9.25m12 6.625v-1.875a3.375 3.375 0 00-3.375-3.375h-1.5a1.125 1.125 0 01-1.125-1.125v-1.5a3.375 3.375 0 00-3.375-3.375H9.75" />
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke-width="1.5"
+                  stroke="currentColor"
+                  class="w-4 h-4"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125h-9.75a1.125 1.125 0 01-1.125-1.125V7.875c0-.621.504-1.125 1.125-1.125H6.75a9.06 9.06 0 011.5.124m7.5 10.376h3.375c.621 0 1.125-.504 1.125-1.125V11.25c0-4.46-3.243-8.161-7.5-8.876a9.06 9.06 0 00-1.5-.124H9.375c-.621 0-1.125.504-1.125 1.125v3.5m7.5 10.375H9.375a1.125 1.125 0 01-1.125-1.125v-9.25m12 6.625v-1.875a3.375 3.375 0 00-3.375-3.375h-1.5a1.125 1.125 0 01-1.125-1.125v-1.5a3.375 3.375 0 00-3.375-3.375H9.75"
+                  />
                 </svg>
               </button>
             </div>
-            <div v-html="formattedAiAnalysis" class="prose prose-sm max-w-none"></div>
+            <div
+              v-html="formattedAiAnalysis"
+              class="prose prose-sm max-w-none"
+            ></div>
           </div>
 
           <!-- AI Analysis Loading -->
-          <div v-if="aiEnabled && isAiLoading" class="bg-base-100 rounded-lg shadow-md p-6">
+          <div
+            v-if="aiEnabled && isAiLoading"
+            class="bg-base-100 rounded-lg shadow-md p-6"
+          >
             <div class="flex flex-col items-center justify-center">
               <span class="loading loading-spinner loading-md mb-4"></span>
               <p class="text-base-content">Analyzing query execution plan with AI...</p>
@@ -296,25 +421,39 @@
           </div>
 
           <!-- AI Analysis Button -->
-          <div v-if="aiEnabled && !isAiLoading && !aiAnalysis" class="bg-base-100 rounded-lg shadow-md p-6">
+          <div
+            v-if="aiEnabled && !isAiLoading && !aiAnalysis"
+            class="bg-base-100 rounded-lg shadow-md p-6"
+          >
             <div class="text-center">
               <p class="mb-4 text-base-content opacity-70">Get advanced AI analysis of your query execution plan to identify optimization opportunities.</p>
               <button
                 class="btn btn-primary"
                 @click="analyzeWithAI"
               >
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5 mr-2">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456zM16.894 20.567L16.5 21.75l-.394-1.183a2.25 2.25 0 00-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 001.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 001.423 1.423l1.183.394-1.183.394a2.25 2.25 0 00-1.423 1.423z" />
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke-width="1.5"
+                  stroke="currentColor"
+                  class="w-5 h-5 mr-2"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456zM16.894 20.567L16.5 21.75l-.394-1.183a2.25 2.25 0 00-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 001.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 001.423 1.423l1.183.394-1.183.394a2.25 2.25 0 00-1.423 1.423z"
+                  />
                 </svg>
                 Analyze with AI
               </button>
             </div>
           </div>
         </div>
-        
+
         <!-- Empty State (when no results and not loading) -->
-        <div 
-          v-else-if="!hasResults && !isLoading && !errorMessage" 
+        <div
+          v-else-if="!hasResults && !isLoading && !errorMessage"
           class="flex-1 flex items-center justify-center text-base-content opacity-70"
         >
           <div class="text-center p-8 bg-base-100 rounded-lg shadow-md max-w-md">
@@ -347,11 +486,11 @@ import { useConnectionsStore } from "@/store/connections";
 import { useDatabaseStore } from "@/store/database";
 import { useSettingsStore } from "@/store/settings";
 import { analyzeExplainWithAI } from "@/services/ai/ExplainAnalysisService";
-import { marked } from 'marked';
-import hljs from 'highlight.js/lib/core';
-import sql from 'highlight.js/lib/languages/sql';
+import { marked } from "marked";
+import hljs from "highlight.js/lib/core";
+import sql from "highlight.js/lib/languages/sql";
 
-hljs.registerLanguage('sql', sql);
+hljs.registerLanguage("sql", sql);
 
 const route = useRoute();
 const router = useRouter();
@@ -387,7 +526,7 @@ onErrorCaptured((error, instance, info) => {
 
 function resetComponent() {
   hasRenderError.value = false;
-  renderErrorMessage.value = "";    
+  renderErrorMessage.value = "";
   explainResults.value = [];
   explainColumns.value = [];
   performanceInsights.value = [];
@@ -397,10 +536,7 @@ function resetComponent() {
 
 const aiEnabled = computed(() => {
   const settings = settingsStore.settings;
-  return (
-    (settings.aiProvider === "openai" && settings.openai?.apiKey) ||
-    (settings.aiProvider === "gemini" && settings.gemini?.apiKey)
-  );
+  return (settings.aiProvider === "openai" && settings.openai?.apiKey) || (settings.aiProvider === "gemini" && settings.gemini?.apiKey);
 });
 
 const formattedAiAnalysis = computed(() => {
@@ -419,30 +555,31 @@ const hasResults = computed(() => {
 
 function formatSql(sql) {
   if (!sql) return "";
-  
-  return sql.replace(/\s+/g, ' ')
-            .replace(/\s*,\s*/g, ', ')
-            .replace(/\s*=\s*/g, ' = ')
-            .replace(/\s*>\s*/g, ' > ')
-            .replace(/\s*<\s*/g, ' < ')
-            .replace(/\s*(\()\s*/g, ' $1')
-            .replace(/\s*(\))\s*/g, '$1 ')
-            .replace(/\bSELECT\b/gi, 'SELECT\n  ')
-            .replace(/\bFROM\b/gi, '\nFROM\n  ')
-            .replace(/\bWHERE\b/gi, '\nWHERE\n  ')
-            .replace(/\bAND\b/gi, '\n  AND ')
-            .replace(/\bOR\b/gi, '\n  OR ')
-            .replace(/\bORDER BY\b/gi, '\nORDER BY\n  ')
-            .replace(/\bGROUP BY\b/gi, '\nGROUP BY\n  ')
-            .replace(/\bLIMIT\b/gi, '\nLIMIT ');
+
+  return sql
+    .replace(/\s+/g, " ")
+    .replace(/\s*,\s*/g, ", ")
+    .replace(/\s*=\s*/g, " = ")
+    .replace(/\s*>\s*/g, " > ")
+    .replace(/\s*<\s*/g, " < ")
+    .replace(/\s*(\()\s*/g, " $1")
+    .replace(/\s*(\))\s*/g, "$1 ")
+    .replace(/\bSELECT\b/gi, "SELECT\n  ")
+    .replace(/\bFROM\b/gi, "\nFROM\n  ")
+    .replace(/\bWHERE\b/gi, "\nWHERE\n  ")
+    .replace(/\bAND\b/gi, "\n  AND ")
+    .replace(/\bOR\b/gi, "\n  OR ")
+    .replace(/\bORDER BY\b/gi, "\nORDER BY\n  ")
+    .replace(/\bGROUP BY\b/gi, "\nGROUP BY\n  ")
+    .replace(/\bLIMIT\b/gi, "\nLIMIT ");
 }
 
 const formattedQuery = computed(() => {
   if (!queryToAnalyze.value) return "";
-  
+
   try {
     const formattedSql = formatSql(queryToAnalyze.value);
-    return hljs.highlight(formattedSql, {language: 'sql'}).value;
+    return hljs.highlight(formattedSql, { language: "sql" }).value;
   } catch (error) {
     console.error("Failed to format SQL:", error);
     return queryToAnalyze.value;
@@ -455,7 +592,7 @@ const connection = computed(() => {
 
 onMounted(async () => {
   console.log("ExplainView mounted");
-  
+
   if (!route.params.id) {
     console.log("No connection ID, redirecting to home");
     router.push("/");
@@ -567,7 +704,7 @@ async function analyzeQuery() {
     }
 
     explainResults.value = result.results;
-    
+
     if (explainResults.value.length > 0) {
       explainColumns.value = Object.keys(explainResults.value[0]);
     }
@@ -576,10 +713,9 @@ async function analyzeQuery() {
 
     setTimeout(() => {
       if (resultTableRef.value) {
-        resultTableRef.value.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        resultTableRef.value.scrollIntoView({ behavior: "smooth", block: "start" });
       }
     }, 300);
-
   } catch (error) {
     console.error("Error analyzing query:", error);
     errorMessage.value = error.message || "Failed to analyze query";
@@ -590,85 +726,86 @@ async function analyzeQuery() {
 
 function generatePerformanceInsights() {
   performanceInsights.value = [];
-  
+
   for (const row of explainResults.value) {
-    if (row.type === 'ALL') {
+    if (row.type === "ALL") {
       performanceInsights.value.push({
-        severity: 'high',
-        title: 'Full Table Scan Detected',
+        severity: "high",
+        title: "Full Table Scan Detected",
         description: `The query is performing a full table scan on table ${row.table}, which can be inefficient for large tables.`,
-        recommendation: 'Consider adding an index on columns used in WHERE clauses or JOIN conditions.'
+        recommendation: "Consider adding an index on columns used in WHERE clauses or JOIN conditions."
       });
     }
-    
-    if (row.type === 'ALL' && row.Extra?.includes('Using join buffer')) {
+
+    if (row.type === "ALL" && row.Extra?.includes("Using join buffer")) {
       performanceInsights.value.push({
-        severity: 'high',
-        title: 'Missing Index for Join',
+        severity: "high",
+        title: "Missing Index for Join",
         description: `The join with table ${row.table} is not using an index, which can slow down the query.`,
-        recommendation: 'Add an index on the join columns to improve performance.'
+        recommendation: "Add an index on the join columns to improve performance."
       });
     }
-    
-    if (row.Extra?.includes('Using temporary')) {
+
+    if (row.Extra?.includes("Using temporary")) {
       performanceInsights.value.push({
-        severity: 'medium',
-        title: 'Temporary Table Created',
-        description: 'The query requires a temporary table, which can impact performance.',
-        recommendation: 'Consider simplifying the query or adding indexes on sort/group columns.'
+        severity: "medium",
+        title: "Temporary Table Created",
+        description: "The query requires a temporary table, which can impact performance.",
+        recommendation: "Consider simplifying the query or adding indexes on sort/group columns."
       });
     }
-    
-    if (row.Extra?.includes('Using filesort')) {
+
+    if (row.Extra?.includes("Using filesort")) {
       performanceInsights.value.push({
-        severity: 'medium',
-        title: 'Filesort Detected',
-        description: 'The query is using filesort which can be slow for large result sets.',
-        recommendation: 'Add an index that covers both your WHERE conditions and ORDER BY clauses.'
+        severity: "medium",
+        title: "Filesort Detected",
+        description: "The query is using filesort which can be slow for large result sets.",
+        recommendation: "Add an index that covers both your WHERE conditions and ORDER BY clauses."
       });
     }
   }
-  
+
   if (performanceInsights.value.length === 0) {
     performanceInsights.value.push({
-      severity: 'low',
-      title: 'Query Appears Efficient',
-      description: 'No major performance issues were detected in the execution plan.',
+      severity: "low",
+      title: "Query Appears Efficient",
+      description: "No major performance issues were detected in the execution plan.",
       recommendation: null
     });
   }
 }
 
 function getRowClass(row) {
-  if (row.type === 'ALL') {
-    return 'bg-red-800/10';
+  if (row.type === "ALL") {
+    return "bg-red-800/10";
   } else if (row.key === null) {
-    return 'bg-yellow-800/10';
+    return "bg-yellow-800/10";
   }
-  return '';
+  return "";
 }
 
 function getInsightSeverityClass(severity) {
   switch (severity) {
-    case 'high':
-      return 'bg-red-600';
-    case 'medium':
-      return 'bg-yellow-600';
-    case 'low':
-      return 'bg-green-600';
+    case "high":
+      return "bg-red-600";
+    case "medium":
+      return "bg-yellow-600";
+    case "low":
+      return "bg-green-600";
     default:
-      return 'bg-blue-600';
+      return "bg-blue-600";
   }
 }
 
 function copyToClipboard(text) {
-  navigator.clipboard.writeText(text)
+  navigator.clipboard
+    .writeText(text)
     .then(() => {
-      showAlert('Copied to clipboard', 'success');
+      showAlert("Copied to clipboard", "success");
     })
-    .catch(err => {
-      console.error('Failed to copy text: ', err);
-      showAlert('Failed to copy to clipboard', 'error');
+    .catch((err) => {
+      console.error("Failed to copy text: ", err);
+      showAlert("Failed to copy to clipboard", "error");
     });
 }
 
@@ -701,7 +838,7 @@ async function analyzeWithAI() {
 </script>
 
 <style>
-@import 'highlight.js/styles/atom-one-dark.css';
+@import "highlight.js/styles/atom-one-dark.css";
 </style>
 
 <style scoped>
@@ -771,9 +908,9 @@ pre {
 
 code.hljs {
   padding: 0;
-  font-family: 'Fira Code', 'Courier New', monospace;
+  font-family: "Fira Code", "Courier New", monospace;
   font-size: 14px;
   line-height: 1.5;
   background: transparent;
 }
-</style> 
+</style>

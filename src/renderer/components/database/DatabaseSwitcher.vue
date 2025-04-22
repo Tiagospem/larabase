@@ -170,4 +170,6 @@ async function openDatabaseSwitcher() {
   showDatabaseSwitcher.value = true;
   await loadAvailableDatabases();
 }
+
+defineExpose({ openDatabaseSwitcher });
 </script>
