@@ -56,8 +56,11 @@
 <script setup>
 import { useTableDataStore } from "@/store/table-data";
 import { inject, ref } from "vue";
+import { useDatabaseStore } from "@/store/database";
 
 const showAlert = inject("showAlert");
+
+const databaseStore = useDatabaseStore();
 
 const showTruncateConfirm = ref(false);
 
