@@ -115,7 +115,7 @@
 <script setup>
 import { Helpers } from "@/utils/helpers";
 import { useTableDataStore } from "@/store/table-data";
-import { inject, ref } from "vue";
+import { inject, ref, nextTick } from "vue";
 import { useDatabaseStore } from "@/store/database";
 
 const showAlert = inject("showAlert");
@@ -135,21 +135,48 @@ const databaseStore = useDatabaseStore();
 const tableDataStore = useTableDataStore(props.storeId);
 
 function openEditModal(row) {
-  originalRecord.value = { ...row };
-
-  const processedRecord = JSON.parse(JSON.stringify(row));
-
-  // Process fields
-  for (const key in processedRecord) {
-    // Handle date fields
-    if (Helpers.isDateField(key) && processedRecord[key]) {
-      if (typeof processedRecord[key] === "string") {
+  // Reset state first to avoid any stale data
+  closeEditModal();
+  
+  // Wait for the next tick to ensure the modal is fully closed
+  nextTick(() => {
+    // Store a copy of the original record for comparison
+    originalRecord.value = JSON.parse(JSON.stringify(row));
+    
+    // Create a deep copy to work with
+    const processedRecord = JSON.parse(JSON.stringify(row));
+    
+    // Process all fields systematically
+    for (const key in processedRecord) {
+      const value = processedRecord[key];
+      
+      // 1. Handle null values first
+      if (value === null) {
+        continue;
+      }
+      
+      // 2. Handle object values (convert to JSON string)
+      if (typeof value === 'object') {
         try {
-          if (processedRecord[key].includes(" ")) {
-            processedRecord[key] = processedRecord[key].replace(" ", "T");
+          processedRecord[key] = JSON.stringify(value, null, 2);
+        } catch (e) {
+          console.warn(`Failed to stringify object for ${key}:`, e);
+          processedRecord[key] = String(value);
+        }
+        continue;
+      }
+      
+      // 3. Handle date fields
+      if (Helpers.isDateField(key) && typeof value === "string") {
+        try {
+          let dateStr = value;
+          
+          // Standardize format replacing space with T if needed
+          if (dateStr.includes(" ")) {
+            dateStr = dateStr.replace(" ", "T");
           }
-
-          const date = new Date(processedRecord[key]);
+          
+          const date = new Date(dateStr);
           if (!isNaN(date.getTime())) {
             processedRecord[key] = date.toISOString().slice(0, 16);
           }
@@ -159,19 +186,10 @@ function openEditModal(row) {
       }
     }
     
-    // Convert objects to formatted JSON strings
-    if (typeof processedRecord[key] === 'object' && processedRecord[key] !== null) {
-      try {
-        processedRecord[key] = JSON.stringify(processedRecord[key], null, 2);
-      } catch (e) {
-        console.warn(`Failed to stringify object for ${key}:`, e);
-        processedRecord[key] = String(processedRecord[key]);
-      }
-    }
-  }
-
-  editingRecord.value = processedRecord;
-  tableDataStore.showEditModal = true;
+    // Set the processed record and open the modal
+    editingRecord.value = processedRecord;
+    tableDataStore.showEditModal = true;
+  });
 }
 
 function closeEditModal() {
@@ -192,28 +210,30 @@ async function saveRecord() {
     for (const key in editingRecord.value) {
       let value = editingRecord.value[key];
 
-      if (value && Helpers.isDateField(key)) {
-        if (typeof value === "string" && value.includes("T")) {
-          const date = new Date(value);
-          if (!isNaN(date.getTime())) {
-            value = date.toISOString().slice(0, 19).replace("Z", "");
-          }
-        }
-      }
-      
-      // Try to parse JSON strings back to objects
+      // 1. Process JSON strings back to objects
       if (typeof value === 'string') {
-        try {
-          // Check if this looks like a JSON string
-          if ((value.trim().startsWith('{') && value.trim().endsWith('}')) || 
-              (value.trim().startsWith('[') && value.trim().endsWith(']'))) {
+        // Try to parse JSON strings
+        if (value.trim() && (value.trim().startsWith('{') || value.trim().startsWith('['))) {
+          try {
             const parsed = JSON.parse(value);
             if (typeof parsed === 'object') {
               value = parsed;
             }
+          } catch (e) {
+            // Not valid JSON, keep as string
           }
-        } catch (e) {
-          // Not valid JSON, keep as string
+        }
+        
+        // 2. Process date fields
+        if (Helpers.isDateField(key) && value.includes("T")) {
+          try {
+            const date = new Date(value);
+            if (!isNaN(date.getTime())) {
+              value = date.toISOString().slice(0, 19).replace("T", " ");
+            }
+          } catch (e) {
+            console.warn(`Failed to format date for ${key}:`, e);
+          }
         }
       }
 
@@ -229,7 +249,7 @@ async function saveRecord() {
       if (row.id && originalRecord.value.id) {
         return row.id === originalRecord.value.id;
       }
-      return JSON.stringify(row) === JSON.stringify(originalRecord.value);
+      return false;
     });
 
     if (index === -1) {
