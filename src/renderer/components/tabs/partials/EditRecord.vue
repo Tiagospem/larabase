@@ -209,31 +209,45 @@ async function saveRecord() {
 
     for (const key in editingRecord.value) {
       let value = editingRecord.value[key];
-
-      // 1. Process JSON strings back to objects
-      if (typeof value === "string") {
-        // Try to parse JSON strings
-        if (value.trim() && (value.trim().startsWith("{") || value.trim().startsWith("["))) {
+      if (value && Helpers.isDateField(key)) {
+        if (typeof value === "string") {
           try {
+            const date = new Date(value);
+            if (!isNaN(date.getTime())) {
+              const pad = (n) => String(n).padStart(2, "0");
+              const Y = date.getFullYear();
+              const m = pad(date.getMonth() + 1);
+              const d = pad(date.getDate());
+              const H = pad(date.getHours());
+              const i = pad(date.getMinutes());
+              const s = pad(date.getSeconds());
+              value = `${Y}-${m}-${d} ${H}:${i}:${s}`;
+            }
+          } catch (e) {
+            console.warn(`Failed to process date for ${key}:`, e);
+          }
+        }
+      }
+
+      // Process JSON fields using the _json_ prefixed version
+      if (typeof value === "object" && value !== null) {
+        try {
+          value = JSON.parse(editingRecord.value["_json_" + key]);
+        } catch (e) {
+          // Not using _json_ prefixes anymore, keep object as is
+        }
+      } else if (typeof value === "string") {
+        // Try to parse JSON strings back to objects
+        try {
+          // Check if this is a stringified JSON object/array
+          if ((value.trim().startsWith("{") && value.trim().endsWith("}")) || (value.trim().startsWith("[") && value.trim().endsWith("]"))) {
             const parsed = JSON.parse(value);
             if (typeof parsed === "object") {
               value = parsed;
             }
-          } catch (e) {
-            // Not valid JSON, keep as string
           }
-        }
-
-        // 2. Process date fields
-        if (Helpers.isDateField(key) && value.includes("T")) {
-          try {
-            const date = new Date(value);
-            if (!isNaN(date.getTime())) {
-              value = date.toISOString().slice(0, 19).replace("T", " ");
-            }
-          } catch (e) {
-            console.warn(`Failed to format date for ${key}:`, e);
-          }
+        } catch (e) {
+          // Not valid JSON, keep as string
         }
       }
 
