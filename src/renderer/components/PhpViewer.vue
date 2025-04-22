@@ -1,13 +1,16 @@
 <template>
-  <div class="code-viewer">
-    <div class="mockup-code bg-neutral h-full overflow-auto text-xs">
-      <pre><code v-html="highlightedCode"/></pre>
+  <div
+    class="code-viewer"
+    :style="{ height: heightStyle }"
+  >
+    <div class="mockup-code bg-neutral h-full w-full overflow-auto text-xs">
+      <pre class="w-full"><code v-html="highlightedCode"/></pre>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, watch, onMounted } from "vue";
+import { ref, watch, onMounted, computed } from "vue";
 import hljs from "highlight.js/lib/core";
 import php from "highlight.js/lib/languages/php";
 import json from "highlight.js/lib/languages/json";
@@ -33,6 +36,14 @@ const props = defineProps({
 });
 
 const highlightedCode = ref("");
+
+// Compute the proper CSS height value based on the height prop
+const heightStyle = computed(() => {
+  if (props.height.endsWith("rem") || props.height.endsWith("px") || props.height.endsWith("%") || props.height.endsWith("vh")) {
+    return props.height;
+  }
+  return props.height + "rem";
+});
 
 function highlightCode() {
   try {
@@ -91,13 +102,23 @@ watch(() => props.code, highlightCode, { immediate: true });
 <style scoped>
 .code-viewer {
   width: 100%;
-  height: v-bind('props.height + "rem"');
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.mockup-code {
+  flex: 1;
+  display: block;
+  min-height: 100%;
 }
 
 /* Base syntax highlighting styles */
 :deep(.hljs) {
   background: transparent;
   padding: 0;
+  display: block;
+  width: auto;
 }
 
 :deep(.hljs-keyword) {
@@ -150,5 +171,7 @@ watch(() => props.code, highlightCode, { immediate: true });
 :deep(code) {
   font-family: Consolas, Monaco, "Andale Mono", monospace;
   white-space: pre;
+  display: inline-block;
+  min-width: 100%;
 }
 </style>
