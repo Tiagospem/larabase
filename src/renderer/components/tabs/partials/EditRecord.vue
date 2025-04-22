@@ -139,7 +139,9 @@ function openEditModal(row) {
 
   const processedRecord = JSON.parse(JSON.stringify(row));
 
+  // Process fields
   for (const key in processedRecord) {
+    // Handle date fields
     if (Helpers.isDateField(key) && processedRecord[key]) {
       if (typeof processedRecord[key] === "string") {
         try {
@@ -154,6 +156,16 @@ function openEditModal(row) {
         } catch (e) {
           console.warn(`Failed to process date for ${key}:`, e);
         }
+      }
+    }
+    
+    // Convert objects to formatted JSON strings
+    if (typeof processedRecord[key] === 'object' && processedRecord[key] !== null) {
+      try {
+        processedRecord[key] = JSON.stringify(processedRecord[key], null, 2);
+      } catch (e) {
+        console.warn(`Failed to stringify object for ${key}:`, e);
+        processedRecord[key] = String(processedRecord[key]);
       }
     }
   }
@@ -186,6 +198,22 @@ async function saveRecord() {
           if (!isNaN(date.getTime())) {
             value = date.toISOString().slice(0, 19).replace("Z", "");
           }
+        }
+      }
+      
+      // Try to parse JSON strings back to objects
+      if (typeof value === 'string') {
+        try {
+          // Check if this looks like a JSON string
+          if ((value.trim().startsWith('{') && value.trim().endsWith('}')) || 
+              (value.trim().startsWith('[') && value.trim().endsWith(']'))) {
+            const parsed = JSON.parse(value);
+            if (typeof parsed === 'object') {
+              value = parsed;
+            }
+          }
+        } catch (e) {
+          // Not valid JSON, keep as string
         }
       }
 
