@@ -9,7 +9,7 @@
           v-model="searchTerm"
           type="text"
           placeholder="Search tables..."
-          class="input input-sm input-bordered w-full bg-base-300 pl-9"
+          class="input input-sm input-bordered w-full bg-base-300 pl-9 pr-8"
         />
         <svg
           xmlns="http://www.w3.org/2000/svg"
@@ -25,6 +25,26 @@
             d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z"
           />
         </svg>
+        <button
+          v-if="searchTerm"
+          class="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-200"
+          @click="clearSearch"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke-width="1.5"
+            stroke="currentColor"
+            class="w-4 h-4"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              d="M6 18L18 6M6 6l12 12"
+            />
+          </svg>
+        </button>
       </div>
 
       <div class="flex justify-between items-center">
@@ -146,10 +166,11 @@
         <li
           v-for="table in sortedTables"
           :key="table.name"
-          class="hover:bg-base-300"
+          class="table-item"
         >
           <a
             :class="{ 'bg-base-300': isTableActive(table.name) }"
+            class="table-link rounded-md"
             @click="openTable(table)"
           >
             <svg
@@ -219,7 +240,7 @@ const databaseStore = useDatabaseStore();
 /**
  * @type {import('vue').Ref<string>}
  */
-const searchTerm = ref("");
+const searchTerm = ref(localStorage.getItem(`tableSearch_${props.connectionId}`) || "");
 
 const sortBy = ref(localStorage.getItem("tableSort") || "name");
 const sortOrder = ref(localStorage.getItem("tableSortOrder") || "asc");
@@ -253,6 +274,23 @@ const sortedTables = computed(() => {
     }
   });
 });
+
+watch(searchTerm, (newValue) => {
+  localStorage.setItem(`tableSearch_${props.connectionId}`, newValue);
+});
+
+watch(
+  () => props.connectionId,
+  (newConnectionId) => {
+    if (newConnectionId) {
+      searchTerm.value = localStorage.getItem(`tableSearch_${newConnectionId}`) || "";
+    }
+  }
+);
+
+function clearSearch() {
+  searchTerm.value = "";
+}
 
 function isTableActive(tableName) {
   return props.activeTabName === tableName;
@@ -438,5 +476,18 @@ onUnmounted(() => {
   text-overflow: ellipsis;
   max-width: 100%;
   display: block;
+}
+
+.table-item {
+  margin: 2px 0;
+}
+
+.table-link {
+  border-radius: 6px !important;
+}
+
+.table-link:hover {
+  background-color: hsl(var(--b3)) !important;
+  border-radius: 6px !important;
 }
 </style>
