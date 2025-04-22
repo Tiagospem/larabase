@@ -68,10 +68,9 @@ try {
     getMigrationStatus: (config) => safeIpcRenderer.invoke("get-migration-status", config),
     getSettings: () => safeIpcRenderer.invoke("get-settings"),
     saveSettings: (settings) => safeIpcRenderer.invoke("save-settings", settings),
-    monitorDatabaseOperations: (connectionId, callback) => {
+    monitorDatabaseOperations: (connectionId, callback, clearHistory = false) => {
       try {
         const channel = `db-operation-${connectionId}`;
-        console.log(`Configurando listener IPC no canal: ${channel}`);
 
         ipcRenderer.removeAllListeners(channel);
 
@@ -79,9 +78,7 @@ try {
           callback(data);
         });
 
-        console.log(`Calling start-db-monitoring with connectionId: ${connectionId}`);
-        return ipcRenderer.invoke("start-db-monitoring", connectionId).then((result) => {
-          console.log("Result of monitoring initialization:", result);
+        return ipcRenderer.invoke("start-db-monitoring", connectionId, clearHistory).then((result) => {
           return channel;
         });
       } catch (error) {
@@ -90,17 +87,13 @@ try {
       }
     },
     stopMonitoringDatabaseOperations: (channel) => {
-      console.log(`Stopping monitoring on channel: ${channel}`);
-
       ipcRenderer.removeAllListeners(channel);
 
       const connectionId = channel.replace("db-operation-", "");
 
-      // Stop monitoring on the main process
       return ipcRenderer
         .invoke("stop-db-monitoring", connectionId)
         .then((result) => {
-          console.log("Monitoring stop result:", result);
           return result;
         })
         .catch((err) => {

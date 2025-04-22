@@ -686,12 +686,12 @@ async function startProcessListPolling(connection) {
   return true;
 }
 
-ipcMain.handle("start-db-monitoring", async (event, connectionId) => {
+ipcMain.handle("start-db-monitoring", async (event, connectionId, clearHistory = false) => {
   let connection = null;
   const activityLogTable = "larabase_db_activity_log";
 
   try {
-    console.log(`Starting database monitoring for connection ${connectionId}`);
+    console.log(`Starting database monitoring for connection ${connectionId}, clearHistory: ${clearHistory}`);
 
     // Validate connectionId
     if (!connectionId) {
@@ -741,6 +741,18 @@ ipcMain.handle("start-db-monitoring", async (event, connectionId) => {
       dateStrings: true,
       multipleStatements: true // Enable multiple statements for creating complex triggers
     });
+
+    // Se clearHistory = true, limpar a tabela de log de atividades
+    if (clearHistory) {
+      try {
+        console.log(`Clearing activity log table for connection ${connectionId}`);
+        await dbConnection.query(`TRUNCATE TABLE ${activityLogTable}`);
+        console.log(`Activity log table cleared successfully`);
+      } catch (clearError) {
+        console.error(`Error clearing activity log:`, clearError);
+        // Não interromper o processo se não conseguir limpar o histórico
+      }
+    }
 
     console.log(`Connection established to ${connection.database}`);
 

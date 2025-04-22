@@ -266,7 +266,7 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, onMounted, onUnmounted } from "vue";
+import { ref, computed, watch, onUnmounted } from "vue";
 
 const props = defineProps({
   isOpen: {
@@ -363,36 +363,17 @@ function goToTable(tableName) {
 
 function clearUpdates() {
   updates.value = [];
+  if (connected.value && monitoringChannel) {
+    stopMonitoring();
+
+    setTimeout(() => {
+      startMonitoring(true);
+    }, 300);
+  }
 }
 
-function parseChanges(details) {
-  if (!details) return [];
-
-  const changesText = details.replace(/^(Changed|Updated):\s*/i, "");
-
-  // Split by comma to get individual changes
-  const changeItems = changesText.split(", ");
-
-  // Parse each change
-  return changeItems
-    .filter((item) => item.includes("→")) // Only include items with a change arrow
-    .map((item) => {
-      const [fieldPart, changePart] = item.split(": ");
-      if (!changePart) return null;
-
-      const [from, to] = changePart.split(" → ");
-      return {
-        field: fieldPart,
-        from: from || "",
-        to: to || ""
-      };
-    })
-    .filter((item) => item !== null);
-}
-
-function startMonitoring() {
+function startMonitoring(clearHistory = false) {
   if (connected.value) {
-    console.log("Already connected to database monitoring");
     return;
   }
 
@@ -401,31 +382,30 @@ function startMonitoring() {
     return;
   }
 
-  console.log(`Starting database monitoring for connection: ${props.connectionId}`);
-
   loading.value = true;
 
   updates.value = [];
 
   window.api
-    .monitorDatabaseOperations(props.connectionId, (data) => {
-      console.log("Received database operation:", data);
+    .monitorDatabaseOperations(
+      props.connectionId,
+      (data) => {
+        if (data && data.table) {
+          updates.value.unshift(data);
 
-      if (data && data.table) {
-        updates.value.unshift(data);
+          if (loading.value) {
+            loading.value = false;
+            clearTimeout(initTimeout);
+          }
 
-        if (loading.value) {
-          loading.value = false;
-          clearTimeout(initTimeout);
+          if (updates.value.length > 1000) {
+            updates.value = updates.value.slice(0, 500);
+          }
         }
-
-        if (updates.value.length > 1000) {
-          updates.value = updates.value.slice(0, 500);
-        }
-      }
-    })
+      },
+      clearHistory
+    )
     .then((channel) => {
-      console.log("Monitoring started on channel:", channel);
       monitoringChannel = channel;
       connected.value = true;
 
@@ -441,7 +421,6 @@ function startMonitoring() {
 
 function stopMonitoring() {
   if (!connected.value || !monitoringChannel) {
-    console.log("Not monitoring, nothing to stop");
     return;
   }
 
@@ -449,8 +428,6 @@ function stopMonitoring() {
     clearTimeout(initTimeout);
     initTimeout = null;
   }
-
-  console.log("Stopping database monitoring");
 
   if (!window.api || !window.api.stopMonitoringDatabaseOperations) {
     console.error("API for stopping monitoring not available");
@@ -462,8 +439,7 @@ function stopMonitoring() {
 
   window.api
     .stopMonitoringDatabaseOperations(monitoringChannel)
-    .then((result) => {
-      console.log("Monitoring stopped:", result);
+    .then(() => {
       connected.value = false;
       monitoringChannel = null;
     })
