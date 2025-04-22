@@ -8,7 +8,7 @@
           class="h-32 w-32 mb-2"
         />
         <h1 class="text-3xl font-bold text-white">Larabase</h1>
-        <p class="text-sm text-white">An opinionated MySQL GUI for Laravel developers</p>
+        <p class="text-sm text-white">An opinionated database GUI for Laravel developers</p>
       </div>
 
       <button
