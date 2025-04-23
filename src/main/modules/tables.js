@@ -509,6 +509,7 @@ function registerTableHandlers(store, dbMonitoringConnections) {
       });
 
       const dbName = conn.escapeId(config.database);
+
       await conn.query(`DROP DATABASE ${dbName}`);
 
       return {
@@ -516,6 +517,7 @@ function registerTableHandlers(store, dbMonitoringConnections) {
         message: `Database ${config.database} dropped successfully`
       };
     } catch (err) {
+      console.error("Error dropping database:", err);
       let msg = err.message;
       if (err.code === "ER_ACCESS_DENIED_ERROR") {
         msg = "Access denied with the provided credentials";
@@ -534,6 +536,141 @@ function registerTableHandlers(store, dbMonitoringConnections) {
           await conn.end();
         } catch (e) {
           console.error("Error closing connection:", e);
+        }
+      }
+    }
+  });
+
+  ipcMain.handle("drop-tables", async (_e, config = {}) => {
+    // Safely clone input to prevent serialization issues
+    try {
+      config = JSON.parse(JSON.stringify({
+        connectionId: config.connectionId || "",
+        tables: Array.isArray(config.tables) ? [...config.tables] : [],
+        ignoreForeignKeys: Boolean(config.ignoreForeignKeys),
+        cascade: Boolean(config.cascade)
+      }));
+    } catch (parseError) {
+      console.error("Error serializing input config:", parseError);
+      return {
+        success: false,
+        message: "Invalid input format: could not process request data"
+      };
+    }
+
+    if (!config.connectionId || !config.tables || !Array.isArray(config.tables) || config.tables.length === 0) {
+      return {
+        success: false,
+        message: "Missing required parameters: connectionId or tables"
+      };
+    }
+
+    console.log("Tables deletion requested:", config);
+
+    const connections = store.get("connections") || [];
+    const connection = connections.find(c => c.id === config.connectionId);
+    
+    if (!connection) {
+      return {
+        success: false,
+        message: "Connection not found"
+      };
+    }
+
+    let conn;
+    
+    try {
+      // Create a new connection
+      conn = await mysql.createConnection({
+        host: connection.host,
+        port: connection.port || 3306,
+        user: connection.username,
+        password: connection.password || "",
+        database: connection.database,
+        connectTimeout: 10000
+      });
+      
+      // Begin transaction
+      await conn.query("START TRANSACTION");
+      
+      // Disable foreign key checks if needed
+      if (config.ignoreForeignKeys) {
+        await conn.query("SET FOREIGN_KEY_CHECKS = 0");
+      }
+
+      let successCount = 0;
+      let failedTables = [];
+
+      // Process each table
+      for (const tableName of config.tables) {
+        try {
+          console.log(`Attempting to drop table: ${tableName}`);
+          const escapedTableName = conn.escapeId(tableName);
+          let dropQuery = `DROP TABLE `;
+          
+          if (config.cascade) {
+            dropQuery += `CASCADE `;
+          }
+          
+          dropQuery += escapedTableName;
+          
+          console.log(`Executing query: ${dropQuery}`);
+          await conn.query(dropQuery);
+          successCount++;
+          console.log(`Successfully dropped table: ${tableName}`);
+        } catch (err) {
+          console.error(`Failed to drop table ${tableName}:`, err.message);
+          failedTables.push(tableName);
+        }
+      }
+
+      // Re-enable foreign key checks if they were disabled
+      if (config.ignoreForeignKeys) {
+        await conn.query("SET FOREIGN_KEY_CHECKS = 1");
+      }
+
+      // Commit or rollback based on results
+      if (failedTables.length === 0) {
+        await conn.query("COMMIT");
+        console.log(`Successfully dropped ${successCount} tables`);
+        return {
+          success: true,
+          message: `Successfully dropped ${successCount} tables`
+        };
+      } else {
+        await conn.query("ROLLBACK");
+        console.log(`Failed to drop ${failedTables.length} tables: ${failedTables.join(', ')}`);
+        return {
+          success: false,
+          message: `Failed to drop ${failedTables.length} tables: ${failedTables.join(', ')}`
+        };
+      }
+    } catch (err) {
+      // Handle any uncaught errors
+      console.error("Error in drop-tables handler:", err);
+      
+      if (conn) {
+        try {
+          await conn.query("ROLLBACK");
+          if (config.ignoreForeignKeys) {
+            await conn.query("SET FOREIGN_KEY_CHECKS = 1");
+          }
+        } catch (rollbackErr) {
+          // Ignore rollback errors
+        }
+      }
+      
+      return {
+        success: false,
+        message: "Error dropping tables: " + (err.message || "Unknown error")
+      };
+    } finally {
+      // Always close the connection
+      if (conn) {
+        try {
+          await conn.end();
+        } catch (err) {
+          // Ignore connection close errors
         }
       }
     }
