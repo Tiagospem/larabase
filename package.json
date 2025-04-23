@@ -1,20 +1,19 @@
 {
   "name": "larabase",
-  "version": "0.5.0",
+  "version": "0.4.1",
   "description": "An Opined Database GUI for Laravel Developers",
-  "main": "src/main/index.js",
+  "main": "dist/main.cjs",
   "type": "commonjs",
   "scripts": {
-    "dev": "concurrently -k \"vite\" \"cross-env NODE_ENV=development electron .\"",
-    "build": "vite build && electron-builder",
-    "build:mac": "vite build && electron-builder --mac",
-    "build:win": "vite build && electron-builder --win",
-    "build:linux": "vite build && electron-builder --linux",
-    "publish": "cross-env NODE_ENV=production vite build && electron-builder --publish always",
-    "publish:mac": "cross-env NODE_ENV=production vite build && electron-builder --publish always --mac",
-    "publish:win": "cross-env NODE_ENV=production vite build && electron-builder --publish always --win",
-    "publish:linux": "cross-env NODE_ENV=production vite build && electron-builder --publish always --linux",
-    "clean": "rimraf dist node_modules/.vite",
+    "dev": "concurrently -k \"vite\" \"node build.cjs --dev && electron .\"",
+    "build": "vite build && node build.cjs --prod",
+    "build:mac": "npm run build && electron-builder --mac --universal",
+    "build:win": "npm run build && electron-builder --win",
+    "build:linux": "npm run build && electron-builder --linux",
+    "publish:mac": "npm run build && electron-builder --publish always --mac --universal",
+    "publish:win": "npm run build && electron-builder --publish always --win",
+    "publish:linux": "npm run build && electron-builder --publish always --linux",
+    "clean": "rimraf dist release node_modules/.vite",
     "format": "prettier . --write --single-attribute-per-line"
   },
   "keywords": [],
@@ -22,7 +21,6 @@
   "license": "ISC",
   "dependencies": {
     "daisyui": "^3.9.3",
-    "electron-log": "^5.3.4",
     "electron-store": "^8.1.0",
     "electron-updater": "^6.6.2",
     "highlight.js": "^11.11.1",
@@ -46,6 +44,7 @@
     "electron": "^32.1.0",
     "electron-builder": "^24.6.4",
     "electron-reload": "^2.0.0-alpha.1",
+    "esbuild": "^0.25.1",
     "eslint-config-prettier": "10.1.1",
     "eslint-plugin-prettier": "5.2.5",
     "globals": "^16.0.0",
@@ -67,14 +66,10 @@
   "build": {
     "appId": "com.larabase.app",
     "productName": "Larabase",
-    "directories": {
-      "output": "dist",
-      "buildResources": "assets"
-    },
     "files": [
       "dist/**/*",
-      "src/main/**/*",
-      "LICENSE"
+      "node_modules/**/*",
+      "package.json"
     ],
     "extraResources": [
       {
@@ -83,65 +78,58 @@
       }
     ],
     "extraMetadata": {
-      "main": "src/main/index.js"
+      "main": "dist/main.cjs"
     },
-    "fileAssociations": [],
     "asar": true,
-    "asarUnpack": [
-      "node_modules/mysql2/lib/**/*"
-    ],
-    "compression": "maximum",
+    "compression": "store",
     "artifactName": "${productName}-${version}-${os}-${arch}.${ext}",
-    "forceCodeSigning": false,
     "publish": {
       "provider": "github",
       "owner": "Tiagospem",
       "repo": "larabase",
       "private": false
     },
+    "directories": {
+      "output": "release"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "installerIcon": "src/renderer/assets/icons/win/icon.ico"
+    },
     "mac": {
       "darkModeSupport": true,
-      "icon": "src/renderer/assets/icons/mac/icon.icns",
-      "hardenedRuntime": true,
+      "icon": "dist/icon.icns",
+      "hardenedRuntime": false,
       "gatekeeperAssess": false,
-      "mergeASARs": false,
-      "entitlements": "build/entitlements.mac.plist",
-      "entitlementsInherit": "build/entitlements.mac.plist",
-      "notarize": false,
-      "electronUpdaterCompatibility": false,
-      "target": [
-        {
-          "target": "dmg",
-          "arch": [
-            "x64",
-            "arm64"
-          ]
-        },
-        {
-          "target": "zip",
-          "arch": [
-            "x64",
-            "arm64"
-          ]
-        }
-      ]
+      "notarize": false
     },
     "dmg": {
       "title": "${productName} ${version}",
-      "icon": "src/renderer/assets/icons/mac/icon.icns"
+      "icon": "dist/icon.icns"
     },
     "win": {
       "target": [
-        "nsis"
+        {
+          "target": "nsis",
+          "arch": [
+            "ia32",
+            "x64"
+          ]
+        }
       ],
       "icon": "src/renderer/assets/icons/win/icon.ico"
     },
     "linux": {
       "target": [
-        "AppImage"
+        "AppImage",
+        "snap"
       ],
       "category": "Development",
       "icon": "src/renderer/assets/icons/png"
-    }
+    },
+    "asarUnpack": [
+      "node_modules/electron-store/**/*"
+    ]
   }
 }
