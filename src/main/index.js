@@ -12,6 +12,7 @@ const { registerConnectionHandlers } = require("./modules/connections");
 const { registerProjectHandlers } = require("./modules/project");
 const { registerTableHandlers } = require("./modules/tables");
 const { registerRedisHandlers } = require("./modules/redis");
+const { registerUpdaterHandlers, cleanup } = require("./modules/updater");
 
 const store = new Store();
 const dbMonitoringConnections = new Map();
@@ -28,6 +29,10 @@ app.whenReady().then(async () => {
 
   enhancePath();
 
+  // Register the updater handlers first to ensure they're available
+  registerUpdaterHandlers(mainWindow);
+
+  // Then register other handlers
   registerTableHandlers(store, dbMonitoringConnections);
   registerRestoreDumpHandlers(store);
   registerConnectionHandlers(store);
@@ -175,28 +180,62 @@ function setupGlobalMonitoring() {
 //   console.log('Global MySQL monitoring configured');
 // }
 
+// Fix the electron-reload implementation
 if (process.env.NODE_ENV === "development") {
   try {
-    require("electron-reload")(path.join(__dirname, "../renderer"), {
-      electron: path.join(__dirname, "../../node_modules", ".bin", "electron"),
-      hardResetMethod: "exit"
-    });
+    const electronReloadPath = path.join(__dirname, "../../node_modules/electron-reload");
+    if (fs.existsSync(electronReloadPath)) {
+      const electronReload = require(electronReloadPath);
+      const rendererPath = path.resolve(__dirname, "../renderer");
+
+      if (fs.existsSync(rendererPath)) {
+        console.log(`Setting up electron-reload with path: ${rendererPath}`);
+        electronReload(rendererPath, {
+          electron: path.join(__dirname, "../../node_modules", ".bin", "electron"),
+          hardResetMethod: "exit"
+        });
+      } else {
+        console.log(`Renderer path not found: ${rendererPath}`);
+      }
+    } else {
+      console.log("electron-reload module not found, skipping hot reload setup");
+    }
   } catch (err) {
-    console.error("electron-reload:", err);
+    console.error("electron-reload setup error:", err.message);
   }
 }
 
-app.on("will-quit", () => {
+app.on("will-quit", async () => {
   console.log("Application is quitting, performing cleanup...");
+
+  // Clean up updater interval
+  cleanup();
 
   for (const [connectionId, connection] of dbMonitoringConnections.entries()) {
     try {
-      if (connection) connection.end();
-    } catch (e) {
-      console.error(`Error closing connection ${connectionId}:`, e);
+      await connection.end();
+      console.log(`Closed monitoring connection for ${connectionId}`);
+    } catch (error) {
+      console.error(`Error closing monitoring connection for ${connectionId}:`, error);
     }
   }
   dbMonitoringConnections.clear();
+
+  for (const [connectionId, connectionData] of dbActivityConnections.entries()) {
+    try {
+      if (connectionData.connection) {
+        await connectionData.connection.end();
+      }
+      if (connectionData.triggerConnection) {
+        await connectionData.triggerConnection.end();
+      }
+      console.log(`Closed trigger-based monitoring connections for ${connectionId}`);
+    } catch (error) {
+      console.error(`Error closing trigger-based monitoring connections for ${connectionId}:`, error);
+    }
+  }
+
+  dbActivityConnections.clear();
 });
 
 app.on("window-all-closed", () => {
@@ -2811,6 +2850,22 @@ ipcMain.handle("set-app-badge", async (_, count) => {
     return { success: true };
   } catch (error) {
     console.error("Error setting app badge:", error);
+    return { success: false, error: error.message };
+  }
+});
+
+// Adicionar manipulador para abrir URLs externas
+ipcMain.handle("open-external", async (event, url) => {
+  try {
+    if (url && typeof url === "string" && (url.startsWith("http://") || url.startsWith("https://"))) {
+      await shell.openExternal(url);
+      return { success: true };
+    } else {
+      console.error(`Invalid URL format: ${url}`);
+      return { success: false, error: "Invalid URL format" };
+    }
+  } catch (error) {
+    console.error(`Error opening external URL: ${error.message}`);
     return { success: false, error: error.message };
   }
 });

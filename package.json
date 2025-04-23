@@ -1,18 +1,19 @@
 {
   "name": "larabase",
-  "version": "0.4.0",
+  "version": "0.5.1",
   "description": "An Opined Database GUI for Laravel Developers",
-  "main": "src/main/index.js",
+  "main": "dist/main.cjs",
   "type": "commonjs",
   "scripts": {
-    "dev": "concurrently -k \"vite\" \"cross-env NODE_ENV=development electron .\"",
-    "build": "vite build && electron-builder",
-    "build:mac": "vite build && electron-builder --mac",
-    "build:win": "vite build && electron-builder --win",
-    "build:linux": "vite build && electron-builder --linux",
-    "publish-win": "vite build && electron-builder --publish always --win",
-    "publish-mac": "vite build && electron-builder --publish always --mac --universal",
-    "publish-linux": "vite build && electron-builder --publish always --linux",
+    "dev": "concurrently -k \"vite\" \"node build.cjs --dev && electron .\"",
+    "build": "vite build && node build.cjs --prod",
+    "build:mac": "npm run build && electron-builder --mac --universal",
+    "build:win": "npm run build && electron-builder --win",
+    "build:linux": "npm run build && electron-builder --linux",
+    "publish:mac": "npm run build && electron-builder --publish always --mac --universal",
+    "publish:win": "npm run build && electron-builder --publish always --win",
+    "publish:linux": "npm run build && electron-builder --publish always --linux",
+    "clean": "rimraf dist release node_modules/.vite",
     "format": "prettier . --write --single-attribute-per-line"
   },
   "keywords": [],
@@ -21,7 +22,7 @@
   "dependencies": {
     "daisyui": "^3.9.3",
     "electron-store": "^8.1.0",
-    "eslint-config-prettier": "10.1.1",
+    "electron-updater": "^6.6.2",
     "highlight.js": "^11.11.1",
     "marked": "^15.0.8",
     "mysql2": "^3.14.0",
@@ -29,7 +30,6 @@
     "pluralize": "^8.0.0",
     "redis": "^4.6.10",
     "sql-formatter": "^15.6.0",
-    "tailwindcss": "^3.3.3",
     "uuid": "^11.1.0",
     "vue": "^3.3.4",
     "vue-router": "^4.2.4"
@@ -44,10 +44,15 @@
     "electron": "^32.1.0",
     "electron-builder": "^24.6.4",
     "electron-reload": "^2.0.0-alpha.1",
+    "esbuild": "^0.25.1",
+    "eslint-config-prettier": "10.1.1",
     "eslint-plugin-prettier": "5.2.5",
     "globals": "^16.0.0",
     "postcss": "^8.4.29",
     "prettier": "^3.5.3",
+    "rimraf": "^6.0.1",
+    "tailwindcss": "^3.3.3",
+    "terser": "^5.39.0",
     "ts-node": "^10.9.2",
     "typescript": "^5.8.3",
     "vite": "^4.4.9",
@@ -61,45 +66,57 @@
   "build": {
     "appId": "com.larabase.app",
     "productName": "Larabase",
-    "directories": {
-      "output": "dist"
+    "files": [
+      "dist/**/*",
+      "node_modules/**/*",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "assets",
+        "to": "assets"
+      }
+    ],
+    "extraMetadata": {
+      "main": "dist/main.cjs"
     },
+    "asar": true,
+    "compression": "maximum",
+    "artifactName": "${productName}-${version}-${os}-${arch}.${ext}",
     "publish": {
       "provider": "github",
       "owner": "Tiagospem",
       "repo": "larabase",
       "private": false
     },
-    "files": [
-      "dist/**/*",
-      "src/main/**/*"
-    ],
+    "directories": {
+      "output": "release"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "installerIcon": "src/renderer/assets/icons/win/icon.ico"
+    },
     "mac": {
       "darkModeSupport": true,
-      "icon": "src/renderer/assets/icons/mac/icon.icns",
-      "mergeASARs": false,
-      "target": [
-        {
-          "target": "dmg",
-          "arch": [
-            "universal"
-          ]
-        },
-        {
-          "target": "zip",
-          "arch": [
-            "universal"
-          ]
-        }
-      ]
+      "icon": "dist/icon.icns",
+      "hardenedRuntime": false,
+      "gatekeeperAssess": false,
+      "notarize": false
     },
     "dmg": {
       "title": "${productName} ${version}",
-      "icon": "src/renderer/assets/icons/mac/icon.icns"
+      "icon": "dist/icon.icns"
     },
     "win": {
       "target": [
-        "nsis"
+        {
+          "target": "nsis",
+          "arch": [
+            "ia32",
+            "x64"
+          ]
+        }
       ],
       "icon": "src/renderer/assets/icons/win/icon.ico"
     },
@@ -109,6 +126,9 @@
       ],
       "category": "Development",
       "icon": "src/renderer/assets/icons/png"
-    }
+    },
+    "asarUnpack": [
+      "node_modules/electron-store/**/*"
+    ]
   }
 }
