@@ -5,20 +5,18 @@ const path = require("path");
 const https = require("https");
 const { execFile, spawn } = require("child_process");
 
+const CONFIG = {
+  updateCheckIntervalMs: 3600000,
+  initialCheckDelayMs: 30000,
+  repoOwner: "Tiagospem",
+  repoName: "larabase",
+  quitDelayMs: 1000,
+  extendedQuitDelayMs: 2000
+};
+
 const isDev = process.env.NODE_ENV === "development";
 
-if (!isDev) {
-  autoUpdater.autoDownload = false;
-  autoUpdater.autoInstallOnAppQuit = true;
-
-  autoUpdater.allowDowngrade = true;
-  autoUpdater.allowPrerelease = true;
-  autoUpdater.forceDevUpdateConfig = true;
-  autoUpdater.disableWebInstaller = false;
-  autoUpdater.requestHeaders = { "Cache-Control": "no-cache" };
-}
-
-let updateState = {
+const updateState = {
   updateAvailable: false,
   updateDownloaded: false,
   dialogOpen: false,
@@ -29,177 +27,166 @@ let updateState = {
 };
 
 let mainWindow;
-
-const updateCheckIntervalMs = 3600000;
 let updateCheckInterval;
 
-function registerUpdaterHandlers(window) {
-  mainWindow = window;
+function setupAutoUpdater() {
+  if (isDev) return;
 
-  if (!isDev) {
-    autoUpdater.on("checking-for-update", () => {
-      sendStatusToWindow("checking-for-update");
-    });
+  autoUpdater.autoDownload = false;
+  autoUpdater.autoInstallOnAppQuit = true;
+  autoUpdater.allowDowngrade = true;
+  autoUpdater.allowPrerelease = true;
+  autoUpdater.forceDevUpdateConfig = true;
+  autoUpdater.disableWebInstaller = false;
+  autoUpdater.requestHeaders = { "Cache-Control": "no-cache" };
+}
 
-    autoUpdater.on("update-available", (info) => {
-      if (updateState.notifiedVersion === info.version) {
-        return;
-      }
+function setupAutoUpdaterEvents() {
+  if (isDev) return;
 
-      updateState.updateAvailable = true;
-      updateState.notifiedVersion = info.version;
-      updateState.updateInfo = info;
+  autoUpdater.on("checking-for-update", () => {
+    sendStatusToWindow("checking-for-update");
+  });
 
-      sendStatusToWindow("update-available", info);
+  autoUpdater.on("update-available", (info) => {
+    handleUpdateAvailable(info);
+  });
 
-      if (!updateState.dialogOpen && !updateState.updateDownloaded && mainWindow) {
-        updateState.dialogOpen = true;
+  autoUpdater.on("update-not-available", () => {
+    updateState.updateAvailable = false;
+    sendStatusToWindow("update-not-available");
+  });
 
-        dialog
-          .showMessageBox(mainWindow, {
-            type: "info",
-            title: "Update Available",
-            message: `A new version (${info.version}) is available.`,
-            detail: "Would you like to download it now?",
-            buttons: ["Download", "Later"],
-            defaultId: 0
-          })
-          .then(({ response }) => {
-            updateState.dialogOpen = false;
-            if (response === 0) {
-              handleDownloadUpdate();
-            }
-          })
-          .catch((err) => {
-            updateState.dialogOpen = false;
-          });
-      }
-    });
+  autoUpdater.on("error", (err) => {
+    handleUpdateError(err);
+  });
 
-    autoUpdater.on("update-not-available", () => {
-      updateState.updateAvailable = false;
-      sendStatusToWindow("update-not-available");
-    });
+  autoUpdater.on("download-progress", (progressObj) => {
+    sendStatusToWindow("download-progress", progressObj);
+  });
 
-    autoUpdater.on("error", (err) => {
-      updateState.dialogOpen = false;
-      console.error("Update error:", err);
+  autoUpdater.on("update-downloaded", (info) => {
+    handleUpdateDownloaded(info);
+  });
+}
 
-      if (err.message && err.message.includes("code signature") && err.message.includes("did not pass validation")) {
-        if (process.platform === "darwin" && mainWindow && updateState.updateInfo) {
-          downloadUpdateDirectly();
-          return;
-        }
-      }
-
-      sendStatusToWindow("update-error", err);
-    });
-
-    autoUpdater.on("download-progress", (progressObj) => {
-      sendStatusToWindow("download-progress", progressObj);
-    });
-
-    autoUpdater.on("update-downloaded", (info) => {
-      updateState.updateDownloaded = true;
-      sendStatusToWindow("update-downloaded", info);
-
-      if (!updateState.dialogOpen && mainWindow) {
-        updateState.dialogOpen = true;
-
-        if (process.platform === "darwin") {
-          downloadUpdateDirectly();
-        } else {
-          dialog
-            .showMessageBox(mainWindow, {
-              type: "info",
-              title: "Update Ready",
-              message: "A new version has been downloaded.",
-              detail: "Would you like to restart the application and install the update now?",
-              buttons: ["Restart", "Later"],
-              defaultId: 0
-            })
-            .then(({ response }) => {
-              updateState.dialogOpen = false;
-              if (response === 0) {
-                autoUpdater.quitAndInstall(false, true);
-              }
-            })
-            .catch(() => {
-              updateState.dialogOpen = false;
-            });
-        }
-      }
-    });
+function handleUpdateAvailable(info) {
+  if (updateState.notifiedVersion === info.version) {
+    return;
   }
 
-  safeRegisterHandler("check-for-updates", async () => {
-    try {
-      if (isDev) {
-        return { updateAvailable: false };
-      }
-      return await autoUpdater.checkForUpdates();
-    } catch (error) {
-      return { error: error.message };
-    }
-  });
+  updateState.updateAvailable = true;
+  updateState.notifiedVersion = info.version;
+  updateState.updateInfo = info;
 
-  safeRegisterHandler("download-update", async () => {
-    try {
-      if (isDev) {
-        return { success: false, skipped: true };
-      }
+  sendStatusToWindow("update-available", info);
 
-      if (process.platform === "darwin") {
-        return await downloadUpdateDirectly();
-      } else {
-        if (!updateState.updateDownloaded) {
-          return await autoUpdater.downloadUpdate();
-        } else {
-          return { alreadyDownloaded: true };
-        }
-      }
-    } catch (error) {
-      return { error: error.message };
-    }
-  });
-
-  safeRegisterHandler("quit-and-install", () => {
-    if (!isDev) {
-      if (process.platform === "darwin") {
-        downloadUpdateDirectly();
-      } else {
-        autoUpdater.quitAndInstall(false, true);
-      }
-    }
-  });
-
-  safeRegisterHandler("get-current-version", () => {
-    return app.getVersion();
-  });
-
-  if (!isDev) {
-    setupAutoUpdateCheck();
+  if (!updateState.dialogOpen && !updateState.updateDownloaded && mainWindow) {
+    showUpdateAvailableDialog(info);
   }
 }
 
-function getInstallerExtension() {
-  switch (process.platform) {
-    case "win32":
-      return ".exe";
-    case "darwin":
-      return ".dmg";
-    case "linux":
-      return process.arch === "x64" ? ".AppImage" : ".deb";
-    default:
-      return ".zip";
+function handleUpdateError(err) {
+  updateState.dialogOpen = false;
+  console.error("Update error:", err);
+
+  if (err.message && err.message.includes("code signature") && err.message.includes("did not pass validation") && process.platform === "darwin" && mainWindow && updateState.updateInfo) {
+    downloadUpdateDirectly();
+    return;
   }
+
+  sendStatusToWindow("update-error", err);
+}
+
+function handleUpdateDownloaded(info) {
+  updateState.updateDownloaded = true;
+  sendStatusToWindow("update-downloaded", info);
+
+  if (!updateState.dialogOpen && mainWindow) {
+    if (process.platform === "darwin") {
+      downloadUpdateDirectly();
+    } else {
+      showUpdateReadyDialog();
+    }
+  }
+}
+
+function showUpdateAvailableDialog(info) {
+  updateState.dialogOpen = true;
+
+  dialog
+    .showMessageBox(mainWindow, {
+      type: "info",
+      title: "Update Available",
+      message: `A new version (${info.version}) is available.`,
+      detail: "Would you like to download it now?",
+      buttons: ["Download", "Later"],
+      defaultId: 0
+    })
+    .then(({ response }) => {
+      updateState.dialogOpen = false;
+      if (response === 0) {
+        handleDownloadUpdate();
+      }
+    })
+    .catch(() => {
+      updateState.dialogOpen = false;
+    });
+}
+
+function showUpdateReadyDialog() {
+  updateState.dialogOpen = true;
+
+  dialog
+    .showMessageBox(mainWindow, {
+      type: "info",
+      title: "Update Ready",
+      message: "A new version has been downloaded.",
+      detail: "Would you like to restart the application and install the update now?",
+      buttons: ["Restart", "Later"],
+      defaultId: 0
+    })
+    .then(({ response }) => {
+      updateState.dialogOpen = false;
+      if (response === 0) {
+        autoUpdater.quitAndInstall(false, true);
+      }
+    })
+    .catch(() => {
+      updateState.dialogOpen = false;
+    });
+}
+
+function showDownloadingDialog(version) {
+  updateState.dialogOpen = true;
+
+  dialog.showMessageBox(mainWindow, {
+    type: "info",
+    title: "Downloading Update",
+    message: `Downloading Larabase ${version}`,
+    detail: "The download has started. Please wait...",
+    buttons: ["OK"],
+    defaultId: 0
+  });
+}
+
+async function showDownloadCompleteDialog() {
+  updateState.dialogOpen = true;
+
+  return dialog.showMessageBox(mainWindow, {
+    type: "info",
+    title: "Update Downloaded",
+    message: "Update has been downloaded successfully",
+    detail: "The application will now quit and open the installer. Please follow the installation instructions.",
+    buttons: ["Install Now"],
+    defaultId: 0
+  });
 }
 
 function findInstallerFile(files) {
   if (!files || files.length === 0) return null;
 
   const extension = getInstallerExtension();
-
   let installerFile = files.find((file) => file.url && file.url.endsWith(extension));
 
   if (!installerFile && process.platform === "linux") {
@@ -215,6 +202,19 @@ function findInstallerFile(files) {
   }
 
   return installerFile;
+}
+
+function getInstallerExtension() {
+  switch (process.platform) {
+    case "win32":
+      return ".exe";
+    case "darwin":
+      return ".dmg";
+    case "linux":
+      return process.arch === "x64" ? ".AppImage" : ".deb";
+    default:
+      return ".zip";
+  }
 }
 
 async function downloadUpdateDirectly() {
@@ -235,8 +235,7 @@ async function downloadUpdateDirectly() {
       return { success: false, error: "No installer file found" };
     }
 
-    const repoOwner = "Tiagospem";
-    const repoName = "larabase";
+    const { repoOwner, repoName } = CONFIG;
     const version = updateState.updateInfo.version;
 
     let fileUrl = installerFile.url;
@@ -248,7 +247,6 @@ async function downloadUpdateDirectly() {
     if (!extension) {
       extension = getInstallerExtension();
     }
-
     const fileName = `Larabase-${version}${extension}`;
     const downloadPath = path.join(app.getPath("downloads"), fileName);
 
@@ -262,31 +260,14 @@ async function downloadUpdateDirectly() {
     updateState.downloadProgress = 0;
 
     if (mainWindow) {
-      updateState.dialogOpen = true;
-      dialog.showMessageBox(mainWindow, {
-        type: "info",
-        title: "Downloading Update",
-        message: `Downloading Larabase ${version}`,
-        detail: "The download has started. Please wait...",
-        buttons: ["OK"],
-        defaultId: 0
-      });
+      showDownloadingDialog(version);
     }
 
     const file = fs.createWriteStream(downloadPath);
-
     await downloadFile(fileUrl, file, downloadPath);
 
     if (mainWindow) {
-      updateState.dialogOpen = true;
-      await dialog.showMessageBox(mainWindow, {
-        type: "info",
-        title: "Update Downloaded",
-        message: "Update has been downloaded successfully",
-        detail: "The application will now quit and open the installer. Please follow the installation instructions.",
-        buttons: ["Install Now"],
-        defaultId: 0
-      });
+      await showDownloadCompleteDialog();
     }
 
     openInstallerAndQuit(downloadPath);
@@ -303,11 +284,9 @@ async function downloadFile(url, fileStream, downloadPath) {
     const handleResponse = (response) => {
       if (response.statusCode > 300 && response.statusCode < 400 && response.headers.location) {
         console.log(`Following redirect to: ${response.headers.location}`);
-
         response.destroy();
 
         const redirectUrl = new URL(response.headers.location, url).toString();
-
         const protocol = redirectUrl.startsWith("https") ? https : require("http");
         protocol.get(redirectUrl, handleResponse).on("error", handleError);
         return;
@@ -369,17 +348,17 @@ async function downloadFile(url, fileStream, downloadPath) {
 
 function openInstallerAndQuit(filePath) {
   try {
-    console.log(`Opening installer at ${filePath} and quitting app`);
+    const { quitDelayMs } = CONFIG;
 
     if (process.platform === "darwin") {
       execFile("open", [filePath], (error) => {
         if (error) {
           console.error(`Error opening DMG: ${error.message}`);
           shell.openPath(filePath).then(() => {
-            setTimeout(() => app.quit(), 1000);
+            setTimeout(() => app.quit(), quitDelayMs);
           });
         } else {
-          setTimeout(() => app.quit(), 1000);
+          setTimeout(() => app.quit(), quitDelayMs);
         }
       });
     } else if (process.platform === "win32") {
@@ -390,7 +369,7 @@ function openInstallerAndQuit(filePath) {
         });
         child.unref();
         app.quit();
-      }, 1000);
+      }, quitDelayMs);
     } else {
       const extension = path.extname(filePath).toLowerCase();
 
@@ -403,14 +382,14 @@ function openInstallerAndQuit(filePath) {
           });
           child.unref();
           app.quit();
-        }, 1000);
+        }, quitDelayMs);
       } else if (extension === ".deb") {
         shell.openPath(path.dirname(filePath)).then(() => {
-          setTimeout(() => app.quit(), 1000);
+          setTimeout(() => app.quit(), quitDelayMs);
         });
       } else {
         shell.openPath(filePath).then(() => {
-          setTimeout(() => app.quit(), 1000);
+          setTimeout(() => app.quit(), quitDelayMs);
         });
       }
     }
@@ -419,11 +398,11 @@ function openInstallerAndQuit(filePath) {
     shell
       .openPath(filePath)
       .then(() => {
-        setTimeout(() => app.quit(), 1000);
+        setTimeout(() => app.quit(), quitDelayMs);
       })
       .catch(() => {
         shell.showItemInFolder(filePath);
-        setTimeout(() => app.quit(), 2000);
+        setTimeout(() => app.quit(), extendedQuitDelayMs);
       });
   }
 }
@@ -446,7 +425,6 @@ function safeRegisterHandler(channel, handler) {
     }
 
     ipcMain.handle(channel, handler);
-
     ipcMain._invokeHandlers[channel] = true;
   } catch (err) {
     console.error(`Error registering handler for ${channel}:`, err);
@@ -460,13 +438,71 @@ function sendStatusToWindow(status, data = null) {
 }
 
 function setupAutoUpdateCheck() {
+  const { updateCheckIntervalMs, initialCheckDelayMs } = CONFIG;
+
   setTimeout(() => {
     autoUpdater.checkForUpdates();
-  }, 30000);
+  }, initialCheckDelayMs);
 
   updateCheckInterval = setInterval(() => {
     autoUpdater.checkForUpdates();
   }, updateCheckIntervalMs);
+}
+
+function registerUpdaterHandlers(window) {
+  mainWindow = window;
+
+  setupAutoUpdater();
+  setupAutoUpdaterEvents();
+
+  safeRegisterHandler("check-for-updates", async () => {
+    try {
+      if (isDev) {
+        return { updateAvailable: false };
+      }
+      return await autoUpdater.checkForUpdates();
+    } catch (error) {
+      return { error: error.message };
+    }
+  });
+
+  safeRegisterHandler("download-update", async () => {
+    try {
+      if (isDev) {
+        return { success: false, skipped: true };
+      }
+
+      if (process.platform === "darwin") {
+        return await downloadUpdateDirectly();
+      } else {
+        if (!updateState.updateDownloaded) {
+          return await autoUpdater.downloadUpdate();
+        } else {
+          return { alreadyDownloaded: true };
+        }
+      }
+    } catch (error) {
+      return { error: error.message };
+    }
+  });
+
+  safeRegisterHandler("quit-and-install", () => {
+    if (!isDev) {
+      if (process.platform === "darwin") {
+        downloadUpdateDirectly();
+      } else {
+        autoUpdater.quitAndInstall(false, true);
+      }
+    }
+  });
+
+  safeRegisterHandler("get-current-version", () => {
+    return app.getVersion();
+  });
+
+  if (!isDev) {
+    setupAutoUpdateCheck();
+  }
 }
 
 function cleanup() {
