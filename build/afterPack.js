@@ -3,7 +3,7 @@ const path = require('path');
 
 /**
  * This script runs after the app is packed but before it's bundled into an installer.
- * It removes unnecessary files to reduce the final bundle size.
+ * It aggressively removes unnecessary files to reduce the final bundle size.
  */
 exports.default = async function(context) {
   const { appOutDir, packager, electronPlatformName } = context;
@@ -11,175 +11,304 @@ exports.default = async function(context) {
   
   console.log(`Optimizing bundle for ${electronPlatformName} at: ${appOutDir}`);
   
-  // Directories to clean up (adjust as needed)
-  const foldersToRemove = [];
+  // Track size savings
+  let totalRemoved = 0;
   
-  // Safely add locales if the directory exists
-  const localesPath = path.join(appOutDir, 'locales');
+  // Directories to always clean up
+  const foldersToAlwaysRemove = [
+    "node_modules/@types",
+    "node_modules/typescript",
+    "node_modules/esbuild",
+    "node_modules/ts-node",
+    "node_modules/vue-tsc",
+    "node_modules/prettier",
+    "node_modules/eslint*"
+  ];
+
+  // Patterns to find and remove
+  const patternsToRemove = [
+    "*.d.ts",
+    "*.map",
+    "*.md",
+    "LICENSE*",
+    "README*",
+    "CHANGELOG*",
+    "CONTRIBUTORS*",
+    "CONTRIBUTING*",
+    ".git*",
+    ".npmignore",
+    ".travis.yml",
+    ".eslintrc*",
+    "test",
+    "tests",
+    "__tests__",
+    "example",
+    "examples",
+    "docs",
+    "doc",
+    "benchmark",
+    "coverage"
+  ];
+  
+  // Clean locales, keeping only en-US
+  const localesPath = getPath(appOutDir, 'locales');
   if (fs.existsSync(localesPath)) {
     try {
       const localeFiles = fs.readdirSync(localesPath)
         .filter(file => file !== 'en-US.pak' && file !== 'en-US.pak.info')
         .map(file => path.join(localesPath, file));
       
-      foldersToRemove.push(...localeFiles);
-      console.log(`Found ${localeFiles.length} locale files to remove`);
+      totalRemoved += await removeFiles(localeFiles);
     } catch (error) {
-      console.error(`Error reading locales directory: ${error.message}`);
+      console.error(`Error cleaning locales: ${error.message}`);
     }
-  } else {
-    console.log('Locales directory not found, skipping locale cleanup');
   }
   
-  // Base path for node_modules
-  const nodeModulesPath = path.join(appOutDir, 'resources', 'app.asar.unpacked', 'node_modules');
-  
+  // Process node_modules to remove unnecessary files
+  const nodeModulesPath = getPath(appOutDir, 'node_modules');
   if (fs.existsSync(nodeModulesPath)) {
-    // Add specific node_modules directories to remove if they exist
-    const specificModulesToRemove = [
-      path.join(nodeModulesPath, '@types'),
-      path.join(nodeModulesPath, 'typescript'),
-      path.join(nodeModulesPath, 'ts-node')
-    ];
-    
-    for (const modulePath of specificModulesToRemove) {
-      if (fs.existsSync(modulePath)) {
-        foldersToRemove.push(modulePath);
-      }
+    // Remove large folders that are definitely not needed
+    for (const folderPattern of foldersToAlwaysRemove) {
+      const folders = findByPattern(nodeModulesPath, folderPattern);
+      totalRemoved += await removeFiles(folders);
     }
     
-    // Find common removable directories
-    const dirsToFind = ['docs', 'doc', 'example', 'examples', 'test', 'tests'];
-    for (const dirName of dirsToFind) {
-      const found = findAllRecursive(nodeModulesPath, dirName);
-      if (found.length > 0) {
-        console.log(`Found ${found.length} '${dirName}' directories to remove`);
-        foldersToRemove.push(...found);
-      }
-    }
-  } else {
-    console.log('Node modules directory not found in expected location, skipping module cleanup');
-  }
-  
-  // Process all folders to remove
-  let totalSaved = 0;
-  
-  for (const folder of foldersToRemove) {
-    try {
-      if (fs.existsSync(folder)) {
-        const stats = await getDirectorySize(folder);
-        totalSaved += stats.size;
-        
-        console.log(`Removing: ${folder} (${formatBytes(stats.size)})`);
-        await removeDirectory(folder);
-      }
-    } catch (error) {
-      console.error(`Error removing ${folder}:`, error);
+    // Find and remove files by pattern
+    for (const pattern of patternsToRemove) {
+      const files = findFilesByPattern(nodeModulesPath, pattern, 5); // Depth of 5 is enough for node_modules
+      totalRemoved += await removeFiles(files);
     }
   }
   
-  console.log(`Optimization complete! Saved approximately ${formatBytes(totalSaved)}`);
+  // Clean out all .DS_Store files
+  const dsStoreFiles = findFilesByPattern(appOutDir, '.DS_Store', 10);
+  totalRemoved += await removeFiles(dsStoreFiles);
+  
+  console.log(`Optimization complete! Removed approximately ${formatBytes(totalRemoved)}`);
 };
 
-/**
- * Recursively find all directories with the given name
- */
-function findAllRecursive(dir, nameToFind, result = []) {
-  if (!fs.existsSync(dir)) return result;
-  
-  try {
-    const items = fs.readdirSync(dir);
+// Get the correct path based on platform and packager
+function getPath(appOutDir, subPath) {
+  // For macOS, the app is inside a .app bundle
+  if (process.platform === 'darwin') {
+    const appContentsPath = path.join(appOutDir, `${path.basename(appOutDir, '.app')}.app`, 'Contents');
+    const resourcesPath = path.join(appContentsPath, 'Resources');
     
-    for (const item of items) {
-      const fullPath = path.join(dir, item);
-      const stats = fs.statSync(fullPath);
-      
-      if (stats.isDirectory()) {
-        if (item === nameToFind) {
-          result.push(fullPath);
-        } else {
-          // Don't go too deep - only recurse 3 levels to avoid performance issues
-          const level = fullPath.split(path.sep).length - dir.split(path.sep).length;
-          if (level < 3) {
-            findAllRecursive(fullPath, nameToFind, result);
+    if (subPath === 'locales') {
+      return path.join(appContentsPath, 'MacOS', 'locales');
+    } else if (subPath === 'node_modules') {
+      // Node modules could be in resources/app or resources/app.asar.unpacked
+      const unpackedPath = path.join(resourcesPath, 'app.asar.unpacked', 'node_modules');
+      if (fs.existsSync(unpackedPath)) {
+        return unpackedPath;
+      }
+      return path.join(resourcesPath, 'app', 'node_modules');
+    }
+  }
+  
+  // For Windows and Linux
+  if (subPath === 'locales') {
+    return path.join(appOutDir, 'locales');
+  } else if (subPath === 'node_modules') {
+    // Check both possible locations
+    const unpackedPath = path.join(appOutDir, 'resources', 'app.asar.unpacked', 'node_modules');
+    if (fs.existsSync(unpackedPath)) {
+      return unpackedPath;
+    }
+    return path.join(appOutDir, 'resources', 'app', 'node_modules');
+  }
+  
+  return path.join(appOutDir, subPath);
+}
+
+// Find files by glob pattern with limited depth
+function findByPattern(basePath, pattern) {
+  const found = [];
+  
+  if (!fs.existsSync(basePath)) {
+    return found;
+  }
+  
+  const parts = pattern.split('/');
+  let currentPath = basePath;
+  
+  for (let i = 0; i < parts.length; i++) {
+    const part = parts[i];
+    if (part.includes('*')) {
+      // It's a pattern, we need to find matching files/dirs
+      const regex = new RegExp('^' + part.replace(/\*/g, '.*') + '$');
+      if (fs.existsSync(currentPath)) {
+        const items = fs.readdirSync(currentPath);
+        for (const item of items) {
+          if (regex.test(item)) {
+            if (i === parts.length - 1) {
+              // This is the last part of the pattern
+              found.push(path.join(currentPath, item));
+            } else {
+              // More parts to check, recurse
+              found.push(...findByPattern(path.join(currentPath, item), parts.slice(i + 1).join('/')));
+            }
           }
         }
+        return found;
+      }
+      return found;
+    } else {
+      // It's a fixed name, just append to the path
+      currentPath = path.join(currentPath, part);
+      if (!fs.existsSync(currentPath)) {
+        return found;
       }
     }
-  } catch (error) {
-    console.error(`Error searching directory ${dir}:`, error);
   }
   
-  return result;
+  // If we got here, the entire pattern was fixed names and they all exist
+  found.push(currentPath);
+  return found;
 }
 
-/**
- * Recursively remove a directory
- */
-async function removeDirectory(dir) {
-  if (!fs.existsSync(dir)) return;
+// Find files by pattern recursively with depth limit
+function findFilesByPattern(basePath, pattern, maxDepth = 3, currentDepth = 0) {
+  const found = [];
   
-  const items = fs.readdirSync(dir);
-  
-  for (const item of items) {
-    const fullPath = path.join(dir, item);
-    const stats = fs.statSync(fullPath);
-    
-    if (stats.isDirectory()) {
-      await removeDirectory(fullPath);
-    } else {
-      fs.unlinkSync(fullPath);
-    }
-  }
-  
-  fs.rmdirSync(dir);
-}
-
-/**
- * Calculate the size of a directory
- */
-async function getDirectorySize(dir) {
-  let size = 0;
-  let fileCount = 0;
-  
-  if (!fs.existsSync(dir)) {
-    return { size, fileCount };
+  if (!fs.existsSync(basePath) || currentDepth > maxDepth) {
+    return found;
   }
   
   try {
-    const items = fs.readdirSync(dir);
+    const items = fs.readdirSync(basePath);
     
     for (const item of items) {
-      const fullPath = path.join(dir, item);
-      const stats = fs.statSync(fullPath);
+      const fullPath = path.join(basePath, item);
       
-      if (stats.isDirectory()) {
-        const result = await getDirectorySize(fullPath);
-        size += result.size;
-        fileCount += result.fileCount;
-      } else {
-        size += stats.size;
-        fileCount++;
+      try {
+        const stats = fs.statSync(fullPath);
+        
+        if (stats.isDirectory()) {
+          // Recurse into subdirectories
+          found.push(...findFilesByPattern(fullPath, pattern, maxDepth, currentDepth + 1));
+        } else if (matchesPattern(item, pattern)) {
+          found.push(fullPath);
+        }
+      } catch (err) {
+        // Skip files that can't be accessed
       }
     }
-  } catch (error) {
-    console.error(`Error calculating size of ${dir}:`, error);
+  } catch (err) {
+    // Skip directories that can't be read
   }
   
-  return { size, fileCount };
+  return found;
 }
 
-/**
- * Format bytes to human readable format
- */
+// Check if a filename matches a pattern with wildcards
+function matchesPattern(filename, pattern) {
+  const regexPattern = '^' + pattern.split('*').map(escapeRegExp).join('.*') + '$';
+  return new RegExp(regexPattern, 'i').test(filename);
+}
+
+// Escape special regex characters
+function escapeRegExp(string) {
+  return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+// Remove a list of files or directories, return total bytes removed
+async function removeFiles(filePaths) {
+  let bytesRemoved = 0;
+  
+  for (const filePath of filePaths) {
+    try {
+      if (fs.existsSync(filePath)) {
+        const stats = fs.statSync(filePath);
+        
+        if (stats.isDirectory()) {
+          const dirSize = await getDirSize(filePath);
+          bytesRemoved += dirSize;
+          removeDir(filePath);
+        } else {
+          bytesRemoved += stats.size;
+          fs.unlinkSync(filePath);
+        }
+      }
+    } catch (error) {
+      console.error(`Error removing ${filePath}: ${error.message}`);
+    }
+  }
+  
+  return bytesRemoved;
+}
+
+// Get the size of a directory
+async function getDirSize(dirPath) {
+  let size = 0;
+  
+  if (!fs.existsSync(dirPath)) {
+    return size;
+  }
+  
+  try {
+    const files = fs.readdirSync(dirPath);
+    
+    for (const file of files) {
+      const filePath = path.join(dirPath, file);
+      
+      try {
+        const stats = fs.statSync(filePath);
+        
+        if (stats.isDirectory()) {
+          size += await getDirSize(filePath);
+        } else {
+          size += stats.size;
+        }
+      } catch (err) {
+        // Skip files that can't be accessed
+      }
+    }
+  } catch (err) {
+    // Skip directories that can't be read
+  }
+  
+  return size;
+}
+
+// Recursively remove a directory
+function removeDir(dirPath) {
+  if (!fs.existsSync(dirPath)) {
+    return;
+  }
+  
+  try {
+    const files = fs.readdirSync(dirPath);
+    
+    for (const file of files) {
+      const filePath = path.join(dirPath, file);
+      
+      try {
+        const stats = fs.statSync(filePath);
+        
+        if (stats.isDirectory()) {
+          removeDir(filePath);
+        } else {
+          fs.unlinkSync(filePath);
+        }
+      } catch (err) {
+        // Skip files that can't be accessed
+      }
+    }
+    
+    fs.rmdirSync(dirPath);
+  } catch (err) {
+    console.error(`Error removing directory ${dirPath}: ${err.message}`);
+  }
+}
+
+// Format bytes to human-readable
 function formatBytes(bytes, decimals = 2) {
   if (bytes === 0) return '0 Bytes';
   
   const k = 1024;
-  const dm = decimals < 0 ? 0 : decimals;
   const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
-  
   const i = Math.floor(Math.log(bytes) / Math.log(k));
   
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(decimals)) + ' ' + sizes[i];
 } 

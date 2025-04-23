@@ -1,16 +1,20 @@
-const { app, ipcMain, dialog } = require('electron');
-const { autoUpdater } = require('electron-updater');
-const log = require('electron-log');
+const { app, ipcMain, dialog } = require("electron");
+const { autoUpdater } = require("electron-updater");
 
-// Configure logging
-log.transports.file.level = 'info';
-autoUpdater.logger = log;
-autoUpdater.autoDownload = false;
-autoUpdater.autoInstallOnAppQuit = true;
+// Don't initialize autoUpdater in development
+const isDev = process.env.NODE_ENV === "development";
 
-// Enable updates in development mode
-autoUpdater.allowPrerelease = true;
-autoUpdater.forceDevUpdateConfig = true;
+// Only configure autoUpdater in production
+if (!isDev) {
+  autoUpdater.autoDownload = false;
+  autoUpdater.autoInstallOnAppQuit = true;
+
+  autoUpdater.allowDowngrade = true;
+  autoUpdater.allowPrerelease = true;
+  autoUpdater.forceDevUpdateConfig = true;
+  autoUpdater.disableWebInstaller = false;
+  autoUpdater.requestHeaders = { "Cache-Control": "no-cache" };
+}
 
 let updateState = {
   updateAvailable: false,
@@ -20,177 +24,202 @@ let updateState = {
 };
 
 let mainWindow;
-const updateCheckIntervalMs = 3600000; // 1 hour
+
+const updateCheckIntervalMs = 3600000;
 let updateCheckInterval;
 
 function registerUpdaterHandlers(window) {
   mainWindow = window;
-  
-  // Log the current app version and update configuration
-  log.info(`App version: ${app.getVersion()}`);
-  log.info(`Update config - allowPrerelease: ${autoUpdater.allowPrerelease}, forceDevUpdateConfig: ${autoUpdater.forceDevUpdateConfig}`);
-  log.info(`GitHub repository: ${process.env.npm_package_build_publish_repo || 'unknown'}`);
-  
-  // Log the autoUpdater configuration
-  try {
-    const updateConfig = autoUpdater.configOnDisk || {};
-    log.info('Update configuration:', JSON.stringify({
-      provider: updateConfig.provider,
-      repo: updateConfig.repo,
-      owner: updateConfig.owner,
-      url: updateConfig.url
-    }));
-  } catch (error) {
-    log.error('Failed to log update configuration:', error);
+
+  // Register auto-updater events only in production
+  if (!isDev) {
+    autoUpdater.on("checking-for-update", () => {
+      sendStatusToWindow("checking-for-update");
+    });
+
+    autoUpdater.on("update-available", (info) => {
+      if (updateState.notifiedVersion === info.version) {
+        return;
+      }
+
+      updateState.updateAvailable = true;
+      updateState.notifiedVersion = info.version;
+
+      sendStatusToWindow("update-available", info);
+
+      if (!updateState.dialogOpen && !updateState.updateDownloaded && mainWindow) {
+        updateState.dialogOpen = true;
+
+        dialog
+          .showMessageBox(mainWindow, {
+            type: "info",
+            title: "Update Available",
+            message: `A new version (${info.version}) is available.`,
+            detail: "Would you like to download it now? The update will be installed when you restart the application.",
+            buttons: ["Download", "Later"],
+            defaultId: 0
+          })
+          .then(({ response }) => {
+            updateState.dialogOpen = false;
+            if (response === 0) {
+              autoUpdater.downloadUpdate();
+            }
+          })
+          .catch((err) => {
+            updateState.dialogOpen = false;
+          });
+      }
+    });
+
+    autoUpdater.on("update-not-available", (info) => {
+      updateState.updateAvailable = false;
+      sendStatusToWindow("update-not-available");
+    });
+
+    autoUpdater.on("error", (err) => {
+      updateState.dialogOpen = false;
+
+      if (err.message && err.message.includes("code signature") && err.message.includes("did not pass validation")) {
+        if (process.platform === "darwin" && mainWindow) {
+          updateState.dialogOpen = true;
+
+          dialog
+            .showMessageBox(mainWindow, {
+              type: "info",
+              title: "Download Update Manually",
+              message: "Auto-update failed due to code signing restrictions",
+              detail: "You need to download and install the latest version manually. Would you like to open the download page?",
+              buttons: ["Open Download Page", "Cancel"],
+              defaultId: 0
+            })
+            .then(({ response }) => {
+              updateState.dialogOpen = false;
+              if (response === 0) {
+                const { shell } = require("electron");
+                shell.openExternal("https://github.com/Tiagospem/larabase/releases/latest");
+              }
+            });
+
+          return;
+        }
+      }
+
+      sendStatusToWindow("update-error", err);
+    });
+
+    autoUpdater.on("download-progress", (progressObj) => {
+      sendStatusToWindow("download-progress", progressObj);
+    });
+
+    autoUpdater.on("update-downloaded", (info) => {
+      updateState.updateDownloaded = true;
+      sendStatusToWindow("update-downloaded", info);
+
+      if (!updateState.dialogOpen && mainWindow) {
+        updateState.dialogOpen = true;
+
+        dialog
+          .showMessageBox(mainWindow, {
+            type: "info",
+            title: "Update Ready",
+            message: "A new version has been downloaded.",
+            detail: "Would you like to restart the application and install the update now?",
+            buttons: ["Restart", "Later"],
+            defaultId: 0
+          })
+          .then(({ response }) => {
+            updateState.dialogOpen = false;
+            if (response === 0) {
+              autoUpdater.quitAndInstall(false, true);
+            }
+          })
+          .catch(() => {
+            updateState.dialogOpen = false;
+          });
+      }
+    });
   }
 
-  // Setup update events handlers
-  autoUpdater.on('checking-for-update', () => {
-    log.info('Checking for updates...');
-    sendStatusToWindow('checking-for-update');
-  });
-
-  autoUpdater.on('update-available', (info) => {
-    log.info('Update available:', info);
-    
-    // Verificar se já notificamos sobre esta versão
-    if (updateState.notifiedVersion === info.version) {
-      log.info(`Already notified about version ${info.version}, skipping notification`);
-      return;
-    }
-    
-    updateState.updateAvailable = true;
-    updateState.notifiedVersion = info.version;
-    
-    sendStatusToWindow('update-available', info);
-    
-    // Evitar mostrar o diálogo se outro já estiver aberto
-    if (!updateState.dialogOpen && !updateState.updateDownloaded && mainWindow) {
-      updateState.dialogOpen = true;
-      
-      dialog.showMessageBox(mainWindow, {
-        type: 'info',
-        title: 'Update Available',
-        message: `A new version (${info.version}) is available.`,
-        detail: 'Would you like to download it now? The update will be installed when you restart the application.',
-        buttons: ['Download', 'Later'],
-        defaultId: 0
-      }).then(({ response }) => {
-        updateState.dialogOpen = false;
-        if (response === 0) {
-          log.info(`User initiated download of version ${info.version}`);
-          autoUpdater.downloadUpdate();
-        }
-      }).catch(err => {
-        updateState.dialogOpen = false;
-        log.error('Error showing update dialog:', err);
-      });
-    }
-  });
-
-  autoUpdater.on('update-not-available', (info) => {
-    log.info('No updates available:', info);
-    updateState.updateAvailable = false;
-    sendStatusToWindow('update-not-available');
-  });
-
-  autoUpdater.on('error', (err) => {
-    log.error('Error during update:', err);
-    updateState.dialogOpen = false;
-    sendStatusToWindow('update-error', err);
-  });
-
-  autoUpdater.on('download-progress', (progressObj) => {
-    let logMessage = `Download speed: ${progressObj.bytesPerSecond} - Downloaded ${progressObj.percent}% (${progressObj.transferred}/${progressObj.total})`;
-    log.info(logMessage);
-    sendStatusToWindow('download-progress', progressObj);
-  });
-
-  autoUpdater.on('update-downloaded', (info) => {
-    log.info('Update downloaded:', info);
-    updateState.updateDownloaded = true;
-    sendStatusToWindow('update-downloaded', info);
-    
-    if (!updateState.dialogOpen && mainWindow) {
-      updateState.dialogOpen = true;
-      
-      dialog.showMessageBox(mainWindow, {
-        type: 'info',
-        title: 'Update Ready',
-        message: 'A new version has been downloaded.',
-        detail: 'Would you like to restart the application and install the update now?',
-        buttons: ['Restart', 'Later'],
-        defaultId: 0
-      }).then(({ response }) => {
-        updateState.dialogOpen = false;
-        if (response === 0) {
-          autoUpdater.quitAndInstall(false, true);
-        }
-      }).catch(err => {
-        updateState.dialogOpen = false;
-        log.error('Error showing update-ready dialog:', err);
-      });
-    }
-  });
-
-  // IPC handlers for renderer process to interact with updater
-  ipcMain.handle('check-for-updates', async () => {
+  // Always register the required IPC handlers for updater
+  // Check if handlers already exist to avoid registration errors
+  safeRegisterHandler("check-for-updates", async () => {
     try {
-      log.info('Manual update check requested');
+      if (isDev) {
+        console.log("Skipping update check in development mode");
+        return { updateAvailable: false };
+      }
       return await autoUpdater.checkForUpdates();
     } catch (error) {
-      log.error('Error checking for updates:', error);
       return { error: error.message };
     }
   });
 
-  ipcMain.handle('download-update', async () => {
+  safeRegisterHandler("download-update", async () => {
     try {
-      log.info('Manual download requested');
+      if (isDev) {
+        console.log("Skipping update download in development mode");
+        return { success: false, skipped: true };
+      }
       if (!updateState.updateDownloaded) {
         return await autoUpdater.downloadUpdate();
       } else {
-        log.info('Update already downloaded, skipping download');
         return { alreadyDownloaded: true };
       }
     } catch (error) {
-      log.error('Error downloading update:', error);
       return { error: error.message };
     }
   });
 
-  ipcMain.handle('quit-and-install', () => {
-    log.info('Manual quit and install requested');
-    autoUpdater.quitAndInstall(false, true);
+  safeRegisterHandler("quit-and-install", () => {
+    if (!isDev) {
+      autoUpdater.quitAndInstall(false, true);
+    } else {
+      console.log("Skipping quit and install in development mode");
+    }
   });
 
-  ipcMain.handle('get-current-version', () => {
+  safeRegisterHandler("get-current-version", () => {
     return app.getVersion();
   });
-  
-  // Schedule periodic update checks
-  setupAutoUpdateCheck();
+
+  if (!isDev) {
+    setupAutoUpdateCheck();
+  }
+}
+
+// Safe registration helper - checks if handler already exists
+function safeRegisterHandler(channel, handler) {
+  // Check if we already have a handler for this channel
+  try {
+    ipcMain._invokeHandlers = ipcMain._invokeHandlers || {};
+    if (ipcMain._invokeHandlers[channel]) {
+      console.log(`Handler for '${channel}' already registered, skipping duplicate registration`);
+      return;
+    }
+
+    // Register the handler
+    ipcMain.handle(channel, handler);
+
+    // Track that we registered this handler
+    ipcMain._invokeHandlers[channel] = true;
+  } catch (err) {
+    console.error(`Error registering handler for ${channel}:`, err);
+  }
 }
 
 function sendStatusToWindow(status, data = null) {
   if (mainWindow) {
-    mainWindow.webContents.send('update-status', { status, data });
+    mainWindow.webContents.send("update-status", { status, data });
   }
 }
 
 function setupAutoUpdateCheck() {
-  // Check for updates after a delay to ensure app is fully initialized
   setTimeout(() => {
-    log.info('Performing initial update check...');
-    autoUpdater.checkForUpdates()
-      .catch(err => log.error('Initial update check failed:', err));
-  }, 30000); // Wait 30 seconds after startup
-  
-  // Setup periodic update checks
+    autoUpdater.checkForUpdates();
+  }, 30000);
+
   updateCheckInterval = setInterval(() => {
-    log.info('Performing scheduled update check...');
-    autoUpdater.checkForUpdates()
-      .catch(err => log.error('Scheduled update check failed:', err));
+    autoUpdater.checkForUpdates();
   }, updateCheckIntervalMs);
 }
 
@@ -204,4 +233,4 @@ function cleanup() {
 module.exports = {
   registerUpdaterHandlers,
   cleanup
-}; 
+};

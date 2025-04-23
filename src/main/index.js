@@ -31,7 +31,7 @@ app.whenReady().then(async () => {
 
   // Register the updater handlers first to ensure they're available
   registerUpdaterHandlers(mainWindow);
-  
+
   // Then register other handlers
   registerTableHandlers(store, dbMonitoringConnections);
   registerRestoreDumpHandlers(store);
@@ -180,14 +180,28 @@ function setupGlobalMonitoring() {
 //   console.log('Global MySQL monitoring configured');
 // }
 
+// Fix the electron-reload implementation
 if (process.env.NODE_ENV === "development") {
   try {
-    require("electron-reload")(path.join(__dirname, "../renderer"), {
-      electron: path.join(__dirname, "../../node_modules", ".bin", "electron"),
-      hardResetMethod: "exit"
-    });
+    const electronReloadPath = path.join(__dirname, "../../node_modules/electron-reload");
+    if (fs.existsSync(electronReloadPath)) {
+      const electronReload = require(electronReloadPath);
+      const rendererPath = path.resolve(__dirname, "../renderer");
+
+      if (fs.existsSync(rendererPath)) {
+        console.log(`Setting up electron-reload with path: ${rendererPath}`);
+        electronReload(rendererPath, {
+          electron: path.join(__dirname, "../../node_modules", ".bin", "electron"),
+          hardResetMethod: "exit"
+        });
+      } else {
+        console.log(`Renderer path not found: ${rendererPath}`);
+      }
+    } else {
+      console.log("electron-reload module not found, skipping hot reload setup");
+    }
   } catch (err) {
-    console.error("electron-reload:", err);
+    console.error("electron-reload setup error:", err.message);
   }
 }
 
@@ -2843,12 +2857,12 @@ ipcMain.handle("set-app-badge", async (_, count) => {
 // Adicionar manipulador para abrir URLs externas
 ipcMain.handle("open-external", async (event, url) => {
   try {
-    if (url && typeof url === 'string' && (url.startsWith('http://') || url.startsWith('https://'))) {
+    if (url && typeof url === "string" && (url.startsWith("http://") || url.startsWith("https://"))) {
       await shell.openExternal(url);
       return { success: true };
     } else {
       console.error(`Invalid URL format: ${url}`);
-      return { success: false, error: 'Invalid URL format' };
+      return { success: false, error: "Invalid URL format" };
     }
   } catch (error) {
     console.error(`Error opening external URL: ${error.message}`);

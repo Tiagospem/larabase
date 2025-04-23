@@ -39,8 +39,24 @@ async function _testConnection(config, options) {
   }
 }
 
+function safeRegisterHandler(channel, handler) {
+  try {
+    ipcMain._invokeHandlers = ipcMain._invokeHandlers || {};
+    if (ipcMain._invokeHandlers[channel]) {
+      console.log(`Handler for '${channel}' already registered, skipping duplicate registration`);
+      return;
+    }
+
+    ipcMain.handle(channel, handler);
+
+    ipcMain._invokeHandlers[channel] = true;
+  } catch (err) {
+    console.error(`Error registering handler for ${channel}:`, err);
+  }
+}
+
 function registerConnectionHandlers(store) {
-  ipcMain.handle("test-mysql-connection", async (_e, config) => {
+  safeRegisterHandler("test-mysql-connection", async (_e, config) => {
     try {
       await _testConnection(config, { selectDb: true });
       return { success: true, message: "Connection successful" };
@@ -52,15 +68,16 @@ function registerConnectionHandlers(store) {
     }
   });
 
-  ipcMain.handle("get-connections", () => {
+  safeRegisterHandler("get-connections", () => {
     try {
       return store.get("connections") || [];
-    } catch {
+    } catch (error) {
+      console.error("Error getting connections:", error);
       return [];
     }
   });
 
-  ipcMain.handle("update-connection-database", (_e, id, newDb) => {
+  safeRegisterHandler("update-connection-database", (_e, id, newDb) => {
     if (!id || !newDb) {
       return {
         success: false,

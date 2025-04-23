@@ -12,12 +12,12 @@ export default defineConfig({
   build: {
     outDir: path.resolve(__dirname, "dist/renderer"),
     emptyOutDir: true,
-    minify: 'terser',
+    minify: "terser",
     terserOptions: {
       compress: {
         drop_console: true,
         drop_debugger: true,
-        pure_funcs: ['console.log', 'console.debug', 'console.trace']
+        pure_funcs: ["console.log", "console.debug", "console.trace"]
       },
       format: {
         comments: false
@@ -25,14 +25,24 @@ export default defineConfig({
     },
     rollupOptions: {
       output: {
-        manualChunks: {
-          'vue-vendor': ['vue', 'vue-router', 'pinia'],
-          'ui-components': ['highlight.js', 'marked', 'sql-formatter'],
-          'database': ['uuid']
+        manualChunks: (id) => {
+          // Split vendors into separate chunks to improve caching
+          if (id.includes("node_modules")) {
+            if (id.includes("vue")) {
+              return "vendor-vue";
+            } else if (id.includes("highlight.js") || id.includes("marked") || id.includes("sql-formatter")) {
+              return "vendor-formatters";
+            } else if (id.includes("pinia") || id.includes("vue-router")) {
+              return "vendor-framework";
+            } else {
+              return "vendor";
+            }
+          }
         }
       }
     },
-    sourcemap: false
+    sourcemap: false,
+    chunkSizeWarningLimit: 1000
   },
   resolve: {
     alias: {
