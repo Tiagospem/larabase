@@ -5,11 +5,12 @@
   >
     <div class="flex items-center mb-2 sm:mb-0">
       <span class="text-gray-400">
-        {{ tableDataStore.tableName }} | {{ tableDataStore.totalRecords }} records{{ tableDataStore.selectedRows.length > 0 ? ` | ${tableDataStore.selectedRows.length} selected` : "" }} |
+        {{ tableDataStore.totalRecords }} records{{ tableDataStore.selectedRows.length > 0 ? ` | ${tableDataStore.selectedRows.length} selected` : "" }} |
         <span>{{ tableDataStore.columns.length }} columns</span>
       </span>
       <div class="ml-4 flex space-x-2">
         <button
+          v-tooltip.top="'Export'"
           v-if="tableDataStore.tableData.length > 0"
           class="btn btn-ghost btn-xs"
           @click="showExportModal = true"
@@ -28,12 +29,11 @@
               d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3"
             />
           </svg>
-          Export
         </button>
       </div>
     </div>
 
-    <div class="flex items-center space-x-4">
+    <div class="flex items-center space-x-2">
       <div class="join">
         <button
           class="join-item btn btn-xs"
@@ -135,16 +135,15 @@
       </div>
 
       <div class="flex items-center space-x-2">
-        <span class="text-gray-400 hidden sm:inline-block">Rows per page:</span>
         <select
           v-model="tableDataStore.rowsPerPage"
-          class="select select-xs select-bordered bg-base-300 w-16"
+          class="select select-xs select-bordered bg-base-300 w-22"
           @change="tableDataStore.currentPage = 1"
         >
-          <option value="10">10</option>
-          <option value="25">25</option>
-          <option value="50">50</option>
-          <option value="100">100</option>
+          <option value="10">10 rows</option>
+          <option value="25">25 rows</option>
+          <option value="50">50 rows</option>
+          <option value="100">100 rows</option>
         </select>
       </div>
 

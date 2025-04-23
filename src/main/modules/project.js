@@ -5,6 +5,16 @@ const path = require("path");
 const { execSync } = require("child_process");
 const pluralize = require("pluralize");
 
+// Utility function to extract values from .env file
+function extractEnvValue(content, key) {
+  const regex = new RegExp(`^${key}=(.*)$`, "m");
+  const match = content.match(regex);
+  if (match && match[1]) {
+    return match[1].trim().replace(/^["']|["']$/g, "");
+  }
+  return null;
+}
+
 const DOCKER_SOCKET = "/var/run/docker.sock";
 
 function socketExists(path) {
@@ -448,6 +458,188 @@ function registerProjectHandlers() {
     } catch (error) {
       console.error("Error validating Laravel project:", error);
       return false;
+    }
+  });
+
+  ipcMain.handle("compare-project-database", async (event, { projectPath, connectionDatabase }) => {
+    try {
+      if (!projectPath || !connectionDatabase) {
+        return {
+          success: false,
+          message: "Missing project path or connection database",
+          isMatch: false
+        };
+      }
+
+      const envPath = path.join(projectPath, ".env");
+
+      if (!fs.existsSync(envPath)) {
+        return {
+          success: false,
+          message: ".env file not found",
+          isMatch: false
+        };
+      }
+
+      const envContent = fs.readFileSync(envPath, "utf8");
+      const projectDatabase = extractEnvValue(envContent, "DB_DATABASE");
+
+      if (!projectDatabase) {
+        return {
+          success: false,
+          message: "DB_DATABASE not found in .env file",
+          isMatch: false
+        };
+      }
+
+      return {
+        success: true,
+        isMatch: projectDatabase === connectionDatabase,
+        projectDatabase,
+        connectionDatabase
+      };
+    } catch (error) {
+      console.error("Error comparing project database:", error);
+      return {
+        success: false,
+        message: error.message || "Failed to compare project database",
+        isMatch: false
+      };
+    }
+  });
+
+  ipcMain.handle("find-laravel-commands", async (event, projectPath) => {
+    try {
+      if (!projectPath) {
+        return {
+          success: false,
+          message: "Missing project path",
+          commands: []
+        };
+      }
+
+      const commands = [];
+
+      // Check for the main commands directories in different Laravel versions
+      const commandDirs = [path.join(projectPath, "app", "Console", "Commands"), path.join(projectPath, "app", "Commands")];
+
+      // Recursively process command files
+      const processCommandFiles = (dir) => {
+        if (!fs.existsSync(dir)) return;
+
+        const entries = fs.readdirSync(dir, { withFileTypes: true });
+
+        for (const entry of entries) {
+          const fullPath = path.join(dir, entry.name);
+
+          if (entry.isDirectory()) {
+            // Recursively process subdirectories
+            processCommandFiles(fullPath);
+          } else if (entry.isFile() && entry.name.endsWith(".php")) {
+            try {
+              const content = fs.readFileSync(fullPath, "utf8");
+
+              // Look for common command patterns
+              const extendsCommand = /extends\s+Command|extends\s+BaseCommand/i.test(content);
+              const implementsConsole = /implements\s+ConsoleCommand/i.test(content);
+
+              if (!extendsCommand && !implementsConsole) continue;
+
+              // Extract command information
+              const classMatch = content.match(/class\s+(\w+)/);
+              if (!classMatch) continue;
+
+              const className = classMatch[1];
+              const nameMatch = content.match(/protected\s+\$name\s*=\s*['"](.*?)['"]/);
+              const signatureMatch = content.match(/protected\s+\$signature\s*=\s*['"](.*?)['"]/);
+              const descriptionMatch = content.match(/protected\s+\$description\s*=\s*['"](.*?)['"]/);
+
+              const commandName = nameMatch ? nameMatch[1] : signatureMatch ? signatureMatch[1].split(" ")[0] : null;
+              const signature = signatureMatch ? signatureMatch[1] : nameMatch ? nameMatch[1] : null;
+              const description = descriptionMatch ? descriptionMatch[1] : "";
+
+              if (commandName || signature) {
+                commands.push({
+                  name: commandName || signature.split(" ")[0],
+                  signature: signature,
+                  description: description,
+                  className: className,
+                  path: fullPath,
+                  relativePath: path.relative(projectPath, fullPath)
+                });
+              }
+            } catch (err) {
+              console.error(`Error parsing command file ${fullPath}:`, err);
+            }
+          }
+        }
+      };
+
+      // Process all command directories
+      for (const dir of commandDirs) {
+        processCommandFiles(dir);
+      }
+
+      // Additionally, try to discover artisan commands using artisan list
+      try {
+        const useSail = fs.existsSync(path.join(projectPath, "docker-compose.yml")) && fs.existsSync(path.join(projectPath, "vendor", "laravel", "sail"));
+
+        const cmdPrefix = useSail ? "sail " : "";
+        const artisanListCmd = `cd "${projectPath}" && ${cmdPrefix}php artisan list --format=json`;
+
+        const artisanListOutput = execCommand(artisanListCmd, { timeout: 10000 });
+
+        if (artisanListOutput) {
+          try {
+            const jsonStart = artisanListOutput.indexOf("{");
+            const jsonEnd = artisanListOutput.lastIndexOf("}");
+
+            if (jsonStart >= 0 && jsonEnd > jsonStart) {
+              const jsonStr = artisanListOutput.substring(jsonStart, jsonEnd + 1);
+              const parsed = JSON.parse(jsonStr);
+
+              if (parsed.commands) {
+                // Add built-in commands that don't have PHP files
+                for (const cmdName in parsed.commands) {
+                  const cmd = parsed.commands[cmdName];
+
+                  // Skip already found custom commands
+                  if (!commands.some((c) => c.name === cmdName)) {
+                    commands.push({
+                      name: cmdName,
+                      signature: cmd.definition || cmdName,
+                      description: cmd.description || "",
+                      className: null,
+                      path: null,
+                      relativePath: null,
+                      isBuiltIn: true
+                    });
+                  }
+                }
+              }
+            }
+          } catch (jsonErr) {
+            console.error("Error parsing artisan list JSON:", jsonErr);
+          }
+        }
+      } catch (artisanErr) {
+        console.error("Error running artisan list command:", artisanErr);
+      }
+
+      // Sort commands by name
+      commands.sort((a, b) => a.name.localeCompare(b.name));
+
+      return {
+        success: true,
+        commands: commands
+      };
+    } catch (error) {
+      console.error("Error finding Laravel commands:", error);
+      return {
+        success: false,
+        message: error.message || "Failed to find Laravel commands",
+        commands: []
+      };
     }
   });
 }

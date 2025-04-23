@@ -5,6 +5,9 @@ export const useTabsStore = defineStore("tabs", () => {
   const openTabs = ref([]);
   const activeTabId = ref(null);
 
+  // Define a computed property for tabs to be used externally
+  const tabs = computed(() => openTabs.value);
+
   async function addTab(tableData) {
     const isFiltered = tableData.filter && tableData.filter.trim() !== "";
 
@@ -232,16 +235,24 @@ export const useTabsStore = defineStore("tabs", () => {
     return openTabs.value.find((tab) => tab.id === activeTabId.value) || null;
   });
 
+  function closeTab(tabId) {
+    return removeTab(tabId);
+  }
+
   return {
     openTabs,
     activeTabId,
     activeTab,
+    tabs,
     addTab,
     removeTab,
+    closeTab,
     updateTabData,
     activateTab,
     reorderTabs,
     loadSavedTabs,
+    saveOpenTabs,
+    saveTabs: saveOpenTabs,
     closeAllTabs,
     closeTabsByConnectionId
   };

@@ -265,17 +265,19 @@
       v-if="selectedMigration"
       class="modal modal-open"
     >
-      <div class="modal-box w-11/12 max-w-5xl max-h-[90vh]">
+      <div class="modal-box w-11/12 max-w-5xl max-h-[90vh] flex flex-col">
         <h3 class="font-bold text-lg mb-4">
           Migration:
           {{ selectedMigration.displayName || selectedMigration.name }}
         </h3>
-        <PhpViewer
-          :code="selectedMigration.code"
-          language="php"
-          height="60"
-        />
-        <div class="modal-action">
+        <div class="flex-1 overflow-auto">
+          <PhpViewer
+            :code="selectedMigration.code"
+            language="php"
+            height="100%"
+          />
+        </div>
+        <div class="modal-action mt-4">
           <button
             class="btn"
             @click="selectedMigration = null"
@@ -440,37 +442,3 @@ onMounted(() => {
   loadMigrations();
 });
 </script>
-
-<style scoped>
-.timeline-box {
-  width: 100%;
-  max-width: none;
-}
-
-.timeline-vertical::before {
-  left: 50%;
-}
-
-.timeline-start {
-  place-items: end;
-  grid-column-start: 1;
-  grid-column-end: 5;
-  text-align: left;
-}
-
-.timeline-middle {
-  grid-column-start: 5;
-  grid-column-end: 7;
-}
-
-.timeline-end {
-  grid-column-start: 7;
-  grid-column-end: 11;
-}
-
-@media (max-width: 640px) {
-  .timeline-box {
-    width: calc(100% - 1rem);
-  }
-}
-</style>

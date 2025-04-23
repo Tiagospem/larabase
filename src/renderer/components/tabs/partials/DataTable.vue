@@ -166,7 +166,6 @@
                 <span
                   v-else-if="tableDataStore.isForeignKeyColumn(column) && row[column] === null"
                   class="ml-1 text-gray-500 flex-shrink-0"
-                  title="Relação nula"
                 >
                   <svg
                     xmlns="http://www.w3.org/2000/svg"

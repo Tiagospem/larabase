@@ -62,6 +62,28 @@
           </button>
 
           <button
+            v-tooltip.bottom="'Switch Database'"
+            class="btn btn-ghost btn-sm text-white"
+            title="Switch Database"
+            @click="databaseSwitchRef?.openDatabaseSwitcher()"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke-width="1.5"
+              stroke="currentColor"
+              class="size-5"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                d="M7.5 21 3 16.5m0 0L7.5 12M3 16.5h13.5m0-13.5L21 7.5m0 0L16.5 12M21 7.5H7.5"
+              />
+            </svg>
+          </button>
+
+          <button
             v-tooltip.bottom="'SQL Editor'"
             class="btn btn-ghost btn-sm"
             title="SQL Editor"
@@ -79,6 +101,28 @@
                 stroke-linecap="round"
                 stroke-linejoin="round"
                 d="M17.25 6.75 22.5 12l-5.25 5.25m-10.5 0L1.5 12l5.25-5.25m7.5-3-4.5 16.5"
+              />
+            </svg>
+          </button>
+
+          <button
+            v-tooltip.bottom="'Query Explain Tool'"
+            class="btn btn-ghost btn-sm"
+            title="Query Explain Tool"
+            @click="openExplainTool"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke-width="1.5"
+              stroke="currentColor"
+              class="size-5"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                d="M7.5 14.25v2.25m3-4.5v4.5m3-6.75v6.75m3-9v9M6 20.25h12A2.25 2.25 0 0020.25 18V6A2.25 2.25 0 0018 3.75H6A2.25 2.25 0 003.75 6v12A2.25 2.25 0 006 20.25z"
               />
             </svg>
           </button>
@@ -115,9 +159,7 @@
               id="Capa_1"
               fill="#fff"
               class="size-5"
-              version="1.1"
               xmlns="http://www.w3.org/2000/svg"
-              xmlns:xlink="http://www.w3.org/1999/xlink"
               viewBox="0 0 60 60"
               xml:space="preserve"
             >
@@ -207,9 +249,32 @@
             </svg>
           </button>
 
+          <button
+            v-tooltip.bottom="'Laravel Commands'"
+            class="btn btn-ghost btn-sm text-white"
+            title="Laravel Commands"
+            @click="showLaravelCommands = true"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke-width="1.5"
+              stroke="currentColor"
+              class="size-5"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                d="m6.75 7.5 3 2.25-3 2.25m4.5 0h3m-9 8.25h13.5A2.25 2.25 0 0 0 21 18V6a2.25 2.25 0 0 0-2.25-2.25H5.25A2.25 2.25 0 0 0 3 6v12a2.25 2.25 0 0 0 2.25 2.25Z"
+              />
+            </svg>
+          </button>
+
           <!-- Redis Manager Button -->
           <button
-            v-if="isRedisConnection && isRedisAvailable"
+            :disabled="!isRedisConnection && !isRedisAvailable"
+            :class="{ 'opacity-20': !isRedisConnection && !isRedisAvailable }"
             v-tooltip.bottom="'Redis Manager'"
             class="btn btn-ghost btn-sm text-white"
             title="Redis Manager"
@@ -288,6 +353,7 @@
         :style="{ width: `${sidebarWidth}px` }"
         @resize-start="startResize"
         @table-open="mainTabsRef?.openTable"
+        @close-tabs="closeDeletedTableTabs"
         @update:sidebar-width="sidebarWidth = $event"
       />
 
@@ -374,9 +440,21 @@
     @close="showArtisanCommands = false"
   />
 
+  <LaravelCommands
+    v-if="showLaravelCommands"
+    :connection-id="connectionId"
+    :project-path="connection?.projectPath"
+    :connection="connection"
+    @close="showLaravelCommands = false"
+    @update-project-path="handleUpdateProjectPath"
+  />
+
   <CommandOutput />
 
-  <DatabaseSwitcher :connection-id="connectionId" />
+  <DatabaseSwitcher
+    :connection-id="connectionId"
+    ref="databaseSwitchRef"
+  />
 
   <RedisManager
     v-if="showRedisManager"
@@ -469,6 +547,7 @@ import MainTabs from "../components/database/MainTabs.vue";
 import ShowConnectionInfo from "@/components/database/ShowConnectionInfo.vue";
 import DatabaseSwitcher from "@/components/database/DatabaseSwitcher.vue";
 import RedisManager from "@/components/RedisManager.vue";
+import LaravelCommands from "../components/LaravelCommands.vue";
 
 const TableContentComponent = markRaw(TableContent);
 
@@ -482,6 +561,7 @@ const connectionsStore = useConnectionsStore();
 const databaseStore = useDatabaseStore();
 const tabsStore = useTabsStore();
 
+const databaseSwitchRef = ref(null);
 const mainTabsRef = ref(null);
 const sidebarWidth = ref(240);
 const initialSidebarLoaded = ref(false);
@@ -496,6 +576,7 @@ const allTablesModelsJson = ref("");
 const showSettings = ref(false);
 const showArtisanCommands = ref(false);
 const showRedisManager = ref(false);
+const showLaravelCommands = ref(false);
 const isRedisAvailable = ref(false);
 const isRedisConnection = computed(() => !!connection.value?.redis);
 
@@ -505,32 +586,44 @@ const connection = computed(() => {
 
 const activeTab = computed(() => tabsStore.activeTab);
 
-// Global function to expose table model info for AI integration
 window.getTableModelJson = (tableName) => {
   if (!tableName || !connectionId.value) return null;
   return databaseStore.getTableModelJson(connectionId.value, tableName);
 };
 
-// Global function to get all tables models data
 window.getAllTablesModelsJson = async () => {
   if (!connectionId.value) return null;
   return await databaseStore.getAllTablesModelsJson(connectionId.value);
 };
 
-function startResize() {
+function startResize(e) {
   isResizing.value = true;
+
+  document.documentElement.classList.add("resizing");
+  document.body.style.userSelect = "none";
+  document.body.style.cursor = "col-resize";
+
   document.addEventListener("mousemove", onResize);
   document.addEventListener("mouseup", stopResize);
+
+  e.preventDefault();
+  e.stopPropagation();
 }
 
 function onResize(e) {
   if (isResizing.value) {
     sidebarWidth.value = Math.max(200, Math.min(500, e.clientX));
+    e.preventDefault();
   }
 }
 
 function stopResize() {
   isResizing.value = false;
+
+  document.documentElement.classList.remove("resizing");
+  document.body.style.userSelect = "";
+  document.body.style.cursor = "";
+
   document.removeEventListener("mousemove", onResize);
   document.removeEventListener("mouseup", stopResize);
 
@@ -575,7 +668,6 @@ onMounted(async () => {
   try {
     await tabsStore.loadSavedTabs();
 
-    // Ensure connections are loaded before trying to access them
     await connectionsStore.loadConnections();
 
     if (!connection.value) {
@@ -592,7 +684,6 @@ onMounted(async () => {
     showAlert(`Connected to ${connection.value.name}`, "success");
     await databaseStore.loadTables(connectionId.value);
 
-    // Check Redis availability if it's a Redis connection
     await checkRedisAvailability();
 
     databaseStore.clearTableRecordCounts();
@@ -691,6 +782,10 @@ function openSqlEditor() {
   router.push(`/sql-editor/${connectionId.value}`);
 }
 
+function openExplainTool() {
+  router.push(`/explain/${connectionId.value}`);
+}
+
 function loadSidebarWidth() {
   const savedSidebarWidth = localStorage.getItem("sidebarWidth");
   if (savedSidebarWidth) {
@@ -720,5 +815,44 @@ async function checkRedisAvailability() {
     console.error("Error checking Redis availability:", error);
     isRedisAvailable.value = false;
   }
+}
+
+function closeDeletedTableTabs(deletedTableNames) {
+  if (!deletedTableNames || !deletedTableNames.length) return;
+
+  try {
+    const currentTabs = tabsStore.openTabs || [];
+
+    deletedTableNames.forEach((tableName) => {
+      const tabsToClose = currentTabs.filter((tab) => tab.connectionId === connectionId.value && tab.tableName === tableName);
+
+      if (tabsToClose && tabsToClose.length > 0) {
+        tabsToClose.forEach((tab) => {
+          tabsStore.removeTab(tab.id);
+        });
+      }
+    });
+
+    tabsStore.saveOpenTabs();
+  } catch (error) {
+    console.error("Error closing deleted table tabs:", error);
+    showAlert(`Error closing tabs: ${error.message}`, "error");
+  }
+}
+
+function handleUpdateProjectPath(newProjectPath) {
+  if (!connection.value || !newProjectPath) return;
+
+  connectionsStore
+    .updateConnection(connectionId.value, {
+      projectPath: newProjectPath
+    })
+    .then(() => {
+      showAlert(`Project path updated to ${newProjectPath}`, "success");
+    })
+    .catch((error) => {
+      console.error("Error updating project path:", error);
+      showAlert(`Failed to update project path: ${error.message}`, "error");
+    });
 }
 </script>
