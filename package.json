@@ -21,6 +21,7 @@
   "license": "ISC",
   "dependencies": {
     "daisyui": "^3.9.3",
+    "dockerode": "^4.0.6",
     "electron-dl": "^4.0.0",
     "electron-store": "^8.1.0",
     "electron-updater": "^6.6.2",

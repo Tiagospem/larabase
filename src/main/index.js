@@ -2853,19 +2853,3 @@ ipcMain.handle("set-app-badge", async (_, count) => {
     return { success: false, error: error.message };
   }
 });
-
-// Adicionar manipulador para abrir URLs externas
-ipcMain.handle("open-external", async (event, url) => {
-  try {
-    if (url && typeof url === "string" && (url.startsWith("http://") || url.startsWith("https://"))) {
-      await shell.openExternal(url);
-      return { success: true };
-    } else {
-      console.error(`Invalid URL format: ${url}`);
-      return { success: false, error: "Invalid URL format" };
-    }
-  } catch (error) {
-    console.error(`Error opening external URL: ${error.message}`);
-    return { success: false, error: error.message };
-  }
-});
