@@ -43,6 +43,7 @@ try {
     clearAllRedisDatabases: (config) => safeIpcRenderer.invoke("clear-all-redis-databases", config),
     getRedisKeys: (config) => safeIpcRenderer.invoke("get-redis-keys", config),
     getRedisKeyValue: (config) => safeIpcRenderer.invoke("get-redis-key-value", config),
+    compareProjectDatabase: (config) => safeIpcRenderer.invoke("compare-project-database", config),
 
     saveConnections: (connections) => safeIpcRenderer.invoke("save-connections", connections),
     getOpenTabs: () => safeIpcRenderer.invoke("get-open-tabs"),

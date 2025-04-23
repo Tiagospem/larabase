@@ -5,6 +5,16 @@ const path = require("path");
 const { execSync } = require("child_process");
 const pluralize = require("pluralize");
 
+// Utility function to extract values from .env file
+function extractEnvValue(content, key) {
+  const regex = new RegExp(`^${key}=(.*)$`, "m");
+  const match = content.match(regex);
+  if (match && match[1]) {
+    return match[1].trim().replace(/^["']|["']$/g, "");
+  }
+  return null;
+}
+
 const DOCKER_SOCKET = "/var/run/docker.sock";
 
 function socketExists(path) {
@@ -448,6 +458,53 @@ function registerProjectHandlers() {
     } catch (error) {
       console.error("Error validating Laravel project:", error);
       return false;
+    }
+  });
+
+  ipcMain.handle("compare-project-database", async (event, { projectPath, connectionDatabase }) => {
+    try {
+      if (!projectPath || !connectionDatabase) {
+        return {
+          success: false,
+          message: "Missing project path or connection database",
+          isMatch: false
+        };
+      }
+
+      const envPath = path.join(projectPath, ".env");
+
+      if (!fs.existsSync(envPath)) {
+        return {
+          success: false,
+          message: ".env file not found",
+          isMatch: false
+        };
+      }
+
+      const envContent = fs.readFileSync(envPath, "utf8");
+      const projectDatabase = extractEnvValue(envContent, "DB_DATABASE");
+
+      if (!projectDatabase) {
+        return {
+          success: false,
+          message: "DB_DATABASE not found in .env file",
+          isMatch: false
+        };
+      }
+
+      return {
+        success: true,
+        isMatch: projectDatabase === connectionDatabase,
+        projectDatabase,
+        connectionDatabase
+      };
+    } catch (error) {
+      console.error("Error comparing project database:", error);
+      return {
+        success: false,
+        message: error.message || "Failed to compare project database",
+        isMatch: false
+      };
     }
   });
 }

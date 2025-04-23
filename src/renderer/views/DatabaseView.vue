@@ -553,13 +553,11 @@ const connection = computed(() => {
 
 const activeTab = computed(() => tabsStore.activeTab);
 
-// Global function to expose table model info for AI integration
 window.getTableModelJson = (tableName) => {
   if (!tableName || !connectionId.value) return null;
   return databaseStore.getTableModelJson(connectionId.value, tableName);
 };
 
-// Global function to get all tables models data
 window.getAllTablesModelsJson = async () => {
   if (!connectionId.value) return null;
   return await databaseStore.getAllTablesModelsJson(connectionId.value);
@@ -567,37 +565,32 @@ window.getAllTablesModelsJson = async () => {
 
 function startResize(e) {
   isResizing.value = true;
-  
-  // Adicionar classe ao documento para prevenir seleção de texto
-  document.documentElement.classList.add('resizing');
-  document.body.style.userSelect = 'none';
-  document.body.style.cursor = 'col-resize';
-  
+
+  document.documentElement.classList.add("resizing");
+  document.body.style.userSelect = "none";
+  document.body.style.cursor = "col-resize";
+
   document.addEventListener("mousemove", onResize);
   document.addEventListener("mouseup", stopResize);
-  
-  // Prevenir o comportamento padrão e propagação
+
   e.preventDefault();
   e.stopPropagation();
 }
 
 function onResize(e) {
   if (isResizing.value) {
-    // Calcular nova largura (limitada entre 200px e 500px)
     sidebarWidth.value = Math.max(200, Math.min(500, e.clientX));
-    // Prevenir seleção de texto
     e.preventDefault();
   }
 }
 
 function stopResize() {
   isResizing.value = false;
-  
-  // Remover classe do documento
-  document.documentElement.classList.remove('resizing');
-  document.body.style.userSelect = '';
-  document.body.style.cursor = '';
-  
+
+  document.documentElement.classList.remove("resizing");
+  document.body.style.userSelect = "";
+  document.body.style.cursor = "";
+
   document.removeEventListener("mousemove", onResize);
   document.removeEventListener("mouseup", stopResize);
 
@@ -642,7 +635,6 @@ onMounted(async () => {
   try {
     await tabsStore.loadSavedTabs();
 
-    // Ensure connections are loaded before trying to access them
     await connectionsStore.loadConnections();
 
     if (!connection.value) {
@@ -659,7 +651,6 @@ onMounted(async () => {
     showAlert(`Connected to ${connection.value.name}`, "success");
     await databaseStore.loadTables(connectionId.value);
 
-    // Check Redis availability if it's a Redis connection
     await checkRedisAvailability();
 
     databaseStore.clearTableRecordCounts();
