@@ -646,10 +646,13 @@ function handleCascadeDeleteChange() {
   width: 5px;
   cursor: col-resize;
   transition: background-color 0.2s;
+  z-index: 10;
+  opacity: 0;
 }
 
 .resize-handle:hover {
   background-color: #4e4e50;
+  opacity: 0.5;
 }
 
 .sidebar-container {
@@ -667,7 +670,7 @@ function handleCascadeDeleteChange() {
 
 /* Custom scrollbar styling */
 .scrollable-container::-webkit-scrollbar {
-  width: 8px; /* Make scrollbar wider */
+  width: 8px;
 }
 
 .scrollable-container::-webkit-scrollbar-track {

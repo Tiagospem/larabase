@@ -565,20 +565,39 @@ window.getAllTablesModelsJson = async () => {
   return await databaseStore.getAllTablesModelsJson(connectionId.value);
 };
 
-function startResize() {
+function startResize(e) {
   isResizing.value = true;
+  
+  // Adicionar classe ao documento para prevenir seleção de texto
+  document.documentElement.classList.add('resizing');
+  document.body.style.userSelect = 'none';
+  document.body.style.cursor = 'col-resize';
+  
   document.addEventListener("mousemove", onResize);
   document.addEventListener("mouseup", stopResize);
+  
+  // Prevenir o comportamento padrão e propagação
+  e.preventDefault();
+  e.stopPropagation();
 }
 
 function onResize(e) {
   if (isResizing.value) {
+    // Calcular nova largura (limitada entre 200px e 500px)
     sidebarWidth.value = Math.max(200, Math.min(500, e.clientX));
+    // Prevenir seleção de texto
+    e.preventDefault();
   }
 }
 
 function stopResize() {
   isResizing.value = false;
+  
+  // Remover classe do documento
+  document.documentElement.classList.remove('resizing');
+  document.body.style.userSelect = '';
+  document.body.style.cursor = '';
+  
   document.removeEventListener("mousemove", onResize);
   document.removeEventListener("mouseup", stopResize);
 

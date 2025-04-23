@@ -16,6 +16,13 @@ body {
   min-height: 100vh;
 }
 
+/* Classe para prevenir seleção de texto durante redimensionamento */
+html.resizing,
+html.resizing * {
+  user-select: none !important;
+  cursor: col-resize !important;
+}
+
 #app {
   width: 100%;
   height: 100vh;
