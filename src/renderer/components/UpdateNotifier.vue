@@ -1,8 +1,11 @@
 <template>
   <div v-if="updateAvailable" class="fixed bottom-4 right-4 z-50">
-    <div class="bg-base-200 rounded-lg shadow-lg p-4 max-w-md border border-primary">
+    <div class="bg-base-200 rounded-lg shadow-lg p-4 w-96 border border-primary">
       <div class="flex justify-between items-start mb-2">
-        <h3 class="text-lg font-semibold text-base-content">Update Available: v{{ updateInfo.version }}</h3>
+        <h3 class="text-lg font-semibold text-base-content">
+          Update Available: 
+          <span class="font-mono">v{{ updateInfo.version || '?.?.?' }}</span>
+        </h3>
         <button @click="dismissUpdate" class="btn btn-sm btn-ghost">
           <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
             <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" />
@@ -17,7 +20,10 @@
           <progress class="progress progress-primary w-full" :value="updateInfo.percent" max="100"></progress>
         </p>
         <p v-else-if="updateStatus === 'update-downloaded'">Update downloaded and ready to install. Restart to apply the update.</p>
-        <p v-else-if="updateStatus === 'update-error'">Error updating: {{ updateInfo.message || 'Unknown error' }}</p>
+        <p v-else-if="updateStatus === 'update-error'" class="text-error">
+          <span class="font-bold">Error updating:</span> 
+          <span class="break-words">{{ updateInfo.message || 'Unknown error' }}</span>
+        </p>
       </div>
       
       <div class="flex justify-end space-x-2">
@@ -39,11 +45,17 @@
           class="btn btn-sm btn-outline">
           Try Again
         </button>
+        <button 
+          v-if="updateStatus === 'update-error'" 
+          @click="openReleases" 
+          class="btn btn-sm btn-primary">
+          Download Manually
+        </button>
       </div>
     </div>
   </div>
   
-  <div class="fixed bottom-4 left-4 z-40 text-xs text-opacity-70" v-if="currentVersion">
+  <div class="fixed bottom-4 left-4 z-40 text-xs text-base-content opacity-60" v-if="currentVersion">
     v{{ currentVersion }}
     <button 
       @click="checkForUpdates" 
@@ -64,6 +76,7 @@ const updateStatus = ref('');
 const updateInfo = ref({});
 const currentVersion = ref('');
 let removeUpdateListener = null;
+const RELEASES_URL = 'https://github.com/Tiagospem/larabase/releases';
 
 onMounted(async () => {
   try {
@@ -81,9 +94,19 @@ onMounted(async () => {
             updateStatus.value = data.status;
             
             if (data.data) {
+              // Se for um erro de assinatura, vamos melhorar a mensagem
+              if (data.status === 'update-error' && data.data.message && 
+                  data.data.message.includes('code signature') && 
+                  data.data.message.includes('did not pass validation')) {
+                
+                data.data.message = 'Code signature validation failed. The update cannot be installed automatically. ' +
+                                    'Please download the latest version manually from GitHub.';
+              }
+              
               updateInfo.value = data.data;
             }
             
+            // Atualizar o estado da UI
             if (data.status === 'update-available') {
               updateAvailable.value = true;
             } else if (data.status === 'update-not-available') {
@@ -130,6 +153,10 @@ async function downloadUpdate() {
     await window.api.downloadUpdate();
   } catch (error) {
     console.error('Error downloading update:', error);
+    
+    // Em caso de erro, mostrar o erro na interface
+    updateInfo.value = { message: error.message || 'Unknown error during download' };
+    updateStatus.value = 'update-error';
   }
 }
 
@@ -138,10 +165,23 @@ function installUpdate() {
     window.api.quitAndInstall();
   } catch (error) {
     console.error('Error installing update:', error);
+    
+    // Em caso de erro, mostrar o erro na interface
+    updateInfo.value = { message: error.message || 'Failed to install update' };
+    updateStatus.value = 'update-error';
   }
 }
 
 function dismissUpdate() {
   updateAvailable.value = false;
+}
+
+function openReleases() {
+  if (window.api && window.api.openExternal) {
+    window.api.openExternal(RELEASES_URL);
+  } else {
+    // Fallback to regular window.open if the API is not available
+    window.open(RELEASES_URL, '_blank');
+  }
 }
 </script> 

@@ -11,7 +11,28 @@ export default defineConfig({
   root: path.resolve(__dirname, "src/renderer"),
   build: {
     outDir: path.resolve(__dirname, "dist/renderer"),
-    emptyOutDir: true
+    emptyOutDir: true,
+    minify: 'terser',
+    terserOptions: {
+      compress: {
+        drop_console: true,
+        drop_debugger: true,
+        pure_funcs: ['console.log', 'console.debug', 'console.trace']
+      },
+      format: {
+        comments: false
+      }
+    },
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'vue-vendor': ['vue', 'vue-router', 'pinia'],
+          'ui-components': ['highlight.js', 'marked', 'sql-formatter'],
+          'database': ['uuid']
+        }
+      }
+    },
+    sourcemap: false
   },
   resolve: {
     alias: {

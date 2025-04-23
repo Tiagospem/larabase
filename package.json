@@ -1,6 +1,6 @@
 {
   "name": "larabase",
-  "version": "0.5.0",
+  "version": "0.4.0",
   "description": "An Opined Database GUI for Laravel Developers",
   "main": "src/main/index.js",
   "type": "commonjs",
@@ -10,9 +10,14 @@
     "build:mac": "vite build && electron-builder --mac",
     "build:win": "vite build && electron-builder --win",
     "build:linux": "vite build && electron-builder --linux",
-    "publish-win": "vite build && electron-builder --publish always --win",
-    "publish-mac": "vite build && electron-builder --publish always --mac --universal",
-    "publish-linux": "vite build && electron-builder --publish always --linux",
+    "build:optimized": "npm run clean && cross-env NODE_ENV=production vite build && electron-builder --config.compression=maximum",
+    "build:mac:optimized": "npm run clean && cross-env NODE_ENV=production vite build && electron-builder --mac --config.compression=maximum",
+    "build:win:optimized": "npm run clean && cross-env NODE_ENV=production vite build && electron-builder --win --config.compression=maximum",
+    "build:linux:optimized": "npm run clean && cross-env NODE_ENV=production vite build && electron-builder --linux --config.compression=maximum",
+    "publish-win": "npm run clean && cross-env NODE_ENV=production vite build && electron-builder --publish always --win",
+    "publish-mac": "npm run clean && cross-env NODE_ENV=production vite build && electron-builder --publish always --mac",
+    "publish-linux": "npm run clean && cross-env NODE_ENV=production vite build && electron-builder --publish always --linux",
+    "clean": "rimraf dist node_modules/.vite",
     "format": "prettier . --write --single-attribute-per-line"
   },
   "keywords": [],
@@ -23,7 +28,6 @@
     "electron-log": "^5.3.4",
     "electron-store": "^8.1.0",
     "electron-updater": "^6.6.2",
-    "eslint-config-prettier": "10.1.1",
     "highlight.js": "^11.11.1",
     "marked": "^15.0.8",
     "mysql2": "^3.14.0",
@@ -31,7 +35,6 @@
     "pluralize": "^8.0.0",
     "redis": "^4.6.10",
     "sql-formatter": "^15.6.0",
-    "tailwindcss": "^3.3.3",
     "uuid": "^11.1.0",
     "vue": "^3.3.4",
     "vue-router": "^4.2.4"
@@ -46,10 +49,14 @@
     "electron": "^32.1.0",
     "electron-builder": "^24.6.4",
     "electron-reload": "^2.0.0-alpha.1",
+    "eslint-config-prettier": "10.1.1",
     "eslint-plugin-prettier": "5.2.5",
     "globals": "^16.0.0",
     "postcss": "^8.4.29",
     "prettier": "^3.5.3",
+    "rimraf": "^6.0.1",
+    "tailwindcss": "^3.3.3",
+    "terser": "^5.39.0",
     "ts-node": "^10.9.2",
     "typescript": "^5.8.3",
     "vite": "^4.4.9",
@@ -64,33 +71,58 @@
     "appId": "com.larabase.app",
     "productName": "Larabase",
     "directories": {
-      "output": "dist"
+      "output": "dist",
+      "buildResources": "assets"
     },
+    "files": [
+      "dist/**/*",
+      "src/main/**/*",
+      "LICENSE"
+    ],
+    "extraResources": [
+      {
+        "from": "assets",
+        "to": "assets"
+      }
+    ],
+    "extraMetadata": {
+      "main": "src/main/index.js"
+    },
+    "fileAssociations": [],
+    "asar": true,
+    "asarUnpack": [
+      "node_modules/mysql2/lib/**/*"
+    ],
+    "compression": "maximum",
+    "afterPack": "./build/afterPack.js",
+    "artifactName": "${productName}-${version}-${os}-${arch}.${ext}",
     "publish": {
       "provider": "github",
       "owner": "Tiagospem",
       "repo": "larabase",
       "private": false
     },
-    "files": [
-      "dist/**/*",
-      "src/main/**/*"
-    ],
     "mac": {
       "darkModeSupport": true,
       "icon": "src/renderer/assets/icons/mac/icon.icns",
+      "hardenedRuntime": true,
+      "gatekeeperAssess": false,
       "mergeASARs": false,
+      "entitlements": "build/entitlements.mac.plist",
+      "entitlementsInherit": "build/entitlements.mac.plist",
       "target": [
         {
           "target": "dmg",
           "arch": [
-            "universal"
+            "x64",
+            "arm64"
           ]
         },
         {
           "target": "zip",
           "arch": [
-            "universal"
+            "x64",
+            "arm64"
           ]
         }
       ]

@@ -197,6 +197,7 @@ try {
     downloadUpdate: () => safeIpcRenderer.invoke("download-update"),
     quitAndInstall: () => safeIpcRenderer.invoke("quit-and-install"),
     getCurrentVersion: () => safeIpcRenderer.invoke("get-current-version"),
+    openExternal: (url) => safeIpcRenderer.invoke("open-external", url),
     onUpdateStatus: (callback) => {
       const updateStatusListener = (_, data) => callback(data);
       ipcRenderer.on("update-status", updateStatusListener);
