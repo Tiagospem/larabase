@@ -10,7 +10,77 @@ const safeIpcRenderer = {
   }
 };
 
+// Helper to relay IPC events to DOM events
+function relayEventToDom(channel, data) {
+  try {
+    const event = new CustomEvent(channel, {
+      detail: data
+    });
+    window.dispatchEvent(event);
+
+    // Also log event for debugging
+    if (channel.includes("progress")) {
+      console.log(`[Preload] Relayed ${channel}:`, typeof data === "object" && data?.percent !== undefined ? data.percent : data);
+    }
+  } catch (error) {
+    console.error(`[Preload] Error relaying event ${channel}:`, error);
+  }
+}
+
+// Set up IPC event listeners that relay to DOM events
+const validChannels = ["update-status", "update-available", "update-info", "autoUpdater:update-info", "autoUpdater:download-progress", "autoUpdater:download-complete"];
+
+validChannels.forEach((channel) => {
+  ipcRenderer.on(channel, (event, data) => {
+    relayEventToDom(channel, data);
+  });
+});
+
+// Store event listeners for cleanup
+const eventListeners = new Map();
+
 try {
+  // Expose ipcRenderer for update events
+  contextBridge.exposeInMainWorld("electron", {
+    ipcRenderer: {
+      on: (channel, func) => {
+        if (validChannels.includes(channel)) {
+          const wrappedFunc = (event, ...args) => func(event, ...args);
+          ipcRenderer.on(channel, wrappedFunc);
+
+          // Store the wrapped function for cleanup
+          if (!eventListeners.has(channel)) {
+            eventListeners.set(channel, []);
+          }
+          eventListeners.get(channel).push(wrappedFunc);
+
+          return wrappedFunc;
+        }
+      },
+      removeListener: (channel, func) => {
+        if (validChannels.includes(channel)) {
+          ipcRenderer.removeListener(channel, func);
+
+          // Remove from our stored listeners
+          if (eventListeners.has(channel)) {
+            const listeners = eventListeners.get(channel);
+            const idx = listeners.indexOf(func);
+            if (idx > -1) {
+              listeners.splice(idx, 1);
+            }
+          }
+        }
+      },
+      send: (channel, data) => {
+        const validSendChannels = ["main:download-update", "main:download-progress-info", "main:download-complete"];
+        if (validSendChannels.includes(channel)) {
+          ipcRenderer.send(channel, data);
+        }
+      }
+    }
+  });
+
+  // Expose the API
   contextBridge.exposeInMainWorld("api", {
     selectSqlDumpFile: () => safeIpcRenderer.invoke("select-sql-dump-file"),
     cancelDatabaseRestore: (connectionId) => safeIpcRenderer.invoke("cancel-database-restore", connectionId),
@@ -186,7 +256,7 @@ try {
     send: (channel, data) => {
       if (typeof channel !== "string") return;
 
-      const allowedSendChannels = ["start-database-restore"];
+      const allowedSendChannels = ["start-database-restore", "main:download-update", "main:download-progress-info", "main:download-complete"];
 
       if (allowedSendChannels.includes(channel)) {
         ipcRenderer.send(channel, data);
@@ -194,7 +264,10 @@ try {
     },
     setAppBadge: (count) => safeIpcRenderer.invoke("set-app-badge", count),
     checkForUpdates: () => safeIpcRenderer.invoke("check-for-updates"),
-    downloadUpdate: () => safeIpcRenderer.invoke("download-update"),
+    downloadUpdate: () => {
+      ipcRenderer.send("main:download-update");
+      return Promise.resolve(true);
+    },
     quitAndInstall: () => safeIpcRenderer.invoke("quit-and-install"),
     getCurrentVersion: () => safeIpcRenderer.invoke("get-current-version"),
     openExternal: (url) => safeIpcRenderer.invoke("open-external", url),
@@ -204,7 +277,44 @@ try {
       return () => {
         ipcRenderer.removeListener("update-status", updateStatusListener);
       };
+    },
+    // Additional API for direct event handling
+    onEvent: (channel, callback) => {
+      if (validChannels.includes(channel)) {
+        const listener = (_, data) => callback(data);
+        ipcRenderer.on(channel, listener);
+
+        // Store for cleanup
+        if (!eventListeners.has(channel)) {
+          eventListeners.set(channel, []);
+        }
+        eventListeners.get(channel).push(listener);
+
+        return () => {
+          ipcRenderer.removeListener(channel, listener);
+
+          // Remove from stored listeners
+          if (eventListeners.has(channel)) {
+            const listeners = eventListeners.get(channel);
+            const idx = listeners.indexOf(listener);
+            if (idx > -1) {
+              listeners.splice(idx, 1);
+            }
+          }
+        };
+      }
     }
+  });
+
+  // Setup cleanup on window unload
+  window.addEventListener("beforeunload", () => {
+    // Clean up all listeners
+    for (const [channel, listeners] of eventListeners.entries()) {
+      for (const listener of listeners) {
+        ipcRenderer.removeListener(channel, listener);
+      }
+    }
+    eventListeners.clear();
   });
 } catch (error) {
   console.error(error);
