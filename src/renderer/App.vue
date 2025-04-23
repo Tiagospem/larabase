@@ -9,12 +9,14 @@
       :message="alertMessage"
       @close="clearAlert"
     />
+    <update-notifier />
   </div>
 </template>
 
 <script setup>
 import { ref, provide } from "vue";
 import AppAlert from "./components/AppAlert.vue";
+import UpdateNotifier from "./components/UpdateNotifier.vue";
 
 const alertMessage = ref("");
 const alertType = ref("info");

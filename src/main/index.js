@@ -12,6 +12,7 @@ const { registerConnectionHandlers } = require("./modules/connections");
 const { registerProjectHandlers } = require("./modules/project");
 const { registerTableHandlers } = require("./modules/tables");
 const { registerRedisHandlers } = require("./modules/redis");
+const { registerUpdaterHandlers, cleanup } = require("./modules/updater");
 
 const store = new Store();
 const dbMonitoringConnections = new Map();
@@ -28,6 +29,10 @@ app.whenReady().then(async () => {
 
   enhancePath();
 
+  // Register the updater handlers first to ensure they're available
+  registerUpdaterHandlers(mainWindow);
+  
+  // Then register other handlers
   registerTableHandlers(store, dbMonitoringConnections);
   registerRestoreDumpHandlers(store);
   registerConnectionHandlers(store);
@@ -186,17 +191,37 @@ if (process.env.NODE_ENV === "development") {
   }
 }
 
-app.on("will-quit", () => {
+app.on("will-quit", async () => {
   console.log("Application is quitting, performing cleanup...");
+
+  // Clean up updater interval
+  cleanup();
 
   for (const [connectionId, connection] of dbMonitoringConnections.entries()) {
     try {
-      if (connection) connection.end();
-    } catch (e) {
-      console.error(`Error closing connection ${connectionId}:`, e);
+      await connection.end();
+      console.log(`Closed monitoring connection for ${connectionId}`);
+    } catch (error) {
+      console.error(`Error closing monitoring connection for ${connectionId}:`, error);
     }
   }
   dbMonitoringConnections.clear();
+
+  for (const [connectionId, connectionData] of dbActivityConnections.entries()) {
+    try {
+      if (connectionData.connection) {
+        await connectionData.connection.end();
+      }
+      if (connectionData.triggerConnection) {
+        await connectionData.triggerConnection.end();
+      }
+      console.log(`Closed trigger-based monitoring connections for ${connectionId}`);
+    } catch (error) {
+      console.error(`Error closing trigger-based monitoring connections for ${connectionId}:`, error);
+    }
+  }
+
+  dbActivityConnections.clear();
 });
 
 app.on("window-all-closed", () => {
