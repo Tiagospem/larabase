@@ -10,13 +10,10 @@
     "build:mac": "vite build && electron-builder --mac",
     "build:win": "vite build && electron-builder --win",
     "build:linux": "vite build && electron-builder --linux",
-    "build:optimized": "npm run clean && cross-env NODE_ENV=production vite build && electron-builder --config.compression=maximum",
-    "build:mac:optimized": "npm run clean && cross-env NODE_ENV=production vite build && electron-builder --mac --config.compression=maximum",
-    "build:win:optimized": "npm run clean && cross-env NODE_ENV=production vite build && electron-builder --win --config.compression=maximum",
-    "build:linux:optimized": "npm run clean && cross-env NODE_ENV=production vite build && electron-builder --linux --config.compression=maximum",
-    "publish-win": "npm run clean && cross-env NODE_ENV=production vite build && electron-builder --publish always --win",
-    "publish-mac": "npm run clean && cross-env NODE_ENV=production vite build && electron-builder --publish always --mac",
-    "publish-linux": "npm run clean && cross-env NODE_ENV=production vite build && electron-builder --publish always --linux",
+    "publish": "cross-env NODE_ENV=production vite build && electron-builder --publish always",
+    "publish:mac": "cross-env NODE_ENV=production vite build && electron-builder --publish always --mac",
+    "publish:win": "cross-env NODE_ENV=production vite build && electron-builder --publish always --win",
+    "publish:linux": "cross-env NODE_ENV=production vite build && electron-builder --publish always --linux",
     "clean": "rimraf dist node_modules/.vite",
     "format": "prettier . --write --single-attribute-per-line"
   },
@@ -94,8 +91,8 @@
       "node_modules/mysql2/lib/**/*"
     ],
     "compression": "maximum",
-    "afterPack": "./build/afterPack.js",
     "artifactName": "${productName}-${version}-${os}-${arch}.${ext}",
+    "forceCodeSigning": false,
     "publish": {
       "provider": "github",
       "owner": "Tiagospem",
@@ -110,6 +107,8 @@
       "mergeASARs": false,
       "entitlements": "build/entitlements.mac.plist",
       "entitlementsInherit": "build/entitlements.mac.plist",
+      "notarize": false,
+      "electronUpdaterCompatibility": false,
       "target": [
         {
           "target": "dmg",
