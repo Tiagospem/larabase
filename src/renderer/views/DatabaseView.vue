@@ -249,6 +249,28 @@
             </svg>
           </button>
 
+          <button
+            v-tooltip.bottom="'Laravel Commands'"
+            class="btn btn-ghost btn-sm text-white"
+            title="Laravel Commands"
+            @click="showLaravelCommands = true"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke-width="1.5"
+              stroke="currentColor"
+              class="size-5"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                d="m6.75 7.5 3 2.25-3 2.25m4.5 0h3m-9 8.25h13.5A2.25 2.25 0 0 0 21 18V6a2.25 2.25 0 0 0-2.25-2.25H5.25A2.25 2.25 0 0 0 3 6v12a2.25 2.25 0 0 0 2.25 2.25Z"
+              />
+            </svg>
+          </button>
+
           <!-- Redis Manager Button -->
           <button
             :disabled="!isRedisConnection && !isRedisAvailable"
@@ -418,6 +440,15 @@
     @close="showArtisanCommands = false"
   />
 
+  <LaravelCommands
+    v-if="showLaravelCommands"
+    :connection-id="connectionId"
+    :project-path="connection?.projectPath"
+    :connection="connection"
+    @close="showLaravelCommands = false"
+    @update-project-path="handleUpdateProjectPath"
+  />
+
   <CommandOutput />
 
   <DatabaseSwitcher
@@ -516,6 +547,7 @@ import MainTabs from "../components/database/MainTabs.vue";
 import ShowConnectionInfo from "@/components/database/ShowConnectionInfo.vue";
 import DatabaseSwitcher from "@/components/database/DatabaseSwitcher.vue";
 import RedisManager from "@/components/RedisManager.vue";
+import LaravelCommands from "../components/LaravelCommands.vue";
 
 const TableContentComponent = markRaw(TableContent);
 
@@ -544,6 +576,7 @@ const allTablesModelsJson = ref("");
 const showSettings = ref(false);
 const showArtisanCommands = ref(false);
 const showRedisManager = ref(false);
+const showLaravelCommands = ref(false);
 const isRedisAvailable = ref(false);
 const isRedisConnection = computed(() => !!connection.value?.redis);
 
@@ -805,5 +838,21 @@ function closeDeletedTableTabs(deletedTableNames) {
     console.error("Error closing deleted table tabs:", error);
     showAlert(`Error closing tabs: ${error.message}`, "error");
   }
+}
+
+function handleUpdateProjectPath(newProjectPath) {
+  if (!connection.value || !newProjectPath) return;
+
+  connectionsStore
+    .updateConnection(connectionId.value, {
+      projectPath: newProjectPath
+    })
+    .then(() => {
+      showAlert(`Project path updated to ${newProjectPath}`, "success");
+    })
+    .catch((error) => {
+      console.error("Error updating project path:", error);
+      showAlert(`Failed to update project path: ${error.message}`, "error");
+    });
 }
 </script>

@@ -29,6 +29,7 @@ try {
     getTableStructure: (config) => safeIpcRenderer.invoke("get-table-structure", config),
     getTableForeignKeys: (config) => safeIpcRenderer.invoke("get-table-foreign-keys", config),
     findTableMigrations: (config) => safeIpcRenderer.invoke("find-table-migrations", config),
+    findLaravelCommands: (projectPath) => safeIpcRenderer.invoke("find-laravel-commands", projectPath),
     updateRecord: (config) => safeIpcRenderer.invoke("update-table-record", config),
     deleteRecords: (config) => safeIpcRenderer.invoke("delete-table-records", config),
     truncateTable: (config) => safeIpcRenderer.invoke("truncate-table", config),
