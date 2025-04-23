@@ -73,6 +73,45 @@ Build the application:
 npm run build
 ```
 
+## Troubleshooting
+
+### macOS Malware Alert
+
+Some macOS users might encounter the following warning when using Docker or OrbStack features:
+
+```
+Malware Blocked
+"Docker" was not opened because it contains malware. This action did not harm your Mac.
+```
+
+This is triggered by macOS Gatekeeper security system, which sometimes incorrectly flags Docker/OrbStack as suspicious. Here's how to resolve it:
+
+#### Option 1: Allow via Security Settings
+
+1. When the alert appears, go to System Preferences > Security & Privacy > General tab
+2. Look for a message about Docker/OrbStack being blocked
+3. Click "Allow Anyway" or "Open Anyway"
+
+#### Option 2: Reinstall from Official Source
+
+1. Download Docker Desktop from the [official website](https://www.docker.com/products/docker-desktop/)
+2. Download OrbStack from the [official website](https://orbstack.dev/)
+3. Uninstall your current version before installing the new one
+
+#### Option 3: Remove Quarantine Flag (Advanced)
+
+Run this command in Terminal:
+
+```bash
+xattr -d com.apple.quarantine /Applications/Docker.app
+# Or for OrbStack
+xattr -d com.apple.quarantine /Applications/OrbStack.app
+```
+
+#### Option 4: Update to Latest Version
+
+The latest versions of Docker Desktop and OrbStack are properly signed and generally avoid these issues.
+
 ## Project Structure
 
 - `src/main`: Electron code (main process)
