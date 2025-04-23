@@ -96,7 +96,8 @@
       <div class="modal-box bg-base-300">
         <h3 class="font-bold text-lg">Delete Database</h3>
         <p class="py-4">
-          Are you sure you want to delete database <span class="font-bold">{{ databaseToDelete }}</span>? This action cannot be undone.
+          Are you sure you want to delete database <span class="font-bold">{{ databaseToDelete }}</span
+          >? This action cannot be undone.
         </p>
         <div class="modal-action">
           <button
@@ -104,7 +105,10 @@
             :disabled="deletingDatabase"
             @click="deleteDatabase"
           >
-            <span v-if="deletingDatabase" class="loading loading-spinner loading-xs mr-2"></span>
+            <span
+              v-if="deletingDatabase"
+              class="loading loading-spinner loading-xs mr-2"
+            ></span>
             Delete
           </button>
           <button
@@ -200,9 +204,9 @@ async function deleteDatabase() {
 
     if (result.success) {
       showAlert(`Database ${databaseToDelete.value} deleted successfully`, "success");
-      
+
       // Remove the database from the list
-      availableDatabases.value = availableDatabases.value.filter(db => db !== databaseToDelete.value);
+      availableDatabases.value = availableDatabases.value.filter((db) => db !== databaseToDelete.value);
     } else {
       showAlert(`Failed to delete database: ${result.message}`, "error");
     }

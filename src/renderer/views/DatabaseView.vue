@@ -331,6 +331,7 @@
         :style="{ width: `${sidebarWidth}px` }"
         @resize-start="startResize"
         @table-open="mainTabsRef?.openTable"
+        @close-tabs="closeDeletedTableTabs"
         @update:sidebar-width="sidebarWidth = $event"
       />
 
@@ -770,6 +771,29 @@ async function checkRedisAvailability() {
   } catch (error) {
     console.error("Error checking Redis availability:", error);
     isRedisAvailable.value = false;
+  }
+}
+
+function closeDeletedTableTabs(deletedTableNames) {
+  if (!deletedTableNames || !deletedTableNames.length) return;
+
+  try {
+    const currentTabs = tabsStore.openTabs || [];
+
+    deletedTableNames.forEach((tableName) => {
+      const tabsToClose = currentTabs.filter((tab) => tab.connectionId === connectionId.value && tab.tableName === tableName);
+
+      if (tabsToClose && tabsToClose.length > 0) {
+        tabsToClose.forEach((tab) => {
+          tabsStore.removeTab(tab.id);
+        });
+      }
+    });
+
+    tabsStore.saveOpenTabs();
+  } catch (error) {
+    console.error("Error closing deleted table tabs:", error);
+    showAlert(`Error closing tabs: ${error.message}`, "error");
   }
 }
 </script>

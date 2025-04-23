@@ -166,20 +166,20 @@
           </div>
         </div>
 
-        <div 
-          v-if="isDeleteMode" 
+        <div
+          v-if="isDeleteMode"
           class="flex justify-between items-center mt-2 text-sm"
         >
           <div class="flex items-center">
-            <input 
-              type="checkbox" 
+            <input
+              type="checkbox"
               class="checkbox checkbox-xs mr-2"
               :checked="isAllSelected"
               @change="toggleSelectAll"
             />
             <span class="text-xs">Select All</span>
           </div>
-          <button 
+          <button
             class="btn btn-xs btn-error"
             :disabled="selectedTables.length === 0"
             @click="confirmDelete"
@@ -219,9 +219,12 @@
               class="table-link rounded-md"
               @click="isDeleteMode ? toggleTableSelection(table.name) : openTable(table)"
             >
-              <div v-if="isDeleteMode" class="flex items-center mr-1">
-                <input 
-                  type="checkbox" 
+              <div
+                v-if="isDeleteMode"
+                class="flex items-center mr-1"
+              >
+                <input
+                  type="checkbox"
                   class="checkbox checkbox-xs"
                   :checked="isTableSelected(table.name)"
                   @click.stop="toggleTableSelection(table.name)"
@@ -277,15 +280,15 @@
         <h3 class="font-bold text-lg">Delete Tables</h3>
         <p class="py-4">
           Are you sure you want to delete {{ selectedTables.length }} table(s)?
-          <br>
+          <br />
           <span class="font-bold text-error">This action cannot be undone.</span>
         </p>
         <div class="py-2">
           <div class="form-control">
             <label class="label cursor-pointer justify-start">
-              <input 
-                v-model="ignoreForeignKeys" 
-                type="checkbox" 
+              <input
+                v-model="ignoreForeignKeys"
+                type="checkbox"
                 class="checkbox checkbox-sm checkbox-error mr-2"
                 @change="handleIgnoreForeignKeysChange"
               />
@@ -294,9 +297,9 @@
           </div>
           <div class="form-control">
             <label class="label cursor-pointer justify-start">
-              <input 
-                v-model="cascadeDelete" 
-                type="checkbox" 
+              <input
+                v-model="cascadeDelete"
+                type="checkbox"
                 class="checkbox checkbox-sm checkbox-error mr-2"
                 @change="handleCascadeDeleteChange"
               />
@@ -308,7 +311,12 @@
           <div class="font-semibold mb-1">Selected tables:</div>
           <div class="max-h-32 overflow-y-auto bg-base-300 p-2 rounded">
             <ul class="list-disc pl-4 space-y-1">
-              <li v-for="table in selectedTables" :key="table">{{ table }}</li>
+              <li
+                v-for="table in selectedTables"
+                :key="table"
+              >
+                {{ table }}
+              </li>
             </ul>
           </div>
         </div>
@@ -318,7 +326,10 @@
             :disabled="isDeleting"
             @click="deleteTables"
           >
-            <span v-if="isDeleting" class="loading loading-spinner loading-xs mr-2"></span>
+            <span
+              v-if="isDeleting"
+              class="loading loading-spinner loading-xs mr-2"
+            ></span>
             Delete Tables
           </button>
           <button
@@ -353,7 +364,7 @@ const props = defineProps({
   }
 });
 
-const emit = defineEmits(["resize-start", "table-open", "update:sidebarWidth"]);
+const emit = defineEmits(["resize-start", "table-open", "update:sidebarWidth", "close-tabs"]);
 const showAlert = inject("showAlert");
 
 const databaseStore = useDatabaseStore();
@@ -453,7 +464,7 @@ function toggleSortOrder() {
 
 function toggleDeleteMode() {
   isDeleteMode.value = !isDeleteMode.value;
-  
+
   if (!isDeleteMode.value) {
     selectedTables.value = [];
   }
@@ -465,7 +476,7 @@ function isTableSelected(tableName) {
 
 function toggleTableSelection(tableName) {
   if (isTableSelected(tableName)) {
-    selectedTables.value = selectedTables.value.filter(t => t !== tableName);
+    selectedTables.value = selectedTables.value.filter((t) => t !== tableName);
   } else {
     selectedTables.value.push(tableName);
   }
@@ -475,27 +486,24 @@ function toggleSelectAll() {
   if (isAllSelected.value) {
     selectedTables.value = [];
   } else {
-    selectedTables.value = sortedTables.value.map(t => t.name);
+    selectedTables.value = sortedTables.value.map((t) => t.name);
   }
 }
 
 function confirmDelete() {
   if (selectedTables.value.length === 0) return;
-  
+
   showDeleteConfirmation.value = true;
 }
 
 async function deleteTables() {
   if (selectedTables.value.length === 0) return;
-  
+
   isDeleting.value = true;
-  
+
   // Convert proxy array to plain JavaScript array using JSON serialization
   const tablesToDelete = JSON.parse(JSON.stringify(selectedTables.value));
-  
-  console.log("Deleting tables:", tablesToDelete);
-  console.log("Options:", { ignoreForeignKeys: ignoreForeignKeys.value, cascade: cascadeDelete.value });
-  
+
   try {
     // Create a clean params object with primitive types
     const params = {
@@ -504,15 +512,18 @@ async function deleteTables() {
       ignoreForeignKeys: Boolean(ignoreForeignKeys.value),
       cascade: Boolean(cascadeDelete.value)
     };
-    
+
     console.log("Calling API with params:", JSON.stringify(params));
-    
+
     const result = await window.api.dropTables(params);
-    
+
     console.log("API response:", result);
-    
+
     if (result && result.success) {
       showAlert(`Successfully deleted tables`, "success");
+
+      emit("close-tabs", tablesToDelete);
+
       await databaseStore.loadTables(props.connectionId);
       selectedTables.value = [];
       isDeleteMode.value = false;

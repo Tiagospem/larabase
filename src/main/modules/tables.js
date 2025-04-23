@@ -544,12 +544,14 @@ function registerTableHandlers(store, dbMonitoringConnections) {
   ipcMain.handle("drop-tables", async (_e, config = {}) => {
     // Safely clone input to prevent serialization issues
     try {
-      config = JSON.parse(JSON.stringify({
-        connectionId: config.connectionId || "",
-        tables: Array.isArray(config.tables) ? [...config.tables] : [],
-        ignoreForeignKeys: Boolean(config.ignoreForeignKeys),
-        cascade: Boolean(config.cascade)
-      }));
+      config = JSON.parse(
+        JSON.stringify({
+          connectionId: config.connectionId || "",
+          tables: Array.isArray(config.tables) ? [...config.tables] : [],
+          ignoreForeignKeys: Boolean(config.ignoreForeignKeys),
+          cascade: Boolean(config.cascade)
+        })
+      );
     } catch (parseError) {
       console.error("Error serializing input config:", parseError);
       return {
@@ -568,8 +570,8 @@ function registerTableHandlers(store, dbMonitoringConnections) {
     console.log("Tables deletion requested:", config);
 
     const connections = store.get("connections") || [];
-    const connection = connections.find(c => c.id === config.connectionId);
-    
+    const connection = connections.find((c) => c.id === config.connectionId);
+
     if (!connection) {
       return {
         success: false,
@@ -578,7 +580,7 @@ function registerTableHandlers(store, dbMonitoringConnections) {
     }
 
     let conn;
-    
+
     try {
       // Create a new connection
       conn = await mysql.createConnection({
@@ -589,10 +591,10 @@ function registerTableHandlers(store, dbMonitoringConnections) {
         database: connection.database,
         connectTimeout: 10000
       });
-      
+
       // Begin transaction
       await conn.query("START TRANSACTION");
-      
+
       // Disable foreign key checks if needed
       if (config.ignoreForeignKeys) {
         await conn.query("SET FOREIGN_KEY_CHECKS = 0");
@@ -607,13 +609,13 @@ function registerTableHandlers(store, dbMonitoringConnections) {
           console.log(`Attempting to drop table: ${tableName}`);
           const escapedTableName = conn.escapeId(tableName);
           let dropQuery = `DROP TABLE `;
-          
+
           if (config.cascade) {
             dropQuery += `CASCADE `;
           }
-          
+
           dropQuery += escapedTableName;
-          
+
           console.log(`Executing query: ${dropQuery}`);
           await conn.query(dropQuery);
           successCount++;
@@ -639,16 +641,16 @@ function registerTableHandlers(store, dbMonitoringConnections) {
         };
       } else {
         await conn.query("ROLLBACK");
-        console.log(`Failed to drop ${failedTables.length} tables: ${failedTables.join(', ')}`);
+        console.log(`Failed to drop ${failedTables.length} tables: ${failedTables.join(", ")}`);
         return {
           success: false,
-          message: `Failed to drop ${failedTables.length} tables: ${failedTables.join(', ')}`
+          message: `Failed to drop ${failedTables.length} tables: ${failedTables.join(", ")}`
         };
       }
     } catch (err) {
       // Handle any uncaught errors
       console.error("Error in drop-tables handler:", err);
-      
+
       if (conn) {
         try {
           await conn.query("ROLLBACK");
@@ -659,7 +661,7 @@ function registerTableHandlers(store, dbMonitoringConnections) {
           // Ignore rollback errors
         }
       }
-      
+
       return {
         success: false,
         message: "Error dropping tables: " + (err.message || "Unknown error")
