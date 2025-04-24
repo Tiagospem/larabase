@@ -4,9 +4,79 @@ import { ref, computed } from "vue";
 export const useTabsStore = defineStore("tabs", () => {
   const openTabs = ref([]);
   const activeTabId = ref(null);
+  const pinnedTabIds = ref([]);
 
-  // Define a computed property for tabs to be used externally
   const tabs = computed(() => openTabs.value);
+
+  const pinnedTabs = computed(() => {
+    return openTabs.value.filter((tab) => pinnedTabIds.value.includes(tab.id));
+  });
+
+  const hasPinnedTabs = computed(() => pinnedTabIds.value.length > 0);
+
+  function saveTabPinState() {
+    try {
+      localStorage.setItem("pinnedTabIds", JSON.stringify(pinnedTabIds.value));
+    } catch (e) {
+      console.error("Error saving tab pin state:", e);
+    }
+  }
+
+  function loadTabPinState() {
+    try {
+      const savedPinnedIds = localStorage.getItem("pinnedTabIds");
+
+      if (savedPinnedIds) {
+        const loadedIds = JSON.parse(savedPinnedIds);
+
+        if (Array.isArray(loadedIds)) {
+          const stringLoadedIds = loadedIds.map((id) => String(id));
+          const currentTabIds = openTabs.value.map((tab) => String(tab.id));
+
+          const validPinnedIds = stringLoadedIds.filter((id) => currentTabIds.includes(id));
+
+          pinnedTabIds.value = validPinnedIds.map((id) => {
+            const numId = Number(id);
+            return !isNaN(numId) ? numId : id;
+          });
+        }
+      }
+    } catch (e) {
+      console.error("Error loading tab pin state:", e);
+      pinnedTabIds.value = [];
+    }
+
+    return Promise.resolve();
+  }
+
+  function pinTab(tabId) {
+    if (!pinnedTabIds.value.includes(tabId)) {
+      pinnedTabIds.value.push(tabId);
+      saveTabPinState();
+    }
+  }
+
+  function unpinTab(tabId) {
+    pinnedTabIds.value = pinnedTabIds.value.filter((id) => id !== tabId);
+    saveTabPinState();
+  }
+
+  function toggleTabPin(tabId) {
+    if (pinnedTabIds.value.includes(tabId)) {
+      unpinTab(tabId);
+    } else {
+      pinTab(tabId);
+    }
+  }
+
+  function clearPinnedTabs() {
+    pinnedTabIds.value = [];
+    saveTabPinState();
+  }
+
+  function isTabPinned(tabId) {
+    return pinnedTabIds.value.includes(tabId);
+  }
 
   async function addTab(tableData) {
     const isFiltered = tableData.filter && tableData.filter.trim() !== "";
@@ -65,6 +135,10 @@ export const useTabsStore = defineStore("tabs", () => {
       }
 
       openTabs.value.splice(index, 1);
+
+      if (pinnedTabIds.value.includes(tabId)) {
+        unpinTab(tabId);
+      }
 
       if (activeTabId.value === tabId) {
         activeTabId.value = openTabs.value.length > 0 ? openTabs.value[Math.min(index, openTabs.value.length - 1)].id : null;
@@ -198,6 +272,8 @@ export const useTabsStore = defineStore("tabs", () => {
 
     openTabs.value = [];
     activeTabId.value = null;
+    pinnedTabIds.value = []; // Clear pinned tabs when closing all tabs
+    saveTabPinState(); // Save the cleared pinned state
     await saveOpenTabs();
   }
 
@@ -213,6 +289,11 @@ export const useTabsStore = defineStore("tabs", () => {
         if (tab.tableName) {
           const liveTableKey = `liveTable.enabled.${connectionId}.${tab.tableName}`;
           localStorage.setItem(liveTableKey, "false");
+        }
+
+        // Remove tab from pinned tabs if it's pinned
+        if (pinnedTabIds.value.includes(tab.id)) {
+          unpinTab(tab.id);
         }
       } catch (e) {
         console.error("Error deactivating live table during connection tabs removal:", e);
@@ -235,22 +316,24 @@ export const useTabsStore = defineStore("tabs", () => {
     return openTabs.value.find((tab) => tab.id === activeTabId.value) || null;
   });
 
-  function closeTab(tabId) {
-    return removeTab(tabId);
-  }
-
   return {
     openTabs,
     activeTabId,
     activeTab,
     tabs,
+    pinnedTabIds,
+    pinnedTabs,
+    hasPinnedTabs,
+    toggleTabPin,
+    clearPinnedTabs,
+    isTabPinned,
     addTab,
     removeTab,
-    closeTab,
     updateTabData,
     activateTab,
     reorderTabs,
     loadSavedTabs,
+    loadTabPinState,
     saveOpenTabs,
     saveTabs: saveOpenTabs,
     closeAllTabs,

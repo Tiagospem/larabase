@@ -32,13 +32,32 @@
       <div
         v-for="tab in openTabs"
         :key="tab.id"
-        :class="['tab', { active: tab.id === activeTabId }]"
+        :class="[
+          'tab',
+          {
+            active: tab.id === activeTabId,
+            pinned: isTabPinned(tab.id)
+          }
+        ]"
         draggable="true"
         @click="activateTab(tab.id)"
         @dragstart="handleDragStart($event, tab.id)"
         @dragover.prevent
         @drop="handleDrop($event, tab.id)"
       >
+        <span
+          class="pin-indicator"
+          @click.stop="toggleTabPin(tab.id)"
+        >
+          <IconPin
+            v-if="!isTabPinned(tab.id)"
+            class="opacity-50 hover:opacity-100"
+          />
+          <IconPinFilled
+            v-else
+            class="text-primary"
+          />
+        </span>
         <span class="tab-title">{{ tab.title }}</span>
         <button
           class="close-icon"
@@ -82,13 +101,138 @@
         />
       </svg>
     </button>
+
+    <div
+      class="tabs-actions flex items-center"
+      v-if="pinnedTabs.length > 0"
+    >
+      <!-- Pinned tabs actions menu -->
+      <div class="dropdown dropdown-end">
+        <label
+          tabindex="0"
+          class="tab-action-button ml-1 flex items-center cursor-pointer"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke-width="1.5"
+            stroke="currentColor"
+            class="w-4 h-4 mr-1"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              d="M12 6.75a.75.75 0 110-1.5.75.75 0 010 1.5zM12 12.75a.75.75 0 110-1.5.75.75 0 010 1.5zM12 18.75a.75.75 0 110-1.5.75.75 0 010 1.5z"
+            />
+          </svg>
+          <span class="text-xs">Actions</span>
+          <div class="badge-primary text-xs rounded-full px-1.5 text-center ml-1 min-w-[20px]">
+            {{ pinnedTabs.length }}
+          </div>
+        </label>
+
+        <ul
+          tabindex="0"
+          class="dropdown-content menu p-2 shadow bg-base-300 rounded-box w-56"
+        >
+          <li>
+            <a
+              @click="confirmTruncatePinnedTables()"
+              class="text-error"
+            >
+              <IconTruncate />
+              <span>Truncate tables</span>
+            </a>
+          </li>
+          <li>
+            <a @click="clearPinnedTabs()">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke-width="1.5"
+                stroke="currentColor"
+                class="w-4 h-4"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"
+                />
+              </svg>
+              <span>Unpin all</span>
+            </a>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- Truncate Confirmation Modal -->
+  <div
+    class="modal"
+    :class="{ 'modal-open': showTruncateConfirm }"
+  >
+    <div class="modal-box">
+      <h3 class="font-bold text-lg text-error">⚠️ Truncate Tables</h3>
+      <p class="py-4">
+        Are you sure you want to truncate <strong>{{ pinnedTabs.length }}</strong> table(s)? This will delete ALL records and cannot be undone.
+      </p>
+      <div class="max-h-40 overflow-y-auto bg-base-300 rounded p-2 mb-4">
+        <ul class="list-disc pl-4 space-y-1">
+          <li
+            v-for="tab in pinnedTabs"
+            :key="tab.id"
+          >
+            {{ tab.tableName }}
+          </li>
+        </ul>
+      </div>
+      <div class="form-control">
+        <label class="label cursor-pointer justify-start">
+          <input
+            v-model="ignoreForeignKeys"
+            type="checkbox"
+            class="checkbox checkbox-sm checkbox-error mr-2"
+          />
+          <span class="label-text">Ignore foreign key constraints</span>
+        </label>
+      </div>
+      <div class="modal-action">
+        <button
+          class="btn"
+          @click="showTruncateConfirm = false"
+        >
+          Cancel
+        </button>
+        <button
+          class="btn btn-error"
+          :disabled="isProcessing"
+          @click="truncatePinnedTables"
+        >
+          <span
+            v-if="isProcessing"
+            class="loading loading-spinner loading-xs mr-2"
+          ></span>
+          Truncate Tables
+        </button>
+      </div>
+    </div>
+    <div
+      class="modal-backdrop"
+      @click="showTruncateConfirm = false"
+    />
   </div>
 </template>
 
 <script setup>
-import { computed, nextTick, ref, watch } from "vue";
+import { computed, inject, nextTick, onMounted, ref, watch, onUnmounted } from "vue";
 import { useTabsStore } from "@/store/tabs";
 import { useDatabaseStore } from "@/store/database";
+import IconPin from "@/components/icons/IconPin.vue";
+import IconPinFilled from "@/components/icons/IconPinFilled.vue";
+import IconTruncate from "@/components/icons/IconTruncate.vue";
 
 const props = defineProps({
   connectionId: {
@@ -99,8 +243,12 @@ const props = defineProps({
 
 const tabsStore = useTabsStore();
 const databaseStore = useDatabaseStore();
+const showAlert = inject("showAlert");
 
 const draggingTabId = ref(null);
+const showTruncateConfirm = ref(false);
+const ignoreForeignKeys = ref(true);
+const isProcessing = ref(false);
 
 /**
  * @type {import('vue').Ref<HTMLElement>}
@@ -111,8 +259,98 @@ const hasScrollRight = ref(false);
 const hasScrollLeft = ref(false);
 
 const activeTabId = computed(() => tabsStore.activeTabId);
-
 const openTabs = computed(() => tabsStore.openTabs);
+const pinnedTabs = computed(() => tabsStore.pinnedTabs);
+
+function isTabPinned(tabId) {
+  return tabsStore.isTabPinned(tabId);
+}
+
+function toggleTabPin(tabId) {
+  tabsStore.toggleTabPin(tabId);
+}
+
+function clearPinnedTabs() {
+  tabsStore.clearPinnedTabs();
+}
+
+function confirmTruncatePinnedTables() {
+  if (pinnedTabs.value.length === 0) return;
+  showTruncateConfirm.value = true;
+}
+
+async function truncatePinnedTables() {
+  if (pinnedTabs.value.length === 0) return;
+
+  isProcessing.value = true;
+
+  try {
+    const tabsByConnection = {};
+
+    pinnedTabs.value.forEach((tab) => {
+      if (!tabsByConnection[tab.connectionId]) {
+        tabsByConnection[tab.connectionId] = [];
+      }
+      tabsByConnection[tab.connectionId].push(tab.tableName);
+    });
+
+    const results = [];
+
+    for (const [connectionId, tableNames] of Object.entries(tabsByConnection)) {
+      try {
+        const result = await databaseStore.truncateTables(connectionId, tableNames, ignoreForeignKeys.value);
+
+        if (result.results) {
+          results.push(...result.results);
+        }
+      } catch (error) {
+        console.error(`Error truncating tables for connection ${connectionId}:`, error);
+
+        tableNames.forEach((tableName) => {
+          results.push({
+            tableName,
+            success: false,
+            message: error.message
+          });
+        });
+      }
+    }
+
+    const successCount = results.filter((r) => r.success).length;
+    const failCount = results.length - successCount;
+
+    if (failCount === 0) {
+      showAlert(`Successfully truncated ${successCount} table(s)`, "success");
+    } else if (successCount === 0) {
+      showAlert(`Failed to truncate ${failCount} table(s)`, "error");
+    } else {
+      showAlert(`Truncated ${successCount} table(s), failed to truncate ${failCount}`, "warning");
+    }
+
+    // Reload all truncated tables
+    for (let connectionId in tabsByConnection) {
+      const connectionTables = results.filter((r) => r.success && tabsByConnection[connectionId].includes(r.tableName));
+
+      connectionTables.forEach((result) => {
+        window.dispatchEvent(
+          new CustomEvent("reload-table-data", {
+            detail: {
+              connectionId: connectionId,
+              tableName: result.tableName
+            }
+          })
+        );
+      });
+    }
+
+    showTruncateConfirm.value = false;
+  } catch (error) {
+    console.error(`Error in truncatePinnedTables:`, error);
+    showAlert(`Error truncating tables: ${error.message}`, "error");
+  } finally {
+    isProcessing.value = false;
+  }
+}
 
 function scrollLeft() {
   if (!tabsScrollRef.value) return;
@@ -289,6 +527,13 @@ function openTable(table, filter) {
   }
 }
 
+onMounted(async () => {
+  await tabsStore.loadSavedTabs();
+  await nextTick();
+  await tabsStore.loadTabPinState();
+  checkScrollPosition();
+});
+
 watch(
   () => openTabs.value.length,
   () => {
@@ -321,7 +566,6 @@ defineExpose({
   position: relative;
   width: 100%;
   height: 35px;
-  overflow: hidden;
   display: flex;
 }
 
@@ -339,6 +583,7 @@ defineExpose({
 }
 
 .tab {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -356,6 +601,29 @@ defineExpose({
 .tab.active {
   background-color: rgba(255, 255, 255, 0.1);
   color: white;
+}
+
+.tab.pinned {
+  background-color: rgba(59, 130, 246, 0.1);
+  border-top: 2px solid rgba(59, 130, 246, 0.7);
+}
+
+.tab.active.pinned {
+  background-color: rgba(59, 130, 246, 0.15);
+}
+
+.pin-indicator {
+  margin-right: 8px;
+  display: inline-flex;
+  align-items: center;
+  cursor: pointer;
+  padding: 3px;
+  border-radius: 3px;
+  transition: background-color 0.2s ease;
+}
+
+.pin-indicator:hover {
+  background-color: rgba(255, 255, 255, 0.1);
 }
 
 .tab-title {
@@ -414,5 +682,47 @@ defineExpose({
 
 .tab-scroll-right {
   border-left: 1px solid rgb(24, 24, 27);
+}
+
+.tabs-actions {
+  padding: 0 8px;
+  border-left: 1px solid rgb(24, 24, 27);
+  z-index: 999;
+  position: relative;
+}
+
+.tab-action-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 24px;
+  height: 24px;
+  margin: 0 3px;
+  padding: 0 6px;
+  border-radius: 4px;
+  color: #bbb;
+  transition: all 0.2s;
+  border: 1px solid transparent;
+}
+
+.tab-action-button:hover {
+  color: white;
+  background-color: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.badge-primary {
+  background-color: #3b82f6;
+  color: white;
+}
+
+/* Fix for dropdown z-index */
+.tabs-actions .absolute {
+  z-index: 9999 !important;
+}
+
+/* Fix for dropdown z-index */
+.dropdown-content {
+  z-index: 9999 !important;
 }
 </style>

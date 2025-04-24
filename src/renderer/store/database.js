@@ -333,6 +333,73 @@ export const useDatabaseStore = defineStore("database", () => {
     return result;
   }
 
+  async function truncateTables(connectionId, tableNames, ignoreForeignKeys = false) {
+    try {
+      if (!connectionId || !tableNames || !tableNames.length) {
+        console.error("Missing required parameters for truncateTables");
+        return {
+          success: false,
+          message: "Missing required parameters",
+          results: []
+        };
+      }
+
+      const currentConnection = connectionStore.getConnection(connectionId);
+      if (!currentConnection) {
+        console.error(`Connection not found for ID: ${connectionId}`);
+        return {
+          success: false,
+          message: "Connection not found",
+          results: []
+        };
+      }
+
+      const results = [];
+      for (const tableName of tableNames) {
+        try {
+          const result = await truncateTable(connectionId, tableName);
+          results.push({
+            tableName,
+            success: result.success,
+            message: result.message
+          });
+        } catch (error) {
+          console.error(`Error truncating table ${tableName}:`, error);
+          results.push({
+            tableName,
+            success: false,
+            message: error.message || "Error truncating table"
+          });
+        }
+      }
+
+      const successCount = results.filter((r) => r.success).length;
+      const failCount = results.length - successCount;
+
+      return {
+        success: successCount > 0,
+        results,
+        message:
+          failCount === 0
+            ? `Successfully truncated ${successCount} table(s)`
+            : successCount === 0
+              ? `Failed to truncate ${failCount} table(s)`
+              : `Truncated ${successCount} table(s), failed to truncate ${failCount}`
+      };
+    } catch (error) {
+      console.error("Error truncating tables:", error);
+      return {
+        success: false,
+        message: error.message || "An unknown error occurred",
+        results: tableNames.map((tableName) => ({
+          tableName,
+          success: false,
+          message: error.message || "Unknown error"
+        }))
+      };
+    }
+  }
+
   const tablesList = computed(() => tables.value.tables || []);
 
   return {
@@ -354,6 +421,7 @@ export const useDatabaseStore = defineStore("database", () => {
     updateRecord,
     deleteRecords,
     truncateTable,
+    truncateTables,
     tablesList,
     getConnection: _getConnection
   };
