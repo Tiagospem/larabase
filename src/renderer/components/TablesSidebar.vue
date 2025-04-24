@@ -7,7 +7,7 @@
       <div class="p-3 border-b border-black/10 flex-shrink-0">
         <div class="relative mb-2">
           <input
-            v-model="searchTerm"
+            v-model="tablesStore.searchTerm"
             type="text"
             placeholder="Search tables..."
             class="input input-sm input-bordered w-full bg-base-300 pl-9 pr-8"
@@ -27,9 +27,9 @@
             />
           </svg>
           <button
-            v-if="searchTerm"
+            v-if="tablesStore.searchTerm"
             class="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-200"
-            @click="clearSearch"
+            @click="tablesStore.clearSearch"
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -49,15 +49,15 @@
         </div>
 
         <div class="flex justify-between items-center">
-          <span class="text-xs text-gray-400">{{ filteredTables.length }} tables</span>
+          <span class="text-xs text-gray-400">{{ tablesStore.filteredTables.length }} tables</span>
           <div class="flex items-center gap-1">
             <button
               v-tooltip.right="'Sort by name'"
               class="btn btn-xs btn-ghost tooltip tooltip-left"
               :class="{
-                'text-primary bg-neutral': sortBy === 'name'
+                'text-primary bg-neutral': tablesStore.sortBy === 'name'
               }"
-              @click="setSortBy('name')"
+              @click="tablesStore.setSortBy('name')"
             >
               <svg
                 fill="currentColor"
@@ -85,9 +85,9 @@
               v-tooltip.right="'Sort by records'"
               class="btn btn-xs btn-ghost tooltip tooltip-left"
               :class="{
-                'text-primary bg-neutral': sortBy === 'records'
+                'text-primary bg-neutral': tablesStore.sortBy === 'records'
               }"
-              @click="setSortBy('records')"
+              @click="tablesStore.setSortBy('records')"
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -107,10 +107,10 @@
             <button
               v-tooltip.right="'Toggle sort order'"
               class="btn btn-xs btn-ghost tooltip tooltip-left"
-              @click="toggleSortOrder"
+              @click="tablesStore.toggleSortOrder"
             >
               <svg
-                v-if="sortOrder === 'asc'"
+                v-if="tablesStore.sortOrder === 'asc'"
                 xmlns="http://www.w3.org/2000/svg"
                 fill="none"
                 viewBox="0 0 24 24"
@@ -207,7 +207,7 @@
 
       <div class="scrollable-container flex-1 overflow-y-auto overflow-x-hidden min-h-0">
         <div
-          v-if="isLoadingCounts || !allTablesLoaded"
+          v-if="tablesStore.isLoadingCounts || !tablesStore.allTablesLoaded"
           class="p-2"
         >
           <div
@@ -226,7 +226,7 @@
           class="menu menu-sm p-2"
         >
           <li
-            v-for="table in sortedTables"
+            v-for="table in tablesStore.sortedTables"
             :key="table.name"
             class="table-item"
           >
@@ -274,7 +274,7 @@
                 class="badge badge-sm"
                 :class="{ 'badge-primary': table.recordCount > 0 }"
               >
-                {{ formatRecordCount(table.recordCount) }}
+                {{ tablesStore.formatRecordCount(table.recordCount) }}
               </span>
             </a>
           </li>
@@ -364,6 +364,7 @@
 <script setup>
 import { computed, inject, onActivated, onMounted, onUnmounted, ref, watch } from "vue";
 import { useDatabaseStore } from "@/store/database";
+import { useTablesStore } from "@/store/tables";
 
 const props = defineProps({
   connectionId: {
@@ -384,16 +385,7 @@ const emit = defineEmits(["resize-start", "table-open", "update:sidebarWidth", "
 const showAlert = inject("showAlert");
 
 const databaseStore = useDatabaseStore();
-
-/**
- * @type {import('vue').Ref<string>}
- */
-const searchTerm = ref(localStorage.getItem(`tableSearch_${props.connectionId}`) || "");
-
-const sortBy = ref(localStorage.getItem("tableSort") || "name");
-const sortOrder = ref(localStorage.getItem("tableSortOrder") || "asc");
-const isLoadingCounts = ref(false);
-const allTablesLoaded = ref(false);
+const tablesStore = useTablesStore();
 
 // Table deletion state
 const isDeleteMode = ref(false);
@@ -403,73 +395,13 @@ const ignoreForeignKeys = ref(false);
 const cascadeDelete = ref(false);
 const isDeleting = ref(false);
 
-/**
- * @type {import('vue').Ref<number|null>}
- */
-const loadingTimer = ref(null);
-
-//const isLoading = computed(() => databaseStore.isLoading);
-
-const tables = computed(() => localTables.value);
-
-const localTables = ref([]);
-
-const filteredTables = computed(() => {
-  if (!searchTerm.value) return tables.value;
-  const term = searchTerm.value.toLowerCase();
-  return tables.value.filter((table) => table.name.toLowerCase().includes(term));
-});
-
-const sortedTables = computed(() => {
-  const tablesCopy = [...filteredTables.value];
-
-  return tablesCopy.sort((a, b) => {
-    if (sortBy.value === "name") {
-      return sortOrder.value === "asc" ? a.name.localeCompare(b.name) : b.name.localeCompare(a.name);
-    } else {
-      const aCount = a.recordCount || 0;
-      const bCount = b.recordCount || 0;
-      return sortOrder.value === "asc" ? aCount - bCount : bCount - aCount;
-    }
-  });
-});
-
-const isAllSelected = computed(() => {
-  return selectedTables.value.length === sortedTables.value.length && sortedTables.value.length > 0;
-});
-
-watch(searchTerm, (newValue) => {
-  localStorage.setItem(`tableSearch_${props.connectionId}`, newValue);
-});
-
-watch(
-  () => props.connectionId,
-  (newConnectionId) => {
-    if (newConnectionId) {
-      searchTerm.value = localStorage.getItem(`tableSearch_${newConnectionId}`) || "";
-    }
+watch(() => props.connectionId, (newConnectionId) => {
+  if (newConnectionId) {
+    const savedSearchTerm = localStorage.getItem(`tableSearch_${newConnectionId}`) || "";
+    tablesStore.setSearchTerm(newConnectionId, savedSearchTerm);
+    tablesStore.initializeTables(newConnectionId);
   }
-);
-
-watch(
-  () => props.connectionId,
-  () => {
-    if (props.connectionId) {
-      allTablesLoaded.value = false;
-
-      localTables.value = databaseStore.tablesList.map((t) => ({ ...t, recordCount: null }));
-
-      loadingTimer.value = setTimeout(() => {
-        loadTableRecordCounts();
-      }, 500);
-    }
-  },
-  { immediate: true }
-);
-
-function clearSearch() {
-  searchTerm.value = "";
-}
+}, { immediate: true });
 
 function isTableActive(tableName) {
   return props.activeTabName === tableName;
@@ -481,20 +413,6 @@ function openTable(table) {
 
 function startResize(e) {
   emit("resize-start", e);
-}
-
-function setSortBy(value) {
-  if (sortBy.value === value) {
-    toggleSortOrder();
-  } else {
-    sortBy.value = value;
-    localStorage.setItem("tableSort", value);
-  }
-}
-
-function toggleSortOrder() {
-  sortOrder.value = sortOrder.value === "asc" ? "desc" : "asc";
-  localStorage.setItem("tableSortOrder", sortOrder.value);
 }
 
 function toggleDeleteMode() {
@@ -517,11 +435,15 @@ function toggleTableSelection(tableName) {
   }
 }
 
+const isAllSelected = computed(() => {
+  return selectedTables.value.length === tablesStore.sortedTables.length && tablesStore.sortedTables.length > 0;
+});
+
 function toggleSelectAll() {
   if (isAllSelected.value) {
     selectedTables.value = [];
   } else {
-    selectedTables.value = sortedTables.value.map((t) => t.name);
+    selectedTables.value = tablesStore.sortedTables.map((t) => t.name);
   }
 }
 
@@ -575,108 +497,27 @@ async function deleteTables() {
   }
 }
 
-async function loadTableRecordCounts() {
-  if (isLoadingCounts.value) return;
-
-  isLoadingCounts.value = true;
-  allTablesLoaded.value = false;
-
-  if (loadingTimer.value) {
-    clearTimeout(loadingTimer.value);
-    loadingTimer.value = null;
-  }
-
-  try {
-    const updatedTables = [...localTables.value];
-
-    const promises = updatedTables.map(async (table, i) => {
-      try {
-        if (table.recordCount === null || table.recordCount === undefined) {
-          return {
-            index: i,
-            count: await databaseStore.getTableRecordCount(props.connectionId, table.name)
-          };
-        }
-        return { index: i, count: table.recordCount };
-      } catch {
-        return { index: i, count: 0 };
-      }
-    });
-
-    const results = await Promise.all(promises);
-
-    results.forEach(({ index, count }) => {
-      updatedTables[index].recordCount = count;
-    });
-
-    localTables.value = updatedTables;
-
-    allTablesLoaded.value = true;
-  } catch (error) {
-    console.error("Error loading record counts:", error);
-  } finally {
-    isLoadingCounts.value = false;
-  }
-}
-
-function formatRecordCount(count) {
-  if (count === null || count === undefined) return "0";
-
-  if (count >= 1000000) {
-    return (count / 1000000).toFixed(1).replace(/\.0$/, "") + "M";
-  }
-  if (count >= 1000) {
-    return (count / 1000).toFixed(1).replace(/\.0$/, "") + "K";
-  }
-  return count.toString();
-}
-
 function getTableModel(tableName) {
   return databaseStore.getModelForTable(props.connectionId, tableName);
 }
 
 watch(
   () => databaseStore.tablesList,
-  (newList, oldList) => {
-    if (!oldList || newList.length !== oldList.length) {
-      const existingRecordCounts = {};
-      localTables.value.forEach((table) => {
-        if (table.recordCount !== null && table.recordCount !== undefined) {
-          existingRecordCounts[table.name] = table.recordCount;
-        }
-      });
-
-      localTables.value = newList.map((t) => ({
-        ...t,
-        recordCount: existingRecordCounts[t.name] !== undefined ? existingRecordCounts[t.name] : null
-      }));
-
-      const needsReload = localTables.value.some((t) => t.recordCount === null);
-      if (needsReload) {
-        loadTableRecordCounts();
-      }
+  (newList) => {
+    if (newList) {
+      tablesStore.initializeTables(props.connectionId);
     }
   },
   { immediate: true }
 );
 
 onMounted(() => {
-  loadingTimer.value = setTimeout(() => {
-    loadTableRecordCounts();
-  }, 500);
+  tablesStore.initializeTables(props.connectionId);
 });
 
 onActivated(() => {
-  const needsReload = localTables.value.some((t) => t.recordCount === null || t.recordCount === undefined);
-
-  if (needsReload) {
-    loadTableRecordCounts();
-  }
-});
-
-onUnmounted(() => {
-  if (loadingTimer.value) {
-    clearTimeout(loadingTimer.value);
+  if (!tablesStore.allTablesLoaded || tablesStore.localTables.some(t => t.recordCount === null)) {
+    tablesStore.loadTableRecordCounts(props.connectionId);
   }
 });
 
