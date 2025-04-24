@@ -1,6 +1,6 @@
 {
   "name": "larabase",
-  "version": "0.6.0",
+  "version": "0.6.1",
   "description": "An Opined Database GUI for Laravel Developers",
   "main": "dist/main.cjs",
   "type": "commonjs",
@@ -83,7 +83,7 @@
       "main": "dist/main.cjs"
     },
     "asar": true,
-    "compression": "maximum",
+    "compression": "store",
     "artifactName": "${productName}-${version}-${os}-${arch}.${ext}",
     "publish": {
       "provider": "github",
