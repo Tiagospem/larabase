@@ -77,12 +77,21 @@ async function confirmDelete() {
 
   try {
     const idsToDelete = [...tableDataStore.deletingIds];
+    const countBeforeDeletion = tableDataStore.totalRecords;
 
     const result = await databaseStore.deleteRecords(tableDataStore.connectionId, tableDataStore.tableName, idsToDelete);
 
     showAlert(result.message, "success");
 
     tableDataStore.selectedRows = [];
+    
+    // Reduzir o total de registros pelo número de registros excluídos
+    // Ou obter o valor atualizado da API se disponível
+    if (result.deletedCount) {
+      tableDataStore.totalRecordsCount = Math.max(0, countBeforeDeletion - result.deletedCount);
+    } else {
+      tableDataStore.totalRecordsCount = Math.max(0, countBeforeDeletion - idsToDelete.length);
+    }
 
     await tableDataStore.loadTableData();
     

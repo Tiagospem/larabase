@@ -486,6 +486,14 @@ export const useTableDataStore = (id) => {
       }
     }
 
+    function resetData() {
+      tableData.value = [];
+      selectedRows.value = [];
+      updatedRows.value = [];
+      previousDataSnapshot.value = [];
+      updateCounter.value = 0;
+    }
+
     function startLiveUpdates() {
       stopLiveUpdates();
 
@@ -552,6 +560,7 @@ export const useTableDataStore = (id) => {
       setTableName,
       setOnLoad,
       deleteSelected,
+      resetData,
       onLoad,
       tableData,
       filteredData,

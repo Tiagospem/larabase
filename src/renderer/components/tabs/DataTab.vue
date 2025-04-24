@@ -70,6 +70,7 @@ import { Helpers } from "../../utils/helpers";
 
 import { useTableDataStore, createTableDataStoreId } from "@/store/table-data";
 import { useDatabaseStore } from "@/store/database";
+import { useTablesStore } from "@/store/tables";
 
 const props = defineProps({
   connectionId: {
@@ -99,6 +100,7 @@ const storeId = createTableDataStoreId(props.connectionId, props.tableName);
 
 const tableDataStore = useTableDataStore(storeId);
 const databaseStore = useDatabaseStore();
+const tablesStore = useTablesStore();
 
 const showAlert = inject("showAlert");
 
@@ -110,6 +112,32 @@ const highlightChanges = computed(() => tableDataStore.highlightChanges);
 
 const filterButtonRef = ref(null);
 const dataTableRef = ref(null);
+
+// Handle table truncate event from other components
+function handleTableTruncate(event) {
+  const { connectionId, tableName, totalRecords, forceReset } = event.detail;
+  
+  // Only respond if this event is for our table
+  if (connectionId === props.connectionId && tableName === props.tableName) {
+    console.log(`Table ${tableName} truncated from external source, refreshing data`);
+    
+    // Reset the table state completely to ensure buttons update their state
+    tableDataStore.resetData();
+    tableDataStore.totalRecordsCount = totalRecords !== undefined ? totalRecords : 0;
+    
+    // Force UI update by loading data with a slight delay if forceReset is true
+    if (forceReset) {
+      setTimeout(() => {
+        tableDataStore.loadTableData();
+      }, 50);
+    } else {
+      tableDataStore.loadTableData();
+    }
+    
+    // Update the record count in the sidebar to zero
+    tablesStore.updateTableRecordCount(tableName, 0);
+  }
+}
 
 const refreshLiveTableState = () => {
   try {
@@ -239,6 +267,10 @@ onMounted(() => {
   window.addEventListener("tab-activated", handleTabActivation);
   window.addEventListener("storage", handleStorageChange);
   window.addEventListener("focus", handleWindowFocus);
+  
+  // Add listener for table truncation
+  window.addEventListener("reload-table-data", handleTableTruncate);
+  window.addEventListener("truncate-table", handleTableTruncate);
 
   loadTableStructure().then(() => {
     let hasFilter = false;
@@ -336,6 +368,10 @@ onUnmounted(() => {
   window.removeEventListener("tab-activated", handleTabActivation);
   window.removeEventListener("storage", handleStorageChange);
   window.removeEventListener("focus", handleWindowFocus);
+  
+  // Remove truncate event listeners
+  window.removeEventListener("reload-table-data", handleTableTruncate);
+  window.removeEventListener("truncate-table", handleTableTruncate);
 
   if (tableDataStore.isLiveTableActive) {
     try {

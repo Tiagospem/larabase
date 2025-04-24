@@ -408,7 +408,7 @@ watch(() => props.connectionId, (newConnectionId) => {
       tablesStore.initializeTables(newConnectionId);
       lastConnectionId.value = newConnectionId;
     }
-  }
+    }
 }, { immediate: true });
 
 function isTableActive(tableName) {
@@ -535,7 +535,7 @@ onActivated(() => {
   if (props.connectionId === lastConnectionId.value) {
     if (!tablesStore.allTablesLoaded || tablesStore.localTables.some(t => t.recordCount === null)) {
       tablesStore.loadTableRecordCounts(props.connectionId);
-    }
+  }
   } else if (props.connectionId) {
     // If we've changed connections while component was inactive
     tablesStore.initializeTables(props.connectionId);

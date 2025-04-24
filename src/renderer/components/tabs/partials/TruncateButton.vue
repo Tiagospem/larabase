@@ -79,21 +79,32 @@ function confirmTruncateTable() {
   showTruncateConfirm.value = true;
 }
 
-async function truncateTable() {
+const truncateTable = async () => {
   showTruncateConfirm.value = false;
 
   try {
-    const result = await databaseStore.truncateTable(tableDataStore.connectionId, tableDataStore.tableName);
+    await databaseStore.truncateTable(tableDataStore.connectionId, tableDataStore.tableName);
 
-    showAlert(result.message, "success");
+    showAlert('Table truncated successfully', 'success');
 
-    tableDataStore.selectedRows = [];
+    tableDataStore.resetData();
+    tableDataStore.totalRecordsCount = 0;
     await tableDataStore.loadTableData();
     
-    // Set record count to zero in the sidebar after truncate
     tablesStore.updateTableRecordCount(tableDataStore.tableName, 0);
+
+    window.dispatchEvent(
+      new CustomEvent("truncate-table", {
+        detail: {
+          connectionId: tableDataStore.connectionId,
+          tableName: tableDataStore.tableName,
+          totalRecords: 0,
+          forceReset: true
+        }
+      })
+    );
   } catch (error) {
-    showAlert(`Error truncating table: ${error.message}`, "error");
+    showAlert(error.message || 'Failed to truncate table', 'error');
   }
-}
+};
 </script>

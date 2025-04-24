@@ -337,11 +337,26 @@ async function truncatePinnedTables() {
         // Set the record count to zero for successfully truncated tables
         tablesStore.updateTableRecordCount(result.tableName, 0);
         
+        // Dispatch both reload-table-data and truncate-table events
         window.dispatchEvent(
           new CustomEvent("reload-table-data", {
             detail: {
               connectionId: connectionId,
-              tableName: result.tableName
+              tableName: result.tableName,
+              totalRecords: 0,
+              forceReset: true
+            }
+          })
+        );
+        
+        // Add a truncate-table event
+        window.dispatchEvent(
+          new CustomEvent("truncate-table", {
+            detail: {
+              connectionId: connectionId,
+              tableName: result.tableName,
+              totalRecords: 0,
+              forceReset: true
             }
           })
         );
