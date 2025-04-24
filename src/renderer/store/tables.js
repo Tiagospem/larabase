@@ -8,6 +8,7 @@ export const useTablesStore = defineStore("tables", () => {
   const allTablesLoaded = ref(false);
   const loadingTimer = ref(null);
   const databaseStore = useDatabaseStore();
+  const lastLoadedConnection = ref(null);
 
   // Table sorting and filtering
   const searchTerm = ref("");
@@ -77,7 +78,8 @@ export const useTablesStore = defineStore("tables", () => {
     if (isLoadingCounts.value) return;
 
     isLoadingCounts.value = true;
-    allTablesLoaded.value = false;
+    
+    // Don't reset allTablesLoaded here, since we're just updating counts
 
     if (loadingTimer.value) {
       clearTimeout(loadingTimer.value);
@@ -118,12 +120,29 @@ export const useTablesStore = defineStore("tables", () => {
   }
 
   function initializeTables(connectionId) {
+    // Check if the data is already loaded for this connection
+    if (lastLoadedConnection.value === connectionId && localTables.value.length > 0 && allTablesLoaded.value) {
+      return;
+    }
+    
+    // Otherwise, reset and load new data
     allTablesLoaded.value = false;
     localTables.value = databaseStore.tablesList.map((t) => ({ ...t, recordCount: null }));
+    lastLoadedConnection.value = connectionId;
 
     loadingTimer.value = setTimeout(() => {
       loadTableRecordCounts(connectionId);
     }, 500);
+  }
+
+  function clearTablesData() {
+    localTables.value = [];
+    allTablesLoaded.value = false;
+    lastLoadedConnection.value = null;
+    if (loadingTimer.value) {
+      clearTimeout(loadingTimer.value);
+      loadingTimer.value = null;
+    }
   }
 
   return {
@@ -134,6 +153,7 @@ export const useTablesStore = defineStore("tables", () => {
     searchTerm,
     sortBy,
     sortOrder,
+    lastLoadedConnection,
     
     // Computed
     tables,
@@ -147,6 +167,7 @@ export const useTablesStore = defineStore("tables", () => {
     toggleSortOrder,
     formatRecordCount,
     loadTableRecordCounts,
-    initializeTables
+    initializeTables,
+    clearTablesData
   };
 }); 

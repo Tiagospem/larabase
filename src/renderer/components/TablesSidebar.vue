@@ -394,12 +394,20 @@ const showDeleteConfirmation = ref(false);
 const ignoreForeignKeys = ref(false);
 const cascadeDelete = ref(false);
 const isDeleting = ref(false);
+const lastConnectionId = ref(null);
 
 watch(() => props.connectionId, (newConnectionId) => {
   if (newConnectionId) {
     const savedSearchTerm = localStorage.getItem(`tableSearch_${newConnectionId}`) || "";
     tablesStore.setSearchTerm(newConnectionId, savedSearchTerm);
-    tablesStore.initializeTables(newConnectionId);
+    
+    // Only initialize tables if the connection has changed or tables aren't loaded
+    if (newConnectionId !== lastConnectionId.value || 
+        !tablesStore.allTablesLoaded || 
+        tablesStore.localTables.length === 0) {
+      tablesStore.initializeTables(newConnectionId);
+      lastConnectionId.value = newConnectionId;
+    }
   }
 }, { immediate: true });
 
@@ -503,21 +511,35 @@ function getTableModel(tableName) {
 
 watch(
   () => databaseStore.tablesList,
-  (newList) => {
-    if (newList) {
+  (newList, oldList) => {
+    // Only update tables if there's a change in the tables list
+    if (newList && (!oldList || newList.length !== oldList.length)) {
       tablesStore.initializeTables(props.connectionId);
+      lastConnectionId.value = props.connectionId;
     }
   },
   { immediate: true }
 );
 
 onMounted(() => {
-  tablesStore.initializeTables(props.connectionId);
+  // On mount, only initialize if not already loaded
+  if (!tablesStore.allTablesLoaded || tablesStore.localTables.length === 0) {
+    tablesStore.initializeTables(props.connectionId);
+    lastConnectionId.value = props.connectionId;
+  }
 });
 
 onActivated(() => {
-  if (!tablesStore.allTablesLoaded || tablesStore.localTables.some(t => t.recordCount === null)) {
-    tablesStore.loadTableRecordCounts(props.connectionId);
+  // On activation, check if we need to reload counts
+  // This happens when returning to this component from elsewhere
+  if (props.connectionId === lastConnectionId.value) {
+    if (!tablesStore.allTablesLoaded || tablesStore.localTables.some(t => t.recordCount === null)) {
+      tablesStore.loadTableRecordCounts(props.connectionId);
+    }
+  } else if (props.connectionId) {
+    // If we've changed connections while component was inactive
+    tablesStore.initializeTables(props.connectionId);
+    lastConnectionId.value = props.connectionId;
   }
 });
 
