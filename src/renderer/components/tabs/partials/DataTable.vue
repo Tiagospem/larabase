@@ -207,7 +207,7 @@
 <script setup>
 import { useTableDataStore } from "@/store/table-data";
 import { Helpers } from "@/utils/helpers";
-import { onMounted, onUnmounted, ref } from "vue";
+import { onMounted, onUnmounted, ref, onActivated, onDeactivated } from "vue";
 import EditRecord from "@/components/tabs/partials/EditRecord.vue";
 import DataPreviewModal from "@/components/tabs/partials/DataPreviewModal.vue";
 
@@ -466,6 +466,20 @@ function openPreviewModal(row) {
   tableDataStore.previewingRecord = JSON.parse(JSON.stringify(row));
   tableDataStore.showPreviewModal = true;
 }
+
+onActivated(() => {
+  // Re-attach event listeners when component is reactivated from cache
+  window.addEventListener("keydown", handleKeyDown);
+  window.addEventListener("keyup", handleKeyDown);
+  window.addEventListener("mouseup", handleMouseUp);
+});
+
+onDeactivated(() => {
+  // Detach event listeners when component is deactivated to prevent memory leaks
+  window.removeEventListener("keydown", handleKeyDown);
+  window.removeEventListener("keyup", handleKeyDown);
+  window.removeEventListener("mouseup", handleMouseUp);
+});
 
 onMounted(() => {
   window.addEventListener("keydown", handleKeyDown);

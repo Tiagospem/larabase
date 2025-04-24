@@ -27,7 +27,7 @@
 </template>
 
 <script setup>
-import { ref, computed, markRaw, defineAsyncComponent } from "vue";
+import { ref, computed, markRaw, defineAsyncComponent, onActivated } from "vue";
 
 const DataTab = markRaw(defineAsyncComponent(() => import("./tabs/DataTab.vue")));
 const StructureTab = markRaw(defineAsyncComponent(() => import("./tabs/StructureTab.vue")));
@@ -36,6 +36,11 @@ const ForeignKeysTab = markRaw(defineAsyncComponent(() => import("./tabs/Foreign
 const MigrationsTab = markRaw(defineAsyncComponent(() => import("./tabs/MigrationsTab.vue")));
 const ModelTab = markRaw(defineAsyncComponent(() => import("./tabs/ModelTab.vue")));
 const FactoryTab = markRaw(defineAsyncComponent(() => import("./tabs/FactoryTab.vue")));
+
+// Explicitly name this component for keep-alive caching
+defineOptions({
+  name: 'TableContent'
+});
 
 const props = defineProps({
   connectionId: {
@@ -132,4 +137,14 @@ function handleTabData(tabId, data) {
     });
   }
 }
+
+onActivated(() => {
+  // When component is reactivated from cache, ensure the active tab data is refreshed if needed
+  if (activeContentTab.value === "data") {
+    // Signal that this tab is being re-activated without full reload
+    emit("update-tab-data", props.tableName, {
+      activeContentTab: activeContentTab.value
+    });
+  }
+});
 </script>

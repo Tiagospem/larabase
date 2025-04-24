@@ -50,7 +50,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted, inject, watch } from "vue";
+import { ref, computed, onMounted, onUnmounted, inject, watch, onActivated, onDeactivated } from "vue";
 
 import {
   RefreshButton,
@@ -112,6 +112,8 @@ const highlightChanges = computed(() => tableDataStore.highlightChanges);
 
 const filterButtonRef = ref(null);
 const dataTableRef = ref(null);
+
+const isActive = ref(true);
 
 // Handle table truncate event from other components
 function handleTableTruncate(event) {
@@ -263,6 +265,36 @@ async function loadTableStructure() {
   }
 }
 
+onActivated(() => {
+  isActive.value = true;
+  
+  // Re-attach event listeners
+  window.addEventListener("tab-activated", handleTabActivation);
+  window.addEventListener("storage", handleStorageChange);
+  window.addEventListener("focus", handleWindowFocus);
+  window.addEventListener("reload-table-data", handleTableTruncate);
+  window.addEventListener("truncate-table", handleTableTruncate);
+  
+  // Restore live updates if previously active
+  refreshLiveTableState();
+});
+
+onDeactivated(() => {
+  isActive.value = false;
+  
+  // Detach event listeners to prevent memory leaks
+  window.removeEventListener("tab-activated", handleTabActivation);
+  window.removeEventListener("storage", handleStorageChange);
+  window.removeEventListener("focus", handleWindowFocus);
+  window.removeEventListener("reload-table-data", handleTableTruncate);
+  window.removeEventListener("truncate-table", handleTableTruncate);
+  
+  // Pause live updates when component is deactivated
+  if (tableDataStore.isLiveTableActive) {
+    tableDataStore.stopLiveUpdates(false); // Stop without updating localStorage
+  }
+});
+
 onMounted(() => {
   window.addEventListener("tab-activated", handleTabActivation);
   window.addEventListener("storage", handleStorageChange);
@@ -365,11 +397,10 @@ onMounted(() => {
 });
 
 onUnmounted(() => {
+  // Only perform full cleanup on actual unmount, not on deactivation
   window.removeEventListener("tab-activated", handleTabActivation);
   window.removeEventListener("storage", handleStorageChange);
   window.removeEventListener("focus", handleWindowFocus);
-  
-  // Remove truncate event listeners
   window.removeEventListener("reload-table-data", handleTableTruncate);
   window.removeEventListener("truncate-table", handleTableTruncate);
 

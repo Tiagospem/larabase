@@ -419,7 +419,7 @@ export const useTableDataStore = (id) => {
       }
     }
 
-    function stopLiveUpdates(updateLocalStorage = false) {
+    function stopLiveUpdates(updateLocalStorage = true) {
       if (liveTableInterval.value !== null) {
         clearInterval(liveTableInterval.value);
         liveTableInterval.value = null;

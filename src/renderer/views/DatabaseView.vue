@@ -381,7 +381,7 @@
           </div>
         </div>
 
-        <keep-alive>
+        <keep-alive :include="'TableContent'">
           <component
             :is="TableContentComponent"
             v-if="activeTab"
@@ -530,7 +530,7 @@
 </template>
 
 <script setup>
-import { computed, inject, onMounted, ref, markRaw, nextTick, watch, onBeforeMount } from "vue";
+import { computed, inject, onMounted, ref, markRaw, nextTick, watch, onBeforeMount, onUnmounted, onActivated } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { useConnectionsStore } from "@/store/connections";
 import { useDatabaseStore } from "@/store/database";
@@ -660,15 +660,19 @@ async function testConnection() {
   }
 }
 
+const loadedConnections = ref(new Set());
+const initialConnectionLoad = ref(false);
+
 onBeforeMount(() => {
   loadSidebarWidth();
 });
 
-onMounted(async () => {
+async function initializeConnection(skipReload = false) {
   try {
-    await tabsStore.loadSavedTabs();
-
-    await connectionsStore.loadConnections();
+    if (!skipReload) {
+      await tabsStore.loadSavedTabs();
+      await connectionsStore.loadConnections();
+    }
 
     if (!connection.value) {
       connectionError.value = true;
@@ -676,17 +680,23 @@ onMounted(async () => {
       return;
     }
 
-    const connectionValid = await testConnection();
-    if (!connectionValid) {
-      return;
-    }
+    // Only test connection if not already loaded
+    if (!loadedConnections.value.has(connectionId.value)) {
+      const connectionValid = await testConnection();
+      if (!connectionValid) {
+        return;
+      }
 
-    showAlert(`Connected to ${connection.value.name}`, "success");
-    await databaseStore.loadTables(connectionId.value);
+      showAlert(`Connected to ${connection.value.name}`, "success");
+      await databaseStore.loadTables(connectionId.value);
+      loadedConnections.value.add(connectionId.value);
+    }
 
     await checkRedisAvailability();
 
-    databaseStore.clearTableRecordCounts();
+    if (!skipReload) {
+      databaseStore.clearTableRecordCounts();
+    }
 
     window.addEventListener("resize", mainTabsRef.value?.checkScrollPosition);
 
@@ -696,10 +706,22 @@ onMounted(async () => {
     });
 
     document.querySelector(".flex.flex-col.h-full")?.focus();
+    initialConnectionLoad.value = true;
   } catch (error) {
     console.error(error);
     connectionError.value = true;
     connectionErrorMessage.value = error.message || "Unknown error occurred";
+  }
+}
+
+onMounted(async () => {
+  await initializeConnection(false);
+});
+
+onActivated(async () => {
+  // When component is activated from cache, only refresh what's needed
+  if (initialConnectionLoad.value) {
+    await initializeConnection(true);
   }
 });
 
