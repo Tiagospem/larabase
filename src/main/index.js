@@ -5,6 +5,7 @@ const fs = require("fs");
 const mysql = require("mysql2/promise");
 const { spawn, execSync, exec } = require("child_process");
 const pluralize = require("pluralize");
+const docker = require("./modules/docker");
 
 const { createWindow, getMainWindow } = require("./modules/window");
 const { registerRestoreDumpHandlers } = require("./modules/restore-dump");
@@ -115,19 +116,19 @@ function enhancePath() {
     console.log(`Set default PATH for ${platform}: ${process.env.PATH}`);
   }
 
-  const whichCmd = platform === "win32" ? "where docker" : "which docker";
-
-  try {
-    const dockerPath = execSync(whichCmd, {
-      timeout: 2000,
-      shell: true,
-      windowsHide: true,
-      encoding: "utf8"
-    }).trim();
-    console.log(`Docker binary found at: ${dockerPath}`);
-  } catch (err) {
-    console.log(`Docker binary not found in PATH: ${err.message}`);
-  }
+  // Check Docker availability using dockerode
+  docker
+    .isDockerAvailable()
+    .then((available) => {
+      if (available) {
+        console.log("Docker is available and running");
+      } else {
+        console.log("Docker is not available or not running");
+      }
+    })
+    .catch((err) => {
+      console.log(`Error checking Docker availability: ${err.message}`);
+    });
 
   console.log(`Electron running on platform: ${platform}`);
   console.log(`Node.js version: ${process.version}`);
@@ -152,33 +153,6 @@ function setupGlobalMonitoring() {
 
   console.log("Global MySQL monitoring configured");
 }
-// function setupGlobalMonitoring() {
-//   mysql.createConnection = async function (...args) {
-//     const connection = await originalCreateConnection.apply(this, args);
-//
-//     const config = args[0];
-//     console.log('New database connection created:', config.host, config.database);
-//
-//     for (const [connectionId, monitoredConn] of dbMonitoringConnections.entries()) {
-//       if (
-//         monitoredConn._config &&
-//         monitoredConn._config.host === config.host &&
-//         monitoredConn._config.database === config.database
-//       ) {
-//         console.log(
-//           `Auto-monitoring new connection to ${config.database} (from monitored connection ${connectionId})`
-//         );
-//
-//         setupMonitoring(connection, config.database);
-//         break;
-//       }
-//     }
-//
-//     return connection;
-//   };
-//
-//   console.log('Global MySQL monitoring configured');
-// }
 
 // Fix the electron-reload implementation
 if (process.env.NODE_ENV === "development") {
@@ -189,7 +163,6 @@ if (process.env.NODE_ENV === "development") {
       const rendererPath = path.resolve(__dirname, "../renderer");
 
       if (fs.existsSync(rendererPath)) {
-        console.log(`Setting up electron-reload with path: ${rendererPath}`);
         electronReload(rendererPath, {
           electron: path.join(__dirname, "../../node_modules", ".bin", "electron"),
           hardResetMethod: "exit"
@@ -2850,22 +2823,6 @@ ipcMain.handle("set-app-badge", async (_, count) => {
     return { success: true };
   } catch (error) {
     console.error("Error setting app badge:", error);
-    return { success: false, error: error.message };
-  }
-});
-
-// Adicionar manipulador para abrir URLs externas
-ipcMain.handle("open-external", async (event, url) => {
-  try {
-    if (url && typeof url === "string" && (url.startsWith("http://") || url.startsWith("https://"))) {
-      await shell.openExternal(url);
-      return { success: true };
-    } else {
-      console.error(`Invalid URL format: ${url}`);
-      return { success: false, error: "Invalid URL format" };
-    }
-  } catch (error) {
-    console.error(`Error opening external URL: ${error.message}`);
     return { success: false, error: error.message };
   }
 });

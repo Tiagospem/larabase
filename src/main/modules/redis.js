@@ -1,11 +1,8 @@
 const { ipcMain } = require("electron");
-const { execSync } = require("child_process");
 const redis = require("redis");
 const os = require("os");
+const docker = require("./docker");
 
-/**
- * Create Redis client with consistent options
- */
 function createRedisClient(config, isRunningInDocker = false) {
   // Basic options with timeouts
   const options = {
@@ -32,29 +29,15 @@ function createRedisClient(config, isRunningInDocker = false) {
   return redis.createClient(options);
 }
 
-/**
- * Check if Redis is running in Docker
- */
-function checkDockerRedis() {
-  try {
-    const platform = os.platform();
-    const dockerCommand = platform === "win32" ? 'docker ps --filter "name=redis" --format "{{.Names}}"' : 'docker ps --filter "name=redis" --format "{{.Names}}"';
-
-    const output = execSync(dockerCommand, { encoding: "utf8" });
-    return output && output.toLowerCase().includes("redis");
-  } catch (err) {
-    return false;
-  }
+async function checkDockerRedis() {
+  return await docker.checkDockerRedis();
 }
 
-/**
- * Check if Redis is running and determine if it's running locally or in Docker
- */
 async function checkRedisStatus(event, config) {
   let client = null;
 
   try {
-    const isRunningInDocker = checkDockerRedis();
+    const isRunningInDocker = await checkDockerRedis();
     const runningMode = isRunningInDocker ? "Docker" : "Local";
 
     // Create client
@@ -95,14 +78,11 @@ async function checkRedisStatus(event, config) {
   }
 }
 
-/**
- * Get information about Redis databases
- */
 async function getRedisDatabases(event, config) {
   let client = null;
 
   try {
-    // First check if Redis is running
+    // First, check if Redis is running
     const statusCheck = await checkRedisStatus(event, config);
     if (!statusCheck.success) {
       return statusCheck;
@@ -112,7 +92,7 @@ async function getRedisDatabases(event, config) {
     client = createRedisClient(config, statusCheck.runningMode === "Docker");
     await client.connect();
 
-    // Get list of databases with key counts and memory usage
+    // Get a list of databases with key counts and memory usage
     const info = await client.sendCommand(["INFO", "keyspace"]);
     const memory = await client.sendCommand(["INFO", "memory"]);
 
@@ -167,9 +147,6 @@ async function getRedisDatabases(event, config) {
   }
 }
 
-/**
- * Clear a specific Redis database
- */
 async function clearRedisDatabase(event, config) {
   let client = null;
 
@@ -223,14 +200,11 @@ async function clearRedisDatabase(event, config) {
   }
 }
 
-/**
- * Clear all Redis databases
- */
 async function clearAllRedisDatabases(event, config) {
   let client = null;
 
   try {
-    // First check if Redis is running
+    // First, check if Redis is running
     const statusCheck = await checkRedisStatus(event, config);
     if (!statusCheck.success) {
       return statusCheck;
@@ -260,9 +234,6 @@ async function clearAllRedisDatabases(event, config) {
   }
 }
 
-/**
- * Parse the Redis INFO command output
- */
 function parseRedisInfo(info) {
   const result = {};
   const lines = info.split("\r\n");
@@ -279,9 +250,6 @@ function parseRedisInfo(info) {
   return result;
 }
 
-/**
- * Parse database info string (e.g., "keys=1,expires=0,avg_ttl=0")
- */
 function parseDbInfo(infoString) {
   const result = {};
   const parts = infoString.split(",");
@@ -294,9 +262,6 @@ function parseDbInfo(infoString) {
   return result;
 }
 
-/**
- * Calculate the approximate memory usage for a database
- */
 function calculateDbMemory(dbKeys, totalMemory, totalKeys) {
   if (totalKeys === 0 || dbKeys === 0) return 0;
 
@@ -304,9 +269,6 @@ function calculateDbMemory(dbKeys, totalMemory, totalKeys) {
   return Math.floor((dbKeys / totalKeys) * totalMemory);
 }
 
-/**
- * Get total keys across all databases
- */
 function getTotalKeys(keyspaceInfo) {
   let total = 0;
 
@@ -320,9 +282,6 @@ function getTotalKeys(keyspaceInfo) {
   return total || 1; // Avoid division by zero
 }
 
-/**
- * Get keys from a specific Redis database with pagination
- */
 async function getRedisKeys(event, config) {
   let client = null;
 
@@ -343,7 +302,7 @@ async function getRedisKeys(event, config) {
       };
     }
 
-    // First check if Redis is running
+    // First, check if Redis is running
     const statusCheck = await checkRedisStatus(event, config);
     if (!statusCheck.success) {
       return statusCheck;
@@ -367,7 +326,7 @@ async function getRedisKeys(event, config) {
     let count = 0;
 
     do {
-      // SCAN cursor COUNT 50 MATCH pattern
+      // SCAN cursor COUNTS 50 MATCH pattern
       const result = await client.sendCommand(["SCAN", cursor, "MATCH", pattern, "COUNT", "50"]);
       cursor = result[0];
       const batchKeys = result[1];
@@ -402,9 +361,6 @@ async function getRedisKeys(event, config) {
   }
 }
 
-/**
- * Get the value of a specific Redis key
- */
 async function getRedisKeyValue(event, config) {
   let client = null;
 

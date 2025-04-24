@@ -273,8 +273,8 @@
 
           <!-- Redis Manager Button -->
           <button
-            :disabled="!isRedisConnection && !isRedisAvailable"
-            :class="{ 'opacity-20': !isRedisConnection && !isRedisAvailable }"
+            :disabled="!hasRedisConnection"
+            :class="{ 'opacity-20': !hasRedisConnection }"
             v-tooltip.bottom="'Redis Manager'"
             class="btn btn-ghost btn-sm text-white"
             title="Redis Manager"
@@ -578,7 +578,7 @@ const showArtisanCommands = ref(false);
 const showRedisManager = ref(false);
 const showLaravelCommands = ref(false);
 const isRedisAvailable = ref(false);
-const isRedisConnection = computed(() => !!connection.value?.redis);
+const hasRedisConnection = computed(() => isRedisAvailable.value);
 
 const connection = computed(() => {
   return connectionsStore.getConnection(connectionId.value);

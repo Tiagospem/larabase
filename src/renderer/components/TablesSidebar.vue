@@ -207,7 +207,7 @@
 
       <div class="scrollable-container flex-1 overflow-y-auto overflow-x-hidden min-h-0">
         <div
-          v-if="isLoading || isLoadingCounts || !allTablesLoaded"
+          v-if="isLoadingCounts || !allTablesLoaded"
           class="p-2"
         >
           <div
@@ -362,7 +362,7 @@
 </template>
 
 <script setup>
-import { computed, onMounted, ref, watch, onUnmounted, inject } from "vue";
+import { computed, inject, onActivated, onMounted, onUnmounted, ref, watch } from "vue";
 import { useDatabaseStore } from "@/store/database";
 
 const props = defineProps({
@@ -408,8 +408,11 @@ const isDeleting = ref(false);
  */
 const loadingTimer = ref(null);
 
-const isLoading = computed(() => databaseStore.isLoading);
-const tables = computed(() => databaseStore.tablesList);
+//const isLoading = computed(() => databaseStore.isLoading);
+
+const tables = computed(() => localTables.value);
+
+const localTables = ref([]);
 
 const filteredTables = computed(() => {
   if (!searchTerm.value) return tables.value;
@@ -446,6 +449,22 @@ watch(
       searchTerm.value = localStorage.getItem(`tableSearch_${newConnectionId}`) || "";
     }
   }
+);
+
+watch(
+  () => props.connectionId,
+  () => {
+    if (props.connectionId) {
+      allTablesLoaded.value = false;
+
+      localTables.value = databaseStore.tablesList.map((t) => ({ ...t, recordCount: null }));
+
+      loadingTimer.value = setTimeout(() => {
+        loadTableRecordCounts();
+      }, 500);
+    }
+  },
+  { immediate: true }
 );
 
 function clearSearch() {
@@ -556,7 +575,7 @@ async function deleteTables() {
   }
 }
 
-function loadTableRecordCounts() {
+async function loadTableRecordCounts() {
   if (isLoadingCounts.value) return;
 
   isLoadingCounts.value = true;
@@ -564,28 +583,39 @@ function loadTableRecordCounts() {
 
   if (loadingTimer.value) {
     clearTimeout(loadingTimer.value);
+    loadingTimer.value = null;
   }
 
   try {
-    const promises = tables.value.map(async (table) => {
+    const updatedTables = [...localTables.value];
+
+    const promises = updatedTables.map(async (table, i) => {
       try {
-        table.recordCount = await databaseStore.getTableRecordCount(props.connectionId, table.name);
-      } catch (error) {
-        console.error(`Failed to get record count for ${table.name}:`, error);
-        table.recordCount = 0;
+        if (table.recordCount === null || table.recordCount === undefined) {
+          return {
+            index: i,
+            count: await databaseStore.getTableRecordCount(props.connectionId, table.name)
+          };
+        }
+        return { index: i, count: table.recordCount };
+      } catch {
+        return { index: i, count: 0 };
       }
     });
 
-    Promise.all(promises).then(() => {
-      loadingTimer.value = setTimeout(() => {
-        allTablesLoaded.value = true;
-        isLoadingCounts.value = false;
-      }, 300);
+    const results = await Promise.all(promises);
+
+    results.forEach(({ index, count }) => {
+      updatedTables[index].recordCount = count;
     });
+
+    localTables.value = updatedTables;
+
+    allTablesLoaded.value = true;
   } catch (error) {
     console.error("Error loading record counts:", error);
+  } finally {
     isLoadingCounts.value = false;
-    allTablesLoaded.value = true;
   }
 }
 
@@ -606,36 +636,42 @@ function getTableModel(tableName) {
 }
 
 watch(
-  () => props.connectionId,
-  () => {
-    if (props.connectionId) {
-      allTablesLoaded.value = false;
+  () => databaseStore.tablesList,
+  (newList, oldList) => {
+    if (!oldList || newList.length !== oldList.length) {
+      const existingRecordCounts = {};
+      localTables.value.forEach((table) => {
+        if (table.recordCount !== null && table.recordCount !== undefined) {
+          existingRecordCounts[table.name] = table.recordCount;
+        }
+      });
 
-      loadingTimer.value = setTimeout(() => {
+      localTables.value = newList.map((t) => ({
+        ...t,
+        recordCount: existingRecordCounts[t.name] !== undefined ? existingRecordCounts[t.name] : null
+      }));
+
+      const needsReload = localTables.value.some((t) => t.recordCount === null);
+      if (needsReload) {
         loadTableRecordCounts();
-      }, 500);
+      }
     }
   },
   { immediate: true }
-);
-
-watch(
-  () => tables.value.length,
-  (newLength) => {
-    if (newLength > 0) {
-      allTablesLoaded.value = false;
-
-      loadingTimer.value = setTimeout(() => {
-        loadTableRecordCounts();
-      }, 300);
-    }
-  }
 );
 
 onMounted(() => {
   loadingTimer.value = setTimeout(() => {
     loadTableRecordCounts();
   }, 500);
+});
+
+onActivated(() => {
+  const needsReload = localTables.value.some((t) => t.recordCount === null || t.recordCount === undefined);
+
+  if (needsReload) {
+    loadTableRecordCounts();
+  }
 });
 
 onUnmounted(() => {

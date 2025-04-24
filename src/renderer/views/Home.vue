@@ -127,6 +127,7 @@
                   </button>
                   <button
                     v-tooltip.bottom="'Restore database'"
+                    :disabled="!connection.isValid"
                     class="btn btn-sm btn-ghost text-white"
                     @click.stop="restoreDump(connection)"
                   >
