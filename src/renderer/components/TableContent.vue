@@ -39,7 +39,7 @@ const FactoryTab = markRaw(defineAsyncComponent(() => import("./tabs/FactoryTab.
 
 // Explicitly name this component for keep-alive caching
 defineOptions({
-  name: 'TableContent'
+  name: "TableContent"
 });
 
 const props = defineProps({

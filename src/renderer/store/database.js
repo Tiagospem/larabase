@@ -400,6 +400,27 @@ export const useDatabaseStore = defineStore("database", () => {
     }
   }
 
+  async function ensureConnection(id) {
+    try {
+      const conn = _getConnection(id);
+      if (!conn) {
+        throw new Error("Connection not found");
+      }
+
+      // Test the connection to make sure it's active
+      const result = await window.api.testMySQLConnection(_buildPayload(conn));
+
+      if (!result.success) {
+        throw new Error(`Failed to connect to database: ${result.message || "Unknown error"}`);
+      }
+
+      return true;
+    } catch (error) {
+      console.error("Connection verification failed:", error);
+      throw error;
+    }
+  }
+
   const tablesList = computed(() => tables.value.tables || []);
 
   return {
@@ -423,6 +444,7 @@ export const useDatabaseStore = defineStore("database", () => {
     truncateTable,
     truncateTables,
     tablesList,
-    getConnection: _getConnection
+    getConnection: _getConnection,
+    ensureConnection
   };
 });

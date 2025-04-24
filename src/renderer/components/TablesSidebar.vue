@@ -396,20 +396,22 @@ const cascadeDelete = ref(false);
 const isDeleting = ref(false);
 const lastConnectionId = ref(null);
 
-watch(() => props.connectionId, (newConnectionId) => {
-  if (newConnectionId) {
-    const savedSearchTerm = localStorage.getItem(`tableSearch_${newConnectionId}`) || "";
-    tablesStore.setSearchTerm(newConnectionId, savedSearchTerm);
-    
-    // Only initialize tables if the connection has changed or tables aren't loaded
-    if (newConnectionId !== lastConnectionId.value || 
-        !tablesStore.allTablesLoaded || 
-        tablesStore.localTables.length === 0) {
-      tablesStore.initializeTables(newConnectionId);
-      lastConnectionId.value = newConnectionId;
+watch(
+  () => props.connectionId,
+  (newConnectionId) => {
+    if (newConnectionId) {
+      const savedSearchTerm = localStorage.getItem(`tableSearch_${newConnectionId}`) || "";
+      tablesStore.setSearchTerm(newConnectionId, savedSearchTerm);
+
+      // Only initialize tables if the connection has changed or tables aren't loaded
+      if (newConnectionId !== lastConnectionId.value || !tablesStore.allTablesLoaded || tablesStore.localTables.length === 0) {
+        tablesStore.initializeTables(newConnectionId);
+        lastConnectionId.value = newConnectionId;
+      }
     }
-    }
-}, { immediate: true });
+  },
+  { immediate: true }
+);
 
 function isTableActive(tableName) {
   return props.activeTabName === tableName;
@@ -533,9 +535,9 @@ onActivated(() => {
   // On activation, check if we need to reload counts
   // This happens when returning to this component from elsewhere
   if (props.connectionId === lastConnectionId.value) {
-    if (!tablesStore.allTablesLoaded || tablesStore.localTables.some(t => t.recordCount === null)) {
+    if (!tablesStore.allTablesLoaded || tablesStore.localTables.some((t) => t.recordCount === null)) {
       tablesStore.loadTableRecordCounts(props.connectionId);
-  }
+    }
   } else if (props.connectionId) {
     // If we've changed connections while component was inactive
     tablesStore.initializeTables(props.connectionId);

@@ -85,12 +85,12 @@ const truncateTable = async () => {
   try {
     await databaseStore.truncateTable(tableDataStore.connectionId, tableDataStore.tableName);
 
-    showAlert('Table truncated successfully', 'success');
+    showAlert("Table truncated successfully", "success");
 
     tableDataStore.resetData();
     tableDataStore.totalRecordsCount = 0;
     await tableDataStore.loadTableData();
-    
+
     tablesStore.updateTableRecordCount(tableDataStore.tableName, 0);
 
     window.dispatchEvent(
@@ -104,7 +104,7 @@ const truncateTable = async () => {
       })
     );
   } catch (error) {
-    showAlert(error.message || 'Failed to truncate table', 'error');
+    showAlert(error.message || "Failed to truncate table", "error");
   }
 };
 </script>

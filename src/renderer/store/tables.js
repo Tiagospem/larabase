@@ -78,7 +78,7 @@ export const useTablesStore = defineStore("tables", () => {
     if (isLoadingCounts.value) return;
 
     isLoadingCounts.value = true;
-    
+
     // Don't reset allTablesLoaded here, since we're just updating counts
 
     if (loadingTimer.value) {
@@ -121,8 +121,8 @@ export const useTablesStore = defineStore("tables", () => {
 
   // Add a method to update a single table's record count
   function updateTableRecordCount(tableName, count) {
-    const tableIndex = localTables.value.findIndex(table => table.name === tableName);
-    
+    const tableIndex = localTables.value.findIndex((table) => table.name === tableName);
+
     if (tableIndex !== -1) {
       const updatedTables = [...localTables.value];
       updatedTables[tableIndex].recordCount = count;
@@ -135,7 +135,7 @@ export const useTablesStore = defineStore("tables", () => {
     if (lastLoadedConnection.value === connectionId && localTables.value.length > 0 && allTablesLoaded.value) {
       return;
     }
-    
+
     // Otherwise, reset and load new data
     allTablesLoaded.value = false;
     localTables.value = databaseStore.tablesList.map((t) => ({ ...t, recordCount: null }));
@@ -165,12 +165,12 @@ export const useTablesStore = defineStore("tables", () => {
     sortBy,
     sortOrder,
     lastLoadedConnection,
-    
+
     // Computed
     tables,
     filteredTables,
     sortedTables,
-    
+
     // Methods
     setSearchTerm,
     clearSearch,
@@ -182,4 +182,4 @@ export const useTablesStore = defineStore("tables", () => {
     initializeTables,
     clearTablesData
   };
-}); 
+});

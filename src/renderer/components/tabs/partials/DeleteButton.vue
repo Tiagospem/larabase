@@ -84,7 +84,7 @@ async function confirmDelete() {
     showAlert(result.message, "success");
 
     tableDataStore.selectedRows = [];
-    
+
     // Reduzir o total de registros pelo número de registros excluídos
     // Ou obter o valor atualizado da API se disponível
     if (result.deletedCount) {
@@ -94,13 +94,14 @@ async function confirmDelete() {
     }
 
     await tableDataStore.loadTableData();
-    
+
     // Update table record count in the sidebar
-    await databaseStore.getTableRecordCount(tableDataStore.connectionId, tableDataStore.tableName)
-      .then(count => {
+    await databaseStore
+      .getTableRecordCount(tableDataStore.connectionId, tableDataStore.tableName)
+      .then((count) => {
         tablesStore.updateTableRecordCount(tableDataStore.tableName, count);
       })
-      .catch(error => {
+      .catch((error) => {
         console.error(`Error updating record count: ${error.message}`);
       });
   } catch (error) {

@@ -2,7 +2,10 @@
   <div class="h-full flex flex-col">
     <div class="bg-base-200 p-2 border-b border-neutral flex flex-wrap items-center justify-between gap-2">
       <div class="flex flex-wrap items-center gap-2">
-        <RefreshButton :store-id="storeId" />
+        <RefreshButton
+          :store-id="storeId"
+          @refresh="handleRefresh"
+        />
         <LiveTableButton :store-id="storeId" />
         <TruncateButton :store-id="storeId" />
         <DeleteButton :store-id="storeId" />
@@ -115,27 +118,75 @@ const dataTableRef = ref(null);
 
 const isActive = ref(true);
 
+const maxRetryAttempts = ref(3);
+const retryDelay = ref(300);
+
+async function loadDataWithRetry(loadFunc, retryCount = 0) {
+  try {
+    await loadFunc();
+    return true;
+  } catch (error) {
+    console.error(`Error loading data (attempt ${retryCount + 1}):`, error);
+
+    if (retryCount < maxRetryAttempts.value) {
+      // Wait before retrying
+      await new Promise((resolve) => setTimeout(resolve, retryDelay.value));
+      return loadDataWithRetry(loadFunc, retryCount + 1);
+    }
+
+    // Max retries reached, show error
+    console.error("Max retry attempts reached", error);
+    tableDataStore.loadError = error.message || "Failed to load data after multiple attempts";
+    return false;
+  }
+}
+
+async function safeLoadTableData() {
+  isLoading.value = true;
+
+  try {
+    // Ensure connection is established first
+    await databaseStore.ensureConnection(props.connectionId);
+
+    // Then load data with retry mechanism
+    const loadFunc = () => {
+      if (tableDataStore.activeFilter || tableDataStore.filterTerm) {
+        return tableDataStore.loadFilteredData();
+      } else {
+        return tableDataStore.loadTableData();
+      }
+    };
+
+    await loadDataWithRetry(loadFunc);
+  } catch (error) {
+    console.error("Failed to load table data:", error);
+    tableDataStore.loadError = error.message || "Failed to load table data";
+  } finally {
+    isLoading.value = false;
+  }
+}
+
 // Handle table truncate event from other components
 function handleTableTruncate(event) {
   const { connectionId, tableName, totalRecords, forceReset } = event.detail;
-  
+
   // Only respond if this event is for our table
   if (connectionId === props.connectionId && tableName === props.tableName) {
     console.log(`Table ${tableName} truncated from external source, refreshing data`);
-    
+
     // Reset the table state completely to ensure buttons update their state
     tableDataStore.resetData();
     tableDataStore.totalRecordsCount = totalRecords !== undefined ? totalRecords : 0;
-    
+
     // Force UI update by loading data with a slight delay if forceReset is true
     if (forceReset) {
       setTimeout(() => {
-        tableDataStore.loadTableData();
+        safeLoadTableData();
       }, 50);
     } else {
-      tableDataStore.loadTableData();
+      safeLoadTableData();
     }
-    
+
     // Update the record count in the sidebar to zero
     tablesStore.updateTableRecordCount(tableName, 0);
   }
@@ -267,28 +318,28 @@ async function loadTableStructure() {
 
 onActivated(() => {
   isActive.value = true;
-  
+
   // Re-attach event listeners
   window.addEventListener("tab-activated", handleTabActivation);
   window.addEventListener("storage", handleStorageChange);
   window.addEventListener("focus", handleWindowFocus);
   window.addEventListener("reload-table-data", handleTableTruncate);
   window.addEventListener("truncate-table", handleTableTruncate);
-  
+
   // Restore live updates if previously active
   refreshLiveTableState();
 });
 
 onDeactivated(() => {
   isActive.value = false;
-  
+
   // Detach event listeners to prevent memory leaks
   window.removeEventListener("tab-activated", handleTabActivation);
   window.removeEventListener("storage", handleStorageChange);
   window.removeEventListener("focus", handleWindowFocus);
   window.removeEventListener("reload-table-data", handleTableTruncate);
   window.removeEventListener("truncate-table", handleTableTruncate);
-  
+
   // Pause live updates when component is deactivated
   if (tableDataStore.isLiveTableActive) {
     tableDataStore.stopLiveUpdates(false); // Stop without updating localStorage
@@ -299,7 +350,7 @@ onMounted(() => {
   window.addEventListener("tab-activated", handleTabActivation);
   window.addEventListener("storage", handleStorageChange);
   window.addEventListener("focus", handleWindowFocus);
-  
+
   // Add listener for table truncation
   window.addEventListener("reload-table-data", handleTableTruncate);
   window.addEventListener("truncate-table", handleTableTruncate);
@@ -345,12 +396,8 @@ onMounted(() => {
       }
     }
 
-    if (hasFilter) {
-      console.log("Applying filter on initialization:", tableDataStore.activeFilter);
-      tableDataStore.loadFilteredData();
-    } else {
-      tableDataStore.loadTableData();
-    }
+    // Use the safe load function instead of direct calls
+    safeLoadTableData();
   });
 
   try {
@@ -472,4 +519,10 @@ watch([() => props.tableName, () => props.connectionId], async ([newTableName, n
     }
   }
 });
+
+function handleRefresh() {
+  // Clear any existing errors before trying to refresh
+  tableDataStore.loadError = null;
+  safeLoadTableData();
+}
 </script>
