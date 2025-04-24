@@ -57,6 +57,7 @@
 import { useTableDataStore } from "@/store/table-data";
 import { inject } from "vue";
 import { useDatabaseStore } from "@/store/database";
+import { useTablesStore } from "@/store/tables";
 
 const showAlert = inject("showAlert");
 
@@ -69,6 +70,7 @@ const props = defineProps({
 
 const tableDataStore = useTableDataStore(props.storeId);
 const databaseStore = useDatabaseStore();
+const tablesStore = useTablesStore();
 
 async function confirmDelete() {
   tableDataStore.showDeleteConfirm = false;
@@ -83,6 +85,15 @@ async function confirmDelete() {
     tableDataStore.selectedRows = [];
 
     await tableDataStore.loadTableData();
+    
+    // Update table record count in the sidebar
+    await databaseStore.getTableRecordCount(tableDataStore.connectionId, tableDataStore.tableName)
+      .then(count => {
+        tablesStore.updateTableRecordCount(tableDataStore.tableName, count);
+      })
+      .catch(error => {
+        console.error(`Error updating record count: ${error.message}`);
+      });
   } catch (error) {
     console.error("Error in confirmDelete:", error);
 

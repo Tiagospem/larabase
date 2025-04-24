@@ -119,6 +119,17 @@ export const useTablesStore = defineStore("tables", () => {
     }
   }
 
+  // Add a method to update a single table's record count
+  function updateTableRecordCount(tableName, count) {
+    const tableIndex = localTables.value.findIndex(table => table.name === tableName);
+    
+    if (tableIndex !== -1) {
+      const updatedTables = [...localTables.value];
+      updatedTables[tableIndex].recordCount = count;
+      localTables.value = updatedTables;
+    }
+  }
+
   function initializeTables(connectionId) {
     // Check if the data is already loaded for this connection
     if (lastLoadedConnection.value === connectionId && localTables.value.length > 0 && allTablesLoaded.value) {
@@ -167,6 +178,7 @@ export const useTablesStore = defineStore("tables", () => {
     toggleSortOrder,
     formatRecordCount,
     loadTableRecordCounts,
+    updateTableRecordCount,
     initializeTables,
     clearTablesData
   };

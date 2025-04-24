@@ -57,10 +57,12 @@
 import { useTableDataStore } from "@/store/table-data";
 import { inject, ref } from "vue";
 import { useDatabaseStore } from "@/store/database";
+import { useTablesStore } from "@/store/tables";
 
 const showAlert = inject("showAlert");
 
 const databaseStore = useDatabaseStore();
+const tablesStore = useTablesStore();
 
 const showTruncateConfirm = ref(false);
 
@@ -87,6 +89,9 @@ async function truncateTable() {
 
     tableDataStore.selectedRows = [];
     await tableDataStore.loadTableData();
+    
+    // Set record count to zero in the sidebar after truncate
+    tablesStore.updateTableRecordCount(tableDataStore.tableName, 0);
   } catch (error) {
     showAlert(`Error truncating table: ${error.message}`, "error");
   }

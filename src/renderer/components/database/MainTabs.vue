@@ -230,6 +230,7 @@
 import { computed, inject, nextTick, onMounted, ref, watch, onUnmounted } from "vue";
 import { useTabsStore } from "@/store/tabs";
 import { useDatabaseStore } from "@/store/database";
+import { useTablesStore } from "@/store/tables";
 import IconPin from "@/components/icons/IconPin.vue";
 import IconPinFilled from "@/components/icons/IconPinFilled.vue";
 import IconTruncate from "@/components/icons/IconTruncate.vue";
@@ -243,6 +244,7 @@ const props = defineProps({
 
 const tabsStore = useTabsStore();
 const databaseStore = useDatabaseStore();
+const tablesStore = useTablesStore();
 const showAlert = inject("showAlert");
 
 const draggingTabId = ref(null);
@@ -327,11 +329,14 @@ async function truncatePinnedTables() {
       showAlert(`Truncated ${successCount} table(s), failed to truncate ${failCount}`, "warning");
     }
 
-    // Reload all truncated tables
+    // Reload all truncated tables and update record counts
     for (let connectionId in tabsByConnection) {
       const connectionTables = results.filter((r) => r.success && tabsByConnection[connectionId].includes(r.tableName));
 
       connectionTables.forEach((result) => {
+        // Set the record count to zero for successfully truncated tables
+        tablesStore.updateTableRecordCount(result.tableName, 0);
+        
         window.dispatchEvent(
           new CustomEvent("reload-table-data", {
             detail: {
