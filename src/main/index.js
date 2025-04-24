@@ -5,6 +5,7 @@ const fs = require("fs");
 const mysql = require("mysql2/promise");
 const { spawn, execSync, exec } = require("child_process");
 const pluralize = require("pluralize");
+const docker = require("./modules/docker");
 
 const { createWindow, getMainWindow } = require("./modules/window");
 const { registerRestoreDumpHandlers } = require("./modules/restore-dump");
@@ -115,19 +116,16 @@ function enhancePath() {
     console.log(`Set default PATH for ${platform}: ${process.env.PATH}`);
   }
 
-  const whichCmd = platform === "win32" ? "where docker" : "which docker";
-
-  try {
-    const dockerPath = execSync(whichCmd, {
-      timeout: 2000,
-      shell: true,
-      windowsHide: true,
-      encoding: "utf8"
-    }).trim();
-    console.log(`Docker binary found at: ${dockerPath}`);
-  } catch (err) {
-    console.log(`Docker binary not found in PATH: ${err.message}`);
-  }
+  // Check Docker availability using dockerode
+  docker.isDockerAvailable().then(available => {
+    if (available) {
+      console.log("Docker is available and running");
+    } else {
+      console.log("Docker is not available or not running");
+    }
+  }).catch(err => {
+    console.log(`Error checking Docker availability: ${err.message}`);
+  });
 
   console.log(`Electron running on platform: ${platform}`);
   console.log(`Node.js version: ${process.version}`);

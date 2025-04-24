@@ -1,7 +1,7 @@
 const { ipcMain } = require("electron");
-const { execSync } = require("child_process");
 const redis = require("redis");
 const os = require("os");
+const docker = require("./docker");
 
 /**
  * Create Redis client with consistent options
@@ -35,16 +35,8 @@ function createRedisClient(config, isRunningInDocker = false) {
 /**
  * Check if Redis is running in Docker
  */
-function checkDockerRedis() {
-  try {
-    const platform = os.platform();
-    const dockerCommand = platform === "win32" ? 'docker ps --filter "name=redis" --format "{{.Names}}"' : 'docker ps --filter "name=redis" --format "{{.Names}}"';
-
-    const output = execSync(dockerCommand, { encoding: "utf8" });
-    return output && output.toLowerCase().includes("redis");
-  } catch (err) {
-    return false;
-  }
+async function checkDockerRedis() {
+  return await docker.checkDockerRedis();
 }
 
 /**
@@ -54,7 +46,7 @@ async function checkRedisStatus(event, config) {
   let client = null;
 
   try {
-    const isRunningInDocker = checkDockerRedis();
+    const isRunningInDocker = await checkDockerRedis();
     const runningMode = isRunningInDocker ? "Docker" : "Local";
 
     // Create client

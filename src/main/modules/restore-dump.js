@@ -4,6 +4,7 @@ const fs = require("fs");
 const { spawn, exec } = require("child_process");
 const mysql = require("mysql2/promise");
 const { validateDatabaseConnection } = require("./connections");
+const docker = require("./docker");
 
 function cancelDatabaseRestoreHandler() {
   //to be implemented
@@ -235,7 +236,7 @@ async function extractTables(filePath, isGzipped, maxLinesToProcess = 50000) {
   });
 }
 
-function _buildDockerRestoreCommand(config) {
+async function _buildDockerRestoreCommand(config) {
   ensureConfig(config, "Docker");
 
   const { connection, sqlFilePath, ignoredTables } = config;
@@ -247,18 +248,16 @@ function _buildDockerRestoreCommand(config) {
 
   getFileSizeOrThrow(sqlFilePath);
 
-  const sedFilters = buildSedFilters(ignoredTables);
-  const useGunzip = sqlFilePath.toLowerCase().endsWith(".gz");
-
-  let command = buildBaseCommand(sqlFilePath, sedFilters, useGunzip);
-
-  command += ` | docker exec -i ${container} mysql`;
-  command += buildCredentialFlags(connection);
-  command += " --binary-mode=1 --force";
-  command += buildInitCommand(database);
-  //command += ` ${database}`;
-
-  return command;
+  // Instead of building a shell command, return the configuration
+  // that will be used with docker.executeMysqlFileInContainer
+  return {
+    container,
+    connection,
+    database,
+    sqlFilePath,
+    ignoredTables: ignoredTables || [],
+    useDockerApi: true
+  };
 }
 
 function _buildLocalRestoreCommand(config) {
@@ -277,9 +276,11 @@ function _buildLocalRestoreCommand(config) {
   command += buildCredentialFlags(connection);
   command += " --binary-mode=1 --force";
   command += buildInitCommand(database);
-  //command += ` ${database}`;
 
-  return command;
+  return {
+    command,
+    useShell: true
+  };
 }
 
 async function _validateDatabaseHasContent(connection) {
@@ -333,13 +334,13 @@ async function restoreDatabase(event, config) {
     return { success: false, error: err.message };
   }
 
-  let command;
+  let commandConfig;
 
   try {
     if (config.connection.docker) {
-      command = _buildDockerRestoreCommand(config);
+      commandConfig = await _buildDockerRestoreCommand(config);
     } else {
-      command = _buildLocalRestoreCommand(config);
+      commandConfig = _buildLocalRestoreCommand(config);
     }
   } catch (err) {
     console.error("Error building restore command:", err);
@@ -354,39 +355,67 @@ async function restoreDatabase(event, config) {
 
   try {
     await new Promise((resolve, reject) => {
-      const child = exec(command, { shell: "/bin/bash" });
-
-      child.stdout.on("data", (chunk) => {
-        const text = chunk.toString();
-        stdoutData += text;
-        const m = text.match(/(\d+)%/);
-        if (m) {
-          const pct = parseInt(m[1], 10);
-          const calc = 20 + pct * 0.8;
-          sendProgress("restoring", calc, `Restoring database: ${pct}% complete`);
-        }
-      });
-
-      child.stderr.on("data", (chunk) => {
-        const text = chunk.toString();
-        stderrData += text;
-      });
-
-      child.on("error", (err) => {
-        console.error("Failed to start process:", err);
-        sendProgress("error", 0, `Process error: ${err.message}`);
-        reject(err);
-      });
-
-      child.on("close", (code) => {
-        if (code === 0) {
+      if (commandConfig.useDockerApi) {
+        // Use dockerode API for Docker operations
+        sendProgress("restoring", 30, "Executing SQL restore in Docker container");
+        
+        // Progress tracking callback
+        const progressCallback = (progress) => {
+          const adjustedProgress = 30 + (progress * 0.6); // Scale to 30-90% range
+          sendProgress("restoring", adjustedProgress, `Restoring database: ${progress}% complete`);
+        };
+        
+        docker.executeMysqlFileInContainer(
+          commandConfig.container,
+          commandConfig.connection,
+          commandConfig.database,
+          commandConfig.sqlFilePath,
+          commandConfig.ignoredTables,
+          progressCallback
+        ).then(() => {
+          sendProgress("restoring", 90, "Database restored successfully");
           resolve();
-        } else {
-          console.error("Restore failed with code", code, stderrData);
-          sendProgress("error", 0, `Restoration failed: ${stderrData || `exit code ${code}`}`);
-          reject(new Error(stderrData || `Exit code ${code}`));
-        }
-      });
+        }).catch(err => {
+          console.error("Docker execution error:", err);
+          sendProgress("error", 0, `Docker execution error: ${err.message}`);
+          reject(err);
+        });
+      } else if (commandConfig.useShell) {
+        // Use shell execution with piping for complex commands (local MySQL)
+        const child = exec(commandConfig.command, { shell: "/bin/bash" });
+
+        child.stdout.on("data", (chunk) => {
+          const text = chunk.toString();
+          stdoutData += text;
+          const m = text.match(/(\d+)%/);
+          if (m) {
+            const pct = parseInt(m[1], 10);
+            const calc = 20 + pct * 0.8;
+            sendProgress("restoring", calc, `Restoring database: ${pct}% complete`);
+          }
+        });
+
+        child.stderr.on("data", (chunk) => {
+          const text = chunk.toString();
+          stderrData += text;
+        });
+
+        child.on("error", (err) => {
+          console.error("Failed to start process:", err);
+          sendProgress("error", 0, `Process error: ${err.message}`);
+          reject(err);
+        });
+
+        child.on("close", (code) => {
+          if (code === 0) {
+            resolve();
+          } else {
+            console.error("Restore failed with code", code, stderrData);
+            sendProgress("error", 0, `Restoration failed: ${stderrData || `exit code ${code}`}`);
+            reject(new Error(stderrData || `Exit code ${code}`));
+          }
+        });
+      }
     });
   } catch (err) {
     return { success: false, error: err.message };
