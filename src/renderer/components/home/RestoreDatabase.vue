@@ -171,7 +171,7 @@
                   class="text-xs px-2 py-0.5 rounded"
                   :class="getTableSizeClass(table.size)"
                 >
-                  {{ table.size }}
+                  {{ table.formattedRows }}
                 </span>
               </div>
             </label>

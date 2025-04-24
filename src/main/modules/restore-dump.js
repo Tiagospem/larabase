@@ -4,6 +4,9 @@ const fs = require("fs");
 const { spawn, exec } = require("child_process");
 const mysql = require("mysql2/promise");
 const { validateDatabaseConnection } = require("./connections");
+const path = require("path");
+const zlib = require("zlib");
+const readline = require("readline");
 const docker = require("./docker");
 
 // Destructure needed functions from docker module for easier access
@@ -183,184 +186,97 @@ function buildInitCommand(database) {
   return ` --init-command="CREATE DATABASE IF NOT EXISTS \\\`${database}\\\`; USE \\\`${database}\\\`;"`;
 }
 
-async function extractTables(filePath, isGzipped, maxLinesToProcess = 50000) {
-  return new Promise((resolve, reject) => {
-    try {
-      let inputStream;
-      if (isGzipped) {
-        const gunzip = spawn("gunzip", ["-c", filePath], {
-          timeout: 30000
-        });
-        inputStream = gunzip.stdout;
-
-        gunzip.on("error", (error) => {
-          reject(new Error(`Error decompressing file: ${error.message}`));
-        });
-      } else {
-        inputStream = fs.createReadStream(filePath, {
-          highWaterMark: 64 * 1024
-        });
-      }
-
-      const lineReader = require("readline").createInterface({
-        input: inputStream,
-        crlfDelay: Infinity
-      });
-
-      const tableNames = new Set();
-      const tableStats = new Map();
-
-      const createTableRegex = /CREATE\s+TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?[`"']?([a-zA-Z0-9_]+)[`"']?/i;
-      const insertRegex = /INSERT\s+INTO\s+[`"']?([a-zA-Z0-9_]+)[`"']?/i;
-      const dropTableRegex = /DROP\s+TABLE\s+(?:IF\s+EXISTS\s+)?[`"']?([a-zA-Z0-9_]+)[`"']?/i;
-      const alterTableRegex = /ALTER\s+TABLE\s+[`"']?([a-zA-Z0-9_]+)[`"']?/i;
-
-      let linesProcessed = 0;
-      let currentTable = null;
-      let currentInsertSize = 0;
-
-      lineReader.on("line", (line) => {
-        linesProcessed++;
-
-        if (linesProcessed > maxLinesToProcess) {
-          lineReader.close();
-          return;
-        }
-
-        if (line.trim().startsWith("--") || line.trim().startsWith("#") || line.trim() === "") {
-          return;
-        }
-
-        // Check if this is the start of an INSERT statement
-        const insertMatch = insertRegex.exec(line);
-        if (insertMatch) {
-          const tableName = insertMatch[1];
-          tableNames.add(tableName);
-          currentTable = tableName;
-
-          // Count values in the INSERT statement to estimate size
-          const valueCount = (line.match(/VALUES/gi) || []).length;
-          const rowCount = (line.match(/\),\(/g) || []).length + 1; // +1 for the first row
-
-          // Accumulate insert size
-          currentInsertSize = Math.max(currentInsertSize, rowCount);
-
-          // Update table stats
-          if (!tableStats.has(tableName)) {
-            tableStats.set(tableName, {
-              insertCount: 1,
-              maxRowsPerInsert: rowCount,
-              totalEstimatedRows: rowCount
-            });
-          } else {
-            const stats = tableStats.get(tableName);
-            stats.insertCount++;
-            stats.maxRowsPerInsert = Math.max(stats.maxRowsPerInsert, rowCount);
-            stats.totalEstimatedRows += rowCount;
-            tableStats.set(tableName, stats);
-          }
-
-          return;
-        }
-
-        // If we're in a multiline INSERT statement, count additional rows
-        if (currentTable && line.includes("),(")) {
-          const rowsInLine = (line.match(/\),\(/g) || []).length;
-          if (rowsInLine > 0) {
-            const stats = tableStats.get(currentTable);
-            if (stats) {
-              stats.totalEstimatedRows += rowsInLine;
-              tableStats.set(currentTable, stats);
-            }
-          }
-        }
-
-        if (currentTable && line.trim().endsWith(";")) {
-          currentTable = null;
-          currentInsertSize = 0;
-        }
-
-        let match;
-        if ((match = createTableRegex.exec(line)) !== null) {
-          tableNames.add(match[1]);
-          if (!tableStats.has(match[1])) {
-            tableStats.set(match[1], {
-              insertCount: 0,
-              maxRowsPerInsert: 0,
-              totalEstimatedRows: 0
-            });
-          }
-        } else if ((match = dropTableRegex.exec(line)) !== null) {
-          tableNames.add(match[1]);
-        } else if ((match = alterTableRegex.exec(line)) !== null) {
-          tableNames.add(match[1]);
-        }
-      });
-
-      const timeout = setTimeout(() => {
-        lineReader.close();
-        console.log(`Extraction timed out after processing ${linesProcessed} lines`);
-      }, 60000);
-
-      lineReader.on("close", () => {
-        clearTimeout(timeout);
-
-        const systemTables = ["mysql", "information_schema", "performance_schema", "sys"];
-
-        const tableResults = [];
-
-        for (const tableName of tableNames) {
-          if (systemTables.includes(tableName.toLowerCase())) {
-            continue;
-          }
-
-          const stats = tableStats.get(tableName) || {
-            insertCount: 0,
-            maxRowsPerInsert: 0,
-            totalEstimatedRows: 0
-          };
-
-          let sizeCategory;
-          if (stats.totalEstimatedRows === 0) {
-            sizeCategory = "empty";
-          } else if (stats.totalEstimatedRows < 1000) {
-            sizeCategory = "small";
-          } else if (stats.totalEstimatedRows < 100000) {
-            sizeCategory = "medium";
-          } else {
-            sizeCategory = "large";
-          }
-
-          tableResults.push({
-            name: tableName,
-            size: sizeCategory,
-            estimatedRows: stats.totalEstimatedRows
-          });
-        }
-
-        tableResults.sort((a, b) => a.name.localeCompare(b.name));
-
-        console.log(`Found ${tableResults.length} tables after processing ${linesProcessed} lines`);
-        console.log(
-          `Tables by size: ${tableResults.filter((t) => t.size === "empty").length} empty, ` +
-            `${tableResults.filter((t) => t.size === "small").length} small, ` +
-            `${tableResults.filter((t) => t.size === "medium").length} medium, ` +
-            `${tableResults.filter((t) => t.size === "large").length} large`
-        );
-
-        resolve(tableResults);
-      });
-
-      inputStream.on("error", (error) => {
-        clearTimeout(timeout);
-        reject(new Error(`Error reading SQL file: ${error.message}`));
-      });
-    } catch (error) {
-      reject(error);
-    }
-  });
+function formatCount(n) {
+  if (n >= 1_000_000) return `~${Math.round(n / 1_000_000)}m`;
+  if (n >= 1_000) return `~${Math.round(n / 1_000)}k`;
+  return `${n}`;
 }
 
+async function extractTables(filePath, isGzipped) {
+  return new Promise((resolve, reject) => {
+    let stream = fs.createReadStream(filePath, { highWaterMark: 64 * 1024 });
+    if (isGzipped) {
+      const gunzip = zlib.createGunzip();
+      stream = stream.pipe(gunzip);
+      gunzip.on("error", (e) => reject(new Error(`Decompression error: ${e.message}`)));
+    }
+
+    const rl = readline.createInterface({ input: stream, crlfDelay: Infinity });
+    const tableNames = new Set();
+    const tableStats = new Map();
+
+    const patterns = {
+      create: /CREATE\s+TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?[`"']?([a-zA-Z0-9_]+)[`"']?/i,
+      insert: /INSERT\s+INTO\s+[`"']?([a-zA-Z0-9_]+)[`"']?\s+VALUES/i,
+      drop: /DROP\s+TABLE\s+(?:IF\s+EXISTS\s+)?[`"']?([a-zA-Z0-9_]+)[`"']?/i,
+      alter: /ALTER\s+TABLE\s+[`"']?([a-zA-Z0-9_]+)[`"']?/i
+    };
+
+    let currentTable = null;
+    let insertBuffer = "";
+
+    rl.on("line", (line) => {
+      const trimmed = line.trim();
+      if (!trimmed || trimmed.startsWith("--") || trimmed.startsWith("#")) return;
+
+      ["create", "drop", "alter"].forEach((key) => {
+        const m = patterns[key].exec(line);
+        if (m) {
+          tableNames.add(m[1]);
+          if (!tableStats.has(m[1])) {
+            tableStats.set(m[1], { estimatedRows: 0 });
+          }
+        }
+      });
+
+      const ins = patterns.insert.exec(line);
+      if (ins) {
+        currentTable = ins[1];
+        tableNames.add(currentTable);
+        insertBuffer = line;
+        return;
+      }
+
+      if (currentTable) {
+        insertBuffer += "\n" + line;
+        if (trimmed.endsWith(";")) {
+          const separators = insertBuffer.match(/\),\s*\(/g) || [];
+          const rowCount = separators.length + 1;
+          const stats = tableStats.get(currentTable) || { estimatedRows: 0 };
+          stats.estimatedRows += rowCount;
+          tableStats.set(currentTable, stats);
+          currentTable = null;
+          insertBuffer = "";
+        }
+        return;
+      }
+    });
+
+    rl.on("close", () => {
+      const system = ["mysql", "information_schema", "performance_schema", "sys"];
+      const result = Array.from(tableNames)
+        .filter((t) => !system.includes(t.toLowerCase()))
+        .sort()
+        .map((name) => {
+          const rows = tableStats.get(name)?.estimatedRows || 0;
+          let size;
+          if (rows === 0) size = "empty";
+          else if (rows < 1_000) size = "small";
+          else if (rows < 100_000) size = "medium";
+          else size = "large";
+          return {
+            name,
+            size,
+            estimatedRows: rows,
+            formattedRows: formatCount(rows)
+          };
+        });
+      resolve(result);
+    });
+
+    stream.on("error", (e) => reject(new Error(`Read error: ${e.message}`)));
+  });
+}
 async function _buildDockerRestoreCommand(config) {
   ensureConfig(config, "Docker");
 
@@ -786,80 +702,33 @@ function registerRestoreDumpHandlers(store) {
   ipcMain.handle("extract-tables-from-sql", async (event, filePath) => {
     try {
       if (!filePath) {
-        return {
-          success: false,
-          message: "Missing file path",
-          tables: []
-        };
+        return { success: false, message: "Missing file path", tables: [] };
       }
 
       if (!fs.existsSync(filePath)) {
-        return {
-          success: false,
-          message: "File not found",
-          tables: []
-        };
+        return { success: false, message: "File not found", tables: [] };
       }
 
-      const stats = fs.statSync(filePath);
-      const fileSizeMB = stats.size / (1024 * 1024);
+      const isGzipped = filePath.toLowerCase().endsWith(".gz");
+      console.log(`Scanning SQL dump for tables: ${filePath}`);
 
-      let isGzipped = filePath.toLowerCase().endsWith(".gz");
-      let maxLines = 100000;
-
-      if (fileSizeMB > 500) {
-        maxLines = 20000;
-      } else if (fileSizeMB > 100) {
-        maxLines = 50000;
-      }
-
-      if (isGzipped) {
-        maxLines = Math.min(maxLines, 30000);
-      }
-
-      console.log(`Extracting tables from SQL file (${fileSizeMB.toFixed(2)}MB), scanning up to ${maxLines} lines`);
-
-      try {
-        const tables = await extractTables(filePath, isGzipped, maxLines);
-
-        if (tables.length === 0) {
-          return {
-            success: true,
-            message: "No tables found in the SQL file. It may be corrupted or not a valid dump file.",
-            tables: []
-          };
-        }
-
+      const tables = await extractTables(filePath, isGzipped);
+      if (tables.length === 0) {
         return {
           success: true,
-          tables: tables,
-          message: `Found ${tables.length} tables in the SQL file`
-        };
-      } catch (extractError) {
-        console.error("Error during table extraction:", extractError);
-
-        if (extractError.message.includes("decompressing file")) {
-          return {
-            success: false,
-            message: "Error decompressing file. Make sure it is a valid .gz file.",
-            tables: []
-          };
-        }
-
-        return {
-          success: false,
-          message: extractError.message || "Failed to extract tables from SQL file",
+          message: "No tables found in the SQL file. It may be corrupted or not a valid dump file.",
           tables: []
         };
       }
-    } catch (error) {
-      console.error("Error extracting tables from SQL dump:", error);
 
       return {
-        success: false,
-        message: error.message || "Failed to extract tables",
-        tables: []
+        success: true,
+        tables,
+        message: `Found ${tables.length} tables in the SQL dump.`
       };
+    } catch (err) {
+      console.error("Error extracting tables:", err);
+      return { success: false, message: err.message || "Extraction failed", tables: [] };
     }
   });
 
