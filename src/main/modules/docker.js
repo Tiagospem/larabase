@@ -178,6 +178,10 @@ async function executeMysqlInContainer(containerName, credentials, database, sql
     const exec = await container.exec(options);
     const stream = await exec.start({hijack: true, stdin: true});
     
+    // Add docker exec information for cancellation tracking
+    stream.dockerExecId = exec.id;
+    stream.dockerContainer = containerName;
+    
     // Send SQL commands to stdin
     if (sqlCommands) {
       stream.write(sqlCommands);
@@ -194,8 +198,33 @@ async function executeMysqlInContainer(containerName, credentials, database, sql
 
 // Process SQL file (handling gzip and filtering) and execute in Docker container
 async function executeMysqlFileInContainer(containerName, credentials, database, sqlFilePath, ignoredTables = [], progressCallback) {
+  // Track cancellation
+  let isCancelled = false;
+  
+  // Create a wrapper for the progress callback that checks cancellation status
+  const safeProgressCallback = (progress) => {
+    // If operation has been cancelled, don't call progress
+    if (isCancelled || global.cancelRestoreRequested || !global.ongoingRestoreOperation) {
+      return;
+    }
+    
+    if (typeof progressCallback === 'function') {
+      progressCallback(progress);
+    }
+  };
+  
+  // Setup interval to check cancellation status
+  const cancellationCheck = setInterval(() => {
+    if (global.cancelRestoreRequested || !global.ongoingRestoreOperation) {
+      console.log('Docker module detected cancellation request');
+      isCancelled = true;
+      clearInterval(cancellationCheck);
+    }
+  }, 300);
+  
   try {
     if (!fs.existsSync(sqlFilePath)) {
+      clearInterval(cancellationCheck);
       throw new Error(`SQL file not found: ${sqlFilePath}`);
     }
 
@@ -229,8 +258,13 @@ async function executeMysqlFileInContainer(containerName, credentials, database,
     const exec = await container.exec(options);
     const execStream = await exec.start({hijack: true, stdin: true});
     
+    // Add docker exec information for cancellation tracking
+    execStream.dockerExecId = exec.id;
+    execStream.dockerContainer = containerName;
+    
     let output = '';
     execStream.on('data', (chunk) => {
+      if (isCancelled) return;
       output += chunk.toString();
     });
     
@@ -241,25 +275,75 @@ async function executeMysqlFileInContainer(containerName, credentials, database,
     
     // Update progress function
     const updateProgress = (processed) => {
+      // Skip progress updates if cancelled
+      if (isCancelled) return;
+      
       processedSize = processed;
       const progress = Math.floor((processedSize / totalSize) * 100);
       
-      if (progress > lastProgress && typeof progressCallback === 'function') {
+      if (progress > lastProgress) {
         lastProgress = progress;
-        progressCallback(progress);
+        safeProgressCallback(progress);
       }
     };
     
     // Process the SQL file
     return new Promise((resolve, reject) => {
       try {
+        // Regularly check if operation was cancelled
+        const streamCancellationCheck = setInterval(() => {
+          if (isCancelled || global.cancelRestoreRequested || !global.ongoingRestoreOperation) {
+            console.log('Docker stream detected cancellation');
+            clearInterval(streamCancellationCheck);
+            
+            try {
+              // Try to destroy streams
+              if (fileStream && !fileStream.destroyed) {
+                fileStream.destroy();
+              }
+              
+              if (processStream && processStream !== fileStream && !processStream.destroyed) {
+                processStream.destroy();
+              }
+              
+              if (execStream && !execStream.destroyed) {
+                execStream.destroy();
+              }
+              
+              // Try to kill the MySQL process in the container
+              container.exec({
+                Cmd: ['pkill', '-9', 'mysql'],
+                AttachStdout: true,
+                AttachStderr: true
+              }).then(killExec => {
+                killExec.start();
+                console.log('Sent emergency kill to container');
+              }).catch(err => console.error('Failed to send emergency kill:', err));
+            } catch (err) {
+              console.error('Error destroying streams:', err);
+            }
+            
+            reject(new Error('Operation cancelled'));
+          }
+        }, 300);
+        
         // Create a readable stream from the file
         const fileStream = fs.createReadStream(sqlFilePath);
         let processStream;
         
+        fileStream.on('error', (err) => {
+          clearInterval(streamCancellationCheck);
+          reject(err);
+        });
+        
         // Setup decompression if needed
         if (isGzipped) {
           const gunzip = zlib.createGunzip();
+          gunzip.on('error', (err) => {
+            clearInterval(streamCancellationCheck);
+            reject(err);
+          });
+          
           processStream = fileStream.pipe(gunzip);
         } else {
           processStream = fileStream;
@@ -267,6 +351,7 @@ async function executeMysqlFileInContainer(containerName, credentials, database,
         
         // Progress tracking
         fileStream.on('data', (chunk) => {
+          if (isCancelled) return;
           updateProgress(processedSize + chunk.length);
         });
         
@@ -281,6 +366,8 @@ async function executeMysqlFileInContainer(containerName, credentials, database,
           );
           
           processStream.on('data', (chunk) => {
+            if (isCancelled) return;
+            
             buffer += chunk.toString();
             
             // Process buffer line by line
@@ -289,6 +376,8 @@ async function executeMysqlFileInContainer(containerName, credentials, database,
             
             // Process complete lines
             for (const line of lines) {
+              if (isCancelled) break;
+              
               // Check if we should ignore this line/table (only for INSERT statements)
               if (!inIgnoredInsert) {
                 const shouldIgnore = ignoredTablePatterns.some(pattern => pattern.test(line));
@@ -312,6 +401,8 @@ async function executeMysqlFileInContainer(containerName, credentials, database,
           });
           
           processStream.on('end', () => {
+            if (isCancelled) return;
+            
             // Process any remaining buffer
             if (buffer && !inIgnoredInsert) {
               execStream.write(buffer);
@@ -324,18 +415,34 @@ async function executeMysqlFileInContainer(containerName, credentials, database,
         }
         
         execStream.on('end', () => {
-          resolve({ success: true, output });
+          clearInterval(streamCancellationCheck);
+          if (!isCancelled) {
+            resolve(execStream);
+          }
         });
         
         execStream.on('error', (err) => {
+          clearInterval(streamCancellationCheck);
           reject(err);
         });
         
+        // Ensure operation can be cancelled even if streams hang
+        execStream.on('close', () => {
+          clearInterval(streamCancellationCheck);
+          if (!isCancelled) {
+            resolve(execStream);
+          }
+        });
+        
       } catch (err) {
+        clearInterval(cancellationCheck);
         reject(err);
       }
+    }).finally(() => {
+      clearInterval(cancellationCheck);
     });
   } catch (error) {
+    clearInterval(cancellationCheck);
     console.error('Error executing MySQL file in container:', error.message);
     throw error;
   }

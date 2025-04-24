@@ -28,7 +28,15 @@ function relayEventToDom(channel, data) {
 }
 
 // Set up IPC event listeners that relay to DOM events
-const validChannels = ["update-status", "update-available", "update-info", "autoUpdater:update-info", "autoUpdater:download-progress", "autoUpdater:download-complete"];
+const validChannels = [
+  "update-status", 
+  "update-available", 
+  "update-info", 
+  "autoUpdater:update-info", 
+  "autoUpdater:download-progress", 
+  "autoUpdater:download-complete",
+  "restoration-progress"
+];
 
 validChannels.forEach((channel) => {
   ipcRenderer.on(channel, (event, data) => {
@@ -303,6 +311,29 @@ try {
           }
         };
       }
+    },
+    onRestorationProgress: (callback) => {
+      const listener = (_, data) => callback(data);
+      ipcRenderer.on("restoration-progress", listener);
+      
+      // Store for cleanup
+      if (!eventListeners.has("restoration-progress")) {
+        eventListeners.set("restoration-progress", []);
+      }
+      eventListeners.get("restoration-progress").push(listener);
+      
+      return () => {
+        ipcRenderer.removeListener("restoration-progress", listener);
+        
+        // Remove from stored listeners
+        if (eventListeners.has("restoration-progress")) {
+          const listeners = eventListeners.get("restoration-progress");
+          const idx = listeners.indexOf(listener);
+          if (idx > -1) {
+            listeners.splice(idx, 1);
+          }
+        }
+      };
     }
   });
 

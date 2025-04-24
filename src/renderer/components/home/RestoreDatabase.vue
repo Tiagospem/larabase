@@ -193,7 +193,7 @@
           class="btn"
           @click="closeRestoreModal"
         >
-          Cancel
+          {{ isRestoring ? 'Cancel' : 'Close' }}
         </button>
         <button
           class="btn btn-primary"
@@ -208,7 +208,7 @@
             v-else-if="isProcessingSql"
             class="loading loading-spinner loading-xs mr-2"
           />
-          Restore Database
+          {{ isRestoring ? 'Restoring...' : 'Restore Database' }}
         </button>
       </div>
     </div>
@@ -318,15 +318,18 @@ const filteredTables = computed(() => {
 function closeRestoreModal() {
   if (isRestoring.value) {
     if (confirm("Are you sure you want to cancel the database restoration?")) {
-      window.api.cancelDatabaseRestore(restoreConfig.value.connection.id);
+      window.api.cancelDatabaseRestore();
+      
       isRestoring.value = false;
       restoreProgress.value = 0;
+      restoreStatus.value = "Restoration cancelled";
       showAlert("Database restoration cancelled", "info");
 
-      isRestoreModalOpen.value = false;
-      tableSearchQuery.value = "";
+      setTimeout(() => {
+        isRestoreModalOpen.value = false;
+        tableSearchQuery.value = "";
+      }, 1000);
     }
-
     return;
   }
 
@@ -379,14 +382,7 @@ async function startRestore() {
   try {
     isRestoring.value = true;
     restoreStatus.value = "Starting database restoration...";
-    restoreProgress.value = 10;
-
-    const updateStatus = (status, progress) => {
-      restoreStatus.value = status;
-      if (progress) restoreProgress.value = progress;
-    };
-
-    updateStatus("Preparing restoration...", 20);
+    restoreProgress.value = 0;
 
     let targetDatabase;
 
@@ -404,37 +400,12 @@ async function startRestore() {
       setAsDefault: !overwriteCurrentDb.value && restoreConfig.value.setAsDefault
     };
 
-    await new Promise((resolve) => setTimeout(resolve, 300));
-
-    updateStatus("Analyzing database configuration...", 30);
-
-    let timeoutIds = [];
-
-    timeoutIds.push(
-      setTimeout(() => {
-        if (isRestoring.value) updateStatus("Reading SQL file...", 40);
-      }, 1000)
-    );
-
-    timeoutIds.push(
-      setTimeout(() => {
-        if (isRestoring.value) updateStatus("Executing restore commands...", 50);
-      }, 3000)
-    );
-
-    timeoutIds.push(
-      setTimeout(() => {
-        if (isRestoring.value) updateStatus("Processing SQL statements...", 70);
-      }, 6000)
-    );
-
     const result = await window.api.simpleDatabaseRestore(simpleConfig);
 
-    timeoutIds.forEach((id) => clearTimeout(id));
-
     if (result.success) {
-      updateStatus("Database restored successfully!", 100);
-
+      restoreProgress.value = 100;
+      restoreStatus.value = "Database restored successfully!";
+      
       showAlert("Database restored successfully", "success");
 
       isRestoring.value = false;
@@ -483,6 +454,30 @@ function restoreDatabase(connection) {
   isRestoreModalOpen.value = true;
   overwriteCurrentDb.value = true;
 }
+
+// Add event listener for restoration progress
+window.api.onRestorationProgress((progress) => {
+  if (isRestoring.value) {
+    // Handle cancellation events
+    if (progress.status === "cancelled") {
+      isRestoring.value = false;
+      restoreStatus.value = "Restoration cancelled";
+      restoreProgress.value = 0;
+      
+      setTimeout(() => {
+        isRestoreModalOpen.value = false;
+        tableSearchQuery.value = "";
+      }, 1000);
+      
+      return;
+    }
+    
+    restoreProgress.value = progress.progress || 0;
+    if (progress.status) {
+      restoreStatus.value = progress.status;
+    }
+  }
+});
 
 defineExpose({ restoreDatabase });
 </script>
