@@ -193,7 +193,7 @@
           class="btn"
           @click="closeRestoreModal"
         >
-          {{ isRestoring ? 'Cancel' : 'Close' }}
+          {{ isRestoring ? "Cancel" : "Close" }}
         </button>
         <button
           class="btn btn-primary"
@@ -208,7 +208,7 @@
             v-else-if="isProcessingSql"
             class="loading loading-spinner loading-xs mr-2"
           />
-          {{ isRestoring ? 'Restoring...' : 'Restore Database' }}
+          {{ isRestoring ? "Restoring..." : "Restore Database" }}
         </button>
       </div>
     </div>
@@ -319,7 +319,7 @@ function closeRestoreModal() {
   if (isRestoring.value) {
     if (confirm("Are you sure you want to cancel the database restoration?")) {
       window.api.cancelDatabaseRestore();
-      
+
       isRestoring.value = false;
       restoreProgress.value = 0;
       restoreStatus.value = "Restoration cancelled";
@@ -405,7 +405,7 @@ async function startRestore() {
     if (result.success) {
       restoreProgress.value = 100;
       restoreStatus.value = "Database restored successfully!";
-      
+
       showAlert("Database restored successfully", "success");
 
       isRestoring.value = false;
@@ -463,15 +463,15 @@ window.api.onRestorationProgress((progress) => {
       isRestoring.value = false;
       restoreStatus.value = "Restoration cancelled";
       restoreProgress.value = 0;
-      
+
       setTimeout(() => {
         isRestoreModalOpen.value = false;
         tableSearchQuery.value = "";
       }, 1000);
-      
+
       return;
     }
-    
+
     restoreProgress.value = progress.progress || 0;
     if (progress.status) {
       restoreStatus.value = progress.status;

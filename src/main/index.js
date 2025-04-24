@@ -117,15 +117,18 @@ function enhancePath() {
   }
 
   // Check Docker availability using dockerode
-  docker.isDockerAvailable().then(available => {
-    if (available) {
-      console.log("Docker is available and running");
-    } else {
-      console.log("Docker is not available or not running");
-    }
-  }).catch(err => {
-    console.log(`Error checking Docker availability: ${err.message}`);
-  });
+  docker
+    .isDockerAvailable()
+    .then((available) => {
+      if (available) {
+        console.log("Docker is available and running");
+      } else {
+        console.log("Docker is not available or not running");
+      }
+    })
+    .catch((err) => {
+      console.log(`Error checking Docker availability: ${err.message}`);
+    });
 
   console.log(`Electron running on platform: ${platform}`);
   console.log(`Node.js version: ${process.version}`);
@@ -150,33 +153,6 @@ function setupGlobalMonitoring() {
 
   console.log("Global MySQL monitoring configured");
 }
-// function setupGlobalMonitoring() {
-//   mysql.createConnection = async function (...args) {
-//     const connection = await originalCreateConnection.apply(this, args);
-//
-//     const config = args[0];
-//     console.log('New database connection created:', config.host, config.database);
-//
-//     for (const [connectionId, monitoredConn] of dbMonitoringConnections.entries()) {
-//       if (
-//         monitoredConn._config &&
-//         monitoredConn._config.host === config.host &&
-//         monitoredConn._config.database === config.database
-//       ) {
-//         console.log(
-//           `Auto-monitoring new connection to ${config.database} (from monitored connection ${connectionId})`
-//         );
-//
-//         setupMonitoring(connection, config.database);
-//         break;
-//       }
-//     }
-//
-//     return connection;
-//   };
-//
-//   console.log('Global MySQL monitoring configured');
-// }
 
 // Fix the electron-reload implementation
 if (process.env.NODE_ENV === "development") {
@@ -187,7 +163,6 @@ if (process.env.NODE_ENV === "development") {
       const rendererPath = path.resolve(__dirname, "../renderer");
 
       if (fs.existsSync(rendererPath)) {
-        console.log(`Setting up electron-reload with path: ${rendererPath}`);
         electronReload(rendererPath, {
           electron: path.join(__dirname, "../../node_modules", ".bin", "electron"),
           hardResetMethod: "exit"

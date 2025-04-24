@@ -652,7 +652,7 @@ async function refreshLogs() {
     const response = await window.api.getProjectLogs({
       projectPath: props.projectPath
     });
-    console.log("Got logs response:", response);
+
     logs.value = response || [];
 
     // Limpar análises obsoletas - manter apenas para logs existentes
