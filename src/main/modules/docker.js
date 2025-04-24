@@ -273,11 +273,11 @@ async function executeMysqlFileInContainer(containerName, credentials, database,
         // if we have tables to ignore, we need to filter the stream
         if (hasFilters) {
           let buffer = '';
-          let inIgnoredTable = false;
+          let inIgnoredInsert = false;
           
-          // Create regex patterns for ignored tables
+          // Create regex patterns for ignored tables - only match INSERT statements
           const ignoredTablePatterns = ignoredTables.map(table => 
-            new RegExp(`(INSERT INTO|CREATE TABLE|DROP TABLE|ALTER TABLE)\\s+\`?${table}\`?`, 'i')
+            new RegExp(`INSERT\\s+INTO\\s+\`?${table}\`?`, 'i')
           );
           
           processStream.on('data', (chunk) => {
@@ -289,23 +289,23 @@ async function executeMysqlFileInContainer(containerName, credentials, database,
             
             // Process complete lines
             for (const line of lines) {
-              // Check if we should ignore this line/table
-              if (!inIgnoredTable) {
+              // Check if we should ignore this line/table (only for INSERT statements)
+              if (!inIgnoredInsert) {
                 const shouldIgnore = ignoredTablePatterns.some(pattern => pattern.test(line));
                 if (shouldIgnore) {
-                  inIgnoredTable = true;
+                  inIgnoredInsert = true;
                   continue;
                 }
               }
               
               // Check if we are exiting an ignored section
-              if (inIgnoredTable && line.trim().endsWith(';')) {
-                inIgnoredTable = false;
+              if (inIgnoredInsert && line.trim().endsWith(';')) {
+                inIgnoredInsert = false;
                 continue;
               }
               
-              // Write the line if it's not in an ignored section
-              if (!inIgnoredTable) {
+              // Write the line if it's not in an ignored insert section
+              if (!inIgnoredInsert) {
                 execStream.write(line + '\n');
               }
             }
@@ -313,7 +313,7 @@ async function executeMysqlFileInContainer(containerName, credentials, database,
           
           processStream.on('end', () => {
             // Process any remaining buffer
-            if (buffer && !inIgnoredTable) {
+            if (buffer && !inIgnoredInsert) {
               execStream.write(buffer);
             }
             execStream.end();

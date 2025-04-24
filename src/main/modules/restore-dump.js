@@ -37,6 +37,7 @@ function buildSedFilters(ignoredTables = []) {
   if (!Array.isArray(ignoredTables) || ignoredTables.length === 0) {
     return "";
   }
+  // Only filter INSERT statements, not table creation
   const sedCommands = ignoredTables.map((table) => `/INSERT INTO \`${table}\`/d; /INSERT INTO "${table}"/d`);
   return ` | sed '${sedCommands.join("; ")}'`;
 }
