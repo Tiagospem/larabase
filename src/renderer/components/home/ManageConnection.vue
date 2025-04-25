@@ -206,7 +206,7 @@
           </label>
           <input
             v-model="newConnection.password"
-            type="password"
+            type="text"
             placeholder="password"
             class="input input-bordered w-full"
           />
@@ -246,7 +246,7 @@
           </label>
           <input
             v-model="newConnection.redisPassword"
-            type="password"
+            type="text"
             placeholder="Leave empty if none"
             class="input input-bordered w-full"
           />
