@@ -264,7 +264,7 @@
                     </ul>
                     <div
                       v-if="stepMigrations.length > 5 && !expandStepsMigrations"
-                      class="absolute bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-base-100 to-transparent pointer-events-none"
+                      class="absolute bottom-0 left-0 right-0 h-12 bg-linear-to-t from-base-100 to-transparent pointer-events-none"
                     />
                   </div>
                   <div
@@ -328,7 +328,7 @@
                     </ul>
                     <div
                       v-if="batchMigrations.length > 5 && !expandBatchMigrations"
-                      class="absolute bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-base-100 to-transparent pointer-events-none"
+                      class="absolute bottom-0 left-0 right-0 h-12 bg-linear-to-t from-base-100 to-transparent pointer-events-none"
                     />
                   </div>
                   <div

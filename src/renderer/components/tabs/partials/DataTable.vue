@@ -6,7 +6,7 @@
     @keydown.prevent="handleKeyDown"
   >
     <div
-      class="overflow-x-scroll overflow-y-auto flex-grow"
+      class="overflow-x-scroll overflow-y-auto grow"
       style="max-height: calc(100% - 45px)"
     >
       <table class="table table-sm w-[110%] table-fixed min-w-full">
@@ -126,7 +126,7 @@
             <td
               v-for="(column, colIndex) in tableDataStore.columns"
               :key="`${rowIndex}-${column}-${colIndex}`"
-              class="px-4 py-2 border-r border-neutral last:border-r-0 truncate whitespace-nowrap overflow-hidden z-[1]"
+              class="px-4 py-2 border-r border-neutral last:border-r-0 truncate whitespace-nowrap overflow-hidden z-1"
               :style="{
                 width: tableDataStore.columnWidths[column] || tableDataStore.defaultColumnWidth(column),
                 maxWidth: tableDataStore.columnWidths[column] || tableDataStore.defaultColumnWidth(column)
@@ -144,7 +144,7 @@
 
                 <button
                   v-if="tableDataStore.isForeignKeyColumn(column) && row[column] !== null"
-                  class="ml-1 text-white hover:text-primary-focus transition-colors cursor-pointer flex-shrink-0"
+                  class="ml-1 text-white hover:text-primary-focus transition-colors cursor-pointer shrink-0"
                   @click.stop="emit('navigateToForeignKey', column, row[column])"
                 >
                   <svg
@@ -165,7 +165,7 @@
 
                 <span
                   v-else-if="tableDataStore.isForeignKeyColumn(column) && row[column] === null"
-                  class="ml-1 text-gray-500 flex-shrink-0"
+                  class="ml-1 text-gray-500 shrink-0"
                 >
                   <svg
                     xmlns="http://www.w3.org/2000/svg"

@@ -41,7 +41,7 @@
       </button>
       <div
         tabindex="0"
-        class="dropdown-content z-[40] menu p-2 shadow bg-base-200 rounded-box w-52"
+        class="dropdown-content z-40 menu p-2 shadow-sm bg-base-200 rounded-box w-52"
       >
         <div class="p-2">
           <div class="form-control">

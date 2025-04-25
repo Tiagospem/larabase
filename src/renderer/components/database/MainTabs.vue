@@ -5,7 +5,7 @@
   >
     <button
       v-if="hasScrollLeft"
-      class="tab-scroll-button tab-scroll-left"
+      class="tab-scroll-button bg-info-content"
       @click="scrollLeft"
     >
       <svg
@@ -33,10 +33,10 @@
         v-for="tab in openTabs"
         :key="tab.id"
         :class="[
-          'tab',
+          'tab bg-base-200 hover:bg-base-100',
           {
-            active: tab.id === activeTabId,
-            pinned: isTabPinned(tab.id)
+            '!bg-base-100 !text-white': tab.id === activeTabId,
+            'border-t border-primary': isTabPinned(tab.id)
           }
         ]"
         draggable="true"
@@ -83,7 +83,7 @@
 
     <button
       v-if="hasScrollRight"
-      class="tab-scroll-button tab-scroll-right"
+      class="tab-scroll-button bg-info-content"
       @click="scrollRight"
     >
       <svg
@@ -103,7 +103,7 @@
     </button>
 
     <div
-      class="tabs-actions flex items-center"
+      class="tabs-actions flex items-center bg-black"
       v-if="pinnedTabs.length > 0"
     >
       <!-- Pinned tabs actions menu -->
@@ -126,15 +126,14 @@
               d="M12 6.75a.75.75 0 110-1.5.75.75 0 010 1.5zM12 12.75a.75.75 0 110-1.5.75.75 0 010 1.5zM12 18.75a.75.75 0 110-1.5.75.75 0 010 1.5z"
             />
           </svg>
-          <span class="text-xs">Actions</span>
-          <div class="bg-primary text-white text-xs rounded-full px-1.5 text-center ml-1 min-w-[20px]">
+          <div class="bg-neutral text-xs rounded-full px-1.5 text-center ml-1 min-w-[20px]">
             {{ pinnedTabs.length }}
           </div>
         </label>
 
         <ul
           tabindex="0"
-          class="dropdown-content menu p-2 shadow bg-base-300 rounded-box w-56"
+          class="dropdown-content menu p-2 shadow-sm bg-base-100 rounded-box w-56"
         >
           <li>
             <a
@@ -179,7 +178,7 @@
       <p class="py-4">
         Are you sure you want to truncate <strong>{{ pinnedTabs.length }}</strong> table(s)? This will delete ALL records and cannot be undone.
       </p>
-      <div class="max-h-40 overflow-y-auto bg-base-300 rounded p-2 mb-4">
+      <div class="max-h-40 overflow-y-auto bg-base-300 rounded-sm p-2 mb-4">
         <ul class="list-disc pl-4 space-y-1">
           <li
             v-for="tab in pinnedTabs"
@@ -611,19 +610,9 @@ defineExpose({
   min-width: 180px;
   max-width: 180px;
   padding: 0 10px;
-  background-color: rgb(24, 24, 27);
   cursor: pointer;
   user-select: none;
   transition: background-color 0.2s;
-}
-
-.tab.active {
-  background-color: rgba(255, 255, 255, 0.1);
-  color: white;
-}
-
-.tab.pinned {
-  border-top: 2px solid red;
 }
 
 .pin-indicator {
@@ -634,10 +623,6 @@ defineExpose({
   padding: 3px;
   border-radius: 3px;
   transition: background-color 0.2s ease;
-}
-
-.pin-indicator:hover {
-  background-color: rgba(255, 255, 255, 0.1);
 }
 
 .tab-title {
@@ -656,51 +641,28 @@ defineExpose({
   justify-content: center;
   border-radius: 50%;
   margin-left: 6px;
-  flex-shrink: 0;
-}
-
-.tab:hover {
-  background-color: rgba(255, 255, 255, 0.1);
+  shrink: 0;
 }
 
 .tab:hover .close-icon {
   opacity: 1;
 }
 
-.close-icon:hover {
-  background-color: rgba(255, 255, 255, 0.1);
-}
-
 .tab-scroll-button {
   width: 28px;
   height: 100%;
-  background-color: rgba(255, 255, 255, 0.1);
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
   color: #bbb;
-  flex-shrink: 0;
+  shrink: 0;
   transition: background-color 0.2s;
   z-index: 1;
 }
 
-.tab-scroll-button:hover {
-  background-color: rgb(24, 24, 27);
-  color: white;
-}
-
-.tab-scroll-left {
-  border-right: 1px solid rgb(24, 24, 27);
-}
-
-.tab-scroll-right {
-  border-left: 1px solid rgb(24, 24, 27);
-}
-
 .tabs-actions {
   padding: 0 8px;
-  border-left: 1px solid rgb(24, 24, 27);
   z-index: 999;
   position: relative;
 }
@@ -714,20 +676,8 @@ defineExpose({
   margin: 0 3px;
   padding: 0 6px;
   border-radius: 4px;
-  color: #bbb;
   transition: all 0.2s;
   border: 1px solid transparent;
-}
-
-.tab-action-button:hover {
-  color: white;
-  background-color: rgba(255, 255, 255, 0.1);
-  border-color: rgba(255, 255, 255, 0.2);
-}
-
-.badge-primary {
-  background-color: #3b82f6;
-  color: white;
 }
 
 /* Fix for dropdown z-index */

@@ -157,7 +157,7 @@
 
                 <div class="flex items-start">
                   <div class="w-28 font-medium text-gray-400">Full Name</div>
-                  <div class="flex-1 font-mono text-sm bg-base-300 p-1 rounded">
+                  <div class="flex-1 font-mono text-sm bg-base-300 p-1 rounded-sm">
                     {{ model.fullName }}
                   </div>
                 </div>

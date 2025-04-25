@@ -1,52 +1,29 @@
 <template>
   <div class="relative h-full flex flex-col">
     <div
-      class="sidebar-container bg-neutral-800 border-r border-neutral flex flex-col h-full w-full overflow-hidden"
+      class="sidebar-container bg-neutral border-r border-neutral flex flex-col h-full w-full overflow-hidden"
       :style="{ width: sidebarWidth + 'px' }"
     >
-      <div class="p-3 border-b border-black/10 flex-shrink-0">
+      <div class="p-3 border-y border-base-100 shrink-0">
         <div class="relative mb-2">
-          <input
-            :value="tablesStore.searchTerm"
-            @input="(e) => tablesStore.setSearchTerm(props.connectionId, e.target.value)"
-            type="text"
-            placeholder="Search tables..."
-            class="input input-sm input-bordered w-full bg-base-300 pl-9 pr-8"
-          />
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke-width="1.5"
-            stroke="currentColor"
-            class="w-5 h-5 absolute left-2 top-1/2 transform -translate-y-1/2 text-gray-400"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z"
-            />
-          </svg>
-          <button
-            v-if="tablesStore.searchTerm"
-            class="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-200"
-            @click="tablesStore.clearSearch"
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke-width="1.5"
-              stroke="currentColor"
-              class="w-4 h-4"
-            >
-              <path
-                stroke-linecap="round"
+          <label class="input input-sm">
+            <svg class="h-[1em] opacity-50" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+              <g
                 stroke-linejoin="round"
-                d="M6 18L18 6M6 6l12 12"
-              />
+                stroke-linecap="round"
+                stroke-width="2.5"
+                fill="none"
+                stroke="currentColor"
+              >
+                <circle cx="11" cy="11" r="8"></circle>
+                <path d="m21 21-4.3-4.3"></path>
+              </g>
             </svg>
-          </button>
+            <input
+              :value="tablesStore.searchTerm"
+              @input="(e) => tablesStore.setSearchTerm(props.connectionId, e.target.value)"
+              type="search" class="input-sm" placeholder="Search" />
+          </label>
         </div>
 
         <div class="flex justify-between items-center">
@@ -214,11 +191,11 @@
           <div
             v-for="i in 10"
             :key="i"
-            class="skeleton-item flex items-center gap-2 p-2 mb-1 rounded bg-base-100 animate-pulse"
+            class="skeleton-item flex items-center gap-2 p-2 mb-1 rounded-sm bg-base-100 animate-pulse"
           >
-            <div class="skeleton-icon w-4 h-4 mr-3 bg-gray-600 rounded" />
-            <div class="skeleton-name h-4 bg-gray-600 rounded w-4/5" />
-            <div class="skeleton-badge ml-auto w-8 h-4 bg-gray-600 rounded" />
+            <div class="skeleton-icon w-4 h-4 mr-3 bg-neutral rounded-sm" />
+            <div class="skeleton-name h-4 bg-neutral rounded-sm w-4/5" />
+            <div class="skeleton-badge ml-auto w-8 h-4 bg-neutral rounded-sm" />
           </div>
         </div>
 
@@ -232,8 +209,8 @@
             class="table-item"
           >
             <a
-              :class="{ 'bg-base-300': isTableActive(table.name) }"
-              class="table-link rounded-md"
+              :class="{ 'bg-base-100': isTableActive(table.name) }"
+              class="rounded-md"
               @click="isDeleteMode ? toggleTableSelection(table.name) : openTable(table)"
             >
               <div
@@ -263,16 +240,16 @@
                 />
               </svg>
               <div class="flex flex-col table-name-container">
-                <span class="table-name">{{ table.name }}</span>
+                <span class="table-name text-sm font-semibold text-neutral-content">{{ table.name }}</span>
                 <span
                   v-if="getTableModel(table.name)"
-                  class="text-xs text-gray-500 table-model"
+                  class="text-xs table-model"
                 >
                   {{ getTableModel(table.name)?.namespace }}\{{ getTableModel(table.name)?.name }}</span
                 >
               </div>
               <span
-                class="badge badge-sm"
+                class="badge badge-soft badge-xs"
                 :class="{ 'badge-primary': table.rowCount > 0 }"
               >
                 {{ tablesStore.formatRecordCount(table.rowCount) }}
@@ -326,7 +303,7 @@
         </div>
         <div class="mt-2 text-sm">
           <div class="font-semibold mb-1">Selected tables:</div>
-          <div class="max-h-32 overflow-y-auto bg-base-300 p-2 rounded">
+          <div class="max-h-32 overflow-y-auto bg-base-300 p-2 rounded-sm">
             <ul class="list-disc pl-4 space-y-1">
               <li
                 v-for="table in selectedTables"
@@ -577,7 +554,7 @@ function handleCascadeDeleteChange() {
 .table-name-container {
   max-width: calc(100% - 5px);
   overflow: hidden;
-  flex-grow: 1;
+  grow: 1;
 }
 
 .table-name {

@@ -3,12 +3,12 @@
     class="modal"
     :class="{ 'modal-open': isCreateModalOpen }"
   >
-    <div class="modal-box w-11/12 max-w-4xl">
+    <div class="modal-box w-11/12 max-w-4xl max-h-[90vh]">
       <h3 class="font-bold text-lg mb-4">
         {{ isEditMode ? "Edit Connection" : "Create New Connection" }}
       </h3>
 
-      <div class="form-control w-full mb-4">
+      <fieldset class="fieldset w-full mb-4">
         <label class="label">
           <span class="label-text">Laravel Project Path</span>
         </label>
@@ -17,7 +17,7 @@
             v-model="newConnection.projectPath"
             type="text"
             placeholder="Select Laravel project directory"
-            class="input input-bordered w-full"
+            class="input  w-full"
             :readonly="true"
           />
           <button
@@ -34,9 +34,9 @@
           <span class="label-text-alt text-error">{{ projectPathError }}</span>
         </label>
         <p class="text-xs text-gray-500 mt-1">Path to your Laravel project (.env file will be read from this location)</p>
-      </div>
+      </fieldset>
 
-      <div class="form-control w-full mb-4">
+      <fieldset class="fieldset w-full mb-4">
         <label class="label cursor-pointer">
           <span class="label-text">Using Laravel Sail?</span>
           <input
@@ -46,7 +46,7 @@
           />
         </label>
         <p class="text-xs text-gray-500 mt-1">Enable if your project uses Laravel Sail (Docker)</p>
-      </div>
+      </fieldset>
 
       <div
         v-if="dockerInfo"
@@ -119,7 +119,7 @@
       <div class="divider">Database Connection</div>
 
       <div class="grid grid-cols-2 gap-4">
-        <div class="form-control w-full">
+        <fieldset class="fieldset w-full">
           <label class="label">
             <span class="label-text">Connection Name</span>
           </label>
@@ -127,12 +127,12 @@
             v-model="newConnection.name"
             type="text"
             placeholder="My Project"
-            class="input input-bordered w-full"
+            class="input  w-full"
             required
           />
-        </div>
+        </fieldset>
 
-        <div class="form-control w-full">
+        <fieldset class="fieldset w-full">
           <label class="label">
             <span class="label-text">Database Type</span>
           </label>
@@ -146,9 +146,9 @@
           <label class="label">
             <span class="label-text-alt">Only MySQL is supported at the moment</span>
           </label>
-        </div>
+        </fieldset>
 
-        <div class="form-control w-full">
+        <fieldset class="fieldset w-full">
           <label class="label">
             <span class="label-text">Host</span>
           </label>
@@ -156,12 +156,12 @@
             v-model="newConnection.host"
             type="text"
             placeholder="localhost"
-            class="input input-bordered w-full"
+            class="input  w-full"
             required
           />
-        </div>
+        </fieldset>
 
-        <div class="form-control w-full">
+        <fieldset class="fieldset w-full">
           <label class="label">
             <span class="label-text">Port</span>
           </label>
@@ -169,12 +169,12 @@
             v-model="newConnection.port"
             type="text"
             placeholder="3306"
-            class="input input-bordered w-full"
+            class="input  w-full"
             required
           />
-        </div>
+        </fieldset>
 
-        <div class="form-control w-full">
+        <fieldset class="fieldset w-full">
           <label class="label">
             <span class="label-text">Database</span>
           </label>
@@ -182,12 +182,12 @@
             v-model="newConnection.database"
             type="text"
             placeholder="mydatabase"
-            class="input input-bordered w-full"
+            class="input  w-full"
             required
           />
-        </div>
+        </fieldset>
 
-        <div class="form-control w-full">
+        <fieldset class="fieldset w-full">
           <label class="label">
             <span class="label-text">Username</span>
           </label>
@@ -195,12 +195,12 @@
             v-model="newConnection.username"
             type="text"
             placeholder="root"
-            class="input input-bordered w-full"
+            class="input  w-full"
             required
           />
-        </div>
+        </fieldset>
 
-        <div class="form-control w-full">
+        <fieldset class="fieldset w-full">
           <label class="label">
             <span class="label-text">Password</span>
           </label>
@@ -208,15 +208,15 @@
             v-model="newConnection.password"
             type="password"
             placeholder="password"
-            class="input input-bordered w-full"
+            class="input  w-full"
           />
-        </div>
+        </fieldset>
       </div>
 
       <div class="divider">Redis Connection (Optional)</div>
 
       <div class="grid grid-cols-2 gap-4">
-        <div class="form-control w-full">
+        <fieldset class="fieldset w-full">
           <label class="label">
             <span class="label-text">Redis Host</span>
           </label>
@@ -224,11 +224,11 @@
             v-model="newConnection.redisHost"
             type="text"
             placeholder="127.0.0.1"
-            class="input input-bordered w-full"
+            class="input  w-full"
           />
-        </div>
+        </fieldset>
 
-        <div class="form-control w-full">
+        <fieldset class="fieldset w-full">
           <label class="label">
             <span class="label-text">Redis Port</span>
           </label>
@@ -236,21 +236,21 @@
             v-model="newConnection.redisPort"
             type="text"
             placeholder="6379"
-            class="input input-bordered w-full"
+            class="input  w-full"
           />
-        </div>
+        </fieldset>
 
-        <div class="form-control w-full">
+        <fieldset class="fieldset w-full">
           <label class="label">
             <span class="label-text">Redis Password</span>
           </label>
           <input
             v-model="newConnection.redisPassword"
-            type="password"
+            type="text"
             placeholder="Leave empty if none"
-            class="input input-bordered w-full"
+            class="input  w-full"
           />
-        </div>
+        </fieldset>
       </div>
 
       <div class="modal-action">

@@ -12,7 +12,7 @@
                 v-model="searchQuery"
                 type="text"
                 placeholder="Search commands..."
-                class="input input-bordered w-full pr-10 focus:outline-none"
+                class="input input-bordered w-full pr-10 focus:outline-hidden"
               />
               <div class="absolute inset-y-0 right-0 flex items-center pr-3">
                 <svg
@@ -177,7 +177,7 @@
                           </label>
                           <ul
                             tabindex="0"
-                            class="dropdown-content z-[1] menu p-2 shadow bg-base-300 rounded-box w-52 mt-1"
+                            class="dropdown-content z-1 menu p-2 shadow-sm bg-base-300 rounded-box w-52 mt-1"
                           >
                             <li>
                               <a

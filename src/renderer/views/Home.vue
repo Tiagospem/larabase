@@ -1,18 +1,18 @@
 <template>
   <div class="flex h-full relative">
-    <div class="w-1/3 bg-[#e82b25] flex flex-col items-center justify-between p-6 border-r border-gray-800">
+    <div class="w-1/3 bg-base-300 flex flex-col items-center justify-between p-6 border-r border-base-300">
       <div class="flex flex-col items-center">
         <img
           src="../assets/icons/png/512x512.png"
           alt="Larabase"
           class="h-32 w-32 mb-2 draggable"
         />
-        <h1 class="text-3xl font-bold text-white">Larabase</h1>
-        <p class="text-sm text-white">An opinionated database GUI for Laravel developers</p>
+        <h1 class="text-3xl font-bold">Larabase</h1>
+        <p class="text-sm">An opinionated database GUI for Laravel developers</p>
       </div>
 
       <button
-        class="btn btn-neutral w-full flex items-center gap-2 mt-8"
+        class="btn w-full flex items-center gap-2 mt-8"
         @click="openCreateConnectionModal"
       >
         <svg
@@ -35,7 +35,7 @@
 
     <div class="w-2/3 flex flex-col">
       <div class="flex-1 overflow-auto p-6">
-        <h2 class="text-xl font-bold mb-4 text-white">Your Connections</h2>
+        <h2 class="text-xl font-bold mb-4">Your Connections</h2>
 
         <div
           v-if="isLoading"
@@ -62,8 +62,8 @@
               d="M20.25 6.375c0 2.278-3.694 4.125-8.25 4.125S3.75 8.653 3.75 6.375m16.5 0c0-2.278-3.694-4.125-8.25-4.125S3.75 4.097 3.75 6.375m16.5 0v11.25c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125V6.375m16.5 0v3.75m-16.5-3.75v3.75m16.5 0v3.75C20.25 16.153 16.556 18 12 18s-8.25-1.847-8.25-4.125v-3.75m16.5 0c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125"
             />
           </svg>
-          <p class="text-xl font-medium text-gray-400">No connections found</p>
-          <p class="text-gray-500 mt-3">Create a new connection to get started</p>
+          <p class="text-lg font-medium">No connections found</p>
+          <p class="mt-1 font-light text-sm">Create a new connection to get started</p>
         </div>
 
         <div
@@ -73,7 +73,7 @@
           <div
             v-for="connection in connectionsStore.connections"
             :key="connection.id"
-            class="card bg-base-200 shadow-xl transition-colors border border-neutral hover:border-gray-500"
+            class="card bg-neutral shadow-xl transition-colors border border-base-200 hover:border-base-100"
           >
             <div class="card-body py-4 px-5">
               <div class="flex flex-col sm:flex-row items-start sm:items-center gap-4">
@@ -81,10 +81,10 @@
                   class="w-10 h-10 rounded-full flex items-center justify-center shrink-0"
                   :class="getConnectionColor(connection.type)"
                 >
-                  <span class="text-white font-bold">{{ connection.icon }}</span>
+                  <span class="font-bold">{{ connection.icon }}</span>
                 </div>
                 <div class="flex-1 min-w-0">
-                  <h2 class="card-title text-base overflow-hidden whitespace-nowrap text-ellipsis">
+                  <h2 class="card-title overflow-hidden whitespace-nowrap text-ellipsis">
                     {{ connection.name }}
                     <span
                       v-if="connection.isValid"
@@ -97,17 +97,17 @@
                       >Invalid</span
                     >
                   </h2>
-                  <p class="text-xs text-gray-400 overflow-hidden whitespace-nowrap text-ellipsis">
+                  <p class="text-xs overflow-hidden whitespace-nowrap text-ellipsis">
                     {{ connection.host || connection.path }}
                   </p>
-                  <p class="text-xs font-medium text-white mt-1 overflow-hidden whitespace-nowrap text-ellipsis">
+                  <p class="text-xs font-medium mt-1 overflow-hidden whitespace-nowrap text-ellipsis">
                     {{ connection.database }}
                   </p>
                 </div>
                 <div class="flex gap-2 self-end sm:self-center mt-2 sm:mt-0">
                   <button
                     v-tooltip.bottom="'Edit connection'"
-                    class="btn btn-sm btn-ghost text-white"
+                    class="btn btn-sm btn-ghost"
                     @click.stop="editConnection(connection)"
                   >
                     <svg
@@ -128,7 +128,7 @@
                   <button
                     v-tooltip.bottom="'Restore database'"
                     :disabled="!connection.isValid"
-                    class="btn btn-sm btn-ghost text-white"
+                    class="btn btn-sm btn-ghost"
                     @click.stop="restoreDump(connection)"
                   >
                     <svg
@@ -148,7 +148,7 @@
                   </button>
                   <button
                     v-tooltip.bottom="'Remove connection'"
-                    class="btn btn-sm btn-ghost text-white"
+                    class="btn btn-sm btn-ghost"
                     @click.stop="removeConnection(connection.id)"
                   >
                     <svg

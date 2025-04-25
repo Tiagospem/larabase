@@ -248,7 +248,6 @@ async function extractTables(filePath, isGzipped) {
           currentTable = null;
           insertBuffer = "";
         }
-        return;
       }
     });
 
@@ -277,6 +276,7 @@ async function extractTables(filePath, isGzipped) {
     stream.on("error", (e) => reject(new Error(`Read error: ${e.message}`)));
   });
 }
+
 async function _buildDockerRestoreCommand(config) {
   ensureConfig(config, "Docker");
 

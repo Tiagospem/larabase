@@ -1,7 +1,7 @@
 <template>
   <div
     v-if="message"
-    class="fixed bottom-4 right-4 z-[9999] max-w-sm"
+    class="fixed bottom-4 right-4 z-9999 max-w-sm"
   >
     <div :class="['alert', alertClass]">
       <span>{{ message }}</span>

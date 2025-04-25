@@ -146,7 +146,7 @@
         </div>
         <textarea
           v-model="sqlQuery"
-          class="w-full h-full p-4 resize-none bg-base-200 text-white font-mono text-sm focus:outline-none"
+          class="w-full h-full p-4 resize-none bg-base-200 text-white font-mono text-sm focus:outline-hidden"
           placeholder="Enter your SQL query here..."
           @keydown.tab.prevent="handleTab"
         />

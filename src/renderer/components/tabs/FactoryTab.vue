@@ -514,7 +514,7 @@
               xmlns="http://www.w3.org/2000/svg"
               fill="none"
               viewBox="0 0 24 24"
-              class="stroke-current flex-shrink-0 w-6 h-6"
+              class="stroke-current shrink-0 w-6 h-6"
             >
               <path
                 stroke-linecap="round"
@@ -578,7 +578,7 @@
                 v-model="attr.value"
                 type="text"
                 :placeholder="getPlaceholderForField(attr.field)"
-                class="input input-bordered input-sm flex-grow"
+                class="input input-bordered input-sm grow"
               />
               <button
                 class="btn btn-sm btn-square btn-error"
@@ -1132,12 +1132,12 @@ async function showDatabaseMismatchDialog(projectDb, connectionDb) {
         <div class="flex flex-col gap-3 mb-6">
           <div class="flex items-center justify-between bg-neutral-content bg-opacity-10 p-3 rounded-lg">
             <span class="text-sm font-medium">Project .env</span>
-            <span class="font-mono text-sm bg-base-200 px-2 py-1 rounded">${projectDb}</span>
+            <span class="font-mono text-sm bg-base-200 px-2 py-1 rounded-sm">${projectDb}</span>
           </div>
 
           <div class="flex items-center justify-between bg-primary bg-opacity-10 p-3 rounded-lg">
             <span class="text-sm font-medium">Your connection</span>
-            <span class="font-mono text-sm bg-base-200 px-2 py-1 rounded">${connectionDb}</span>
+            <span class="font-mono text-sm bg-base-200 px-2 py-1 rounded-sm">${connectionDb}</span>
           </div>
         </div>
 

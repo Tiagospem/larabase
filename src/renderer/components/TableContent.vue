@@ -1,14 +1,14 @@
 <template>
   <div class="h-full flex flex-col">
-    <div class="bg-base-300 px-2 py-2 border-b border-neutral flex items-center">
-      <div class="flex gap-4">
+    <div class="bg-neutral px-2 py-1 border-b border-neutral flex items-center">
+      <div class="flex gap-2">
         <a
           v-for="tab in contentTabs"
           :key="tab.id"
-          class="flex items-center gap-2 px-3 py-1 cursor-pointer transition-colors text-sm"
+          class="flex items-center gap-1 px-2 py-1 cursor-pointer transition-colors text-sm"
           :class="{
-            'text-white': activeContentTab === tab.id,
-            'text-gray-500 hover:text-gray-300': activeContentTab !== tab.id,
+            'text-primary': activeContentTab === tab.id,
+            'hover:text-primary': activeContentTab !== tab.id,
             'pointer-events-none opacity-20 animate-pulse': tablesStore.isLoading
           }"
           @click="switchContentTab(tab.id)"

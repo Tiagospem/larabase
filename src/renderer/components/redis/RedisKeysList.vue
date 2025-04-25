@@ -19,7 +19,7 @@
       <div
         v-for="key in keys"
         :key="key"
-        class="cursor-pointer p-2 rounded hover:bg-base-300 text-sm break-all"
+        class="cursor-pointer p-2 rounded-sm hover:bg-base-300 text-sm break-all"
         :class="{ 'bg-base-300': selectedKey === key }"
         @click="$emit('select-key', key)"
       >
