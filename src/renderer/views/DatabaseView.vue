@@ -6,27 +6,6 @@
   >
     <header class="bg-neutral px-4 py-2 border-b border-neutral flex items-center justify-between">
       <div class="flex items-center">
-        <button
-          v-tooltip.right="'Back to connections'"
-          class="btn btn-ghost btn-sm mr-2"
-          @click="router.push('/')"
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke-width="1.5"
-            stroke="currentColor"
-            class="size-4"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              d="M9 15 3 9m0 0 6-6M3 9h12a6 6 0 0 1 0 12h-3"
-            />
-          </svg>
-        </button>
-
         <div
           class="w-8 h-8 rounded-full flex items-center justify-center mr-2"
           :class="getConnectionColor(connection?.type)"
@@ -249,6 +228,7 @@
             </svg>
           </button>
 
+          <!-- Laravel Commands Button -->
           <button
             v-tooltip.bottom="'Laravel Commands'"
             class="btn btn-ghost btn-sm text-white"
@@ -549,6 +529,11 @@ import DatabaseSwitcher from "@/components/database/DatabaseSwitcher.vue";
 import RedisManager from "@/components/RedisManager.vue";
 import LaravelCommands from "../components/LaravelCommands.vue";
 
+// Define o nome do componente para o keep-alive
+defineOptions({
+  name: "DatabaseView"
+});
+
 const TableContentComponent = markRaw(TableContent);
 
 const route = useRoute();
@@ -718,9 +703,13 @@ onMounted(async () => {
 });
 
 onActivated(async () => {
-  // When component is activated from cache, only refresh what's needed
   if (initialConnectionLoad.value) {
-    await initializeConnection(true);
+    await nextTick(() => {
+      mainTabsRef.value?.scrollToActiveTab();
+      mainTabsRef.value?.checkScrollPosition();
+    });
+  } else {
+    await initializeConnection(false);
   }
 });
 

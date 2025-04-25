@@ -3,7 +3,11 @@
     class="min-h-screen bg-app-bg text-white"
     data-theme="dark"
   >
-    <router-view />
+    <router-view v-slot="{ Component }">
+      <keep-alive include="DatabaseView">
+        <component :is="Component" />
+      </keep-alive>
+    </router-view>
     <app-alert
       :type="alertType"
       :message="alertMessage"
