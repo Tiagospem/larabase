@@ -1,6 +1,7 @@
 <template>
   <div>
     <Modal
+      width="w-lg"
       :show="showConfirmation"
       title="Delete Database"
       @close="showConfirmation = false"
@@ -16,6 +17,7 @@
     </Modal>
 
     <Modal
+      width="w-lg"
       :show="showDatabaseSwitcher"
       title="Switch Database"
       @close="showDatabaseSwitcher = false"

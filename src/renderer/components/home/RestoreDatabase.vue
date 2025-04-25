@@ -473,7 +473,6 @@ function restoreDatabase(connection) {
 
 window.api.onRestorationProgress((progress) => {
   if (isRestoring.value) {
-    // Handle cancellation events
     if (progress.status === "cancelled") {
       isRestoring.value = false;
       restoreStatus.value = "Restoration cancelled";

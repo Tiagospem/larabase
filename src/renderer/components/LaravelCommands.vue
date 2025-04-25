@@ -1,388 +1,76 @@
 <template>
-  <div class="modal modal-open z-30">
-    <div class="modal-box w-11/12 max-w-5xl bg-base-300 max-h-[90vh] flex flex-col">
-      <h3 class="font-bold text-lg mb-4">Laravel Commands</h3>
-
-      <div class="space-y-4 flex-1 overflow-hidden flex flex-col">
-        <div class="flex gap-2 items-center">
-          <fieldset class="fieldset flex-1">
-            <div class="relative">
-              <input
-                v-model="searchQuery"
-                type="text"
-                placeholder="Search commands..."
-                class="input input-sm w-full pr-10 focus:outline-hidden"
-              />
-              <div class="absolute inset-y-0 right-0 flex items-center pr-3">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke-width="1.5"
-                  stroke="currentColor"
-                  class="w-4 h-4 text-gray-400"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z"
-                  />
-                </svg>
-              </div>
-            </div>
-          </fieldset>
-          <button
-            class="btn btn-sm btn-accent"
-            :disabled="isLoading"
-            @click="loadCommands"
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke-width="1.5"
-              stroke="currentColor"
-              class="w-4 h-4 mr-1"
-              :class="{ 'animate-spin': isLoading }"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99"
-              />
-            </svg>
-            Refresh
-          </button>
-        </div>
-
-        <!-- Commands List -->
-        <div class="card bg-neutral shadow-md flex-1 flex flex-col overflow-hidden">
-          <div class="card-body flex-1 flex flex-col overflow-hidden">
-            <h3 class="card-title text-sm">Available Commands</h3>
-
-            <div
-              v-if="isLoading"
-              class="flex justify-center py-4"
-            >
-              <span class="loading loading-spinner loading-md" />
-            </div>
-
-            <div
-              v-else-if="filteredCommands.length === 0"
-              class="text-center py-6 text-gray-400 flex-1 flex flex-col justify-center"
-            >
+  <Modal
+    :show="true"
+    title="Laravel Commands"
+    @close="close"
+  >
+    <div class="space-y-4 flex-1 overflow-hidden flex flex-col">
+      <div class="flex gap-2 items-center">
+        <fieldset class="fieldset flex-1">
+          <div class="relative">
+            <input
+              v-model="searchQuery"
+              type="text"
+              placeholder="Search commands..."
+              class="input input-sm w-full pr-10 focus:outline-hidden"
+            />
+            <div class="absolute inset-y-0 right-0 flex items-center pr-3">
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke-width="1.5"
                 stroke="currentColor"
-                class="w-10 h-10 mx-auto mb-2 text-gray-500"
+                class="w-4 h-4 text-gray-400"
               >
                 <path
                   stroke-linecap="round"
                   stroke-linejoin="round"
-                  d="M6.75 7.5l3 2.25-3 2.25m4.5 0h3m-9 8.25h13.5A2.25 2.25 0 0021 18V6a2.25 2.25 0 00-2.25-2.25H5.25A2.25 2.25 0 003 6v12a2.25 2.25 0 002.25 2.25z"
+                  d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z"
                 />
               </svg>
-              <p v-if="searchQuery">No commands match your search: "{{ searchQuery }}"</p>
-              <p v-else>No Laravel commands found</p>
-              <button
-                v-if="!projectPath"
-                class="btn btn-sm btn-primary mt-4 mx-auto"
-                @click="selectProjectPath"
-              >
-                Select Laravel Project
-              </button>
-            </div>
-
-            <div
-              v-else
-              class="overflow-auto flex-1"
-            >
-              <table class="table table-compact w-full">
-                <thead class="sticky top-0 bg-neutral z-10">
-                  <tr>
-                    <th>Command</th>
-                    <th>Signature</th>
-                    <th class="w-32 text-right">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr
-                    v-for="command in filteredCommands"
-                    :key="command.name"
-                  >
-                    <td class="font-mono text-xs">
-                      <div class="flex items-center gap-2">
-                        <div
-                          v-if="command.isBuiltIn"
-                          class="badge badge-sm badge-outline"
-                        >
-                          Built-in
-                        </div>
-                      </div>
-                      <template v-if="!command.isBuiltIn && command.relativePath">
-                        <div class="text-xs text-primary font-semibold mt-1 flex items-center gap-1">
-                          <span>{{ getFilename(command.relativePath) }}</span>
-                          <button
-                            class="btn btn-xs btn-ghost btn-square p-0"
-                            title="Open in editor"
-                            @click.stop="openFileInEditor(command.path)"
-                          >
-                            <svg
-                              xmlns="http://www.w3.org/2000/svg"
-                              fill="none"
-                              viewBox="0 0 24 24"
-                              stroke-width="1.5"
-                              stroke="currentColor"
-                              class="size-3"
-                            >
-                              <path
-                                stroke-linecap="round"
-                                stroke-linejoin="round"
-                                d="M13.5 6H5.25A2.25 2.25 0 0 0 3 8.25v10.5A2.25 2.25 0 0 0 5.25 21h10.5A2.25 2.25 0 0 0 18 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25"
-                              />
-                            </svg>
-                          </button>
-                        </div>
-                      </template>
-                      <div
-                        v-if="command.description"
-                        class="text-xs mt-1"
-                      >
-                        {{ command.description }}
-                      </div>
-                    </td>
-                    <td class="font-mono text-xs">
-                      {{ command.signature }}
-                    </td>
-                    <td class="text-right">
-                      <div class="flex gap-1 justify-end">
-                        <button
-                          class="btn btn-xs"
-                          :disabled="isLoading"
-                          @click="previewCommand(command)"
-                          title="View command details"
-                        >
-                          <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            stroke-width="1.5"
-                            stroke="currentColor"
-                            class="w-4 h-4"
-                          >
-                            <path
-                              stroke-linecap="round"
-                              stroke-linejoin="round"
-                              d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z"
-                            />
-                            <path
-                              stroke-linecap="round"
-                              stroke-linejoin="round"
-                              d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"
-                            />
-                          </svg>
-                        </button>
-                        <div class="dropdown dropdown-end">
-                          <label
-                            tabindex="0"
-                            class="btn btn-xs btn-primary"
-                          >
-                            <svg
-                              xmlns="http://www.w3.org/2000/svg"
-                              fill="none"
-                              viewBox="0 0 24 24"
-                              stroke-width="1.5"
-                              stroke="currentColor"
-                              class="w-4 h-4"
-                            >
-                              <path
-                                stroke-linecap="round"
-                                stroke-linejoin="round"
-                                d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.347a1.125 1.125 0 0 1 0 1.972l-11.54 6.347a1.125 1.125 0 0 1-1.667-.986V5.653Z"
-                              />
-                            </svg>
-                          </label>
-                          <ul
-                            tabindex="0"
-                            class="dropdown-content z-1 menu p-2 shadow-sm bg-base-300 rounded-box w-52 mt-1"
-                          >
-                            <li>
-                              <a
-                                @click="!isLoading && executeCommand(command)"
-                                :class="{ 'opacity-50 cursor-not-allowed': isLoading }"
-                              >
-                                Run Now
-                              </a>
-                            </li>
-                            <li>
-                              <a
-                                @click="!isLoading && showRunWithFlagsModal(command)"
-                                :class="{ 'opacity-50 cursor-not-allowed': isLoading }"
-                              >
-                                Run with Flags
-                              </a>
-                            </li>
-                          </ul>
-                        </div>
-                      </div>
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-
-            <div
-              v-if="!isLoading && filteredCommands.length > 0"
-              class="text-xs text-gray-400 mt-2"
-            >
-              Showing {{ filteredCommands.length }} of {{ commands.length }} commands
             </div>
           </div>
-        </div>
-
-        <div
-          v-if="projectPath"
-          class="text-xs text-gray-400"
-        >
-          <span>Project: {{ projectPath }}</span>
-        </div>
-        <div
-          v-else
-          class="text-xs text-red-400"
-        >
-          <span>No Laravel project path configured. Please set a project path in the connection settings.</span>
-        </div>
-      </div>
-
-      <div class="modal-action mt-6">
+        </fieldset>
         <button
-          class="btn btn-primary"
-          @click="close"
+          class="btn btn-sm btn-accent"
+          :disabled="isLoading"
+          @click="loadCommands"
         >
-          Close
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke-width="1.5"
+            stroke="currentColor"
+            class="w-4 h-4 mr-1"
+            :class="{ 'animate-spin': isLoading }"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99"
+            />
+          </svg>
+          Refresh
         </button>
       </div>
-    </div>
-    <div
-      class="modal-backdrop"
-      @click="close"
-    />
-  </div>
 
-  <!-- Command Preview Modal -->
-  <div
-    v-if="showCommandPreview"
-    class="modal modal-open z-40"
-  >
-    <div class="modal-box bg-base-200 max-w-2xl max-h-[90vh] flex flex-col">
-      <h3 class="card-title flex items-center gap-2 mb-4">
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke-width="1.5"
-          stroke="currentColor"
-          class="w-6 h-6 text-primary"
-        >
-          <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            d="M6.75 7.5l3 2.25-3 2.25m4.5 0h3m-9 8.25h13.5A2.25 2.25 0 0021 18V6a2.25 2.25 0 00-2.25-2.25H5.25A2.25 2.25 0 003 6v12a2.25 2.25 0 002.25 2.25z"
-          />
-        </svg>
-        {{ currentCommand?.name }}
-      </h3>
-
-      <div class="card bg-base-300 mb-4 overflow-hidden flex flex-col flex-1">
-        <div class="card-body overflow-auto">
-          <div class="mb-4">
-            <div class="flex items-start">
-              <div class="w-28 font-medium text-gray-400">Signature</div>
-              <div class="flex-1 font-mono">
-                {{ currentCommand?.signature }}
-              </div>
-            </div>
-          </div>
+      <!-- Commands List -->
+      <div class="card bg-neutral shadow-md flex-1 flex flex-col overflow-hidden">
+        <div class="card-body flex-1 flex flex-col overflow-hidden">
+          <h3 class="card-title text-sm">Available Commands</h3>
 
           <div
-            v-if="currentCommand?.description"
-            class="mb-4"
+            v-if="isLoading"
+            class="flex justify-center py-4"
           >
-            <div class="flex items-start">
-              <div class="w-28 font-medium text-gray-400">Description</div>
-              <div class="flex-1">
-                {{ currentCommand?.description }}
-              </div>
-            </div>
+            <span class="loading loading-spinner loading-md" />
           </div>
 
           <div
-            v-if="currentCommand?.path"
-            class="mb-4"
-          >
-            <div class="flex items-start">
-              <div class="w-28 font-medium text-gray-400">File Path</div>
-              <div class="flex-1 flex items-center gap-2">
-                <span class="truncate">{{ currentCommand?.relativePath }}</span>
-                <button
-                  class="btn btn-xs btn-ghost"
-                  title="Open in editor"
-                  @click="openFileInEditor(currentCommand?.path)"
-                >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke-width="1.5"
-                    stroke="currentColor"
-                    class="size-4"
-                  >
-                    <path
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      d="M13.5 6H5.25A2.25 2.25 0 0 0 3 8.25v10.5A2.25 2.25 0 0 0 5.25 21h10.5A2.25 2.25 0 0 0 18 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25"
-                    />
-                  </svg>
-                </button>
-              </div>
-            </div>
-          </div>
-
-          <fieldset class="fieldset mb-4">
-            <label class="label">
-              <span class="label-text font-medium text-gray-400">Command Flags</span>
-            </label>
-            <input
-              v-model="commandFlags"
-              type="text"
-              placeholder="--flag=value --option"
-              class="input input-bordered w-full font-mono"
-            />
-            <label class="label">
-              <span class="label-text-alt text-gray-400">Add any additional flags for this command</span>
-            </label>
-          </fieldset>
-
-          <div
-            v-if="commandFileContent && !currentCommand?.isBuiltIn"
-            class="mb-0 flex-1 flex flex-col"
-          >
-            <h4 class="text-sm font-medium text-gray-400 mb-2">Command Code</h4>
-            <div class="flex-1">
-              <PhpViewer
-                :code="commandFileContent"
-                language="php"
-                height="100%"
-              />
-            </div>
-          </div>
-
-          <div
-            v-else-if="currentCommand?.isBuiltIn"
-            class="text-center py-4 text-gray-400"
+            v-else-if="filteredCommands.length === 0"
+            class="text-center py-6 text-gray-400 flex-1 flex flex-col justify-center"
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -395,91 +83,234 @@
               <path
                 stroke-linecap="round"
                 stroke-linejoin="round"
-                d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z"
+                d="M6.75 7.5l3 2.25-3 2.25m4.5 0h3m-9 8.25h13.5A2.25 2.25 0 0021 18V6a2.25 2.25 0 00-2.25-2.25H5.25A2.25 2.25 0 003 6v12a2.25 2.25 0 002.25 2.25z"
               />
             </svg>
-            <p>Source code not available for built-in Laravel command</p>
+            <p v-if="searchQuery">No commands match your search: "{{ searchQuery }}"</p>
+            <p v-else>No Laravel commands found</p>
+            <button
+              v-if="!projectPath"
+              class="btn btn-sm btn-primary mt-4 mx-auto"
+              @click="selectProjectPath"
+            >
+              Select Laravel Project
+            </button>
+          </div>
+
+          <div
+            v-else
+            class="overflow-auto max-h-[300px] flex-1"
+          >
+            <table class="table table-compact w-full">
+              <thead class="top-0 bg-neutral z-10">
+                <tr>
+                  <th>Command</th>
+                  <th>Signature</th>
+                  <th class="w-32 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr
+                  v-for="command in filteredCommands"
+                  :key="command.name"
+                >
+                  <td class="font-mono text-xs">
+                    <div class="flex items-center gap-2">
+                      <div
+                        v-if="command.isBuiltIn"
+                        class="badge badge-sm badge-outline"
+                      >
+                        Built-in
+                      </div>
+                    </div>
+                    <template v-if="!command.isBuiltIn && command.relativePath">
+                      <div class="text-xs text-primary font-semibold mt-1 flex items-center gap-1">
+                        <span>{{ getFilename(command.relativePath) }}</span>
+                        <button
+                          class="btn btn-xs btn-ghost btn-square p-0"
+                          title="Open in editor"
+                          @click.stop="openFileInEditor(command.path)"
+                        >
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke-width="1.5"
+                            stroke="currentColor"
+                            class="size-3"
+                          >
+                            <path
+                              stroke-linecap="round"
+                              stroke-linejoin="round"
+                              d="M13.5 6H5.25A2.25 2.25 0 0 0 3 8.25v10.5A2.25 2.25 0 0 0 5.25 21h10.5A2.25 2.25 0 0 0 18 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25"
+                            />
+                          </svg>
+                        </button>
+                      </div>
+                    </template>
+                    <div
+                      v-if="command.description"
+                      class="text-xs mt-1"
+                    >
+                      {{ command.description }}
+                    </div>
+                  </td>
+                  <td class="font-mono text-xs">
+                    {{ command.signature }}
+                  </td>
+                  <td class="text-right">
+                    <div class="flex gap-1 justify-end">
+                      <button
+                        class="btn btn-xs"
+                        :disabled="isLoading"
+                        @click="previewCommand(command)"
+                        title="View command details"
+                      >
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke-width="1.5"
+                          stroke="currentColor"
+                          class="w-4 h-4"
+                        >
+                          <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z"
+                          />
+                          <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"
+                          />
+                        </svg>
+                      </button>
+                      <div class="dropdown dropdown-end">
+                        <label
+                          tabindex="0"
+                          class="btn btn-xs btn-primary"
+                        >
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke-width="1.5"
+                            stroke="currentColor"
+                            class="w-4 h-4"
+                          >
+                            <path
+                              stroke-linecap="round"
+                              stroke-linejoin="round"
+                              d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.347a1.125 1.125 0 0 1 0 1.972l-11.54 6.347a1.125 1.125 0 0 1-1.667-.986V5.653Z"
+                            />
+                          </svg>
+                        </label>
+                        <ul
+                          tabindex="0"
+                          class="dropdown-content z-1 menu p-2 shadow-sm bg-base-300 rounded-box w-52 mt-1"
+                        >
+                          <li>
+                            <a
+                              @click="!isLoading && executeCommand(command)"
+                              :class="{ 'opacity-50 cursor-not-allowed': isLoading }"
+                            >
+                              Run Now
+                            </a>
+                          </li>
+                          <li>
+                            <a
+                              @click="!isLoading && showRunWithFlagsModal(command)"
+                              :class="{ 'opacity-50 cursor-not-allowed': isLoading }"
+                            >
+                              Run with Flags
+                            </a>
+                          </li>
+                        </ul>
+                      </div>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div
+            v-if="!isLoading && filteredCommands.length > 0"
+            class="text-xs text-gray-400 mt-2"
+          >
+            Showing {{ filteredCommands.length }} of {{ commands.length }} commands
           </div>
         </div>
       </div>
 
-      <div class="modal-action">
-        <button
-          class="btn btn-warning"
-          @click="executeCommand(currentCommand)"
-        >
-          Execute Command
-        </button>
-        <button
-          class="btn btn-primary"
-          @click="showCommandPreview = false"
-        >
-          Close
-        </button>
+      <div
+        v-if="projectPath"
+        class="text-xs text-gray-400"
+      >
+        <span>Project: {{ projectPath }}</span>
+      </div>
+      <div
+        v-else
+        class="text-xs text-red-400"
+      >
+        <span>No Laravel project path configured. Please set a project path in the connection settings.</span>
       </div>
     </div>
-    <div
-      class="modal-backdrop"
-      @click="showCommandPreview = false"
-    />
-  </div>
+  </Modal>
 
-  <!-- Run With Flags Modal -->
-  <div
-    v-if="showFlagsModal"
-    class="modal modal-open z-40"
+  <Modal
+    :show="showCommandPreview"
+    :title="currentCommand?.name"
+    @close="showCommandPreview = false"
   >
-    <div class="modal-box bg-base-200">
-      <h3 class="font-bold text-lg mb-4">Run Command with Flags</h3>
-
-      <div class="mb-4">
-        <div class="font-medium text-primary mb-2">Command:</div>
-        <div class="bg-neutral p-3 rounded-md font-mono text-sm mb-4">
-          {{ currentCommand?.signature }}
-        </div>
-
-        <fieldset class="fieldset w-full">
-          <label class="label">
-            <span class="label-text">Flags</span>
-          </label>
-          <input
-            v-model="commandFlags"
-            type="text"
-            placeholder="--flag=value --option"
-            class="input input-bordered w-full font-mono"
-          />
-          <label class="label">
-            <span class="label-text-alt">Add any additional flags for this command</span>
-          </label>
-        </fieldset>
-      </div>
-
-      <div class="modal-action">
-        <button
-          class="btn btn-warning"
-          @click="runWithFlags"
-        >
-          Execute
-        </button>
-        <button
-          class="btn btn-primary"
-          @click="showFlagsModal = false"
-        >
-          Cancel
-        </button>
-      </div>
+    <div class="max-h-[400px] overflow-auto">
+      <PhpViewer
+        :code="commandFileContent"
+        language="php"
+        height="100%"
+      />
     </div>
-    <div
-      class="modal-backdrop"
-      @click="showFlagsModal = false"
-    />
-  </div>
+  </Modal>
+
+  <Modal
+    :show="showFlagsModal"
+    title="Run Command with Flags"
+    @close="showFlagsModal = false"
+    @action="runWithFlags"
+    actionButtonText="Execute"
+    :showActionButton="true"
+    width="max-w-lg"
+  >
+    <div class="mb-4">
+      <div class="font-medium text-primary mb-2">Command:</div>
+      <div class="bg-neutral p-3 rounded-md font-mono text-sm mb-4">
+        {{ currentCommand?.signature }}
+      </div>
+
+      <fieldset class="fieldset w-full">
+        <label class="label">
+          <span class="label-text">Flags</span>
+        </label>
+        <input
+          v-model="commandFlags"
+          type="text"
+          placeholder="--flag=value --option"
+          class="input input-bordered w-full font-mono"
+        />
+        <label class="label">
+          <span class="label-text-alt">Add any additional flags for this command</span>
+        </label>
+      </fieldset>
+    </div>
+  </Modal>
 </template>
 
 <script setup>
 import { ref, inject, computed, watch, onMounted } from "vue";
 import { useCommandsStore } from "@/store/commands";
 import PhpViewer from "@/components/PhpViewer.vue";
+import Modal from "@/components/Modal.vue";
 
 const props = defineProps({
   connectionId: {
@@ -537,10 +368,8 @@ async function loadCommands() {
     const result = await window.api.findLaravelCommands(props.projectPath);
 
     if (result.success) {
-      console.log("Commands found:", result.commands);
       commands.value = result.commands || [];
 
-      // Check for sail
       await checkForSail();
     } else {
       console.error("Failed to get Laravel commands:", result.message);

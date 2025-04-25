@@ -242,7 +242,7 @@ function removeConnection(connectionId) {
 onMounted(async () => {
   setTimeout(async () => {
     await loadConnectionsWithRetry();
-  }, 300);
+  }, 500);
 });
 
 async function loadConnectionsWithRetry(retries = 3) {

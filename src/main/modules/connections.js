@@ -55,7 +55,7 @@ function safeRegisterHandler(channel, handler) {
   }
 }
 
-function registerConnectionHandlers(store) {
+function registerConnectionHandlers(store, dbMonitoringConnections) {
   safeRegisterHandler("test-mysql-connection", async (_e, config) => {
     try {
       await _testConnection(config, { selectDb: true });
@@ -95,6 +95,97 @@ function registerConnectionHandlers(store) {
       success: true,
       message: `Connection database updated to ${newDb}`
     };
+  });
+
+  safeRegisterHandler("save-connections", (event, connections) => {
+    try {
+      store.set("connections", connections);
+      return true;
+    } catch (error) {
+      console.error("Error saving connections:", error);
+      throw error;
+    }
+  });
+
+  safeRegisterHandler("remove-connection", async (event, connectionId) => {
+    try {
+      if (!connectionId) {
+        return {
+          success: false,
+          message: "Connection ID is required"
+        };
+      }
+
+      const connections = store.get("connections") || [];
+      const connectionIndex = connections.findIndex((conn) => conn.id === connectionId);
+
+      if (connectionIndex === -1) {
+        return {
+          success: false,
+          message: "Connection not found"
+        };
+      }
+
+      connections.splice(connectionIndex, 1);
+
+      store.set("connections", connections);
+
+      const openTabs = store.get("openTabs") || {
+        tabs: [],
+        activeTabId: null
+      };
+      const updatedTabs = {
+        tabs: openTabs.tabs.filter((tab) => tab.connectionId !== connectionId),
+        activeTabId: openTabs.activeTabId
+      };
+
+      if (updatedTabs.tabs.length === 0 || !updatedTabs.tabs.find((tab) => tab.id === updatedTabs.activeTabId)) {
+        updatedTabs.activeTabId = updatedTabs.tabs.length > 0 ? updatedTabs.tabs[0].id : null;
+      }
+
+      store.set("openTabs", updatedTabs);
+
+      try {
+        if (dbMonitoringConnections.has(connectionId)) {
+          const connection = dbMonitoringConnections.get(connectionId);
+          if (connection) {
+            if (connection._pollingInterval) {
+              clearInterval(connection._pollingInterval);
+            }
+            await connection.end();
+          }
+          dbMonitoringConnections.delete(connectionId);
+          console.log(`Monitoring stopped for connection ${connectionId}`);
+        }
+
+        if (dbActivityConnections.has(connectionId)) {
+          const connectionData = dbActivityConnections.get(connectionId);
+          if (connectionData) {
+            if (connectionData.connection) {
+              await connectionData.connection.end();
+            }
+            if (connectionData.triggerConnection) {
+              await connectionData.triggerConnection.end();
+            }
+          }
+          dbActivityConnections.delete(connectionId);
+          console.log(`Trigger-based monitoring stopped for connection ${connectionId}`);
+        }
+      } catch (monitoringError) {
+        console.error(`Error stopping monitoring for connection ${connectionId}:`, monitoringError);
+      }
+
+      return {
+        success: true,
+        message: "Connection and related data removed successfully"
+      };
+    } catch (error) {
+      console.error("Error removing connection:", error);
+      return {
+        success: false,
+        message: error.message || "Failed to remove connection"
+      };
+    }
   });
 }
 

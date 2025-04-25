@@ -291,8 +291,7 @@ function registerUpdaterHandlers(window) {
   });
 
   safeRegisterHandler("get-current-version", () => {
-    const version = app.getVersion();
-    return version;
+    return app.getVersion();
   });
 
   safeRegisterHandler("open-external", (event, url) => {

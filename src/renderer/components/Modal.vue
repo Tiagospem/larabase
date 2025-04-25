@@ -1,9 +1,13 @@
 <template>
   <div
-    class="modal z-50"
+    class="modal"
     :class="{ 'modal-open': show }"
+    :style="{ 'z-index': zIndex }"
   >
-    <div class="modal-box w-11/12 max-w-4xl bg-base-300 relative max-h-[90vh] overflow-auto">
+    <div
+      class="modal-box bg-base-300 relative max-h-[90vh] overflow-auto"
+      :class="width"
+    >
       <div class="flex justify-between items-center mb-4">
         <h3 class="font-bold text-lg">{{ title }}</h3>
         <button
@@ -46,9 +50,14 @@
           </button>
           <button
             v-if="showActionButton"
+            :disabled="isLoadingAction"
             class="btn btn-primary"
             @click="$emit('action')"
           >
+            <span
+              v-if="isLoadingAction"
+              class="loading loading-spinner loading-xs mr-2"
+            />
             {{ actionButtonText }}
           </button>
         </slot>
@@ -95,15 +104,27 @@ const props = defineProps({
   },
   cancelButtonText: {
     type: String,
-    default: "Cancel"
+    default: "Close"
   },
   showActionButton: {
     type: Boolean,
-    default: true
+    default: false
   },
   actionButtonText: {
     type: String,
     default: "Confirm"
+  },
+  isLoadingAction: {
+    type: Boolean,
+    default: false
+  },
+  width: {
+    type: String,
+    default: "max-w-4xl"
+  },
+  zIndex: {
+    type: [Number, String],
+    default: 40
   }
 });
 
