@@ -47,7 +47,7 @@
         @retry="tableDataStore.loadTableData()"
       />
       <EmptyFilterState
-        v-else-if="isFilteredEmpty"
+        v-else-if="isFilteredEmpty && !isLoading"
         @clear="filterButtonRef.clearFilters()"
         @reload="tableDataStore.loadTableData()"
       />
@@ -59,9 +59,13 @@
         @load-filtered-data="tableDataStore.loadFilteredData()"
         @navigate-to-foreign-key="(column, row) => navigateToForeignKey(column, row)"
       />
+      <div
+        v-else-if="isLoading || loadRetries.value > 0">
+      <TableSkeleton />
+      </div>
       <NoRecordState
         v-else
-        @reload="tableDataStore.loadTableData()"
+        @reload="handleRefresh"
       />
     </div>
     <div
@@ -144,11 +148,17 @@ const highlightChanges = computed(() => tableDataStore.highlightChanges);
 
 const filterButtonRef = ref(null);
 const dataTableRef = ref(null);
-
 const isActive = ref(true);
+const loadRetries = ref(0);
+const maxRetries = 3;
+const wasReloaded = ref(false);
 
-async function safeLoadTableData() {
+async function safeLoadTableData(forceRetry = false) {
   isLoading.value = true;
+  
+  if (forceRetry) {
+    loadRetries.value = 0;
+  }
 
   try {
     const loadFunc = () => {
@@ -160,11 +170,55 @@ async function safeLoadTableData() {
     };
 
     await loadFunc();
+    
+    // If after loading we still don't have data and we know the table should have records,
+    // try again some times
+    if (!hasData.value && !tableDataStore.loadError && loadRetries.value < maxRetries) {
+      loadRetries.value++;
+      console.log(`Retry loading data attempt ${loadRetries.value}/${maxRetries}`);
+      
+      // Wait a little before trying again
+      setTimeout(() => {
+        safeLoadTableData();
+      }, 500);
+      return;
+    }
+    
+    // Reset retries counter on success
+    loadRetries.value = 0;
   } catch (error) {
     console.error("Failed to load table data:", error);
     tableDataStore.loadError = error.message || "Failed to load table data";
+    
+    // Retry on error
+    if (loadRetries.value < maxRetries) {
+      loadRetries.value++;
+      console.log(`Error retry attempt ${loadRetries.value}/${maxRetries}`);
+      
+      setTimeout(() => {
+        safeLoadTableData();
+      }, 800);
+      return;
+    }
   } finally {
     isLoading.value = false;
+  }
+}
+
+// Adding event to reload data when the page is reloaded with F5
+function handlePageReload() {
+  if (document.visibilityState === 'visible') {
+    wasReloaded.value = true;
+    loadRetries.value = 0;
+    safeLoadTableData(true);
+  }
+}
+
+// Adding function to check if there is data and reload if there is no data
+function checkAndReloadIfNeeded() {
+  if (!hasData.value && !isLoading.value && !loadError.value) {
+    console.log("No data found, attempting to reload");
+    safeLoadTableData(true);
   }
 }
 
@@ -317,8 +371,14 @@ onActivated(() => {
   window.addEventListener("focus", handleWindowFocus);
   window.addEventListener("reload-table-data", handleTableTruncate);
   window.addEventListener("truncate-table", handleTableTruncate);
+  window.addEventListener("visibilitychange", handlePageReload);
 
   refreshLiveTableState();
+  
+  // If the table is active but has no data, try to reload
+  if (!hasData.value && !isLoading.value) {
+    checkAndReloadIfNeeded();
+  }
 });
 
 onDeactivated(() => {
@@ -329,6 +389,7 @@ onDeactivated(() => {
   window.removeEventListener("focus", handleWindowFocus);
   window.removeEventListener("reload-table-data", handleTableTruncate);
   window.removeEventListener("truncate-table", handleTableTruncate);
+  window.removeEventListener("visibilitychange", handlePageReload);
 
   if (tableDataStore.isLiveTableActive) {
     tableDataStore.stopLiveUpdates(false);
@@ -341,6 +402,7 @@ onMounted(() => {
   window.addEventListener("focus", handleWindowFocus);
   window.addEventListener("reload-table-data", handleTableTruncate);
   window.addEventListener("truncate-table", handleTableTruncate);
+  window.addEventListener("visibilitychange", handlePageReload);
 
   loadTableStructure().then(() => {
     if (props.initialFilter) {
@@ -379,6 +441,9 @@ onMounted(() => {
     }
 
     safeLoadTableData();
+    
+    // Check again after a short period if we have data
+    setTimeout(checkAndReloadIfNeeded, 1000);
   });
 
   try {
@@ -432,6 +497,7 @@ onUnmounted(() => {
   window.removeEventListener("focus", handleWindowFocus);
   window.removeEventListener("reload-table-data", handleTableTruncate);
   window.removeEventListener("truncate-table", handleTableTruncate);
+  window.removeEventListener("visibilitychange", handlePageReload);
 
   if (tableDataStore.isLiveTableActive) {
     try {
@@ -504,6 +570,7 @@ watch([() => props.tableName, () => props.connectionId], async ([newTableName, n
 
 function handleRefresh() {
   tableDataStore.loadError = null;
-  safeLoadTableData();
+  loadRetries.value = 0;
+  safeLoadTableData(true);
 }
 </script>
