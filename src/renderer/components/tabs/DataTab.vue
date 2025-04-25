@@ -151,6 +151,7 @@ const isActive = ref(true);
 const loadRetries = ref(0);
 const maxRetries = 3;
 const wasReloaded = ref(false);
+const wasEmptyChecked = ref(false);
 
 watch(
   () => [tableDataStore.isLoading, tableDataStore.isLiveUpdating],
@@ -176,26 +177,32 @@ async function safeLoadTableData(forceRetry = false) {
 
     await loadFunc();
 
-    // If after loading we still don't have data and we know the table should have records,
-    // try again some times
-    if (!hasData.value && !tableDataStore.loadError && loadRetries.value < maxRetries) {
-      loadRetries.value++;
-      console.log(`Retry loading data attempt ${loadRetries.value}/${maxRetries}`);
+    // Se conseguimos carregar com sucesso, mas não há dados, é provável que a tabela esteja vazia
+    // Não vamos mais tentar recarregar automaticamente
+    if (!hasData.value && !tableDataStore.loadError) {
+      if (loadRetries.value < maxRetries && !wasEmptyChecked.value) {
+        loadRetries.value++;
+        console.log(`Retry loading data attempt ${loadRetries.value}/${maxRetries}`);
 
-      // Wait a little before trying again
-      setTimeout(() => {
-        safeLoadTableData();
-      }, 500);
-      return;
+        // Esperar um pouco antes de tentar novamente
+        setTimeout(() => {
+          safeLoadTableData();
+        }, 500);
+        return;
+      } else {
+        // Marcamos que já verificamos que esta tabela está vazia
+        wasEmptyChecked.value = true;
+        console.log("Table appears to be empty, stopping reload attempts");
+      }
     }
 
-    // Reset retries counter on success
+    // Redefine o contador de tentativas após o sucesso
     loadRetries.value = 0;
   } catch (error) {
     console.error("Failed to load table data:", error);
     tableDataStore.loadError = error.message || "Failed to load table data";
 
-    // Retry on error
+    // Tentar novamente em caso de erro
     if (loadRetries.value < maxRetries) {
       loadRetries.value++;
       console.log(`Error retry attempt ${loadRetries.value}/${maxRetries}`);
@@ -219,7 +226,7 @@ function handlePageReload() {
 
 // Adding function to check if there is data and reload if there is no data
 function checkAndReloadIfNeeded() {
-  if (!hasData.value && !isLoading.value && !loadError.value) {
+  if (!hasData.value && !isLoading.value && !loadError.value && !wasEmptyChecked.value) {
     console.log("No data found, attempting to reload");
     safeLoadTableData(true);
   }
@@ -400,6 +407,9 @@ onDeactivated(() => {
 });
 
 onMounted(() => {
+  // reset states
+  wasEmptyChecked.value = false;
+  
   window.addEventListener("tab-activated", handleTabActivation);
   window.addEventListener("storage", handleStorageChange);
   window.addEventListener("focus", handleWindowFocus);
@@ -523,6 +533,10 @@ watch(highlightChanges, (newValue) => {
 
 watch([() => props.tableName, () => props.connectionId], async ([newTableName, newConnectionId], [oldTableName, oldConnectionId]) => {
   if (newTableName !== oldTableName || newConnectionId !== oldConnectionId) {
+    // Reset states when table changes
+    wasEmptyChecked.value = false;
+    loadRetries.value = 0;
+    
     await loadTableStructure();
 
     if (oldTableName && oldConnectionId) {
@@ -574,6 +588,7 @@ watch([() => props.tableName, () => props.connectionId], async ([newTableName, n
 function handleRefresh() {
   tableDataStore.loadError = null;
   loadRetries.value = 0;
+  wasEmptyChecked.value = false;
   safeLoadTableData(true);
 }
 </script>
