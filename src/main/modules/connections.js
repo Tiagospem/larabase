@@ -55,7 +55,7 @@ function safeRegisterHandler(channel, handler) {
   }
 }
 
-function registerConnectionHandlers(store, dbMonitoringConnections) {
+function registerConnectionHandlers(store) {
   safeRegisterHandler("test-mysql-connection", async (_e, config) => {
     try {
       await _testConnection(config, { selectDb: true });

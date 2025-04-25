@@ -25,9 +25,9 @@ app.whenReady().then(async () => {
 
   registerUpdaterHandlers(mainWindow);
   registerTableHandlers(store, dbMonitoringConnections);
-  registerConnectionHandlers(store, dbMonitoringConnections);
   registerMonitoringHandlers(store, dbMonitoringConnections, mainWindow);
   registerRestoreDumpHandlers(store);
+  registerConnectionHandlers(store);
   registerTabsHandlers(store);
   registerSettingsHandlers(store);
   registerProjectHandlers();
