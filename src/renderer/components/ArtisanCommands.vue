@@ -1,6 +1,6 @@
 <template>
   <div class="modal modal-open z-30">
-    <div class="modal-box w-11/12 max-w-3xl bg-base-300">
+    <div class="modal-box w-11/12 max-w-3xl bg-base-300 max-h-[90vh]">
       <h3 class="font-bold text-lg mb-4">Laravel Migrations Manager</h3>
 
       <div class="space-y-4">
@@ -11,7 +11,7 @@
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
               <button
-                class="btn btn-sm btn-outline"
+                class="btn btn-sm btn-primary"
                 :disabled="isLoading || !projectPath"
                 @click="runMigration('migrate')"
               >
@@ -23,7 +23,7 @@
               </button>
 
               <button
-                class="btn btn-sm btn-outline"
+                class="btn btn-sm btn-primary"
                 :disabled="isLoading || !projectPath"
                 @click="runMigration('migrate:fresh')"
               >
@@ -35,7 +35,7 @@
               </button>
 
               <button
-                class="btn btn-sm btn-outline"
+                class="btn btn-sm btn-primary"
                 :disabled="isLoading || !projectPath"
                 @click="runMigration('migrate:fresh --seed')"
               >
@@ -47,7 +47,7 @@
               </button>
 
               <button
-                class="btn btn-sm btn-outline"
+                class="btn btn-sm btn-primary"
                 :disabled="isLoading || !projectPath"
                 @click="runMigration('migrate:status')"
               >
@@ -58,8 +58,7 @@
                 Check Migration Status
               </button>
             </div>
-
-            <div
+            <!-- <div
               v-if="hasSail"
               class="form-control"
             >
@@ -72,7 +71,7 @@
                   @change="refreshMigrationStatus"
                 />
               </label>
-            </div>
+            </div> -->
           </div>
         </div>
 
@@ -194,7 +193,7 @@
               v-else
               class="space-y-4"
             >
-              <div class="form-control w-full">
+              <fieldset class="fieldset w-full">
                 <label class="label">
                   <span class="label-text">Rollback Strategy</span>
                 </label>
@@ -205,19 +204,18 @@
                   <option value="steps">Rollback by number of steps</option>
                   <option value="batch">Rollback specific batch</option>
                 </select>
-              </div>
+              </fieldset>
 
               <!-- Rollback por steps -->
               <div
                 v-if="selectedRollbackOption === 'steps'"
                 class="space-y-4"
               >
-                <div class="form-control w-full">
+                <fieldset class="fieldset w-full">
                   <label class="label">
                     <span class="label-text">Number of steps to rollback</span>
                   </label>
 
-                  <!-- Exibir um slider e input para escolher qualquer número de steps -->
                   <div class="flex gap-2 items-center">
                     <input
                       v-model.number="rollbackSteps"
@@ -226,19 +224,9 @@
                       max="20"
                       class="range range-primary range-sm flex-1"
                     />
-                    <input
-                      v-model.number="rollbackSteps"
-                      type="number"
-                      min="1"
-                      max="100"
-                      class="input input-bordered w-20 text-center"
-                    />
                   </div>
+                </fieldset>
 
-                  <div class="text-xs text-gray-500 mt-1">O Laravel executará o rollback das últimas {{ rollbackSteps }} migrações, independente dos batches.</div>
-                </div>
-
-                <!-- Preview das migrações afetadas pelo rollback de steps -->
                 <div
                   v-if="rollbackSteps > 0"
                   class="p-2 bg-base-100 rounded-md"
@@ -281,12 +269,11 @@
                 </div>
               </div>
 
-              <!-- Rollback por batch específico -->
               <div
                 v-if="selectedRollbackOption === 'batch'"
                 class="space-y-4"
               >
-                <div class="form-control w-full">
+                <fieldset class="fieldset w-full">
                   <label class="label">
                     <span class="label-text">Select batch to rollback</span>
                   </label>
@@ -303,9 +290,8 @@
                       migrations)
                     </option>
                   </select>
-                </div>
+                </fieldset>
 
-                <!-- Preview das migrações afetadas pelo rollback de batch -->
                 <div
                   v-if="selectedBatch"
                   class="p-2 bg-base-100 rounded-md"
@@ -394,6 +380,7 @@
 
 <script setup>
 import { ref, inject, computed, watch, onMounted } from "vue";
+import { useConnectionsStore } from "@/store/connections";
 import { useCommandsStore } from "@/store/commands";
 
 const props = defineProps({
@@ -405,6 +392,12 @@ const props = defineProps({
     type: String,
     default: ""
   }
+});
+
+const connectionsStore = useConnectionsStore();
+
+const connection = computed(() => {
+  return connectionsStore.getConnection(props.connectionId);
 });
 
 const emit = defineEmits(["close"]);
@@ -420,7 +413,6 @@ const batches = ref([]);
 const selectedRollbackOption = ref("steps");
 const rollbackSteps = ref(1);
 const selectedBatch = ref(null);
-const expandLastMigrations = ref(false);
 const expandStepsMigrations = ref(false);
 const expandBatchMigrations = ref(false);
 
@@ -476,34 +468,10 @@ function formatMigrationName(migration) {
   return name;
 }
 
-function formatMigrationsList(migrations) {
-  if (!migrations || migrations.length === 0) return "";
-
-  return migrations.map(formatMigrationName).join(", ");
-}
-
-// Helper to get a description of what will be included in each step
-function getStepDescription(steps) {
-  if (!batches.value || batches.value.length === 0) return "No batches";
-
-  const totalBatches = Math.min(steps, batches.value.length);
-  let totalMigrations = 0;
-
-  for (let i = 0; i < totalBatches; i++) {
-    if (batches.value[i] && batches.value[i].migrations) {
-      totalMigrations += batches.value[i].migrations.length;
-    }
-  }
-
-  if (steps > batches.value.length) {
-    return `${totalMigrations} migrations (limited to ${batches.value.length} available batches)`;
-  }
-
-  return `${totalMigrations} migrations`;
-}
-
-async function checkForSail() {
+async function init() {
   if (!props.projectPath) return;
+
+  useSail.value = connection.value.usingSail;
 
   try {
     await refreshMigrationStatus();
@@ -654,13 +622,13 @@ function close() {
 }
 
 onMounted(() => {
-  checkForSail();
+  init();
 });
 
 watch(
   () => props.projectPath,
   () => {
-    checkForSail();
+    init();
   }
 );
 

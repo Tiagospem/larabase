@@ -17,7 +17,7 @@
             v-model="newConnection.projectPath"
             type="text"
             placeholder="Select Laravel project directory"
-            class="input  w-full"
+            class="input w-full"
             :readonly="true"
           />
           <button
@@ -127,7 +127,7 @@
             v-model="newConnection.name"
             type="text"
             placeholder="My Project"
-            class="input  w-full"
+            class="input w-full"
             required
           />
         </fieldset>
@@ -156,7 +156,7 @@
             v-model="newConnection.host"
             type="text"
             placeholder="localhost"
-            class="input  w-full"
+            class="input w-full"
             required
           />
         </fieldset>
@@ -169,7 +169,7 @@
             v-model="newConnection.port"
             type="text"
             placeholder="3306"
-            class="input  w-full"
+            class="input w-full"
             required
           />
         </fieldset>
@@ -182,7 +182,7 @@
             v-model="newConnection.database"
             type="text"
             placeholder="mydatabase"
-            class="input  w-full"
+            class="input w-full"
             required
           />
         </fieldset>
@@ -195,7 +195,7 @@
             v-model="newConnection.username"
             type="text"
             placeholder="root"
-            class="input  w-full"
+            class="input w-full"
             required
           />
         </fieldset>
@@ -208,7 +208,7 @@
             v-model="newConnection.password"
             type="text"
             placeholder="password"
-            class="input  w-full"
+            class="input w-full"
           />
         </fieldset>
       </div>
@@ -224,7 +224,7 @@
             v-model="newConnection.redisHost"
             type="text"
             placeholder="127.0.0.1"
-            class="input  w-full"
+            class="input w-full"
           />
         </fieldset>
 
@@ -236,7 +236,7 @@
             v-model="newConnection.redisPort"
             type="text"
             placeholder="6379"
-            class="input  w-full"
+            class="input w-full"
           />
         </fieldset>
 
@@ -248,7 +248,7 @@
             v-model="newConnection.redisPassword"
             type="text"
             placeholder="Leave empty if none"
-            class="input  w-full"
+            class="input w-full"
           />
         </fieldset>
       </div>
@@ -451,7 +451,7 @@ async function selectProjectDirectory() {
         newConnection.value.name = envConfig.APP_NAME || selectedPath.split("/").pop();
       }
 
-      if (envConfig.DB_HOST === 'mysql') {
+      if (envConfig.DB_HOST === "mysql") {
         newConnection.value.host = "0.0.0.0";
       }
 
@@ -475,7 +475,7 @@ async function selectProjectDirectory() {
         newConnection.value.password = envConfig.DB_PASSWORD || "";
       }
 
-      if (envConfig.REDIS_HOST === 'redis') {
+      if (envConfig.REDIS_HOST === "redis") {
         newConnection.value.redisHost = "0.0.0.0";
       }
 

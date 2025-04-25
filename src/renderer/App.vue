@@ -1,7 +1,5 @@
 <template>
-  <div
-    class="min-h-screen"
-  >
+  <div class="min-h-screen">
     <router-view v-slot="{ Component }">
       <keep-alive include="DatabaseView">
         <component :is="Component" />

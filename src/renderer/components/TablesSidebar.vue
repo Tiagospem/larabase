@@ -7,7 +7,11 @@
       <div class="p-3 border-y border-base-100 shrink-0">
         <div class="relative mb-2">
           <label class="input input-sm">
-            <svg class="h-[1em] opacity-50" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+            <svg
+              class="h-[1em] opacity-50"
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 24 24"
+            >
               <g
                 stroke-linejoin="round"
                 stroke-linecap="round"
@@ -15,14 +19,21 @@
                 fill="none"
                 stroke="currentColor"
               >
-                <circle cx="11" cy="11" r="8"></circle>
+                <circle
+                  cx="11"
+                  cy="11"
+                  r="8"
+                ></circle>
                 <path d="m21 21-4.3-4.3"></path>
               </g>
             </svg>
             <input
               :value="tablesStore.searchTerm"
               @input="(e) => tablesStore.setSearchTerm(props.connectionId, e.target.value)"
-              type="search" class="input-sm" placeholder="Search" />
+              type="search"
+              class="input-sm"
+              placeholder="Search"
+            />
           </label>
         </div>
 

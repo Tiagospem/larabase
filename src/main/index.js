@@ -1968,6 +1968,7 @@ ipcMain.handle("get-migration-status", async (event, config) => {
     }
 
     const artisanPath = path.join(config.projectPath, "artisan");
+
     if (!fs.existsSync(artisanPath)) {
       return {
         success: false,
