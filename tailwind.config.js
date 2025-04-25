@@ -16,7 +16,6 @@ module.exports = {
     themes: [
       {
         dark: {
-          ...require("daisyui/src/theming/themes")["dark"],
           primary: "#FF2D20",
           secondary: "#30363d",
           accent: "#FF2D20",
