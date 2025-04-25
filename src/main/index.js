@@ -19,19 +19,20 @@ const dbActivityConnections = new Map();
 let mainWindow;
 
 app.whenReady().then(async () => {
+  registerConnectionHandlers(store);
+  registerTableHandlers(store, dbMonitoringConnections);
+  registerMonitoringHandlers(store, dbMonitoringConnections, null);
+  registerRestoreDumpHandlers(store);
+  registerTabsHandlers(store);
+  registerSettingsHandlers(store);
+  registerProjectHandlers();
+  registerRedisHandlers();
+
   await createWindow();
 
   mainWindow = getMainWindow();
 
   registerUpdaterHandlers(mainWindow);
-  registerTableHandlers(store, dbMonitoringConnections);
-  registerMonitoringHandlers(store, dbMonitoringConnections, mainWindow);
-  registerRestoreDumpHandlers(store);
-  registerConnectionHandlers(store);
-  registerTabsHandlers(store);
-  registerSettingsHandlers(store);
-  registerProjectHandlers();
-  registerRedisHandlers();
 
   app.on("activate", () => {
     if (BrowserWindow.getAllWindows().length === 0) {
