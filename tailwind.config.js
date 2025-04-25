@@ -12,20 +12,4 @@ module.exports = {
       }
     }
   },
-  plugins: [require("daisyui")],
-  daisyui: {
-    themes: [
-      {
-        dark: {
-          primary: "#FF2D20",
-          secondary: "#30363d",
-          accent: "#FF2D20",
-          neutral: "#252526",
-          "base-100": "#1e1e1e",
-          "base-200": "#2d2d30",
-          "base-300": "#333333"
-        }
-      }
-    ]
-  }
 };
