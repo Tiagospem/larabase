@@ -1,11 +1,13 @@
 <template>
-  <div
-    class="modal"
-    :class="{ 'modal-open': isRestoreModalOpen }"
+  <Modal
+    :show="isRestoreModalOpen"
+    :title="`Restore Database: ${restoreConfig.connection?.name}`"
+    :hideCloseButton="blockCloseModal"
+    :allowCloseOnBackdrop="!blockCloseModal"
+    :allowCloseOnEsc="!blockCloseModal"
+    @close="closeRestoreModal"
   >
-    <div class="modal-box w-11/12 max-w-4xl">
-      <h3 class="font-bold text-lg mb-4">Restore Database: {{ restoreConfig.connection?.name }}</h3>
-
+    <div>
       <fieldset class="fieldset w-full mb-4">
         <label class="label">
           <span class="label-text">SQL Dump File (.sql or .sql.gz)</span>
@@ -187,38 +189,38 @@
           <span class="label-text-alt">Select tables to ignore during restore</span>
         </label>
       </fieldset>
-
-      <div class="modal-action">
-        <button
-          class="btn"
-          @click="closeRestoreModal"
-        >
-          {{ isRestoring ? "Cancel" : "Close" }}
-        </button>
-        <button
-          class="btn btn-primary"
-          :disabled="isRestoring || isProcessingSql || !restoreConfig.filePath"
-          @click="startRestore"
-        >
-          <span
-            v-if="isRestoring"
-            class="loading loading-spinner loading-xs mr-2"
-          />
-          <span
-            v-else-if="isProcessingSql"
-            class="loading loading-spinner loading-xs mr-2"
-          />
-          {{ isRestoring ? "Restoring..." : "Restore Database" }}
-        </button>
-      </div>
     </div>
-    <div class="modal-backdrop" />
-  </div>
+
+    <template #footer>
+      <button
+        class="btn"
+        @click="closeRestoreModal"
+      >
+        {{ isRestoring ? "Cancel" : "Close" }}
+      </button>
+      <button
+        class="btn btn-primary"
+        :disabled="isRestoring || isProcessingSql || !restoreConfig.filePath"
+        @click="startRestore"
+      >
+        <span
+          v-if="isRestoring"
+          class="loading loading-spinner loading-xs mr-2"
+        />
+        <span
+          v-else-if="isProcessingSql"
+          class="loading loading-spinner loading-xs mr-2"
+        />
+        {{ isRestoring ? "Restoring..." : "Restore Database" }}
+      </button>
+    </template>
+  </Modal>
 </template>
 
 <script setup>
 import { computed, inject, ref } from "vue";
 import { useConnectionsStore } from "@/store/connections";
+import Modal from "@/components/Modal.vue";
 
 const connectionsStore = useConnectionsStore();
 
@@ -228,6 +230,10 @@ const overwriteCurrentDb = ref(true);
 const isRestoring = ref(false);
 const isProcessingSql = ref(false);
 const isRestoreModalOpen = ref(false);
+
+const blockCloseModal = computed(() => {
+  return isRestoring.value || isProcessingSql.value;
+});
 
 const restoreConfig = ref({
   connection: null,
@@ -302,7 +308,6 @@ async function selectDumpFile() {
 const filteredTables = computed(() => {
   let tables = restoreConfig.value.tables;
 
-  // Sort tables by size: large, medium, small, empty
   tables = [...tables].sort((a, b) => {
     const sizeOrder = { large: 0, medium: 1, small: 2, empty: 3 };
     const sizeA = a.size ? sizeOrder[a.size] : 4;
@@ -466,7 +471,6 @@ function restoreDatabase(connection) {
   overwriteCurrentDb.value = true;
 }
 
-// Add event listener for restoration progress
 window.api.onRestorationProgress((progress) => {
   if (isRestoring.value) {
     // Handle cancellation events

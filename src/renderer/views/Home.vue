@@ -1,6 +1,6 @@
 <template>
   <div class="flex h-full relative">
-    <div class="w-3/12 bg-base-300 flex flex-col items-center justify-between p-6 border-r border-base-300">
+    <div class="w-3/12 bg-neutral flex flex-col items-center justify-between p-6">
       <div class="flex flex-col items-center mt-12 w-full text-center">
         <img
           src="../assets/icons/png/512x512.png"
