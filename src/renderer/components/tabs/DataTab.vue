@@ -1,8 +1,14 @@
 <template>
   <div class="h-full flex flex-col">
-    <div class="bg-base-200 p-2 border-b border-neutral flex flex-wrap items-center justify-between gap-2">
+    <div
+      class="bg-base-200 p-2 border-b border-neutral flex flex-wrap items-center justify-between gap-2"
+      v-if="!tablesStore.isLoading"
+    >
       <div class="flex flex-wrap items-center gap-2">
-        <RefreshButton :store-id="storeId" />
+        <RefreshButton
+          :store-id="storeId"
+          @refresh="handleRefresh"
+        />
         <LiveTableButton :store-id="storeId" />
         <TruncateButton :store-id="storeId" />
         <DeleteButton :store-id="storeId" />
@@ -15,16 +21,33 @@
         />
       </div>
     </div>
+    <div
+      class="bg-base-200 p-2 border-b border-neutral flex flex-wrap items-center justify-between gap-2"
+      v-else
+    >
+      <div class="flex flex-wrap items-center gap-2">
+        <button class="btn btn-sm text-transparent w-36 animate-pulse bg-neutral pointer-events-none"></button>
+        <button class="btn btn-sm text-transparent w-36 animate-pulse bg-neutral pointer-events-none"></button>
+        <button class="btn btn-sm text-transparent w-36 animate-pulse bg-neutral pointer-events-none"></button>
+        <button class="btn btn-sm text-transparent w-36 animate-pulse bg-neutral pointer-events-none"></button>
+      </div>
 
-    <div class="flex-1 overflow-auto">
-      <LoadingState v-if="isLoading" />
+      <div class="flex flex-wrap items-center gap-2">
+        <button class="btn btn-sm text-transparent w-80 animate-pulse bg-neutral pointer-events-none"></button>
+      </div>
+    </div>
+
+    <div
+      class="flex-1 overflow-auto"
+      v-if="!tablesStore.isLoading"
+    >
       <ErrorState
-        v-else-if="loadError"
+        v-if="loadError"
         :message="tableDataStore.loadError"
         @retry="tableDataStore.loadTableData()"
       />
       <EmptyFilterState
-        v-else-if="isFilteredEmpty"
+        v-else-if="isFilteredEmpty && !isLoading"
         @clear="filterButtonRef.clearFilters()"
         @reload="tableDataStore.loadTableData()"
       />
@@ -32,25 +55,37 @@
         v-else-if="hasData"
         ref="dataTableRef"
         :store-id="storeId"
+        :is-loading="isLoading"
         @load-filtered-data="tableDataStore.loadFilteredData()"
         @navigate-to-foreign-key="(column, row) => navigateToForeignKey(column, row)"
       />
+      <div v-else-if="isLoading || loadRetries.value > 0">
+        <TableSkeleton />
+      </div>
       <NoRecordState
         v-else
-        @reload="tableDataStore.loadTableData()"
+        @reload="handleRefresh"
       />
     </div>
+    <div
+      class="flex-1 overflow-auto"
+      v-if="tablesStore.isLoading"
+    >
+      <TableSkeleton />
+    </div>
 
-    <PaginatorBar
-      v-if="hasData"
-      :store-id="storeId"
-      @scroll-to-top="dataTableRef.scrollToTop()"
-    />
+    <template v-if="!tablesStore.isLoading">
+      <PaginatorBar
+        v-if="hasData"
+        :store-id="storeId"
+        @scroll-to-top="dataTableRef.scrollToTop()"
+      />
+    </template>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted, inject, watch } from "vue";
+import { ref, computed, onMounted, onUnmounted, inject, watch, onActivated, onDeactivated } from "vue";
 
 import {
   RefreshButton,
@@ -58,18 +93,19 @@ import {
   TruncateButton,
   DeleteButton,
   FilterButton,
-  LoadingState,
   ErrorState,
   EmptyFilterState,
   DataTable,
   NoRecordState,
-  PaginatorBar
+  PaginatorBar,
+  TableSkeleton
 } from "@/components/tabs/partials";
 
 import { Helpers } from "../../utils/helpers";
 
 import { useTableDataStore, createTableDataStoreId } from "@/store/table-data";
 import { useDatabaseStore } from "@/store/database";
+import { useTablesStore } from "@/store/tables";
 
 const props = defineProps({
   connectionId: {
@@ -99,10 +135,11 @@ const storeId = createTableDataStoreId(props.connectionId, props.tableName);
 
 const tableDataStore = useTableDataStore(storeId);
 const databaseStore = useDatabaseStore();
+const tablesStore = useTablesStore();
 
 const showAlert = inject("showAlert");
 
-const isLoading = computed(() => tableDataStore.isLoading && !tableDataStore.isLiveUpdating);
+const isLoading = ref(false);
 const loadError = computed(() => !!tableDataStore.loadError);
 const isFilteredEmpty = computed(() => (tableDataStore.filterTerm || tableDataStore.activeFilter) && tableDataStore.filteredData.length === 0);
 const hasData = computed(() => tableDataStore.tableData.length > 0);
@@ -110,6 +147,107 @@ const highlightChanges = computed(() => tableDataStore.highlightChanges);
 
 const filterButtonRef = ref(null);
 const dataTableRef = ref(null);
+const isActive = ref(true);
+const loadRetries = ref(0);
+const maxRetries = 3;
+const wasReloaded = ref(false);
+const wasEmptyChecked = ref(false);
+
+watch(
+  () => [tableDataStore.isLoading, tableDataStore.isLiveUpdating],
+  ([storeIsLoading, storeIsLiveUpdating]) => {
+    isLoading.value = storeIsLoading && !storeIsLiveUpdating;
+  },
+  { immediate: true }
+);
+
+async function safeLoadTableData(forceRetry = false) {
+  if (forceRetry) {
+    loadRetries.value = 0;
+  }
+
+  try {
+    const loadFunc = () => {
+      if (tableDataStore.activeFilter || tableDataStore.filterTerm) {
+        return tableDataStore.loadFilteredData();
+      } else {
+        return tableDataStore.loadTableData();
+      }
+    };
+
+    await loadFunc();
+
+    // Se conseguimos carregar com sucesso, mas não há dados, é provável que a tabela esteja vazia
+    // Não vamos mais tentar recarregar automaticamente
+    if (!hasData.value && !tableDataStore.loadError) {
+      if (loadRetries.value < maxRetries && !wasEmptyChecked.value) {
+        loadRetries.value++;
+        console.log(`Retry loading data attempt ${loadRetries.value}/${maxRetries}`);
+
+        // Esperar um pouco antes de tentar novamente
+        setTimeout(() => {
+          safeLoadTableData();
+        }, 500);
+        return;
+      } else {
+        // Marcamos que já verificamos que esta tabela está vazia
+        wasEmptyChecked.value = true;
+        console.log("Table appears to be empty, stopping reload attempts");
+      }
+    }
+
+    // Redefine o contador de tentativas após o sucesso
+    loadRetries.value = 0;
+  } catch (error) {
+    console.error("Failed to load table data:", error);
+    tableDataStore.loadError = error.message || "Failed to load table data";
+
+    // Tentar novamente em caso de erro
+    if (loadRetries.value < maxRetries) {
+      loadRetries.value++;
+      console.log(`Error retry attempt ${loadRetries.value}/${maxRetries}`);
+
+      setTimeout(() => {
+        safeLoadTableData();
+      }, 800);
+      return;
+    }
+  }
+}
+
+// Adding event to reload data when the page is reloaded with F5
+function handlePageReload() {
+  if (document.visibilityState === "visible") {
+    wasReloaded.value = true;
+    loadRetries.value = 0;
+    safeLoadTableData(true);
+  }
+}
+
+// Adding function to check if there is data and reload if there is no data
+function checkAndReloadIfNeeded() {
+  if (!hasData.value && !isLoading.value && !loadError.value && !wasEmptyChecked.value) {
+    console.log("No data found, attempting to reload");
+    safeLoadTableData(true);
+  }
+}
+
+function handleTableTruncate(event) {
+  const { connectionId, tableName, totalRecords, forceReset } = event.detail;
+
+  if (connectionId === props.connectionId && tableName === props.tableName) {
+    tableDataStore.resetData();
+    tableDataStore.totalRecordsCount = totalRecords !== undefined ? totalRecords : 0;
+
+    if (forceReset) {
+      setTimeout(() => {
+        safeLoadTableData();
+      }, 50);
+    } else {
+      safeLoadTableData();
+    }
+  }
+}
 
 const refreshLiveTableState = () => {
   try {
@@ -235,18 +373,54 @@ async function loadTableStructure() {
   }
 }
 
-onMounted(() => {
+onActivated(() => {
+  isActive.value = true;
+
   window.addEventListener("tab-activated", handleTabActivation);
   window.addEventListener("storage", handleStorageChange);
   window.addEventListener("focus", handleWindowFocus);
+  window.addEventListener("reload-table-data", handleTableTruncate);
+  window.addEventListener("truncate-table", handleTableTruncate);
+  window.addEventListener("visibilitychange", handlePageReload);
+
+  refreshLiveTableState();
+
+  // If the table is active but has no data, try to reload
+  if (!hasData.value && !isLoading.value) {
+    checkAndReloadIfNeeded();
+  }
+});
+
+onDeactivated(() => {
+  isActive.value = false;
+
+  window.removeEventListener("tab-activated", handleTabActivation);
+  window.removeEventListener("storage", handleStorageChange);
+  window.removeEventListener("focus", handleWindowFocus);
+  window.removeEventListener("reload-table-data", handleTableTruncate);
+  window.removeEventListener("truncate-table", handleTableTruncate);
+  window.removeEventListener("visibilitychange", handlePageReload);
+
+  if (tableDataStore.isLiveTableActive) {
+    tableDataStore.stopLiveUpdates(false);
+  }
+});
+
+onMounted(() => {
+  // reset states
+  wasEmptyChecked.value = false;
+
+  window.addEventListener("tab-activated", handleTabActivation);
+  window.addEventListener("storage", handleStorageChange);
+  window.addEventListener("focus", handleWindowFocus);
+  window.addEventListener("reload-table-data", handleTableTruncate);
+  window.addEventListener("truncate-table", handleTableTruncate);
+  window.addEventListener("visibilitychange", handlePageReload);
 
   loadTableStructure().then(() => {
-    let hasFilter = false;
-
     if (props.initialFilter) {
       tableDataStore.advancedFilterTerm = props.initialFilter;
       tableDataStore.activeFilter = props.initialFilter;
-      hasFilter = true;
     }
 
     tableDataStore.setConnectionId(props.connectionId);
@@ -261,7 +435,6 @@ onMounted(() => {
         const decodedFilter = decodeURIComponent(urlFilter);
         tableDataStore.advancedFilterTerm = decodedFilter;
         tableDataStore.activeFilter = decodedFilter;
-        hasFilter = true;
       } catch (e) {
         console.error("Error to process URL filter:", e);
       }
@@ -273,7 +446,6 @@ onMounted(() => {
           if (parsedFilter.active && parsedFilter.value) {
             tableDataStore.advancedFilterTerm = parsedFilter.value;
             tableDataStore.activeFilter = parsedFilter.value;
-            hasFilter = true;
           }
         } catch (e) {
           console.error("Error to process saved filter:", e);
@@ -281,12 +453,10 @@ onMounted(() => {
       }
     }
 
-    if (hasFilter) {
-      console.log("Applying filter on initialization:", tableDataStore.activeFilter);
-      tableDataStore.loadFilteredData();
-    } else {
-      tableDataStore.loadTableData();
-    }
+    safeLoadTableData();
+
+    // Check again after a short period if we have data
+    setTimeout(checkAndReloadIfNeeded, 1000);
   });
 
   try {
@@ -295,6 +465,7 @@ onMounted(() => {
     let otherTableLiveActive = false;
 
     const allKeys = Object.keys(localStorage);
+
     allKeys.forEach((key) => {
       if (key.startsWith("liveTable.enabled.") && key !== `liveTable.enabled.${props.connectionId}.${props.tableName}` && localStorage.getItem(key) === "true") {
         otherTableLiveActive = true;
@@ -318,6 +489,7 @@ onMounted(() => {
     }
 
     const savedHighlightChanges = localStorage.getItem("liveTable.highlight");
+
     if (savedHighlightChanges !== null) {
       tableDataStore.highlightChanges = savedHighlightChanges === "true";
     }
@@ -336,6 +508,9 @@ onUnmounted(() => {
   window.removeEventListener("tab-activated", handleTabActivation);
   window.removeEventListener("storage", handleStorageChange);
   window.removeEventListener("focus", handleWindowFocus);
+  window.removeEventListener("reload-table-data", handleTableTruncate);
+  window.removeEventListener("truncate-table", handleTableTruncate);
+  window.removeEventListener("visibilitychange", handlePageReload);
 
   if (tableDataStore.isLiveTableActive) {
     try {
@@ -358,6 +533,10 @@ watch(highlightChanges, (newValue) => {
 
 watch([() => props.tableName, () => props.connectionId], async ([newTableName, newConnectionId], [oldTableName, oldConnectionId]) => {
   if (newTableName !== oldTableName || newConnectionId !== oldConnectionId) {
+    // Reset states when table changes
+    wasEmptyChecked.value = false;
+    loadRetries.value = 0;
+
     await loadTableStructure();
 
     if (oldTableName && oldConnectionId) {
@@ -405,4 +584,11 @@ watch([() => props.tableName, () => props.connectionId], async ([newTableName, n
     }
   }
 });
+
+function handleRefresh() {
+  tableDataStore.loadError = null;
+  loadRetries.value = 0;
+  wasEmptyChecked.value = false;
+  safeLoadTableData(true);
+}
 </script>

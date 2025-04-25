@@ -1,32 +1,13 @@
 <template>
   <div
     v-cloak
-    class="flex flex-col h-full"
+    class="flex flex-col h-full relative"
     tabindex="0"
   >
-    <header class="bg-neutral px-4 py-2 border-b border-neutral flex items-center justify-between">
-      <div class="flex items-center">
-        <button
-          v-tooltip.right="'Back to connections'"
-          class="btn btn-ghost btn-sm mr-2"
-          @click="router.push('/')"
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke-width="1.5"
-            stroke="currentColor"
-            class="size-4"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              d="M9 15 3 9m0 0 6-6M3 9h12a6 6 0 0 1 0 12h-3"
-            />
-          </svg>
-        </button>
+    <div class="absolute w-full h-10 bg-neutral top-0 draggable z-10"></div>
 
+    <header class="bg-neutral mt-8 px-4 z-20 pb-2 border-b border-neutral flex items-center justify-between">
+      <div class="flex items-center">
         <div
           class="w-8 h-8 rounded-full flex items-center justify-center mr-2"
           :class="getConnectionColor(connection?.type)"
@@ -249,6 +230,7 @@
             </svg>
           </button>
 
+          <!-- Laravel Commands Button -->
           <button
             v-tooltip.bottom="'Laravel Commands'"
             class="btn btn-ghost btn-sm text-white"
@@ -381,7 +363,7 @@
           </div>
         </div>
 
-        <keep-alive>
+        <keep-alive :include="'TableContent'">
           <component
             :is="TableContentComponent"
             v-if="activeTab"
@@ -530,7 +512,7 @@
 </template>
 
 <script setup>
-import { computed, inject, onMounted, ref, markRaw, nextTick, watch, onBeforeMount } from "vue";
+import { computed, inject, onMounted, ref, markRaw, nextTick, watch, onBeforeMount, onUnmounted, onActivated } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { useConnectionsStore } from "@/store/connections";
 import { useDatabaseStore } from "@/store/database";
@@ -548,6 +530,11 @@ import ShowConnectionInfo from "@/components/database/ShowConnectionInfo.vue";
 import DatabaseSwitcher from "@/components/database/DatabaseSwitcher.vue";
 import RedisManager from "@/components/RedisManager.vue";
 import LaravelCommands from "../components/LaravelCommands.vue";
+
+// Define o nome do componente para o keep-alive
+defineOptions({
+  name: "DatabaseView"
+});
 
 const TableContentComponent = markRaw(TableContent);
 
@@ -660,15 +647,19 @@ async function testConnection() {
   }
 }
 
+const loadedConnections = ref(new Set());
+const initialConnectionLoad = ref(false);
+
 onBeforeMount(() => {
   loadSidebarWidth();
 });
 
-onMounted(async () => {
+async function initializeConnection(skipReload = false) {
   try {
-    await tabsStore.loadSavedTabs();
-
-    await connectionsStore.loadConnections();
+    if (!skipReload) {
+      await tabsStore.loadSavedTabs();
+      await connectionsStore.loadConnections();
+    }
 
     if (!connection.value) {
       connectionError.value = true;
@@ -676,17 +667,22 @@ onMounted(async () => {
       return;
     }
 
-    const connectionValid = await testConnection();
-    if (!connectionValid) {
-      return;
-    }
+    // Only test connection if not already loaded
+    if (!loadedConnections.value.has(connectionId.value)) {
+      const connectionValid = await testConnection();
+      if (!connectionValid) {
+        return;
+      }
 
-    showAlert(`Connected to ${connection.value.name}`, "success");
-    await databaseStore.loadTables(connectionId.value);
+      await databaseStore.loadTables(connectionId.value);
+      loadedConnections.value.add(connectionId.value);
+    }
 
     await checkRedisAvailability();
 
-    databaseStore.clearTableRecordCounts();
+    if (!skipReload) {
+      databaseStore.clearTableRecordCounts();
+    }
 
     window.addEventListener("resize", mainTabsRef.value?.checkScrollPosition);
 
@@ -696,10 +692,26 @@ onMounted(async () => {
     });
 
     document.querySelector(".flex.flex-col.h-full")?.focus();
+    initialConnectionLoad.value = true;
   } catch (error) {
     console.error(error);
     connectionError.value = true;
     connectionErrorMessage.value = error.message || "Unknown error occurred";
+  }
+}
+
+onMounted(async () => {
+  await initializeConnection(false);
+});
+
+onActivated(async () => {
+  if (initialConnectionLoad.value) {
+    await nextTick(() => {
+      mainTabsRef.value?.scrollToActiveTab();
+      mainTabsRef.value?.checkScrollPosition();
+    });
+  } else {
+    await initializeConnection(false);
   }
 });
 

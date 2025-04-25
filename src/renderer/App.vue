@@ -3,7 +3,11 @@
     class="min-h-screen bg-app-bg text-white"
     data-theme="dark"
   >
-    <router-view />
+    <router-view v-slot="{ Component }">
+      <keep-alive include="DatabaseView">
+        <component :is="Component" />
+      </keep-alive>
+    </router-view>
     <app-alert
       :type="alertType"
       :message="alertMessage"
@@ -42,6 +46,23 @@ html {
   height: 100%;
   width: 100%;
   overflow: hidden;
+}
+
+.draggable {
+  app-region: drag;
+}
+
+* {
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+input,
+textarea,
+[contenteditable="true"],
+.allow-select {
+  user-select: text;
+  -webkit-user-select: text;
 }
 
 ::-webkit-scrollbar {

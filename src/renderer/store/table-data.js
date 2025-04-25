@@ -223,11 +223,6 @@ export const useTableDataStore = (id) => {
         loadStartTime.value = Date.now();
       }
 
-      const loadingTimer = setTimeout(() => {
-        if (isLoading.value) {
-        }
-      }, 100);
-
       loadError.value = null;
 
       const selectedRowIds = [];
@@ -256,8 +251,13 @@ export const useTableDataStore = (id) => {
 
         const result = await databaseStore.loadTableData(connectionId.value, tableName.value, rowsPerPage.value, currentPage.value, sortParams);
 
-        if (!result.data || result.data.length === 0) {
-          console.error("No data found for this page");
+        if (!result || typeof result !== "object") {
+          console.error("Invalid data response format");
+          return Promise.reject(new Error("Invalid data response format"));
+        }
+
+        if (!Array.isArray(result.data)) {
+          result.data = [];
         }
 
         tableData.value = result.data || [];
@@ -282,10 +282,16 @@ export const useTableDataStore = (id) => {
 
         await loadForeignKeyInfo();
 
-        onLoad.value({
-          columns: columns.value,
-          rowCount: result.totalRecords || 0
-        });
+        if (onLoad.value && typeof onLoad.value === "function") {
+          try {
+            onLoad.value({
+              columns: columns.value,
+              rowCount: result.totalRecords || 0
+            });
+          } catch (e) {
+            console.error("Error calling onLoad callback:", e);
+          }
+        }
       } catch (error) {
         loadError.value = error.message;
         console.error(`Error loading data: ${error.message}`);
@@ -294,11 +300,8 @@ export const useTableDataStore = (id) => {
           lastKnownColumns.value = Object.keys(tableData.value[0]);
         }
 
-        tableData.value = [];
-        totalRecordsCount.value = 0;
+        return Promise.reject(error);
       } finally {
-        clearTimeout(loadingTimer);
-
         if (Date.now() - loadStartTime.value < 100 && wasLoading === false) {
           isLoading.value = false;
         } else {
@@ -379,6 +382,15 @@ export const useTableDataStore = (id) => {
 
         const result = await window.api.getFilteredTableData(payload);
 
+        if (!result || typeof result !== "object") {
+          console.error("Invalid filtered data response format");
+          return Promise.reject(new Error("Invalid filtered data response format"));
+        }
+
+        if (!Array.isArray(result.data)) {
+          result.data = [];
+        }
+
         tableData.value = result.data || [];
         totalRecordsCount.value = result.totalRecords || 0;
 
@@ -388,16 +400,20 @@ export const useTableDataStore = (id) => {
 
         await loadForeignKeyInfo();
 
-        onLoad.value({
-          columns: columns.value,
-          rowCount: result.totalRecords || 0
-        });
+        if (onLoad.value && typeof onLoad.value === "function") {
+          try {
+            onLoad.value({
+              columns: columns.value,
+              rowCount: result.totalRecords || 0
+            });
+          } catch (e) {
+            console.error("Error calling onLoad callback:", e);
+          }
+        }
       } catch (error) {
         loadError.value = error.message;
         console.error(`Erro to load filtered data: ${error.message}`);
-
-        tableData.value = [];
-        totalRecordsCount.value = 0;
+        return Promise.reject(error);
       } finally {
         if (Date.now() - loadStartTime.value < 100 && wasLoading === false) {
           isLoading.value = false;
@@ -419,7 +435,7 @@ export const useTableDataStore = (id) => {
       }
     }
 
-    function stopLiveUpdates(updateLocalStorage = false) {
+    function stopLiveUpdates(updateLocalStorage = true) {
       if (liveTableInterval.value !== null) {
         clearInterval(liveTableInterval.value);
         liveTableInterval.value = null;
@@ -486,6 +502,14 @@ export const useTableDataStore = (id) => {
       }
     }
 
+    function resetData() {
+      tableData.value = [];
+      selectedRows.value = [];
+      updatedRows.value = [];
+      previousDataSnapshot.value = [];
+      updateCounter.value = 0;
+    }
+
     function startLiveUpdates() {
       stopLiveUpdates();
 
@@ -531,11 +555,17 @@ export const useTableDataStore = (id) => {
     function deleteSelected() {
       if (selectedRows.value.length === 0) return;
 
-      deletingIds.value = selectedRows.value.map((index) => {
-        const id = paginatedData.value[index].id;
-
-        return typeof id === "object" ? String(id) : id;
-      });
+      deletingIds.value = selectedRows.value
+        .map((index) => {
+          const row = paginatedData.value[index];
+          if (!row || row.id === undefined) {
+            console.error("Invalid row or missing ID at index", index);
+            return null;
+          }
+          const id = row.id;
+          return id;
+        })
+        .filter((id) => id !== null);
 
       showDeleteConfirm.value = true;
     }
@@ -552,6 +582,7 @@ export const useTableDataStore = (id) => {
       setTableName,
       setOnLoad,
       deleteSelected,
+      resetData,
       onLoad,
       tableData,
       filteredData,

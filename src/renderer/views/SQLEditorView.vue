@@ -1,7 +1,9 @@
 <template>
-  <div class="flex flex-col h-full">
+  <div class="flex flex-col h-full relative">
     <!-- Header -->
-    <header class="bg-neutral px-4 py-2 border-b border-neutral flex items-center justify-between">
+    <div class="absolute w-full h-10 bg-neutral top-0 draggable z-10"></div>
+
+    <header class="bg-neutral mt-8 z-20 px-4 pb-2 border-b border-neutral flex items-center justify-between">
       <div class="flex items-center">
         <button
           class="btn btn-ghost btn-sm mr-2"
@@ -263,7 +265,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, inject, nextTick } from "vue";
+import { ref, computed, onMounted, inject, nextTick, onErrorCaptured } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { useConnectionsStore } from "@/store/connections";
 import { useDatabaseStore } from "@/store/database";
@@ -290,6 +292,8 @@ const isResizing = ref(false);
 const isEditorFullscreen = ref(false);
 const showAIModal = ref(false);
 const databaseStructure = ref("");
+const hasRenderError = ref(false);
+const renderErrorMessage = ref("");
 
 const connection = computed(() => {
   return connectionsStore.getConnection(connectionId.value);
@@ -300,14 +304,56 @@ const hasOpenAIConfig = computed(() => {
   return settingsStore.isAIConfigured;
 });
 
+onErrorCaptured((error, instance, info) => {
+  console.error("Error captured:", error, info);
+  hasRenderError.value = true;
+  renderErrorMessage.value = `${error.message}\n\nInfo: ${info}`;
+  return false;
+});
+
+function resetComponent() {
+  hasRenderError.value = false;
+  renderErrorMessage.value = "";
+  errorMessage.value = "";
+}
+
 onMounted(async () => {
-  if (!connection.value) {
+  console.log("SQLEditorView mounted");
+
+  // Save current connection ID to localStorage if available
+  if (connectionId.value) {
+    localStorage.setItem("sqlEditorConnectionId", connectionId.value);
+  }
+
+  // If there's no connection ID in the route, try to get it from localStorage
+  let currentConnectionId = connectionId.value;
+  if (!currentConnectionId) {
+    currentConnectionId = localStorage.getItem("sqlEditorConnectionId");
+    if (currentConnectionId) {
+      console.log("Retrieved connection ID from localStorage:", currentConnectionId);
+    }
+  }
+
+  // Try to load connections if we don't have one yet
+  if (!connection.value && currentConnectionId) {
+    try {
+      await connectionsStore.loadConnections();
+    } catch (error) {
+      console.error("Error loading connections:", error);
+    }
+  }
+
+  // If still no connection, redirect to home
+  if (!connectionsStore.getConnection(currentConnectionId)) {
+    console.log("No valid connection found, redirecting to home");
     router.push("/");
     return;
   }
 
   // Set default query example
-  sqlQuery.value = `SELECT * FROM ${connection.value.database}.users LIMIT 10;`;
+  if (connection.value) {
+    sqlQuery.value = `SELECT * FROM ${connection.value.database}.users LIMIT 10;`;
+  }
 
   // Listen for window resize events to adjust editor height
   window.addEventListener("resize", handleWindowResize);
@@ -318,7 +364,7 @@ onMounted(async () => {
 });
 
 function goBack() {
-  router.push(`/database/${connectionId.value}`);
+  router.push(`/database/${connectionId.value || localStorage.getItem("sqlEditorConnectionId")}`);
 }
 
 function getConnectionColor(type) {
@@ -362,9 +408,16 @@ async function runQuery() {
   try {
     const startTime = performance.now();
 
+    // Get connection ID from route or localStorage
+    const currentConnectionId = connectionId.value || localStorage.getItem("sqlEditorConnectionId");
+
+    if (!currentConnectionId) {
+      throw new Error("No connection ID found. Please return to the home page and try again.");
+    }
+
     // Call the main process to execute the query
     const response = await window.api.executeSQLQuery({
-      connectionId: connectionId.value,
+      connectionId: currentConnectionId,
       query: sqlQuery.value
     });
 
@@ -441,12 +494,18 @@ async function loadDatabaseStructure() {
   try {
     databaseStructure.value = JSON.stringify({ loading: true });
 
-    const fullStructure = await databaseStore.getAllTablesModelsJson(connectionId.value);
+    // Get connection ID from route or localStorage
+    const currentConnectionId = connectionId.value || localStorage.getItem("sqlEditorConnectionId");
+
+    if (!currentConnectionId) {
+      throw new Error("No connection ID found for loading database structure");
+    }
+
+    const fullStructure = await databaseStore.getAllTablesModelsJson(currentConnectionId);
 
     databaseStructure.value = fullStructure;
   } catch (error) {
     console.error("Error loading database structure:", error);
-
     databaseStructure.value = '{"tables": []}';
   }
 }

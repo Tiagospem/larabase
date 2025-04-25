@@ -309,16 +309,21 @@ export const useDatabaseStore = defineStore("database", () => {
     return result;
   }
 
-  async function deleteRecords(id, tableName, ids) {
+  async function deleteRecords(id, tableName, ids, options = {}) {
     const conn = _getConnection(id);
     const sanitized = _sanitize(ids);
-    const result = await window.api.deleteRecords({
+
+    const deleteConfig = {
       connection: _buildPayload(conn),
       tableName,
-      ids: sanitized
-    });
-    if (!result.success) throw new Error(result.message);
+      ids: sanitized,
+      ignoreForeignKeys: options.ignoreForeignKeys === true
+    };
+
+    const result = await window.api.deleteRecords(deleteConfig);
+
     clearTableCache(`${id}:${tableName}`);
+
     return result;
   }
 
@@ -331,6 +336,94 @@ export const useDatabaseStore = defineStore("database", () => {
     if (!result.success) throw new Error(result.message);
     clearTableCache(`${id}:${tableName}`);
     return result;
+  }
+
+  async function truncateTables(connectionId, tableNames, ignoreForeignKeys = false) {
+    try {
+      if (!connectionId || !tableNames || !tableNames.length) {
+        console.error("Missing required parameters for truncateTables");
+        return {
+          success: false,
+          message: "Missing required parameters",
+          results: []
+        };
+      }
+
+      const currentConnection = connectionStore.getConnection(connectionId);
+      if (!currentConnection) {
+        console.error(`Connection not found for ID: ${connectionId}`);
+        return {
+          success: false,
+          message: "Connection not found",
+          results: []
+        };
+      }
+
+      const results = [];
+      for (const tableName of tableNames) {
+        try {
+          const result = await truncateTable(connectionId, tableName);
+          results.push({
+            tableName,
+            success: result.success,
+            message: result.message
+          });
+        } catch (error) {
+          console.error(`Error truncating table ${tableName}:`, error);
+          results.push({
+            tableName,
+            success: false,
+            message: error.message || "Error truncating table"
+          });
+        }
+      }
+
+      const successCount = results.filter((r) => r.success).length;
+      const failCount = results.length - successCount;
+
+      return {
+        success: successCount > 0,
+        results,
+        message:
+          failCount === 0
+            ? `Successfully truncated ${successCount} table(s)`
+            : successCount === 0
+              ? `Failed to truncate ${failCount} table(s)`
+              : `Truncated ${successCount} table(s), failed to truncate ${failCount}`
+      };
+    } catch (error) {
+      console.error("Error truncating tables:", error);
+      return {
+        success: false,
+        message: error.message || "An unknown error occurred",
+        results: tableNames.map((tableName) => ({
+          tableName,
+          success: false,
+          message: error.message || "Unknown error"
+        }))
+      };
+    }
+  }
+
+  async function ensureConnection(id) {
+    try {
+      const conn = _getConnection(id);
+      if (!conn) {
+        throw new Error("Connection not found");
+      }
+
+      // Test the connection to make sure it's active
+      const result = await window.api.testMySQLConnection(_buildPayload(conn));
+
+      if (!result.success) {
+        throw new Error(`Failed to connect to database: ${result.message || "Unknown error"}`);
+      }
+
+      return true;
+    } catch (error) {
+      console.error("Connection verification failed:", error);
+      throw error;
+    }
   }
 
   const tablesList = computed(() => tables.value.tables || []);
@@ -354,7 +447,9 @@ export const useDatabaseStore = defineStore("database", () => {
     updateRecord,
     deleteRecords,
     truncateTable,
+    truncateTables,
     tablesList,
-    getConnection: _getConnection
+    getConnection: _getConnection,
+    ensureConnection
   };
 });

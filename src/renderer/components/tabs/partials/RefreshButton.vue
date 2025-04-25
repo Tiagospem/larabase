@@ -1,7 +1,7 @@
 <template>
   <button
     class="btn btn-sm btn-ghost"
-    @click="tableDataStore.loadTableData()"
+    @click="refresh"
   >
     <svg
       xmlns="http://www.w3.org/2000/svg"
@@ -31,5 +31,12 @@ const props = defineProps({
   }
 });
 
+const emit = defineEmits(["refresh"]);
+
 const tableDataStore = useTableDataStore(props.storeId);
+
+function refresh() {
+  emit("refresh");
+  tableDataStore.loadTableData();
+}
 </script>
