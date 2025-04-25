@@ -108,7 +108,7 @@
               <span v-if="dockerInfo.isDocker"> The system detected a MySQL Docker container. Configuration has been automatically adjusted. </span>
               <span v-else-if="dockerInfo.dockerAvailable">
                 Docker is available, but no MySQL container was found running on port
-                {{ newConnection.value.port }}. A local connection will be used.
+                {{ newConnection?.value?.port }}. A local connection will be used.
               </span>
               <span v-else> Docker was not detected. A local connection will be used. </span>
             </p>
@@ -451,6 +451,10 @@ async function selectProjectDirectory() {
         newConnection.value.name = envConfig.APP_NAME || selectedPath.split("/").pop();
       }
 
+      if (envConfig.DB_HOST === 'mysql') {
+        newConnection.value.host = "0.0.0.0";
+      }
+
       if (!newConnection.value.host || newConnection.value.host === "") {
         newConnection.value.host = envConfig.DB_HOST || "localhost";
       }
@@ -471,6 +475,10 @@ async function selectProjectDirectory() {
         newConnection.value.password = envConfig.DB_PASSWORD || "";
       }
 
+      if (envConfig.REDIS_HOST === 'redis') {
+        newConnection.value.redisHost = "0.0.0.0";
+      }
+
       if (!newConnection.value.redisHost || newConnection.value.redisHost === "") {
         newConnection.value.redisHost = envConfig.REDIS_HOST || "127.0.0.1";
       }
@@ -479,17 +487,13 @@ async function selectProjectDirectory() {
         newConnection.value.redisPort = envConfig.REDIS_PORT || "6379";
       }
 
-      if (!newConnection.value.redisPassword || newConnection.value.redisPassword === "") {
-        newConnection.value.redisPassword = envConfig.REDIS_PASSWORD || "";
+      if (!newConnection.value.redisPassword || newConnection.value.redisPassword === "null") {
+        newConnection.value.redisPassword = "";
       }
 
       if (envConfig.dockerInfo) {
         dockerInfo.value = envConfig.dockerInfo;
         newConnection.value.usingSail = envConfig.dockerInfo.isDocker;
-
-        if (envConfig.dockerInfo.isDocker) {
-          newConnection.value.host = envConfig.DB_HOST === "localhost" ? "host.docker.internal" : envConfig.DB_HOST;
-        }
       }
     }
   } catch (error) {
