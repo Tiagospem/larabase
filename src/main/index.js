@@ -3,7 +3,7 @@ const path = require("path");
 const Store = require("electron-store");
 const fs = require("fs");
 const mysql = require("mysql2/promise");
-const { spawn, execSync, exec } = require("child_process");
+const { spawn, exec } = require("child_process");
 const pluralize = require("pluralize");
 const docker = require("./modules/docker");
 
@@ -28,12 +28,7 @@ app.whenReady().then(async () => {
 
   mainWindow = getMainWindow();
 
-  enhancePath();
-
-  // Register the updater handlers first to ensure they're available
   registerUpdaterHandlers(mainWindow);
-
-  // Then register other handlers
   registerTableHandlers(store, dbMonitoringConnections);
   registerRestoreDumpHandlers(store);
   registerConnectionHandlers(store);
@@ -42,98 +37,12 @@ app.whenReady().then(async () => {
 
   setupGlobalMonitoring();
 
-  if (mainWindow) {
-    mainWindow.webContents.on("before-input-event", (event, input) => {
-      if (!mainWindow.isFocused()) {
-        return;
-      }
-
-      if (input.key === "F12" && !input.alt && !input.control && !input.meta && !input.shift) {
-        if (mainWindow.webContents.isDevToolsOpened()) {
-          mainWindow.webContents.closeDevTools();
-        } else {
-          mainWindow.webContents.openDevTools();
-        }
-      }
-
-      if (input.key === "I" && !input.alt && input.shift && (input.control || input.meta)) {
-        if (mainWindow.webContents.isDevToolsOpened()) {
-          mainWindow.webContents.closeDevTools();
-        } else {
-          mainWindow.webContents.openDevTools();
-        }
-      }
-
-      if (input.key === "r" && !input.alt && !input.shift && (input.control || input.meta)) {
-        mainWindow.reload();
-      }
-    });
-  }
-
   app.on("activate", () => {
     if (BrowserWindow.getAllWindows().length === 0) {
       createWindow();
     }
   });
 });
-
-function enhancePath() {
-  const platform = process.platform;
-  const sep = platform === "win32" ? ";" : ":";
-  const envPath = process.env.PATH || "";
-
-  const config = {
-    darwin: {
-      additional: ["/usr/local/bin", "/opt/homebrew/bin", "/Applications/Docker.app/Contents/Resources/bin"],
-      defaults: ["/usr/local/bin", "/usr/bin", "/bin", "/usr/sbin", "/sbin", "/opt/homebrew/bin", "/Applications/Docker.app/Contents/Resources/bin"]
-    },
-    linux: {
-      additional: ["/usr/bin", "/usr/local/bin", "/snap/bin"],
-      defaults: ["/usr/local/bin", "/usr/bin", "/bin", "/usr/sbin", "/sbin", "/snap/bin"]
-    },
-    win32: {
-      additional: ["C:\\Program Files\\Docker\\Docker\\resources\\bin", "C:\\Program Files\\Docker Desktop\\resources\\bin"],
-      defaults: ["C:\\Windows\\System32", "C:\\Windows", "C:\\Program Files\\Docker\\Docker\\resources\\bin", "C:\\Program Files\\Docker Desktop\\resources\\bin"]
-    }
-  };
-
-  const { additional, defaults } = config[platform] || config.linux;
-  let parts = envPath ? envPath.split(sep) : [];
-
-  if (envPath) {
-    additional.forEach((p) => {
-      if (!parts.includes(p)) parts.unshift(p);
-    });
-
-    process.env.PATH = parts.join(sep);
-
-    console.log(`Enhanced PATH for Docker detection: ${process.env.PATH}`);
-  } else {
-    process.env.PATH = defaults.join(sep);
-
-    console.warn(`PATH environment variable not found, some features might not work correctly`);
-
-    console.log(`Set default PATH for ${platform}: ${process.env.PATH}`);
-  }
-
-  // Check Docker availability using dockerode
-  docker
-    .isDockerAvailable()
-    .then((available) => {
-      if (available) {
-        console.log("Docker is available and running");
-      } else {
-        console.log("Docker is not available or not running");
-      }
-    })
-    .catch((err) => {
-      console.log(`Error checking Docker availability: ${err.message}`);
-    });
-
-  console.log(`Electron running on platform: ${platform}`);
-  console.log(`Node.js version: ${process.version}`);
-  console.log(`Electron version: ${process.versions.electron}`);
-}
 
 function setupGlobalMonitoring() {
   mysql.createConnection = async function (config, ...rest) {
