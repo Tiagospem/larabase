@@ -32,7 +32,7 @@
               viewBox="0 0 24 24"
               stroke-width="1.5"
               stroke="currentColor"
-              class="size-5"
+              class="w-5 h-5"
             >
               <path
                 stroke-linecap="round"
@@ -54,7 +54,7 @@
               viewBox="0 0 24 24"
               stroke-width="1.5"
               stroke="currentColor"
-              class="size-5"
+              class="w-5 h-5"
             >
               <path
                 stroke-linecap="round"
@@ -76,7 +76,7 @@
               viewBox="0 0 24 24"
               stroke-width="1.5"
               stroke="currentColor"
-              class="size-5"
+              class="w-5 h-5"
             >
               <path
                 stroke-linecap="round"
@@ -98,7 +98,7 @@
               viewBox="0 0 24 24"
               stroke-width="1.5"
               stroke="currentColor"
-              class="size-5"
+              class="w-5 h-5"
             >
               <path
                 stroke-linecap="round"
@@ -139,7 +139,7 @@
             <svg
               id="Capa_1"
               fill="#fff"
-              class="size-5"
+              class="w-5 h-5"
               xmlns="http://www.w3.org/2000/svg"
               viewBox="0 0 60 60"
               xml:space="preserve"
@@ -190,7 +190,7 @@
             @click="showArtisanCommands = true"
           >
             <svg
-              class="size-5"
+              class="w-5 h-5"
               viewBox="0 0 64 64"
               fill="currentColor"
               xmlns="http://www.w3.org/2000/svg"
@@ -243,7 +243,7 @@
               viewBox="0 0 24 24"
               stroke-width="1.5"
               stroke="currentColor"
-              class="size-5"
+              class="w-5 h-5"
             >
               <path
                 stroke-linecap="round"
@@ -263,7 +263,7 @@
             @click="showRedisManager = true"
           >
             <svg
-              class="size-5"
+              class="w-5 h-5"
               fill="#fff"
               viewBox="0 -2 28 28"
               xmlns="http://www.w3.org/2000/svg"
