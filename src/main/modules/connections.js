@@ -134,6 +134,7 @@ function registerConnectionHandlers(store, dbMonitoringConnections) {
         tabs: [],
         activeTabId: null
       };
+
       const updatedTabs = {
         tabs: openTabs.tabs.filter((tab) => tab.connectionId !== connectionId),
         activeTabId: openTabs.activeTabId
@@ -144,36 +145,6 @@ function registerConnectionHandlers(store, dbMonitoringConnections) {
       }
 
       store.set("openTabs", updatedTabs);
-
-      try {
-        if (dbMonitoringConnections.has(connectionId)) {
-          const connection = dbMonitoringConnections.get(connectionId);
-          if (connection) {
-            if (connection._pollingInterval) {
-              clearInterval(connection._pollingInterval);
-            }
-            await connection.end();
-          }
-          dbMonitoringConnections.delete(connectionId);
-          console.log(`Monitoring stopped for connection ${connectionId}`);
-        }
-
-        if (dbActivityConnections.has(connectionId)) {
-          const connectionData = dbActivityConnections.get(connectionId);
-          if (connectionData) {
-            if (connectionData.connection) {
-              await connectionData.connection.end();
-            }
-            if (connectionData.triggerConnection) {
-              await connectionData.triggerConnection.end();
-            }
-          }
-          dbActivityConnections.delete(connectionId);
-          console.log(`Trigger-based monitoring stopped for connection ${connectionId}`);
-        }
-      } catch (monitoringError) {
-        console.error(`Error stopping monitoring for connection ${connectionId}:`, monitoringError);
-      }
 
       return {
         success: true,
