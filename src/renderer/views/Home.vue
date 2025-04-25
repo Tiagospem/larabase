@@ -1,11 +1,11 @@
 <template>
-  <div class="flex h-full">
+  <div class="flex h-full relative">
     <div class="w-1/3 bg-[#e82b25] flex flex-col items-center justify-between p-6 border-r border-gray-800">
       <div class="flex flex-col items-center">
         <img
           src="../assets/icons/png/512x512.png"
           alt="Larabase"
-          class="h-32 w-32 mb-2"
+          class="h-32 w-32 mb-2 draggable"
         />
         <h1 class="text-3xl font-bold text-white">Larabase</h1>
         <p class="text-sm text-white">An opinionated database GUI for Laravel developers</p>
@@ -200,6 +200,8 @@
       ref="manageConnection"
       :is-loading="isLoading"
     />
+
+    <div class="absolute w-full h-16 top-0 draggable"></div>
   </div>
 </template>
 

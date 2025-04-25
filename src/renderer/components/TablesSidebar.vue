@@ -8,7 +8,7 @@
         <div class="relative mb-2">
           <input
             :value="tablesStore.searchTerm"
-            @input="e => tablesStore.setSearchTerm(props.connectionId, e.target.value)"
+            @input="(e) => tablesStore.setSearchTerm(props.connectionId, e.target.value)"
             type="text"
             placeholder="Search tables..."
             class="input input-sm input-bordered w-full bg-base-300 pl-9 pr-8"

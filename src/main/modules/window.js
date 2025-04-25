@@ -21,6 +21,10 @@ async function createWindow() {
     height: 800,
     minWidth: 1000,
     minHeight: 700,
+    resizable: true,
+    alwaysOnTop: false,
+    center: true,
+    titleBarStyle: "hiddenInset",
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,

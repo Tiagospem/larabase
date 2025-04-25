@@ -1,10 +1,12 @@
 <template>
   <div
     v-cloak
-    class="flex flex-col h-full"
+    class="flex flex-col h-full relative"
     tabindex="0"
   >
-    <header class="bg-neutral px-4 py-2 border-b border-neutral flex items-center justify-between">
+    <div class="absolute w-full h-10 bg-neutral top-0 draggable z-10"></div>
+
+    <header class="bg-neutral mt-8 px-4 z-20 pb-2 border-b border-neutral flex items-center justify-between">
       <div class="flex items-center">
         <div
           class="w-8 h-8 rounded-full flex items-center justify-center mr-2"

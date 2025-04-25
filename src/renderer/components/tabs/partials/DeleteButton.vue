@@ -121,9 +121,9 @@ async function confirmDelete() {
     const deletedCount = result.affectedRows || idsToDelete.length;
     const newCount = Math.max(0, countBeforeDeletion - deletedCount);
     tableDataStore.totalRecordsCount = newCount;
-    
+
     tablesStore.updateTableRecordCount(tableDataStore.tableName, newCount);
-    
+
     await tableDataStore.loadTableData();
   } catch (error) {
     console.error("Error in confirmDelete:", error);

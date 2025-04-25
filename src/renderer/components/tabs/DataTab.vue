@@ -409,7 +409,7 @@ onDeactivated(() => {
 onMounted(() => {
   // reset states
   wasEmptyChecked.value = false;
-  
+
   window.addEventListener("tab-activated", handleTabActivation);
   window.addEventListener("storage", handleStorageChange);
   window.addEventListener("focus", handleWindowFocus);
@@ -536,7 +536,7 @@ watch([() => props.tableName, () => props.connectionId], async ([newTableName, n
     // Reset states when table changes
     wasEmptyChecked.value = false;
     loadRetries.value = 0;
-    
+
     await loadTableStructure();
 
     if (oldTableName && oldConnectionId) {

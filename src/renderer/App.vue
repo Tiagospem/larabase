@@ -48,6 +48,23 @@ html {
   overflow: hidden;
 }
 
+.draggable {
+  app-region: drag;
+}
+
+* {
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+input,
+textarea,
+[contenteditable="true"],
+.allow-select {
+  user-select: text;
+  -webkit-user-select: text;
+}
+
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;

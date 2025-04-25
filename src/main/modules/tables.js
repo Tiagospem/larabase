@@ -260,7 +260,7 @@ function registerTableHandlers(store, dbMonitoringConnections) {
     if (!connection) throw new Error("Connection details are required");
     if (!tableName) throw new Error("Table name is required");
     if (!Array.isArray(ids) || !ids.length) throw new Error("At least one record ID is required");
-    
+
     let conn;
     try {
       conn = await _createConnection({
@@ -270,9 +270,9 @@ function registerTableHandlers(store, dbMonitoringConnections) {
         password: connection.password || "",
         database: connection.database
       });
-      
+
       const valIds = ids.map((id) => (typeof id === "string" && !isNaN(Number(id)) ? Number(id) : id));
-      
+
       // If ignoreForeignKeys is true, disable foreign key checks
       if (ignoreForeignKeys === true) {
         await conn.query("SET FOREIGN_KEY_CHECKS = 0");
@@ -290,7 +290,7 @@ function registerTableHandlers(store, dbMonitoringConnections) {
             }
           }
         }
-        
+
         if (problematic.length) {
           return {
             success: false,
@@ -299,17 +299,17 @@ function registerTableHandlers(store, dbMonitoringConnections) {
           };
         }
       }
-      
+
       const placeholders = valIds.map(() => "?").join(",");
       const deleteQuery = `DELETE FROM ${conn.escapeId(tableName)} WHERE id IN (${placeholders})`;
-      
+
       const [delRes] = await conn.execute(deleteQuery, valIds);
-      
+
       // Re-enable foreign key checks if they were disabled
       if (ignoreForeignKeys === true) {
         await conn.query("SET FOREIGN_KEY_CHECKS = 1");
       }
-      
+
       return {
         success: true,
         message: `${delRes.affectedRows} record(s) deleted successfully`,

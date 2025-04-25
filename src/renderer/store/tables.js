@@ -87,7 +87,7 @@ export const useTablesStore = defineStore("tables", () => {
   function updateTableRecordCount(tableName, count) {
     if (!tableName) return;
 
-    const table = databaseStore.tablesList.find(t => t.name === tableName);
+    const table = databaseStore.tablesList.find((t) => t.name === tableName);
     if (table) {
       table.rowCount = count;
     }

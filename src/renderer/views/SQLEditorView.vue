@@ -1,7 +1,9 @@
 <template>
-  <div class="flex flex-col h-full">
+  <div class="flex flex-col h-full relative">
     <!-- Header -->
-    <header class="bg-neutral px-4 py-2 border-b border-neutral flex items-center justify-between">
+    <div class="absolute w-full h-10 bg-neutral top-0 draggable z-10"></div>
+
+    <header class="bg-neutral mt-8 z-20 px-4 pb-2 border-b border-neutral flex items-center justify-between">
       <div class="flex items-center">
         <button
           class="btn btn-ghost btn-sm mr-2"
@@ -317,21 +319,21 @@ function resetComponent() {
 
 onMounted(async () => {
   console.log("SQLEditorView mounted");
-  
+
   // Save current connection ID to localStorage if available
   if (connectionId.value) {
-    localStorage.setItem('sqlEditorConnectionId', connectionId.value);
+    localStorage.setItem("sqlEditorConnectionId", connectionId.value);
   }
-  
+
   // If there's no connection ID in the route, try to get it from localStorage
   let currentConnectionId = connectionId.value;
   if (!currentConnectionId) {
-    currentConnectionId = localStorage.getItem('sqlEditorConnectionId');
+    currentConnectionId = localStorage.getItem("sqlEditorConnectionId");
     if (currentConnectionId) {
       console.log("Retrieved connection ID from localStorage:", currentConnectionId);
     }
   }
-  
+
   // Try to load connections if we don't have one yet
   if (!connection.value && currentConnectionId) {
     try {
@@ -340,7 +342,7 @@ onMounted(async () => {
       console.error("Error loading connections:", error);
     }
   }
-  
+
   // If still no connection, redirect to home
   if (!connectionsStore.getConnection(currentConnectionId)) {
     console.log("No valid connection found, redirecting to home");
@@ -362,7 +364,7 @@ onMounted(async () => {
 });
 
 function goBack() {
-  router.push(`/database/${connectionId.value || localStorage.getItem('sqlEditorConnectionId')}`);
+  router.push(`/database/${connectionId.value || localStorage.getItem("sqlEditorConnectionId")}`);
 }
 
 function getConnectionColor(type) {
@@ -405,10 +407,10 @@ async function runQuery() {
 
   try {
     const startTime = performance.now();
-    
+
     // Get connection ID from route or localStorage
-    const currentConnectionId = connectionId.value || localStorage.getItem('sqlEditorConnectionId');
-    
+    const currentConnectionId = connectionId.value || localStorage.getItem("sqlEditorConnectionId");
+
     if (!currentConnectionId) {
       throw new Error("No connection ID found. Please return to the home page and try again.");
     }
@@ -491,10 +493,10 @@ function applySQLFromAI(sql) {
 async function loadDatabaseStructure() {
   try {
     databaseStructure.value = JSON.stringify({ loading: true });
-    
+
     // Get connection ID from route or localStorage
-    const currentConnectionId = connectionId.value || localStorage.getItem('sqlEditorConnectionId');
-    
+    const currentConnectionId = connectionId.value || localStorage.getItem("sqlEditorConnectionId");
+
     if (!currentConnectionId) {
       throw new Error("No connection ID found for loading database structure");
     }
