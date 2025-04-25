@@ -407,7 +407,8 @@ async function startRestore() {
       filePath: restoreConfig.value.filePath,
       ignoredTables: [...restoreConfig.value.ignoredTables],
       database: targetDatabase,
-      setAsDefault: !overwriteCurrentDb.value && restoreConfig.value.setAsDefault
+      setAsDefault: !overwriteCurrentDb.value && restoreConfig.value.setAsDefault,
+      overwriteCurrentDb: overwriteCurrentDb.value
     };
 
     const result = await window.api.simpleDatabaseRestore(simpleConfig);

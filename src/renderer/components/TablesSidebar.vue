@@ -212,7 +212,7 @@
 
         <ul
           v-else
-          class="menu menu-sm p-2"
+          class="menu menu-sm p-2 w-full"
         >
           <li
             v-for="table in tablesStore.sortedTables"

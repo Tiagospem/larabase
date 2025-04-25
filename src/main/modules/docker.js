@@ -201,7 +201,7 @@ async function executeMysqlInContainer(containerName, credentials, database, sql
 }
 
 // Process SQL file (handling gzip and filtering) and execute in Docker container
-async function executeMysqlFileInContainer(containerName, credentials, database, sqlFilePath, ignoredTables = [], progressCallback) {
+async function executeMysqlFileInContainer(containerName, credentials, database, sqlFilePath, ignoredTables = [], progressCallback, overwriteCurrentDb = false) {
   // Track cancellation
   let isCancelled = false;
 
@@ -252,7 +252,7 @@ async function executeMysqlFileInContainer(containerName, credentials, database,
         "--binary-mode=1",
         "--force",
         "--init-command",
-        `CREATE DATABASE IF NOT EXISTS \`${database}\`; USE \`${database}\`;`,
+        overwriteCurrentDb ? `USE \`${database}\`;` : `CREATE DATABASE IF NOT EXISTS \`${database}\`; USE \`${database}\`;`,
         ...mysqlFlags
           .trim()
           .split(" ")

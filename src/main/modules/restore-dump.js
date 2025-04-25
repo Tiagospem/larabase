@@ -182,7 +182,11 @@ function buildCredentialFlags({ user, password, host, port }) {
   return flags;
 }
 
-function buildInitCommand(database) {
+function buildInitCommand(database, overwriteCurrentDb = false) {
+  if (overwriteCurrentDb) {
+    // When overwriting current DB, we don't need to create a new one, just use the existing one
+    return ` --init-command="USE \\\`${database}\\\`;"`;
+  }
   return ` --init-command="CREATE DATABASE IF NOT EXISTS \\\`${database}\\\`; USE \\\`${database}\\\`;"`;
 }
 
@@ -324,7 +328,7 @@ async function extractTables(filePath, isGzipped) {
 async function _buildDockerRestoreCommand(config) {
   ensureConfig(config, "Docker");
 
-  const { connection, sqlFilePath, ignoredTables } = config;
+  const { connection, sqlFilePath, ignoredTables, overwriteCurrentDb } = config;
   const { container, database } = connection;
 
   if (!container) {
@@ -341,13 +345,14 @@ async function _buildDockerRestoreCommand(config) {
     database,
     sqlFilePath,
     ignoredTables: ignoredTables || [],
+    overwriteCurrentDb: overwriteCurrentDb === true,
     useDockerApi: true
   };
 }
 
 function _buildLocalRestoreCommand(config) {
   ensureConfig(config, "local");
-  const { connection, sqlFilePath, ignoredTables } = config;
+  const { connection, sqlFilePath, ignoredTables, overwriteCurrentDb } = config;
   const { database } = connection;
 
   getFileSizeOrThrow(sqlFilePath);
@@ -360,7 +365,7 @@ function _buildLocalRestoreCommand(config) {
   command += " | mysql";
   command += buildCredentialFlags(connection);
   command += " --binary-mode=1 --force";
-  command += buildInitCommand(database);
+  command += buildInitCommand(database, overwriteCurrentDb);
 
   return {
     command,
@@ -490,7 +495,15 @@ async function restoreDatabase(event, config) {
           sendProgress("restoring", adjustedProgress, `Restoring database: ${progress}% complete`);
         };
 
-        executeMysqlFileInContainer(commandConfig.container, commandConfig.connection, commandConfig.database, commandConfig.sqlFilePath, commandConfig.ignoredTables, progressCallback)
+        executeMysqlFileInContainer(
+          commandConfig.container,
+          commandConfig.connection,
+          commandConfig.database,
+          commandConfig.sqlFilePath,
+          commandConfig.ignoredTables,
+          progressCallback,
+          commandConfig.overwriteCurrentDb
+        )
           .then((stream) => {
             // Check for cancellation
             if (global.cancelRestoreRequested || !global.ongoingRestoreOperation) {
@@ -812,8 +825,9 @@ function registerRestoreDumpHandlers(store) {
       }
 
       const isNewDatabase = targetDatabase !== connection.database;
+      const isOverwritingCurrentDb = config.overwriteCurrentDb === true;
 
-      if (isNewDatabase) {
+      if (isNewDatabase && !isOverwritingCurrentDb) {
         try {
           const tempConn = await mysql.createConnection({
             host: connection.host,
@@ -852,7 +866,8 @@ function registerRestoreDumpHandlers(store) {
           container: connection.dockerInfo?.dockerContainerName
         },
         sqlFilePath: config.filePath,
-        ignoredTables: config.ignoredTables || []
+        ignoredTables: config.ignoredTables || [],
+        overwriteCurrentDb: isOverwritingCurrentDb
       };
 
       if (config.ignoredTables && config.ignoredTables.length > 0) {
@@ -876,6 +891,7 @@ function registerRestoreDumpHandlers(store) {
 
         console.log(`Restoring database: ${targetDatabase}`);
         console.log(`Original connection database: ${connection.database}`);
+        console.log(`Overwrite current DB: ${isOverwritingCurrentDb ? "Yes" : "No"}`);
         console.log(`Docker mode: ${useDocker ? "Yes" : "No"}`);
         console.log(`Gzipped file: ${isGzipped ? "Yes" : "No"}`);
         console.log(`Ignored tables: ${restoreConfig.ignoredTables.length}`);

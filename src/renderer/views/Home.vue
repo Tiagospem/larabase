@@ -267,10 +267,6 @@ function getConnectionColor(type) {
   switch (type) {
     case "mysql":
       return "bg-orange-500";
-    case "redis":
-      return "bg-red-600";
-    case "sqlite":
-      return "bg-purple-600";
     case "postgresql":
       return "bg-blue-600";
     default:
