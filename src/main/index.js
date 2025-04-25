@@ -562,7 +562,10 @@ async function startProcessListPolling(connection) {
 
   console.log(`[MONITOR] Starting process list polling for connection ${connectionId}`);
 
+  // Limita o tamanho do conjunto de consultas processadas para evitar vazamento de memória
   connection._processedQueries = new Set();
+  // Contador para limpar a cada X consultas
+  connection._queryCounter = 0;
 
   const pollProcessList = async () => {
     if (!dbMonitoringConnections.has(connectionId)) {
@@ -596,6 +599,15 @@ async function startProcessListPolling(connection) {
 
         const sql = process.info;
 
+        // Aumentar o contador para limpar periodicamente o conjunto
+        connection._queryCounter++;
+
+        // Limpar o conjunto a cada 1000 consultas para evitar vazamento de memória
+        if (connection._queryCounter > 1000) {
+          connection._processedQueries.clear();
+          connection._queryCounter = 0;
+        }
+
         const queryHash = require("crypto").createHash("md5").update(`${process.id}-${sql}`).digest("hex");
 
         if (connection._processedQueries.has(queryHash)) {
@@ -604,6 +616,7 @@ async function startProcessListPolling(connection) {
 
         connection._processedQueries.add(queryHash);
 
+        // Limitar o tamanho do conjunto para evitar vazamento de memória
         if (connection._processedQueries.size > 100) {
           const itemsToDelete = Array.from(connection._processedQueries).slice(0, 30);
           for (const item of itemsToDelete) {

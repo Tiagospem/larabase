@@ -214,8 +214,11 @@ async function extractTables(filePath, isGzipped) {
 
     let currentTable = null;
     let insertBuffer = "";
+    let lineCounter = 0;
+    const maxLines = 100000; // Limite para evitar problemas de memória
 
     rl.on("line", (line) => {
+      lineCounter++;
       const trimmed = line.trim();
       if (!trimmed || trimmed.startsWith("--") || trimmed.startsWith("#")) return;
 
@@ -234,24 +237,65 @@ async function extractTables(filePath, isGzipped) {
         currentTable = ins[1];
         tableNames.add(currentTable);
         insertBuffer = line;
+
+        // Se a linha já termina com ponto e vírgula, processa imediatamente
+        if (trimmed.endsWith(";")) {
+          processInsert();
+        }
         return;
       }
 
       if (currentTable) {
         insertBuffer += "\n" + line;
-        if (trimmed.endsWith(";")) {
-          const separators = insertBuffer.match(/\),\s*\(/g) || [];
-          const rowCount = separators.length + 1;
-          const stats = tableStats.get(currentTable) || { estimatedRows: 0 };
-          stats.estimatedRows += rowCount;
-          tableStats.set(currentTable, stats);
-          currentTable = null;
-          insertBuffer = "";
+        if (trimmed.endsWith(";") || insertBuffer.length > 1000000) {
+          processInsert();
         }
+      }
+
+      // Evita problemas de memória para arquivos muito grandes
+      if (lineCounter % maxLines === 0) {
+        insertBuffer = "";
+        currentTable = null;
       }
     });
 
+    function processInsert() {
+      if (!currentTable) return;
+
+      try {
+        // Conta os valores na declaração INSERT
+        const valueMatches = insertBuffer.match(/\),\s*\(/g) || [];
+        const rowCount = valueMatches.length + 1;
+
+        // Contar múltiplas instruções INSERT
+        const multipleInserts = insertBuffer.match(/INSERT\s+INTO/gi) || [];
+        const insertCount = multipleInserts.length;
+
+        // Se houver múltiplas instruções INSERT, ajusta a contagem
+        const totalRowCount = insertCount > 1 ? rowCount * insertCount : rowCount;
+
+        const stats = tableStats.get(currentTable) || { estimatedRows: 0 };
+        stats.estimatedRows += totalRowCount;
+        tableStats.set(currentTable, stats);
+      } catch (e) {
+        // Em caso de erro, faz uma estimativa baseada no tamanho do buffer
+        const stats = tableStats.get(currentTable) || { estimatedRows: 0 };
+        // Estimativa grosseira: cada linha tem cerca de 100 caracteres em média
+        const roughEstimate = Math.ceil(insertBuffer.length / 100);
+        stats.estimatedRows += roughEstimate;
+        tableStats.set(currentTable, stats);
+      }
+
+      currentTable = null;
+      insertBuffer = "";
+    }
+
     rl.on("close", () => {
+      // Processa qualquer INSERT restante
+      if (currentTable && insertBuffer) {
+        processInsert();
+      }
+
       const system = ["mysql", "information_schema", "performance_schema", "sys"];
       const result = Array.from(tableNames)
         .filter((t) => !system.includes(t.toLowerCase()))

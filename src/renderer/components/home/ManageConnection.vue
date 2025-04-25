@@ -206,7 +206,7 @@
           </label>
           <input
             v-model="newConnection.password"
-            type="password"
+            type="text"
             placeholder="password"
             class="input  w-full"
           />

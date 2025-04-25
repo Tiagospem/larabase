@@ -300,12 +300,22 @@ async function selectDumpFile() {
 }
 
 const filteredTables = computed(() => {
+  let tables = restoreConfig.value.tables;
+
+  // Sort tables by size: large, medium, small, empty
+  tables = [...tables].sort((a, b) => {
+    const sizeOrder = { large: 0, medium: 1, small: 2, empty: 3 };
+    const sizeA = a.size ? sizeOrder[a.size] : 4;
+    const sizeB = b.size ? sizeOrder[b.size] : 4;
+    return sizeA - sizeB;
+  });
+
   if (!tableSearchQuery.value) {
-    return restoreConfig.value.tables;
+    return tables;
   }
 
   const query = tableSearchQuery.value.toLowerCase();
-  return restoreConfig.value.tables.filter((table) => {
+  return tables.filter((table) => {
     if (typeof table === "string") {
       return table.toLowerCase().includes(query);
     } else if (table.name) {

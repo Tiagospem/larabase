@@ -141,15 +141,27 @@ function registerTableHandlers(store, dbMonitoringConnections) {
     try {
       const [tables] = await connection.query(_LIST_TABLES_SQL, [config.database]);
 
-      await Promise.all(
-        tables.map(async (table) => {
-          const [[{ rowCount }]] = await connection.query(
-            `SELECT COUNT(*) AS rowCount
-           FROM \`${config.database}\`.\`${table.name}\`;`
-          );
-          table.rowCount = rowCount;
-        })
+      const [tableCounts] = await connection.query(
+        `
+        SELECT 
+          TABLE_NAME as name, 
+          TABLE_ROWS as rowCount
+        FROM 
+          information_schema.TABLES 
+        WHERE 
+          TABLE_SCHEMA = ?
+      `,
+        [config.database]
       );
+
+      const countsMap = {};
+      tableCounts.forEach((row) => {
+        countsMap[row.name] = row.rowCount;
+      });
+
+      tables.forEach((table) => {
+        table.rowCount = countsMap[table.name] || 0;
+      });
 
       return { success: true, tables: tables };
     } catch (err) {
