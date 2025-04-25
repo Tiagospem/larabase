@@ -6,7 +6,6 @@ const { execSync } = require("child_process");
 const pluralize = require("pluralize");
 const docker = require("./docker");
 
-// Utility function to extract values from .env file
 function extractEnvValue(content, key) {
   const regex = new RegExp(`^${key}=(.*)$`, "m");
   const match = content.match(regex);
@@ -27,12 +26,10 @@ function socketExists(path) {
 }
 
 async function checkDockerByOS() {
-  // Use dockerode to check Docker availability
   return await docker.isDockerRunning();
 }
 
 async function isDockerCliAvailable() {
-  // Direct check with dockerode
   return await docker.isDockerAvailable();
 }
 
