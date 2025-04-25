@@ -127,7 +127,7 @@
             />
           </svg>
           <span class="text-xs">Actions</span>
-          <div class="badge-primary text-xs rounded-full px-1.5 text-center ml-1 min-w-[20px]">
+          <div class="bg-primary text-white text-xs rounded-full px-1.5 text-center ml-1 min-w-[20px]">
             {{ pinnedTabs.length }}
           </div>
         </label>
