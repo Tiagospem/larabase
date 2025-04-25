@@ -7,18 +7,18 @@
   >
     <div
       class="overflow-x-scroll overflow-y-auto grow"
-      style="max-height: calc(100% - 45px)"
+      style="max-height: calc(100% - 40px)"
     >
       <table class="table table-sm w-[110%] table-fixed min-w-full">
-        <thead class="bg-base-300 sticky top-0 z-15">
+        <thead class="sticky top-0 z-15">
           <tr class="text-xs select-none">
-            <th class="w-10 px-2 py-2 border-r border-neutral bg-base-300 sticky left-0 z-10">
+            <th class="w-10 px-2 py-2 border-r border-base-100 bg-neutral sticky left-0 z-10">
               <span class="sr-only">Preview</span>
             </th>
             <th
               v-for="(column, index) in tableDataStore.columns"
               :key="column"
-              class="px-4 py-2 border-r border-neutral last:border-r-0 relative whitespace-nowrap top-0 cursor-pointer bg-base-300"
+              class="px-4 py-2 border-r border-base-100 last:border-r-0 relative whitespace-nowrap top-0 cursor-pointer bg-neutral"
               :style="{
                 width: tableDataStore.columnWidths[column] || tableDataStore.defaultColumnWidth(column),
                 maxWidth: tableDataStore.columnWidths[column] || tableDataStore.defaultColumnWidth(column)
@@ -52,7 +52,7 @@
                   </span>
                   <span
                     v-else
-                    class="ml-1 opacity-0 hover:opacity-100"
+                    class="ml-1"
                     @click.stop="handleSortClick(column, $event)"
                   >
                     <svg
@@ -61,12 +61,12 @@
                       viewBox="0 0 24 24"
                       stroke-width="1.5"
                       stroke="currentColor"
-                      class="w-4 h-4"
+                      class="w-4 w-4"
                     >
                       <path
                         stroke-linecap="round"
                         stroke-linejoin="round"
-                        d="M4.5 15.75l7.5-7.5 7.5 7.5"
+                        d="M3 7.5 7.5 3m0 0L12 7.5M7.5 3v13.5m13.5 0L16.5 21m0 0L12 16.5m4.5 4.5V7.5"
                       />
                     </svg>
                   </span>
@@ -88,13 +88,13 @@
             v-for="(row, rowIndex) in tableDataStore.paginatedData"
             :key="rowIndex"
             :class="getRowClasses(rowIndex)"
-            class="border-b border-neutral hover:bg-base-200 cursor-pointer"
+            class="cursor-pointer"
             @click.stop="handleRowClick($event, rowIndex)"
             @mousedown.stop="handleMouseDown($event, rowIndex)"
             @mouseenter.stop="handleMouseEnter(rowIndex)"
           >
             <td
-              class="w-10 px-1 border-r border-neutral text-center sticky left-0 z-10"
+              class="w-10 px-1 border-r border-base-200 text-center sticky left-0 z-10"
               :class="getRowBackgroundClass(rowIndex)"
             >
               <button
@@ -126,7 +126,7 @@
             <td
               v-for="(column, colIndex) in tableDataStore.columns"
               :key="`${rowIndex}-${column}-${colIndex}`"
-              class="px-4 py-2 border-r border-neutral last:border-r-0 truncate whitespace-nowrap overflow-hidden z-1"
+              class="px-4 py-2 border-r border-base-200 last:border-r-0 truncate whitespace-nowrap overflow-hidden z-1"
               :style="{
                 width: tableDataStore.columnWidths[column] || tableDataStore.defaultColumnWidth(column),
                 maxWidth: tableDataStore.columnWidths[column] || tableDataStore.defaultColumnWidth(column)
@@ -522,7 +522,7 @@ defineExpose({ scrollToTop });
 
 @keyframes pulse-border {
   0% {
-    box-shadow: 0 0 0 0px rgba(234, 67, 49, 0.4);
+    box-shadow: 0 0 0 0 rgba(234, 67, 49, 0.4);
   }
   100% {
     box-shadow: 0 0 0 0.25px rgba(234, 67, 49, 0);
@@ -548,18 +548,10 @@ th:has(+ tr td.expanded) {
   table-layout: fixed;
 }
 
-.group:hover .bg-gray-500 {
-  background-color: theme("colors.primary");
-}
-
 .h-full.flex.flex-col {
   min-height: 100%;
   display: flex;
   flex-direction: column;
-}
-
-.flex-1.overflow-auto {
-  min-height: 0;
 }
 
 .table {
@@ -567,17 +559,8 @@ th:has(+ tr td.expanded) {
   border-spacing: 0;
 }
 
-.table th,
-.table td {
-  border: 0.5px solid #333 !important;
-}
-
 thead {
   z-index: 15 !important;
-}
-
-.table > thead.bg-base-300 > tr > th {
-  border: 0.5px solid #000 !important;
 }
 
 tbody tr:not(.selected-row):hover td.sticky,

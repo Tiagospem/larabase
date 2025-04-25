@@ -4,15 +4,14 @@
       <h3 class="font-bold text-lg mb-4">Laravel Commands</h3>
 
       <div class="space-y-4 flex-1 overflow-hidden flex flex-col">
-        <!-- Search and Filters -->
-        <div class="flex gap-2">
-          <div class="form-control flex-1">
+        <div class="flex gap-2 items-center">
+          <fieldset class="fieldset flex-1">
             <div class="relative">
               <input
                 v-model="searchQuery"
                 type="text"
                 placeholder="Search commands..."
-                class="input input-bordered w-full pr-10 focus:outline-hidden"
+                class="input input-sm w-full pr-10 focus:outline-hidden"
               />
               <div class="absolute inset-y-0 right-0 flex items-center pr-3">
                 <svg
@@ -21,7 +20,7 @@
                   viewBox="0 0 24 24"
                   stroke-width="1.5"
                   stroke="currentColor"
-                  class="w-5 h-5 text-gray-400"
+                  class="w-4 h-4 text-gray-400"
                 >
                   <path
                     stroke-linecap="round"
@@ -31,9 +30,9 @@
                 </svg>
               </div>
             </div>
-          </div>
+          </fieldset>
           <button
-            class="btn btn-primary"
+            class="btn btn-sm btn-accent"
             :disabled="isLoading"
             @click="loadCommands"
           >
@@ -43,7 +42,7 @@
               viewBox="0 0 24 24"
               stroke-width="1.5"
               stroke="currentColor"
-              class="w-5 h-5 mr-1"
+              class="w-4 h-4 mr-1"
               :class="{ 'animate-spin': isLoading }"
             >
               <path
@@ -124,7 +123,7 @@
                         </div>
                       </div>
                       <template v-if="!command.isBuiltIn && command.relativePath">
-                        <div class="text-xs text-blue-400 mt-1 flex items-center gap-1">
+                        <div class="text-xs text-primary font-semibold mt-1 flex items-center gap-1">
                           <span>{{ getFilename(command.relativePath) }}</span>
                           <button
                             class="btn btn-xs btn-ghost btn-square p-0"
@@ -150,7 +149,7 @@
                       </template>
                       <div
                         v-if="command.description"
-                        class="text-xs text-gray-400 mt-1"
+                        class="text-xs mt-1"
                       >
                         {{ command.description }}
                       </div>
@@ -161,19 +160,50 @@
                     <td class="text-right">
                       <div class="flex gap-1 justify-end">
                         <button
-                          class="btn btn-xs btn-outline"
+                          class="btn btn-xs"
                           :disabled="isLoading"
                           @click="previewCommand(command)"
                           title="View command details"
                         >
-                          Preview
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke-width="1.5"
+                            stroke="currentColor"
+                            class="w-4 h-4"
+                          >
+                            <path
+                              stroke-linecap="round"
+                              stroke-linejoin="round"
+                              d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z"
+                            />
+                            <path
+                              stroke-linecap="round"
+                              stroke-linejoin="round"
+                              d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"
+                            />
+                          </svg>
                         </button>
                         <div class="dropdown dropdown-end">
                           <label
                             tabindex="0"
                             class="btn btn-xs btn-primary"
                           >
-                            Run
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              fill="none"
+                              viewBox="0 0 24 24"
+                              stroke-width="1.5"
+                              stroke="currentColor"
+                              class="w-4 h-4"
+                            >
+                              <path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.347a1.125 1.125 0 0 1 0 1.972l-11.54 6.347a1.125 1.125 0 0 1-1.667-.986V5.653Z"
+                              />
+                            </svg>
                           </label>
                           <ul
                             tabindex="0"
@@ -229,7 +259,7 @@
 
       <div class="modal-action mt-6">
         <button
-          class="btn"
+          class="btn btn-primary"
           @click="close"
         >
           Close
@@ -321,7 +351,7 @@
             </div>
           </div>
 
-          <div class="form-control mb-4">
+          <fieldset class="fieldset mb-4">
             <label class="label">
               <span class="label-text font-medium text-gray-400">Command Flags</span>
             </label>
@@ -334,7 +364,7 @@
             <label class="label">
               <span class="label-text-alt text-gray-400">Add any additional flags for this command</span>
             </label>
-          </div>
+          </fieldset>
 
           <div
             v-if="commandFileContent && !currentCommand?.isBuiltIn"
@@ -375,13 +405,13 @@
 
       <div class="modal-action">
         <button
-          class="btn btn-primary"
+          class="btn btn-warning"
           @click="executeCommand(currentCommand)"
         >
           Execute Command
         </button>
         <button
-          class="btn"
+          class="btn btn-primary"
           @click="showCommandPreview = false"
         >
           Close
@@ -408,7 +438,7 @@
           {{ currentCommand?.signature }}
         </div>
 
-        <div class="form-control w-full">
+        <fieldset class="fieldset w-full">
           <label class="label">
             <span class="label-text">Flags</span>
           </label>
@@ -421,18 +451,18 @@
           <label class="label">
             <span class="label-text-alt">Add any additional flags for this command</span>
           </label>
-        </div>
+        </fieldset>
       </div>
 
       <div class="modal-action">
         <button
-          class="btn btn-primary"
+          class="btn btn-warning"
           @click="runWithFlags"
         >
           Execute
         </button>
         <button
-          class="btn"
+          class="btn btn-primary"
           @click="showFlagsModal = false"
         >
           Cancel
@@ -494,14 +524,6 @@ const filteredCommands = computed(() => {
   });
 });
 
-const commandPreviewText = computed(() => {
-  if (!currentCommand.value) return "";
-
-  const prefix = useSail.value ? "sail " : "php ";
-
-  return `cd "${props.projectPath}" && ${prefix}artisan ${commandInput.value}`;
-});
-
 async function loadCommands() {
   if (!props.projectPath) {
     showAlert("No Laravel project path configured", "error");
@@ -519,7 +541,7 @@ async function loadCommands() {
       commands.value = result.commands || [];
 
       // Check for sail
-      checkForSail();
+      await checkForSail();
     } else {
       console.error("Failed to get Laravel commands:", result.message);
       showAlert(result.message || "Failed to get Laravel commands", "error");
@@ -536,7 +558,6 @@ async function checkForSail() {
   if (!props.projectPath) return;
 
   try {
-    // Check if docker-compose.yml exists and vendor/laravel/sail exists to determine if using Sail
     const envConfig = await window.api.readEnvFile(props.projectPath);
     hasSail.value = envConfig?.dockerInfo?.dockerAvailable || false;
   } catch (error) {
@@ -557,10 +578,8 @@ async function selectProjectPath() {
       return;
     }
 
-    // Notify parent to update project path
     emit("update-project-path", selectedPath);
 
-    // Reload commands
     await loadCommands();
   } catch (error) {
     console.error("Error selecting project path:", error);
@@ -570,10 +589,8 @@ async function selectProjectPath() {
 
 async function loadCommandContent(filePath) {
   try {
-    // Show loading state
     commandFileContent.value = "Loading...";
 
-    // Use the IPC method to read the file
     const result = await window.api.readModelFile(filePath);
 
     if (result.success) {
@@ -591,19 +608,13 @@ async function loadCommandContent(filePath) {
 function previewCommand(command) {
   currentCommand.value = command;
   commandInput.value = command.signature;
-  commandFlags.value = ""; // Reset flags
-  commandFileContent.value = ""; // Reset content
+  commandFlags.value = "";
+  commandFileContent.value = "";
   showCommandPreview.value = true;
 
-  // If command has a file path, load its content
   if (command.path && !command.isBuiltIn) {
     loadCommandContent(command.path);
   }
-}
-
-function runPreviewedCommand() {
-  showCommandPreview.value = false;
-  executeCommand({ name: commandInput.value, signature: commandInput.value });
 }
 
 async function executeCommand(command) {
@@ -615,7 +626,6 @@ async function executeCommand(command) {
   try {
     commandsStore.openCommandOutput();
 
-    // Prepare the command with flags if available
     const commandText = command.signature + (commandFlags.value ? " " + commandFlags.value : "");
 
     await commandsStore.runArtisanCommand({
@@ -627,7 +637,6 @@ async function executeCommand(command) {
 
     showAlert(`Command "${command.name}" executed successfully`, "success");
 
-    // Close the modal after executing the command
     close();
   } catch (error) {
     console.error("Error executing command:", error);
@@ -659,11 +668,10 @@ function getFilename(path) {
 function showRunWithFlagsModal(command) {
   currentCommand.value = command;
   commandInput.value = command.signature;
-  commandFlags.value = ""; // Reset flags
-  commandFileContent.value = ""; // Reset content
+  commandFlags.value = "";
+  commandFileContent.value = "";
   showFlagsModal.value = true;
 
-  // If command has a file path, load its content
   if (command.path && !command.isBuiltIn) {
     loadCommandContent(command.path);
   }
@@ -678,7 +686,6 @@ async function runWithFlags() {
   try {
     commandsStore.openCommandOutput();
 
-    // Prepare the command with flags if available
     const commandText = commandInput.value + (commandFlags.value ? " " + commandFlags.value : "");
 
     await commandsStore.runArtisanCommand({
@@ -690,7 +697,6 @@ async function runWithFlags() {
 
     showAlert(`Command "${currentCommand.value.name}" executed successfully`, "success");
 
-    // Close the modal after executing the command
     showFlagsModal.value = false;
   } catch (error) {
     console.error("Error executing command:", error);

@@ -188,7 +188,7 @@
           </li>
         </ul>
       </div>
-      <div class="form-control">
+      <fieldset class="fieldset">
         <label class="label cursor-pointer justify-start">
           <input
             v-model="ignoreForeignKeys"
@@ -197,7 +197,7 @@
           />
           <span class="label-text">Ignore foreign key constraints</span>
         </label>
-      </div>
+      </fieldset>
       <div class="modal-action">
         <button
           class="btn"

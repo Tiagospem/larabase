@@ -122,7 +122,7 @@
                   {{ index.name }}
                 </td>
                 <td class="px-4 py-3">
-                  <span :class="['badge', getBadgeClass(index.type)]">{{ index.type }}</span>
+                  <span :class="['badge badge-sm', getBadgeClass(index.type)]">{{ index.type }}</span>
                 </td>
                 <td class="px-4 py-3">
                   {{ index.columns.join(", ") }}

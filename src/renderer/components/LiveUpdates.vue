@@ -7,21 +7,8 @@
       <div class="flex justify-between items-center mb-4">
         <h3 class="font-bold text-lg">Live Database Updates</h3>
         <div class="flex gap-2">
-          <div
-            v-if="connected"
-            class="badge badge-success"
-          >
-            <span class="mr-1">●</span> Connected
-          </div>
-          <div
-            v-else
-            class="badge badge-error"
-          >
-            <span class="mr-1">●</span> Disconnected
-          </div>
-
           <button
-            class="btn btn-sm btn-ghost"
+            class="btn btn-sm btn-error"
             @click="clearUpdates"
           >
             Clear
@@ -105,7 +92,7 @@
               </td>
               <td>
                 <span
-                  class="badge"
+                  class="badge badge-xs"
                   :class="getOperationBadgeClass(update.operation || update.type)"
                 >
                   {{ update.operation || update.type }}

@@ -4,7 +4,7 @@
       <h3 class="font-bold text-lg mb-4">SQL-to-Eloquent Converter</h3>
 
       <!-- User Input Section -->
-      <div class="form-control mb-4">
+      <fieldset class="fieldset mb-4">
         <label class="label">
           <span class="label-text">Describe the query you want to generate (e.g., "Show all users with their orders")</span>
         </label>
@@ -14,7 +14,7 @@
           placeholder="Example: Show all podcast episodes with their series"
           :disabled="isLoading"
         />
-      </div>
+      </fieldset>
 
       <!-- Response Section -->
       <div

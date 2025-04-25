@@ -1,6 +1,6 @@
 <template>
   <div class="flex items-center gap-1">
-    <div class="dropdown dropdown-end">
+    <div class="dropdown dropdown-start">
       <button
         class="btn btn-sm"
         :class="tableDataStore.isLiveTableActive ? 'btn-primary' : 'btn-ghost'"
@@ -10,11 +10,11 @@
           <span class="relative flex h-2 w-2">
             <span
               class="absolute inline-flex h-full w-full rounded-full opacity-75"
-              :class="tableDataStore.isLiveTableActive ? 'animate-ping bg-success' : 'bg-transparent'"
+              :class="tableDataStore.isLiveTableActive ? 'animate-ping bg-secondary' : 'bg-transparent'"
             />
             <span
               class="relative inline-flex rounded-full h-2 w-2"
-              :class="tableDataStore.isLiveTableActive ? 'bg-success' : 'bg-transparent'"
+              :class="tableDataStore.isLiveTableActive ? 'bg-secondary' : 'bg-transparent'"
             />
           </span>
           <svg
@@ -41,10 +41,10 @@
       </button>
       <div
         tabindex="0"
-        class="dropdown-content z-40 menu p-2 shadow-sm bg-base-200 rounded-box w-52"
+        class="dropdown-content z-[9999] p-2 shadow-sm bg-base-200 rounded-box w-52 mt-2"
       >
         <div class="p-2">
-          <div class="form-control">
+          <fieldset class="fieldset">
             <label class="label">
               <span class="label-text">Update interval</span>
             </label>
@@ -59,8 +59,8 @@
               />
               <span>{{ tableDataStore.liveUpdateDelaySeconds }}s</span>
             </div>
-          </div>
-          <div class="form-control mt-2">
+          </fieldset>
+          <fieldset class="fieldset mt-2">
             <label class="label cursor-pointer">
               <span class="label-text">Highlight changes</span>
               <input
@@ -69,7 +69,7 @@
                 class="toggle toggle-primary toggle-sm"
               />
             </label>
-          </div>
+          </fieldset>
           <button
             v-if="tableDataStore.updateCounter > 0"
             class="btn btn-xs btn-ghost mt-2 w-full"

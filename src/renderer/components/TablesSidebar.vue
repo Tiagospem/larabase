@@ -289,7 +289,7 @@
           <span class="font-bold text-error">This action cannot be undone.</span>
         </p>
         <div class="py-2">
-          <div class="form-control">
+          <fieldset class="fieldset">
             <label class="label cursor-pointer justify-start">
               <input
                 v-model="ignoreForeignKeys"
@@ -299,8 +299,8 @@
               />
               <span class="label-text">Ignore foreign key constraints</span>
             </label>
-          </div>
-          <div class="form-control">
+          </fieldset>
+          <fieldset class="fieldset">
             <label class="label cursor-pointer justify-start">
               <input
                 v-model="cascadeDelete"
@@ -310,7 +310,7 @@
               />
               <span class="label-text">Cascade delete (drop dependent objects)</span>
             </label>
-          </div>
+          </fieldset>
         </div>
         <div class="mt-2 text-sm">
           <div class="font-semibold mb-1">Selected tables:</div>

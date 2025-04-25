@@ -6,13 +6,13 @@
   >
     <div class="absolute w-full h-10 bg-neutral top-0 draggable z-10"></div>
 
-    <header class="bg-neutral mt-8 px-4 z-20 pb-2 border-b border-neutral flex items-center justify-between">
+    <header class="bg-neutral mt-8 pt-2 px-4 z-20 pb-2 border-b border-neutral flex items-center justify-between">
       <div class="flex items-center">
         <div
           class="w-8 h-8 rounded-full flex items-center justify-center mr-2"
           :class="getConnectionColor(connection?.type)"
         >
-          <span class="font-bold text-sm">{{ connection?.icon }}</span>
+          <span class="text-white font-bold text-sm">{{ connection?.icon }}</span>
         </div>
 
         <ShowConnectionInfo :connection-id="connectionId" />
@@ -339,10 +339,10 @@
         @update:sidebar-width="sidebarWidth = $event"
       />
 
-      <div class="flex-1 overflow-hidden">
+      <div class="flex-1 bg-base-100 overflow-hidden">
         <div
           v-if="!activeTab"
-          class="flex items-center justify-center h-full"
+          class="flex items-center justify-center h-full text-gray-500"
         >
           <div class="text-center">
             <svg
@@ -378,7 +378,7 @@
       </div>
     </div>
 
-    <footer class="bg-neutral px-4 py-1 text-xs border-t border-base-300">
+    <footer class="bg-neutral px-4 py-1 text-xs text-gray-400 border-t border-black/20">
       <div class="flex justify-between">
         <div>
           {{ connection?.type.toUpperCase() }} |
@@ -477,7 +477,7 @@
       </div>
       <div class="modal-action">
         <button
-          class="btn btn-primary"
+          class="btn btn-sm btn-primary"
           @click="copyAllTablesJsonToClipboard"
         >
           <svg
@@ -531,6 +531,7 @@ import DatabaseSwitcher from "@/components/database/DatabaseSwitcher.vue";
 import RedisManager from "@/components/RedisManager.vue";
 import LaravelCommands from "../components/LaravelCommands.vue";
 
+// Define o nome do componente para o keep-alive
 defineOptions({
   name: "DatabaseView"
 });

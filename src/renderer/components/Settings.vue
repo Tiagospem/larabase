@@ -1,6 +1,6 @@
 <template>
   <div class="modal modal-open z-30">
-    <div class="modal-box w-11/12 max-w-2xl bg-base-300">
+    <div class="modal-box w-11/12 max-w-3xl max-h-[90vh] bg-base-300">
       <h3 class="font-bold text-lg mb-4">Settings</h3>
 
       <div class="space-y-4">
@@ -9,7 +9,7 @@
           <div class="card-body space-y-4">
             <h3 class="card-title text-md">AI Provider</h3>
 
-            <div class="form-control">
+            <fieldset class="fieldset">
               <label class="label">
                 <span class="label-text">Select AI Provider</span>
               </label>
@@ -20,7 +20,7 @@
                 <option value="openai">OpenAI</option>
                 <option value="gemini">Google Gemini</option>
               </select>
-            </div>
+            </fieldset>
           </div>
         </div>
 
@@ -32,7 +32,7 @@
           <div class="card-body space-y-4">
             <h3 class="card-title text-md">OpenAI API</h3>
 
-            <div class="form-control">
+            <fieldset class="fieldset">
               <label class="label">
                 <span class="label-text">API Key</span>
               </label>
@@ -42,9 +42,9 @@
                 placeholder="Enter your OpenAI API key"
                 class="input input-bordered w-full"
               />
-            </div>
+            </fieldset>
 
-            <div class="form-control">
+            <fieldset class="fieldset">
               <label class="label">
                 <span class="label-text">AI Model</span>
               </label>
@@ -56,7 +56,7 @@
                 <option value="gpt-4">GPT-4</option>
                 <option value="gpt-4-turbo">GPT-4 Turbo</option>
               </select>
-            </div>
+            </fieldset>
           </div>
         </div>
 
@@ -68,7 +68,7 @@
           <div class="card-body space-y-4">
             <h3 class="card-title text-md">Google Gemini API</h3>
 
-            <div class="form-control">
+            <fieldset class="fieldset">
               <label class="label">
                 <span class="label-text">API Key</span>
               </label>
@@ -78,9 +78,9 @@
                 placeholder="Enter your Google Gemini API key"
                 class="input input-bordered w-full"
               />
-            </div>
+            </fieldset>
 
-            <div class="form-control">
+            <fieldset class="fieldset">
               <label class="label">
                 <span class="label-text">AI Model</span>
               </label>
@@ -92,7 +92,7 @@
                 <option value="gemini-2.0-flash">Gemini 2.0 Flash</option>
                 <option value="gemini-2.0-flash-lite">Gemini 2.0 Flash-Lite</option>
               </select>
-            </div>
+            </fieldset>
           </div>
         </div>
 
@@ -101,7 +101,7 @@
           <div class="card-body space-y-4">
             <h3 class="card-title text-md">Language</h3>
 
-            <div class="form-control">
+            <fieldset class="fieldset">
               <label class="label">
                 <span class="label-text">AI Response Language</span>
               </label>
@@ -117,7 +117,7 @@
                   {{ option.label }}
                 </option>
               </select>
-            </div>
+            </fieldset>
           </div>
         </div>
 
@@ -129,7 +129,7 @@
           <div class="card-body space-y-4">
             <h3 class="card-title text-md">Developer Options</h3>
 
-            <div class="form-control">
+            <fieldset class="fieldset">
               <label class="label cursor-pointer">
                 <span class="label-text">Developer Mode</span>
                 <input
@@ -138,7 +138,7 @@
                   class="toggle toggle-primary"
                 />
               </label>
-            </div>
+            </fieldset>
 
             <div
               v-if="settingsData.devMode"

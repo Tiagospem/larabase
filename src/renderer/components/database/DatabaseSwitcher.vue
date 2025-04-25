@@ -22,13 +22,13 @@
           v-else
           class="max-h-60 overflow-y-auto"
         >
-          <ul class="menu bg-base-200 rounded-box">
+          <ul class="menu bg-base-200 rounded-box w-full flex gap-2">
             <li
               v-for="db in availableDatabases"
               :key="db"
               class="rounded-lg"
               :class="{
-                'bg-primary bg-opacity-20': db === connection?.database
+                'bg-primary text-neutral': db === connection?.database
               }"
             >
               <a
@@ -79,7 +79,7 @@
         </div>
         <div class="modal-action">
           <button
-            class="btn"
+            class="btn btn-primary"
             @click="showDatabaseSwitcher = false"
           >
             Close

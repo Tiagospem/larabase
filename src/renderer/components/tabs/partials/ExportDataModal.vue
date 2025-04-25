@@ -3,7 +3,7 @@
     class="modal z-50"
     :class="{ 'modal-open': show }"
   >
-    <div class="modal-box max-w-md relative">
+    <div class="modal-box bg-base-300 max-w-lg relative">
       <!-- Loading overlay -->
       <div
         v-if="isExporting"
@@ -57,7 +57,7 @@
       </h3>
 
       <div class="mb-4">
-        <div class="form-control">
+        <fieldset class="fieldset">
           <label class="label">
             <span class="label-text font-medium">Export Format</span>
           </label>
@@ -71,11 +71,11 @@
             <option value="sql">SQL (INSERT Statements)</option>
             <option value="excel">Excel (.xlsx)</option>
           </select>
-        </div>
+        </fieldset>
       </div>
 
       <div class="mb-4">
-        <div class="form-control">
+        <fieldset class="fieldset">
           <label class="label cursor-pointer justify-start">
             <input
               v-model="includeHeaders"
@@ -85,9 +85,9 @@
             />
             <span class="label-text ml-2">Include headers</span>
           </label>
-        </div>
+        </fieldset>
 
-        <div class="form-control">
+        <fieldset class="fieldset">
           <label class="label cursor-pointer justify-start">
             <input
               v-model="exportAllRecords"
@@ -97,7 +97,7 @@
             />
             <span class="label-text ml-2">Export all records (uncheck to export only current page)</span>
           </label>
-        </div>
+        </fieldset>
       </div>
 
       <div class="bg-base-200 p-3 rounded-md mb-4">
