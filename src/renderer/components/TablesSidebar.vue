@@ -7,7 +7,8 @@
       <div class="p-3 border-b border-black/10 flex-shrink-0">
         <div class="relative mb-2">
           <input
-            v-model="tablesStore.searchTerm"
+            :value="tablesStore.searchTerm"
+            @input="e => tablesStore.setSearchTerm(props.connectionId, e.target.value)"
             type="text"
             placeholder="Search tables..."
             class="input input-sm input-bordered w-full bg-base-300 pl-9 pr-8"
@@ -407,6 +408,15 @@ watch(
     }
   },
   { immediate: true }
+);
+
+watch(
+  () => tablesStore.searchTerm,
+  (newSearchTerm) => {
+    if (props.connectionId) {
+      localStorage.setItem(`tableSearch_${props.connectionId}`, newSearchTerm);
+    }
+  }
 );
 
 function isTableActive(tableName) {
