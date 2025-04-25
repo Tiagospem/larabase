@@ -687,7 +687,6 @@ async function initializeConnection(skipReload = false) {
         return;
       }
 
-      showAlert(`Connected to ${connection.value.name}`, "success");
       await databaseStore.loadTables(connectionId.value);
       loadedConnections.value.add(connectionId.value);
     }

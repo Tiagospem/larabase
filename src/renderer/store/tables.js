@@ -3,10 +3,6 @@ import { ref, computed } from "vue";
 import { useDatabaseStore } from "@/store/database";
 
 export const useTablesStore = defineStore("tables", () => {
-  const localTables = ref([]);
-  const isLoadingCounts = ref(false);
-  const allTablesLoaded = ref(false);
-  const loadingTimer = ref(null);
   const databaseStore = useDatabaseStore();
   const lastLoadedConnection = ref(null);
 
@@ -16,12 +12,14 @@ export const useTablesStore = defineStore("tables", () => {
   const sortOrder = ref(localStorage.getItem("tableSortOrder") || "asc");
 
   // Computed properties
-  const tables = computed(() => localTables.value);
+  const localTables = computed(() => databaseStore.tablesList || []);
+  const isLoading = computed(() => databaseStore.isLoading);
+  const allTablesLoaded = computed(() => !isLoading.value);
 
   const filteredTables = computed(() => {
-    if (!searchTerm.value) return tables.value;
+    if (!searchTerm.value) return localTables.value;
     const term = searchTerm.value.toLowerCase();
-    return tables.value.filter((table) => table.name.toLowerCase().includes(term));
+    return localTables.value.filter((table) => table.name.toLowerCase().includes(term));
   });
 
   const sortedTables = computed(() => {
@@ -31,8 +29,8 @@ export const useTablesStore = defineStore("tables", () => {
       if (sortBy.value === "name") {
         return sortOrder.value === "asc" ? a.name.localeCompare(b.name) : b.name.localeCompare(a.name);
       } else {
-        const aCount = a.recordCount || 0;
-        const bCount = b.recordCount || 0;
+        const aCount = a.rowCount || 0;
+        const bCount = b.rowCount || 0;
         return sortOrder.value === "asc" ? aCount - bCount : bCount - aCount;
       }
     });
@@ -74,100 +72,26 @@ export const useTablesStore = defineStore("tables", () => {
     return count.toString();
   }
 
-  async function loadTableRecordCounts(connectionId) {
-    if (isLoadingCounts.value) return;
-
-    isLoadingCounts.value = true;
-
-    // Don't reset allTablesLoaded here, since we're just updating counts
-
-    if (loadingTimer.value) {
-      clearTimeout(loadingTimer.value);
-      loadingTimer.value = null;
-    }
-
-    try {
-      const updatedTables = [...localTables.value];
-
-      const promises = updatedTables.map(async (table, i) => {
-        try {
-          if (table.recordCount === null || table.recordCount === undefined) {
-            return {
-              index: i,
-              count: await databaseStore.getTableRecordCount(connectionId, table.name)
-            };
-          }
-          return { index: i, count: table.recordCount };
-        } catch {
-          return { index: i, count: 0 };
-        }
-      });
-
-      const results = await Promise.all(promises);
-
-      results.forEach(({ index, count }) => {
-        updatedTables[index].recordCount = count;
-      });
-
-      localTables.value = updatedTables;
-
-      allTablesLoaded.value = true;
-    } catch (error) {
-      console.error("Error loading record counts:", error);
-    } finally {
-      isLoadingCounts.value = false;
-    }
-  }
-
-  // Add a method to update a single table's record count
-  function updateTableRecordCount(tableName, count) {
-    const tableIndex = localTables.value.findIndex((table) => table.name === tableName);
-
-    if (tableIndex !== -1) {
-      const updatedTables = [...localTables.value];
-      updatedTables[tableIndex].recordCount = count;
-      localTables.value = updatedTables;
-    }
-  }
-
   function initializeTables(connectionId) {
-    // Check if the data is already loaded for this connection
-    if (lastLoadedConnection.value === connectionId && localTables.value.length > 0 && allTablesLoaded.value) {
+    if (connectionId === lastLoadedConnection.value && !isLoading.value) {
       return;
     }
 
-    // Otherwise, reset and load new data
-    allTablesLoaded.value = false;
-    localTables.value = databaseStore.tablesList.map((t) => ({ ...t, recordCount: null }));
+    databaseStore.loadTables(connectionId);
     lastLoadedConnection.value = connectionId;
-
-    loadingTimer.value = setTimeout(() => {
-      loadTableRecordCounts(connectionId);
-    }, 500);
-  }
-
-  function clearTablesData() {
-    localTables.value = [];
-    allTablesLoaded.value = false;
-    lastLoadedConnection.value = null;
-    if (loadingTimer.value) {
-      clearTimeout(loadingTimer.value);
-      loadingTimer.value = null;
-    }
   }
 
   return {
     // State
     localTables,
-    isLoadingCounts,
-    allTablesLoaded,
+    lastLoadedConnection,
     searchTerm,
     sortBy,
     sortOrder,
-    lastLoadedConnection,
 
     // Computed
-    tables,
+    isLoading,
+    allTablesLoaded,
     filteredTables,
     sortedTables,
 
@@ -177,9 +101,6 @@ export const useTablesStore = defineStore("tables", () => {
     setSortBy,
     toggleSortOrder,
     formatRecordCount,
-    loadTableRecordCounts,
-    updateTableRecordCount,
-    initializeTables,
-    clearTablesData
+    initializeTables
   };
 });

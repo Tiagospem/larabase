@@ -139,8 +139,19 @@ function registerTableHandlers(store, dbMonitoringConnections) {
     const { error, connection, isMonitored } = await _getDbConnection({ store, dbMonitoringConnections }, config);
     if (error) return _error("tables", error);
     try {
-      const [rows] = await connection.query(_LIST_TABLES_SQL, [config.database]);
-      return { success: true, tables: rows };
+      const [tables] = await connection.query(_LIST_TABLES_SQL, [config.database]);
+
+      await Promise.all(
+        tables.map(async (table) => {
+          const [[{ rowCount }]] = await connection.query(
+            `SELECT COUNT(*) AS rowCount
+           FROM \`${config.database}\`.\`${table.name}\`;`
+          );
+          table.rowCount = rowCount;
+        })
+      );
+
+      return { success: true, tables: tables };
     } catch (err) {
       return _error("tables", err.message || "Failed to list tables");
     } finally {

@@ -223,11 +223,6 @@ export const useTableDataStore = (id) => {
         loadStartTime.value = Date.now();
       }
 
-      const loadingTimer = setTimeout(() => {
-        if (isLoading.value) {
-        }
-      }, 100);
-
       loadError.value = null;
 
       const selectedRowIds = [];
@@ -297,8 +292,6 @@ export const useTableDataStore = (id) => {
         tableData.value = [];
         totalRecordsCount.value = 0;
       } finally {
-        clearTimeout(loadingTimer);
-
         if (Date.now() - loadStartTime.value < 100 && wasLoading === false) {
           isLoading.value = false;
         } else {

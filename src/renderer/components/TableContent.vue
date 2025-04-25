@@ -8,7 +8,8 @@
           class="flex items-center gap-2 px-3 py-1 cursor-pointer transition-colors text-sm"
           :class="{
             'text-white': activeContentTab === tab.id,
-            'text-gray-500 hover:text-gray-300': activeContentTab !== tab.id
+            'text-gray-500 hover:text-gray-300': activeContentTab !== tab.id,
+            'pointer-events-none opacity-20 animate-pulse': tablesStore.isLoading
           }"
           @click="switchContentTab(tab.id)"
         >
@@ -28,6 +29,7 @@
 
 <script setup>
 import { ref, computed, markRaw, defineAsyncComponent, onActivated } from "vue";
+import { useTablesStore } from "@/store/tables";
 
 const DataTab = markRaw(defineAsyncComponent(() => import("./tabs/DataTab.vue")));
 const StructureTab = markRaw(defineAsyncComponent(() => import("./tabs/StructureTab.vue")));
@@ -36,6 +38,8 @@ const ForeignKeysTab = markRaw(defineAsyncComponent(() => import("./tabs/Foreign
 const MigrationsTab = markRaw(defineAsyncComponent(() => import("./tabs/MigrationsTab.vue")));
 const ModelTab = markRaw(defineAsyncComponent(() => import("./tabs/ModelTab.vue")));
 const FactoryTab = markRaw(defineAsyncComponent(() => import("./tabs/FactoryTab.vue")));
+
+const tablesStore = useTablesStore();
 
 // Explicitly name this component for keep-alive caching
 defineOptions({

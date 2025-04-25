@@ -207,7 +207,7 @@
 
       <div class="scrollable-container flex-1 overflow-y-auto overflow-x-hidden min-h-0">
         <div
-          v-if="tablesStore.isLoadingCounts || !tablesStore.allTablesLoaded"
+          v-if="tablesStore.isLoading"
           class="p-2"
         >
           <div
@@ -272,9 +272,9 @@
               </div>
               <span
                 class="badge badge-sm"
-                :class="{ 'badge-primary': table.recordCount > 0 }"
+                :class="{ 'badge-primary': table.rowCount > 0 }"
               >
-                {{ tablesStore.formatRecordCount(table.recordCount) }}
+                {{ tablesStore.formatRecordCount(table.rowCount) }}
               </span>
             </a>
           </li>
@@ -362,7 +362,7 @@
 </template>
 
 <script setup>
-import { computed, inject, onActivated, onMounted, onUnmounted, ref, watch } from "vue";
+import { computed, inject, onMounted, onActivated, ref, watch } from "vue";
 import { useDatabaseStore } from "@/store/database";
 import { useTablesStore } from "@/store/tables";
 
@@ -402,12 +402,8 @@ watch(
     if (newConnectionId) {
       const savedSearchTerm = localStorage.getItem(`tableSearch_${newConnectionId}`) || "";
       tablesStore.setSearchTerm(newConnectionId, savedSearchTerm);
-
-      // Only initialize tables if the connection has changed or tables aren't loaded
-      if (newConnectionId !== lastConnectionId.value || !tablesStore.allTablesLoaded || tablesStore.localTables.length === 0) {
-        tablesStore.initializeTables(newConnectionId);
-        lastConnectionId.value = newConnectionId;
-      }
+      tablesStore.initializeTables(newConnectionId);
+      lastConnectionId.value = newConnectionId;
     }
   },
   { immediate: true }
@@ -484,8 +480,6 @@ async function deleteTables() {
 
     const result = await window.api.dropTables(params);
 
-    console.log("API response:", result);
-
     if (result && result.success) {
       showAlert(`Successfully deleted tables`, "success");
 
@@ -510,40 +504,6 @@ async function deleteTables() {
 function getTableModel(tableName) {
   return databaseStore.getModelForTable(props.connectionId, tableName);
 }
-
-watch(
-  () => databaseStore.tablesList,
-  (newList, oldList) => {
-    // Only update tables if there's a change in the tables list
-    if (newList && (!oldList || newList.length !== oldList.length)) {
-      tablesStore.initializeTables(props.connectionId);
-      lastConnectionId.value = props.connectionId;
-    }
-  },
-  { immediate: true }
-);
-
-onMounted(() => {
-  // On mount, only initialize if not already loaded
-  if (!tablesStore.allTablesLoaded || tablesStore.localTables.length === 0) {
-    tablesStore.initializeTables(props.connectionId);
-    lastConnectionId.value = props.connectionId;
-  }
-});
-
-onActivated(() => {
-  // On activation, check if we need to reload counts
-  // This happens when returning to this component from elsewhere
-  if (props.connectionId === lastConnectionId.value) {
-    if (!tablesStore.allTablesLoaded || tablesStore.localTables.some((t) => t.recordCount === null)) {
-      tablesStore.loadTableRecordCounts(props.connectionId);
-    }
-  } else if (props.connectionId) {
-    // If we've changed connections while component was inactive
-    tablesStore.initializeTables(props.connectionId);
-    lastConnectionId.value = props.connectionId;
-  }
-});
 
 function handleIgnoreForeignKeysChange() {
   if (ignoreForeignKeys.value) {
@@ -604,6 +564,41 @@ function handleCascadeDeleteChange() {
   background: #555;
 }
 
+.table-name-container {
+  max-width: calc(100% - 5px);
+  overflow: hidden;
+  flex-grow: 1;
+}
+
+.table-name {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+  display: block;
+}
+
+.table-model {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+  display: block;
+}
+
+.table-item {
+  margin: 2px 0;
+}
+
+.table-link {
+  border-radius: 6px !important;
+}
+
+.table-link:hover {
+  background-color: hsl(var(--b3)) !important;
+  border-radius: 6px !important;
+}
+
 @keyframes pulse {
   0%,
   100% {
@@ -639,40 +634,5 @@ function handleCascadeDeleteChange() {
   max-width: 200px;
   white-space: normal;
   z-index: 100;
-}
-
-.table-name-container {
-  max-width: calc(100% - 5px);
-  overflow: hidden;
-  flex-grow: 1;
-}
-
-.table-name {
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 100%;
-  display: block;
-}
-
-.table-model {
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 100%;
-  display: block;
-}
-
-.table-item {
-  margin: 2px 0;
-}
-
-.table-link {
-  border-radius: 6px !important;
-}
-
-.table-link:hover {
-  background-color: hsl(var(--b3)) !important;
-  border-radius: 6px !important;
 }
 </style>
