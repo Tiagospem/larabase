@@ -94,7 +94,7 @@
             @mouseenter.stop="handleMouseEnter(rowIndex)"
           >
             <td
-              class="w-10 px-1 border-r border-base-200 text-center sticky left-0 z-10"
+              class="w-10 px-2 py-1 border-r border-base-200 text-center sticky left-0 z-10"
               :class="getRowBackgroundClass(rowIndex)"
             >
               <button
@@ -126,7 +126,7 @@
             <td
               v-for="(column, colIndex) in tableDataStore.columns"
               :key="`${rowIndex}-${column}-${colIndex}`"
-              class="px-4 py-2 border-r border-base-200 last:border-r-0 truncate whitespace-nowrap overflow-hidden z-1"
+              class="px-2 py-1 border-r border-base-200 last:border-r-0 truncate whitespace-nowrap overflow-hidden z-1"
               :style="{
                 width: tableDataStore.columnWidths[column] || tableDataStore.defaultColumnWidth(column),
                 maxWidth: tableDataStore.columnWidths[column] || tableDataStore.defaultColumnWidth(column)
@@ -472,14 +472,12 @@ function openPreviewModal(row) {
 }
 
 onActivated(() => {
-  // Re-attach event listeners when component is reactivated from cache
   window.addEventListener("keydown", handleKeyDown);
   window.addEventListener("keyup", handleKeyDown);
   window.addEventListener("mouseup", handleMouseUp);
 });
 
 onDeactivated(() => {
-  // Detach event listeners when component is deactivated to prevent memory leaks
   window.removeEventListener("keydown", handleKeyDown);
   window.removeEventListener("keyup", handleKeyDown);
   window.removeEventListener("mouseup", handleMouseUp);
