@@ -3,7 +3,7 @@
     class="modal z-50"
     :class="{ 'modal-open': show }"
   >
-    <div class="modal-box max-w-4xl">
+    <div class="modal-box bg-base-300 max-w-4xl">
       <h3 class="font-bold text-lg mb-4 flex justify-between items-center">
         Data Preview
         <button
@@ -27,7 +27,6 @@
         </button>
       </h3>
 
-      <!-- Feedback para cópia de texto -->
       <div
         v-if="copyFeedback"
         class="fixed top-4 right-4 bg-primary text-white py-2 px-4 rounded-md shadow-lg z-50 transition-opacity"
@@ -37,7 +36,7 @@
 
       <div
         v-if="record"
-        class="overflow-y-auto max-h-[60vh] divide-y divide-base-300"
+        class="overflow-y-auto max-h-[60vh] divide-y divide-base-100"
       >
         <div
           v-for="column in columns"
@@ -185,7 +184,7 @@
 
       <div class="modal-action">
         <button
-          class="btn"
+          class="btn btn-primary"
           @click="$emit('close')"
         >
           Close

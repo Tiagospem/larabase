@@ -1,6 +1,6 @@
 <template>
   <div class="relative flex items-center gap-2">
-    <div class="input-group">
+    <div class="input-group flex gap-2">
       <input
         v-model="tableDataStore.filterTerm"
         type="text"
@@ -11,14 +11,14 @@
       <button
         class="btn btn-sm"
         :class="{
-          'bg-base-300 border-base-300': !tableDataStore.activeFilter && !tableDataStore.filterTerm,
-          'bg-primary border-primary text-white': tableDataStore.activeFilter || tableDataStore.filterTerm
+          'border-base-300': !tableDataStore.activeFilter && !tableDataStore.filterTerm,
+          'btn-primary border-primary': tableDataStore.activeFilter || tableDataStore.filterTerm
         }"
         @click="toggleAdvancedFilter"
       >
         <svg
           xmlns="http://www.w3.org/2000/svg"
-          fill="none"
+          fill="currentColor"
           viewBox="0 0 24 24"
           stroke-width="1.5"
           stroke="currentColor"
@@ -58,7 +58,7 @@
     class="modal z-50"
     :class="{ 'modal-open': showFilterModal }"
   >
-    <div class="modal-box max-w-3xl">
+    <div class="modal-box max-w-3xl bg-base-300">
       <h3 class="font-bold text-lg mb-4 flex justify-between items-center">
         Advanced Filter
         <button
@@ -83,13 +83,13 @@
       </h3>
 
       <div class="mb-4">
-        <div class="form-control">
+        <fieldset class="fieldset">
           <label class="label">
             <span class="label-text font-medium">SQL WHERE Clause</span>
           </label>
           <textarea
             v-model="tableDataStore.advancedFilterTerm"
-            class="textarea textarea-bordered h-32 font-mono"
+            class="textarea textarea-bordered h-32 font-mono w-full"
             placeholder="id = 1"
           />
           <label class="label">
@@ -117,7 +117,7 @@
               >
             </span>
           </label>
-        </div>
+        </fieldset>
 
         <div class="mt-2 text-xs">
           <p class="mb-2">Available columns:</p>
@@ -125,7 +125,7 @@
             <span
               v-for="column in tableDataStore.columns"
               :key="column"
-              class="badge badge-primary cursor-pointer"
+              class="badge badge-primary badge-sm cursor-pointer"
               @click="insertColumnName(column)"
             >
               {{ column }}
@@ -137,7 +137,7 @@
             <span
               v-for="op in ['=', '!=', '>', '<', '>=', '<=', 'LIKE', 'IN', 'IS NULL', 'IS NOT NULL', 'BETWEEN', 'AND', 'OR']"
               :key="op"
-              class="badge badge-secondary cursor-pointer"
+              class="badge badge-secondary badge-sm cursor-pointer"
               @click="insertOperator(op)"
             >
               {{ op }}
@@ -146,7 +146,7 @@
         </div>
       </div>
 
-      <div class="form-control mb-4">
+      <fieldset class="fieldset mb-4">
         <label class="label cursor-pointer justify-start">
           <input
             v-model="persistFilter"
@@ -155,20 +155,20 @@
           />
           <span class="label-text ml-2">Persist filter (remember after reload)</span>
         </label>
-      </div>
+      </fieldset>
 
       <div class="modal-action">
-        <button
-          class="btn btn-error"
-          @click="cancelAdvancedFilter"
-        >
-          Cancel
-        </button>
         <button
           class="btn btn-primary"
           @click="applyAdvancedFilter"
         >
           Apply Filter
+        </button>
+        <button
+          class="btn btn-error"
+          @click="cancelAdvancedFilter"
+        >
+          Cancel
         </button>
       </div>
     </div>

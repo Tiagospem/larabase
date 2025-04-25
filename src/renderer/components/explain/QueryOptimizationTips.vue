@@ -21,7 +21,7 @@
       <div
         v-for="(tip, index) in tips"
         :key="index"
-        class="card bg-base-200 shadow-sm hover:shadow-md transition-all"
+        class="card bg-base-200 shadow-xs hover:shadow-md transition-all"
       >
         <div class="card-body p-4">
           <h4 class="card-title text-base flex items-center gap-2">
@@ -38,7 +38,7 @@
 
           <div
             v-if="tip.code"
-            class="bg-base-300 p-3 rounded font-mono text-sm mb-2"
+            class="bg-base-300 p-3 rounded-sm font-mono text-sm mb-2"
           >
             {{ tip.code }}
           </div>

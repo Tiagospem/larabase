@@ -255,23 +255,21 @@
       <div>Factory Path: {{ factory.relativePath }}</div>
     </div>
 
-    <!-- Factory Data Generation Modal -->
     <div
       v-if="showGenerateDataModal"
       class="modal modal-open"
     >
-      <div class="modal-box bg-base-100 max-w-xl">
-        <h3 class="font-bold text-lg mb-3 text-center">Generate Factory Data</h3>
+      <div class="modal-box bg-base-300 max-w-xl">
+        <h3 class="font-bold text-lg mb-2 text-center">Generate Factory Data</h3>
 
-        <p class="text-center mb-4">Create test records for {{ tableName }}</p>
+        <p class="text-center mb-4 text-sm">Create test records for {{ tableName }}</p>
 
-        <!-- Input de número de registros - sempre visível -->
-        <div class="bg-primary bg-opacity-10 p-4 rounded-lg mb-4">
+        <div class="bg-base-100 bg-opacity-10 p-4 rounded-lg mb-4">
           <div class="flex justify-between items-center mb-3">
             <p class="font-medium">Number of records:</p>
           </div>
 
-          <div class="form-control">
+          <fieldset class="fieldset">
             <input
               v-model="recordCount"
               type="number"
@@ -288,13 +286,13 @@
             >
               <span class="label-text-alt text-error">Please enter a number between 1 and 1000</span>
             </label>
-          </div>
+          </fieldset>
         </div>
 
         <div class="tabs tabs-boxed mb-4">
           <a
             class="tab relative"
-            :class="{ 'tab-active': activeTab === 'relationships' }"
+            :class="{ 'tab-active text-primary': activeTab === 'relationships' }"
             @click="activeTab = 'relationships'"
           >
             Relationships
@@ -305,7 +303,7 @@
           </a>
           <a
             class="tab relative"
-            :class="{ 'tab-active': activeTab === 'attributes' }"
+            :class="{ 'tab-active text-primary': activeTab === 'attributes' }"
             @click="activeTab = 'attributes'"
           >
             Attributes
@@ -320,7 +318,7 @@
         <!-- Tab: Relationships -->
         <div
           v-if="activeTab === 'relationships'"
-          class="bg-primary bg-opacity-10 p-4 rounded-lg mb-5"
+          class="bg-base-100 bg-opacity-10 p-4 rounded-lg mb-5"
         >
           <div class="flex justify-between items-center mb-3">
             <p class="font-medium">Assign to specific model:</p>
@@ -346,7 +344,7 @@
             </div>
           </div>
 
-          <div class="form-control mb-4">
+          <fieldset class="fieldset mb-4">
             <select
               v-model="selectedRelation"
               class="select select-bordered w-full"
@@ -360,11 +358,11 @@
                 {{ rel.model }} ({{ rel.table }})
               </option>
             </select>
-          </div>
+          </fieldset>
 
-          <div
+          <fieldset
             v-if="selectedRelation"
-            class="form-control mb-4"
+            class="fieldset mb-4"
           >
             <label class="label">
               <span class="label-text">Select ID from {{ selectedRelation }}</span>
@@ -398,7 +396,7 @@
                 </svg>
               </button>
             </div>
-          </div>
+          </fieldset>
 
           <div
             v-if="isLoadingRelatedRecords"
@@ -472,7 +470,7 @@
         <!-- Tab: Attributes -->
         <div
           v-if="activeTab === 'attributes'"
-          class="bg-primary bg-opacity-10 p-4 rounded-lg mb-5"
+          class="bg-base-100 bg-opacity-10 p-4 rounded-lg mb-5"
         >
           <div class="flex justify-between items-center mb-3">
             <p class="font-medium">Customize attributes:</p>
@@ -514,7 +512,7 @@
               xmlns="http://www.w3.org/2000/svg"
               fill="none"
               viewBox="0 0 24 24"
-              class="stroke-current flex-shrink-0 w-6 h-6"
+              class="stroke-current shrink-0 w-6 h-6"
             >
               <path
                 stroke-linecap="round"
@@ -578,7 +576,7 @@
                 v-model="attr.value"
                 type="text"
                 :placeholder="getPlaceholderForField(attr.field)"
-                class="input input-bordered input-sm flex-grow"
+                class="input input-bordered input-sm grow"
               />
               <button
                 class="btn btn-sm btn-square btn-error"
@@ -603,7 +601,7 @@
           </div>
         </div>
 
-        <div class="bg-neutral-content bg-opacity-10 p-4 rounded-lg mb-6">
+        <div class="bg-neutral bg-opacity-10 p-4 rounded-lg mb-6">
           <p class="text-sm font-medium mb-2">Command preview:</p>
           <div class="mockup-code text-xs">
             <pre><code>{{ generateCommandPreview() }}</code></pre>
@@ -639,7 +637,7 @@
 </template>
 
 <script setup>
-import { inject, onMounted, ref, computed, watch } from "vue";
+import { inject, onMounted, ref, computed } from "vue";
 import { useDatabaseStore } from "@/store/database";
 import { useConnectionsStore } from "@/store/connections";
 import { useCommandsStore } from "@/store/commands";
@@ -671,7 +669,6 @@ const isLoading = ref(true);
 const factory = ref(null);
 const factoryContent = ref("");
 
-// Factory data generation state
 const showGenerateDataModal = ref(false);
 const isGenerating = ref(false);
 const recordCount = ref(10);
@@ -683,7 +680,6 @@ const isLoadingRelatedRecords = ref(false);
 const customAttributes = ref([]);
 const availableRelations = ref([]);
 
-// Adicionar estas variáveis:
 const tableColumns = ref([]);
 const isLoadingTableColumns = ref(false);
 const showRelatedRecords = ref(false);
@@ -737,40 +733,29 @@ async function loadFactory() {
 
 async function findFactoryFile(projectPath, tableName, model) {
   try {
-    const pluralize = await window.api.getPluralizeFunction();
-
     let modelName = "";
 
     if (model) {
-      // If we found a model, use its name
       modelName = model.name;
     } else {
-      // If no model found, create a singular PascalCase name from the table
-      // First get the singular form of the table name
       const singularTableName = await window.api.getSingularForm(tableName);
 
-      // Convert to PascalCase
       modelName = singularTableName
         .split("_")
         .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
         .join("");
     }
 
-    // Common patterns for factory filenames
     const factoryPatterns = [
-      // With model name
       `${modelName}Factory.php`,
-      // Alternative name patterns
       `${modelName.toLowerCase()}Factory.php`,
       `${modelName}factory.php`,
       `${modelName}_factory.php`,
       `${modelName.toLowerCase()}_factory.php`,
-      // Try with table name directly
       `${tableName}_factory.php`,
       `${tableName}Factory.php`
     ];
 
-    // Common directories for factories in Laravel projects
     const factoryDirs = ["database/factories", "database/Factory", "app/database/factories"];
 
     const allFactoryFiles = [];
@@ -782,7 +767,6 @@ async function findFactoryFile(projectPath, tableName, model) {
         const result = await window.api.listFiles(fullDirPath);
 
         if (!result.success || !result.files || !Array.isArray(result.files)) {
-          console.log(`No files found or invalid response for ${fullDirPath}`);
           continue;
         }
 
@@ -813,10 +797,9 @@ async function findFactoryFile(projectPath, tableName, model) {
       }
     }
 
-    // Method 2: Look for partial name matches
     const partialMatches = allFactoryFiles.filter((file) => {
       const filename = file.name.toLowerCase();
-      // Check if filename contains both the model name and 'factory'
+
       return (filename.includes(modelName.toLowerCase()) && filename.includes("factory")) || (filename.includes(tableName.toLowerCase()) && filename.includes("factory"));
     });
 
@@ -828,14 +811,11 @@ async function findFactoryFile(projectPath, tableName, model) {
       };
     }
 
-    // Method 3: Search file contents for references to the model or table
     for (const file of allFactoryFiles) {
       const content = await loadFileContent(file.path);
 
-      // Try with both singular and plural forms of the table name
       const singularTable = await window.api.getSingularForm(tableName);
 
-      // Look for patterns indicating this is a factory for our model or table
       if (
         content.includes(`class ${modelName}Factory`) ||
         content.includes(`return ${modelName}::class`) ||
@@ -857,7 +837,6 @@ async function findFactoryFile(projectPath, tableName, model) {
       }
     }
 
-    // No factory found after all attempts
     return null;
   } catch (error) {
     console.error("Error finding factory file:", error);
@@ -865,7 +844,6 @@ async function findFactoryFile(projectPath, tableName, model) {
   }
 }
 
-// Helper to load file content
 async function loadFileContent(filePath) {
   try {
     const result = await window.api.readModelFile(filePath);
@@ -876,10 +854,8 @@ async function loadFileContent(filePath) {
   }
 }
 
-// Load factory file content
 async function loadFactoryContent(filePath) {
   try {
-    // Use the IPC method to read the file
     const result = await window.api.readModelFile(filePath);
 
     if (result.success) {
@@ -944,16 +920,11 @@ async function loadTableColumns() {
   isLoadingTableColumns.value = true;
 
   try {
-    // Obter a estrutura da tabela
     const columns = await databaseStore.getTableStructure(props.connectionId, props.tableName);
 
-    // Filtrar colunas, remover as que não queremos personalizar
     tableColumns.value = columns.filter((col) => {
-      // Ignorar colunas que normalmente não queremos personalizar em factories
       return !["id", "created_at", "updated_at", "deleted_at"].includes(col.name);
     });
-
-    console.log("Table columns loaded:", tableColumns.value);
   } catch (error) {
     console.error("Error loading table columns:", error);
     showAlert("Failed to load table structure", "error");
@@ -964,18 +935,15 @@ async function loadTableColumns() {
 }
 
 function isColumnSelected(columnName, currentIndex) {
-  // Verificar se a coluna já está selecionada em outro atributo
   return customAttributes.value.some((attr, index) => index !== currentIndex && attr.field === columnName);
 }
 
 function getPlaceholderForField(fieldName) {
   if (!fieldName) return "Value";
 
-  // Encontrar o tipo da coluna
   const column = tableColumns.value.find((col) => col.name === fieldName);
   if (!column) return "Value";
 
-  // Baseado no tipo, retornar um placeholder adequado
   const type = column.type?.toLowerCase() || "";
 
   if (type.includes("varchar") || type.includes("text") || type.includes("char")) {
@@ -998,13 +966,11 @@ function getPlaceholderForField(fieldName) {
 function formatRecordPreview(record) {
   if (!record) return "";
 
-  // Cria um objeto simplificado com no máximo as três primeiras propriedades
   const preview = {};
   const keys = Object.keys(record).slice(0, 3);
 
   keys.forEach((key) => {
     if (typeof record[key] === "string") {
-      // Limita o tamanho das strings
       preview[key] = record[key].length > 20 ? record[key].substring(0, 20) + "..." : record[key];
     } else {
       preview[key] = record[key];
@@ -1016,17 +982,15 @@ function formatRecordPreview(record) {
 
 function toggleRelatedRecords() {
   if (showRelatedRecords.value && relatedRecords.value.length > 0) {
-    // Se já estiver mostrando, esconde
     showRelatedRecords.value = false;
   } else {
-    // Se não estiver mostrando, carrega e mostra
     fetchRelatedRecords();
   }
 }
 
 function selectRelatedRecord(id) {
   relatedModelId.value = id;
-  showRelatedRecords.value = false; // Esconde a lista após selecionar
+  showRelatedRecords.value = false;
 }
 
 async function fetchRelatedRecords() {
@@ -1036,24 +1000,17 @@ async function fetchRelatedRecords() {
   relatedRecords.value = [];
 
   try {
-    // Encontrar a tabela correspondente ao modelo selecionado
     const relationTable = availableRelations.value.find((r) => r.model === selectedRelation.value)?.table;
 
     if (!relationTable) {
       throw new Error("Related table not found");
     }
 
-    // Obter os primeiros 10 registros da tabela relacionada
-    const result = await databaseStore.loadTableData(
-      props.connectionId,
-      relationTable,
-      10, // Limitado a 10 registros para performance
-      1
-    );
+    const result = await databaseStore.loadTableData(props.connectionId, relationTable, 10, 1);
 
     if (result && result.data) {
       relatedRecords.value = result.data;
-      showRelatedRecords.value = true; // Mostrar a lista após carregar
+      showRelatedRecords.value = true;
     } else {
       throw new Error("No records found");
     }
@@ -1084,20 +1041,17 @@ function generateCommandPreview() {
   const count = recordCount.value || 10;
   const usingSail = !!connection.value?.usingSail;
 
-  // Construir o comando base
   let factoryChain = `${modelName}::factory(${count})`;
 
-  // Adicionar atributos personalizados
   const validAttributes = customAttributes.value.filter((attr) => attr.field && attr.value !== "");
   if (validAttributes.length > 0) {
     const attributesArray = validAttributes.map((attr) => {
-      // Tenta converter para número ou booleano quando possível
       let value = attr.value;
 
       if (value === "true") value = true;
       else if (value === "false") value = false;
       else if (!isNaN(parseFloat(value)) && isFinite(value)) value = parseFloat(value);
-      else value = `'${value}'`; // String com aspas simples
+      else value = `'${value}'`;
 
       return `'${attr.field}' => ${value}`;
     });
@@ -1105,14 +1059,11 @@ function generateCommandPreview() {
     factoryChain += `->state([${attributesArray.join(", ")}])`;
   }
 
-  // Adicionar relacionamento
   if (selectedRelation.value && relatedModelId.value) {
-    // Converte o nome do modelo para snake_case e adiciona _id
     const foreignKey = selectedRelation.value.replace(/([a-z])([A-Z])/g, "$1_$2").toLowerCase() + "_id";
     factoryChain += `->state(['${foreignKey}' => ${relatedModelId.value}])`;
   }
 
-  // Finalizar o comando
   factoryChain += `->create();`;
 
   const escapedFactoryChain = factoryChain.replace(/\\/g, "\\\\");
@@ -1132,12 +1083,12 @@ async function showDatabaseMismatchDialog(projectDb, connectionDb) {
         <div class="flex flex-col gap-3 mb-6">
           <div class="flex items-center justify-between bg-neutral-content bg-opacity-10 p-3 rounded-lg">
             <span class="text-sm font-medium">Project .env</span>
-            <span class="font-mono text-sm bg-base-200 px-2 py-1 rounded">${projectDb}</span>
+            <span class="font-mono text-sm bg-base-200 px-2 py-1 rounded-sm">${projectDb}</span>
           </div>
 
           <div class="flex items-center justify-between bg-primary bg-opacity-10 p-3 rounded-lg">
             <span class="text-sm font-medium">Your connection</span>
-            <span class="font-mono text-sm bg-base-200 px-2 py-1 rounded">${connectionDb}</span>
+            <span class="font-mono text-sm bg-base-200 px-2 py-1 rounded-sm">${connectionDb}</span>
           </div>
         </div>
 
@@ -1189,7 +1140,6 @@ async function showDatabaseMismatchDialog(projectDb, connectionDb) {
 }
 
 function openGenerateDataModal() {
-  // Resetar valores
   activeTab.value = "relationships";
   customAttributes.value = [];
   selectedRelation.value = "";
@@ -1197,13 +1147,10 @@ function openGenerateDataModal() {
   relatedRecords.value = [];
   showRelatedRecords.value = false;
 
-  // Carregar relações disponíveis
   loadAvailableRelations();
 
-  // Carregar colunas da tabela
   loadTableColumns();
 
-  // Mostrar o modal
   showGenerateDataModal.value = true;
 }
 
@@ -1248,25 +1195,22 @@ async function generateFactoryData() {
         showAlert(`Successfully updated .env file to use database: ${connection.value.database}`, "success");
       } else if (confirmResult === "switchDatabase") {
         isGenerating.value = false;
-        openDatabaseSwitcher();
+        await openDatabaseSwitcher();
         return;
       }
     }
 
-    // Construir a parte Factory do comando
     let factoryChain = `${modelName}::factory(${count})`;
 
-    // Adicionar atributos personalizados
     const validAttributes = customAttributes.value.filter((attr) => attr.field && attr.value !== "");
     if (validAttributes.length > 0) {
       const attributesArray = validAttributes.map((attr) => {
-        // Tenta converter para número ou booleano quando possível
         let value = attr.value;
 
         if (value === "true") value = true;
         else if (value === "false") value = false;
         else if (!isNaN(parseFloat(value)) && isFinite(value)) value = parseFloat(value);
-        else value = `'${value}'`; // String com aspas simples
+        else value = `'${value}'`;
 
         return `'${attr.field}' => ${value}`;
       });
@@ -1274,14 +1218,11 @@ async function generateFactoryData() {
       factoryChain += `->state([${attributesArray.join(", ")}])`;
     }
 
-    // Adicionar relacionamento
     if (selectedRelation.value && relatedModelId.value) {
-      // Converte o nome do modelo para snake_case e adiciona _id
       const foreignKey = selectedRelation.value.replace(/([a-z])([A-Z])/g, "$1_$2").toLowerCase() + "_id";
       factoryChain += `->state(['${foreignKey}' => ${relatedModelId.value}])`;
     }
 
-    // Finalizar o comando
     factoryChain += `->create()`;
 
     const usingSail = !!connection.value.usingSail;
@@ -1300,7 +1241,6 @@ async function generateFactoryData() {
     if (commandResult && commandResult.success) {
       showAlert(`Generating ${count} records for ${props.tableName} table`, "success");
 
-      // Abrir a tabela de dados para mostrar os registros criados
       setTimeout(() => {
         openDataTab();
       }, 1000);
@@ -1319,15 +1259,11 @@ async function generateFactoryData() {
 
 async function updateEnvDatabase(projectPath, database) {
   try {
-    console.log("Updating .env database at path:", projectPath, "to database:", database);
-
     const result = await window.api.updateEnvDatabase(projectPath, database);
 
     if (!result.success) {
       throw new Error(result.message || "Failed to update .env file");
     }
-
-    console.log("Update .env result:", result);
 
     showAlert(`Successfully updated project's .env file to use database: ${database}`, "success");
     return true;
@@ -1345,15 +1281,6 @@ async function openDatabaseSwitcher() {
   } catch (error) {
     console.error("Error opening database switcher:", error);
     showAlert("Failed to open database switcher: " + error.message, "error");
-  }
-}
-
-async function refreshData() {
-  try {
-    await loadFactory();
-  } catch (error) {
-    console.error("Error refreshing data:", error);
-    showAlert("Failed to refresh factory data", "error");
   }
 }
 
@@ -1378,18 +1305,12 @@ function openDataTab() {
 
 async function loadAvailableRelations() {
   try {
-    // Limpa as relações existentes
     availableRelations.value = [];
 
     if (!connection.value?.projectPath) return;
 
-    // Carrega todos os modelos disponíveis
     await databaseStore.loadModelsForTables(props.connectionId, connection.value.projectPath);
 
-    // Obtém uma lista de tabelas no banco de dados
-    const tables = await databaseStore.loadTables(props.connectionId);
-
-    // Para cada tabela, verifica se há um modelo correspondente
     for (const table of databaseStore.tablesList) {
       if (table.name !== props.tableName) {
         const model = databaseStore.getModelForTable(props.connectionId, table.name);
@@ -1401,8 +1322,6 @@ async function loadAvailableRelations() {
         }
       }
     }
-
-    console.log("Available relations:", availableRelations.value);
   } catch (error) {
     console.error("Error loading available relations:", error);
     showAlert("Failed to load available relations", "error");
@@ -1413,5 +1332,3 @@ onMounted(() => {
   loadFactory();
 });
 </script>
-
-<style scoped></style>

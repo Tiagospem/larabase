@@ -172,7 +172,7 @@ export default {
       el.addEventListener("mouseenter", (e) => showTooltip(e, tooltipId, position));
       el.addEventListener("mouseleave", () => hideTooltip(tooltipId));
       el.addEventListener("focus", (e) => showTooltip(e, tooltipId, position));
-      el.addEventListener("blur", () => hideTooltip(tooltipId));
+      el.addEventListener("blur-sm", () => hideTooltip(tooltipId));
     },
 
     updated(el, binding) {

@@ -3,7 +3,7 @@
     class="modal z-50"
     :class="{ 'modal-open': tableDataStore.showEditModal }"
   >
-    <div class="modal-box max-w-4xl">
+    <div class="modal-box max-w-4xl bg-base-300">
       <h3 class="font-bold text-lg mb-4 flex justify-between items-center">
         Edit Record
         <button
@@ -29,16 +29,16 @@
 
       <div
         v-if="editingRecord"
-        class="overflow-y-auto max-h-[60vh]"
+        class="overflow-y-auto max-h-[60vh] px-2"
       >
-        <div
+        <fieldset
           v-for="column in getEditableColumns()"
           :key="column"
-          class="form-control mb-4"
+          class="fieldset mb-4"
         >
-          <label class="label">
+          <label class="label w-full flex justify-between items-center">
             <span class="label-text font-medium">{{ column }}</span>
-            <span class="label-text-alt text-xs bg-base-300 px-2 py-1 rounded-md">
+            <span class="label-text-alt text-xs bg-base-200 px-2 py-1 rounded-md">
               {{ Helpers.getFieldTypeLabel(column) }}
             </span>
           </label>
@@ -46,7 +46,7 @@
           <textarea
             v-if="Helpers.isLongTextField(column)"
             v-model="editingRecord[column]"
-            class="textarea textarea-bordered h-24"
+            class="textarea textarea-bordered h-24 w-full"
             :placeholder="column"
           />
 
@@ -87,7 +87,7 @@
             type="text"
             class="input input-bordered w-full"
           />
-        </div>
+        </fieldset>
       </div>
 
       <div class="modal-action">

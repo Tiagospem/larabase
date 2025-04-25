@@ -1,7 +1,7 @@
 <template>
   <div class="h-full flex flex-col">
     <div
-      class="bg-base-200 p-2 border-b border-neutral flex flex-wrap items-center justify-between gap-2"
+      class="bg-base p-2 border-b border-neutral flex flex-wrap items-center justify-between gap-2"
       v-if="!tablesStore.isLoading"
     >
       <div class="flex flex-wrap items-center gap-2">
@@ -177,32 +177,25 @@ async function safeLoadTableData(forceRetry = false) {
 
     await loadFunc();
 
-    // Se conseguimos carregar com sucesso, mas não há dados, é provável que a tabela esteja vazia
-    // Não vamos mais tentar recarregar automaticamente
     if (!hasData.value && !tableDataStore.loadError) {
       if (loadRetries.value < maxRetries && !wasEmptyChecked.value) {
         loadRetries.value++;
-        console.log(`Retry loading data attempt ${loadRetries.value}/${maxRetries}`);
 
-        // Esperar um pouco antes de tentar novamente
         setTimeout(() => {
           safeLoadTableData();
         }, 500);
         return;
       } else {
-        // Marcamos que já verificamos que esta tabela está vazia
         wasEmptyChecked.value = true;
         console.log("Table appears to be empty, stopping reload attempts");
       }
     }
 
-    // Redefine o contador de tentativas após o sucesso
     loadRetries.value = 0;
   } catch (error) {
     console.error("Failed to load table data:", error);
     tableDataStore.loadError = error.message || "Failed to load table data";
 
-    // Tentar novamente em caso de erro
     if (loadRetries.value < maxRetries) {
       loadRetries.value++;
       console.log(`Error retry attempt ${loadRetries.value}/${maxRetries}`);
@@ -210,7 +203,6 @@ async function safeLoadTableData(forceRetry = false) {
       setTimeout(() => {
         safeLoadTableData();
       }, 800);
-      return;
     }
   }
 }

@@ -1,12 +1,20 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+@plugin "daisyui" {
+  themes: dim --default;
+}
+
+@layer base {
+  *,
+  ::after,
+  ::before,
+  ::backdrop,
+  ::file-selector-button {
+    border-color: var(--color-gray-200, currentcolor);
+  }
+}
 
 :root {
   font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
-  color-scheme: dark;
-  background-color: #1e1e1e;
-  color: #ffffff;
 }
 
 body {
@@ -16,7 +24,6 @@ body {
   min-height: 100vh;
 }
 
-/* Classe para prevenir seleção de texto durante redimensionamento */
 html.resizing,
 html.resizing * {
   user-select: none !important;
@@ -145,4 +152,9 @@ html.resizing * {
 .prose-invert p {
   margin-top: 0.75em;
   margin-bottom: 0.75em;
+}
+
+.table th,
+.table td {
+  @apply border border-[0.5px] border-base-300;
 }

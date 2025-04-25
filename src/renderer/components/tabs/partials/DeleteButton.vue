@@ -32,7 +32,7 @@
         {{ tableDataStore.selectedRows.length }} record(s)? This action cannot be undone.
       </p>
 
-      <div class="form-control mt-2">
+      <fieldset class="fieldset mt-2">
         <label class="label cursor-pointer justify-start gap-2">
           <input
             type="checkbox"
@@ -47,7 +47,7 @@
         >
           Warning: This may cause data inconsistency if related records exist in other tables.
         </p>
-      </div>
+      </fieldset>
 
       <div class="modal-action">
         <button

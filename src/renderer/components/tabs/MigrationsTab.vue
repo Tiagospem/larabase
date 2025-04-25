@@ -158,7 +158,7 @@
           <div
             v-for="migration in migrations"
             :key="migration.id"
-            class="collapse collapse-arrow bg-base-200 mb-2"
+            class="collapse collapse-arrow bg-base-300 mb-2"
           >
             <input type="checkbox" />
             <div class="collapse-title font-medium flex items-center justify-between">
@@ -265,7 +265,7 @@
       v-if="selectedMigration"
       class="modal modal-open"
     >
-      <div class="modal-box w-11/12 max-w-5xl max-h-[90vh] flex flex-col">
+      <div class="modal-box bg-base-300 w-11/12 max-w-5xl max-h-[90vh] flex flex-col">
         <h3 class="font-bold text-lg mb-4">
           Migration:
           {{ selectedMigration.displayName || selectedMigration.name }}

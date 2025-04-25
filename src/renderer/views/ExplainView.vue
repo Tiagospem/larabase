@@ -153,7 +153,7 @@
             </div>
             <textarea
               v-model="queryToAnalyze"
-              class="w-full h-full p-4 resize-none bg-base-200 text-base-content font-mono text-sm focus:outline-none"
+              class="w-full h-full p-4 resize-none bg-base-200 text-base-content font-mono text-sm focus:outline-hidden"
               placeholder="Enter your SQL query here (e.g., SELECT * FROM table WHERE column = value)"
               @keydown.tab.prevent="handleTab"
             />
@@ -260,7 +260,7 @@
                     <td
                       v-for="column in explainColumns"
                       :key="`${index}-${column}`"
-                      class="p-3 text-sm text-base-content max-w-xs overflow-hidden overflow-ellipsis whitespace-nowrap"
+                      class="p-3 text-sm text-base-content max-w-xs overflow-hidden text-ellipsis whitespace-nowrap"
                     >
                       {{ row[column] }}
                     </td>
@@ -282,7 +282,7 @@
                 :key="index"
                 class="flex items-start"
               >
-                <div class="flex-shrink-0">
+                <div class="shrink-0">
                   <div
                     v-if="insight.severity === 'high'"
                     class="w-8 h-8 rounded-full bg-error/10 flex items-center justify-center"

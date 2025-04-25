@@ -6,7 +6,6 @@ const { execSync } = require("child_process");
 const pluralize = require("pluralize");
 const docker = require("./docker");
 
-// Utility function to extract values from .env file
 function extractEnvValue(content, key) {
   const regex = new RegExp(`^${key}=(.*)$`, "m");
   const match = content.match(regex);
@@ -26,6 +25,18 @@ function socketExists(path) {
   }
 }
 
+async function checkDockerByOS() {
+  return await docker.isDockerRunning();
+}
+
+async function isDockerCliAvailable() {
+  return await docker.isDockerAvailable();
+}
+
+async function getDockerContainers() {
+  return await docker.getDockerContainers();
+}
+
 function execCommand(cmd, { timeout = 2000, windowsHide = true, stdio = "pipe" } = {}) {
   try {
     return execSync(cmd, {
@@ -37,20 +48,6 @@ function execCommand(cmd, { timeout = 2000, windowsHide = true, stdio = "pipe" }
   } catch {
     return "";
   }
-}
-
-async function checkDockerByOS() {
-  // Use dockerode to check Docker availability
-  return await docker.isDockerRunning();
-}
-
-async function isDockerCliAvailable() {
-  // Direct check with dockerode
-  return await docker.isDockerAvailable();
-}
-
-async function getDockerContainers() {
-  return await docker.getDockerContainers();
 }
 
 async function detectDockerMysql(port) {
@@ -552,4 +549,4 @@ function registerProjectHandlers() {
   });
 }
 
-module.exports = { registerProjectHandlers, isDockerCliAvailable };
+module.exports = { registerProjectHandlers };

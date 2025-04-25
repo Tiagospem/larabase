@@ -1,7 +1,7 @@
 <template>
   <div
     v-if="tableDataStore.tableData.length > 0"
-    class="bg-base-200 px-4 py-3 border-t border-neutral flex flex-col sm:flex-row justify-between items-center text-xs sticky bottom-0 left-0 right-0 min-h-[56px] z-20"
+    class="bg-neutral px-4 py-3 border-t border-neutral flex flex-col sm:flex-row justify-between items-center text-xs sticky bottom-0 left-0 right-0 min-h-[56px] z-20"
   >
     <div class="flex items-center mb-2 sm:mb-0">
       <span class="text-gray-400">

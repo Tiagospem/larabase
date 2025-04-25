@@ -103,7 +103,7 @@ onMounted(() => {
     wrapper.addEventListener("mouseenter", showTooltip);
     wrapper.addEventListener("mouseleave", hideTooltip);
     wrapper.addEventListener("focus", showTooltip);
-    wrapper.addEventListener("blur", hideTooltip);
+    wrapper.addEventListener("blur-sm", hideTooltip);
   }
 
   window.addEventListener("resize", positionTooltip);
@@ -115,7 +115,7 @@ onUnmounted(() => {
     wrapper.removeEventListener("mouseenter", showTooltip);
     wrapper.removeEventListener("mouseleave", hideTooltip);
     wrapper.removeEventListener("focus", showTooltip);
-    wrapper.removeEventListener("blur", hideTooltip);
+    wrapper.removeEventListener("blur-sm", hideTooltip);
   }
   clearTimeout(showTimeout);
   clearTimeout(hideTimeout);

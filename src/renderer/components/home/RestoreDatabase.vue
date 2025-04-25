@@ -6,7 +6,7 @@
     <div class="modal-box w-11/12 max-w-4xl">
       <h3 class="font-bold text-lg mb-4">Restore Database: {{ restoreConfig.connection?.name }}</h3>
 
-      <div class="form-control w-full mb-4">
+      <fieldset class="fieldset w-full mb-4">
         <label class="label">
           <span class="label-text">SQL Dump File (.sql or .sql.gz)</span>
         </label>
@@ -37,7 +37,7 @@
           <span class="label-text-alt text-error">{{ restoreFileError }}</span>
         </label>
         <p class="text-xs text-gray-500 mt-1">Select a .sql or .sql.gz file to restore</p>
-      </div>
+      </fieldset>
 
       <div
         v-if="isProcessingSql"
@@ -74,7 +74,7 @@
         </p>
       </div>
 
-      <div class="form-control w-full mb-4">
+      <fieldset class="fieldset w-full mb-4">
         <label class="label cursor-pointer justify-start">
           <input
             v-model="overwriteCurrentDb"
@@ -85,11 +85,11 @@
           <span class="label-text">Restore to current database ({{ restoreConfig.connection?.database }})</span>
         </label>
         <p class="text-xs text-gray-500 mt-1">The backup will overwrite your current database</p>
-      </div>
+      </fieldset>
 
-      <div
+      <fieldset
         v-if="!overwriteCurrentDb"
-        class="form-control w-full mb-4"
+        class="fieldset w-full mb-4"
       >
         <label class="label">
           <span class="label-text">Target Database Name</span>
@@ -104,11 +104,11 @@
         <label class="label">
           <span class="label-text-alt">The backup will be restored to this new database</span>
         </label>
-      </div>
+      </fieldset>
 
-      <div
+      <fieldset
         v-if="!overwriteCurrentDb"
-        class="form-control w-full mb-4"
+        class="fieldset w-full mb-4"
       >
         <label class="label cursor-pointer justify-start">
           <input
@@ -122,11 +122,11 @@
         <label class="label">
           <span class="label-text-alt">If enabled, this database will be set as the default for future connections</span>
         </label>
-      </div>
+      </fieldset>
 
-      <div
+      <fieldset
         v-if="restoreConfig.tables.length > 0"
-        class="form-control w-full mb-4"
+        class="fieldset w-full mb-4"
       >
         <label class="label">
           <span class="label-text">Tables to Ignore (Optional)</span>
@@ -149,7 +149,7 @@
           <div
             v-for="table in filteredTables"
             :key="table.name"
-            class="form-control"
+            class="fieldset"
           >
             <label
               class="label cursor-pointer justify-start gap-2"
@@ -168,7 +168,7 @@
                 <span class="label-text">{{ table.name }}</span>
                 <span
                   v-if="table.size"
-                  class="text-xs px-2 py-0.5 rounded"
+                  class="text-xs px-2 py-0.5 rounded-sm"
                   :class="getTableSizeClass(table.size)"
                 >
                   {{ table.formattedRows }}
@@ -186,7 +186,7 @@
         <label class="label">
           <span class="label-text-alt">Select tables to ignore during restore</span>
         </label>
-      </div>
+      </fieldset>
 
       <div class="modal-action">
         <button

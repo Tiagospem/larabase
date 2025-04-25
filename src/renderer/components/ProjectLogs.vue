@@ -18,7 +18,7 @@
               viewBox="0 0 24 24"
               stroke-width="1.5"
               stroke="currentColor"
-              class="w-5 h-5"
+              class="w-4 h-4"
             >
               <path
                 stroke-linecap="round"
@@ -50,7 +50,7 @@
           </button>
           <button
             v-if="props.projectPath && logs.length > 0"
-            class="btn btn-sm btn-primary"
+            class="btn btn-sm btn-error"
             @click="confirmDeleteAllLogs"
           >
             Clear All
@@ -154,7 +154,7 @@
                 </td>
                 <td>
                   <span
-                    class="badge"
+                    class="badge badge-sm"
                     :class="getLogTypeBadgeClass(log.type)"
                   >
                     {{ log.type }}
@@ -411,12 +411,11 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch, inject } from "vue";
+import { computed, inject, onMounted, ref, watch } from "vue";
 import { useSettingsStore } from "@/store/settings";
 import { analyzeLogWithAI } from "@/services/ai/LogAnalysisService";
 import { marked } from "marked";
 
-// Configure marked for security
 marked.setOptions({
   renderer: new marked.Renderer(),
   gfm: true,
@@ -462,44 +461,35 @@ const hasOpenAIConfig = computed(() => {
   return settingsStore.isAIConfigured;
 });
 
-// Cache de análises para evitar múltiplas chamadas à API
 const analysisCache = ref({});
 
-// Carregar análises do localStorage
 function loadAnalysisCache() {
   try {
-    console.log("Loading analysis cache for connection ID:", props.connectionId);
     const cacheKey = `analysis_cache_${props.connectionId}`;
     const savedCache = localStorage.getItem(cacheKey);
 
     if (savedCache) {
       try {
-        const parsedCache = JSON.parse(savedCache);
-        console.log("Loaded analysis cache from localStorage:", Object.keys(parsedCache).length, "entries");
-        console.log("Cache contents sample:", Object.keys(parsedCache).slice(0, 3));
-        analysisCache.value = parsedCache;
+        analysisCache.value = JSON.parse(savedCache);
       } catch (parseError) {
         console.error("Error parsing analysis cache:", parseError);
         analysisCache.value = {};
       }
     } else {
-      console.log("No cache found with key:", cacheKey);
       analysisCache.value = {};
     }
   } catch (error) {
     console.error("Error loading analysis cache:", error);
-    // Em caso de erro, iniciar com um cache vazio
+
     analysisCache.value = {};
   }
 }
 
-// Salvar análises no localStorage
 function saveAnalysisCache() {
   try {
     const cacheKey = `analysis_cache_${props.connectionId}`;
     const cacheJson = JSON.stringify(analysisCache.value);
     localStorage.setItem(cacheKey, cacheJson);
-    console.log("Saved analysis cache with key:", cacheKey, "entries:", Object.keys(analysisCache.value).length);
   } catch (error) {
     console.error("Error saving analysis cache:", error);
   }
@@ -546,50 +536,34 @@ function getLogTypeBadgeClass(type) {
 function viewLogDetails(log) {
   selectedLog.value = log;
 
-  // Debug para entender a estrutura do log
-  console.log("Log being viewed:", {
-    id: log.id,
-    timestamp: log.timestamp,
-    type: log.type,
-    file: log.file,
-    hasStack: !!log.stack
-  });
-
-  // Criar uma chave estável para o cache - combinar timestamp, tipo e parte da mensagem
   const stableId = createStableLogId(log);
 
-  // Verificar se já existe uma análise em cache para este log
   if (analysisCache.value[stableId]) {
-    console.log("Analysis found in cache for log ID:", stableId);
     analysisResult.value = analysisCache.value[stableId];
-    hideLogDetails.value = true; // Auto-hide log details if analysis exists
-    loadedFromCache.value = true; // Indica que a análise foi carregada do cache
+    hideLogDetails.value = true;
+    loadedFromCache.value = true;
   } else {
-    console.log("No analysis in cache for log ID:", stableId);
     analysisResult.value = "";
-    hideLogDetails.value = false; // Show log details if no analysis
+    hideLogDetails.value = false;
     loadedFromCache.value = false;
   }
 
   showLogDetails.value = true;
 }
 
-// Função para criar um ID estável para o log (para uso como chave de cache)
 function createStableLogId(log) {
-  // Combinamos timestamp, tipo e um hash parcial da mensagem para criar um ID único e estável
   const messageHash = hashString(log.message).substring(0, 10);
   return `${log.timestamp}_${log.type}_${messageHash}`;
 }
 
-// Função simples de hash para mensagens
 function hashString(str) {
   let hash = 0;
   for (let i = 0; i < str.length; i++) {
     const char = str.charCodeAt(i);
     hash = (hash << 5) - hash + char;
-    hash = hash & hash; // Conversão para inteiro de 32 bits
+    hash = hash & hash;
   }
-  return Math.abs(hash).toString(16); // Retornar como string hexadecimal
+  return Math.abs(hash).toString(16);
 }
 
 function confirmDeleteAllLogs() {
@@ -606,7 +580,6 @@ async function deleteAllLogs() {
 
     if (result.success) {
       logs.value = [];
-      // Limpar o cache de análises quando todos os logs forem apagados
       analysisCache.value = {};
       saveAnalysisCache();
       showDeleteConfirm.value = false;
@@ -634,7 +607,6 @@ async function openLogFile() {
       logFilePath = `${props.projectPath}/storage/logs/${logs.value[0].file}`;
     }
 
-    console.log("Opening log file:", logFilePath);
     await window.api.openFile(logFilePath);
   } catch (error) {
     console.error("Error opening log file:", error);
@@ -648,14 +620,12 @@ async function refreshLogs() {
       return;
     }
 
-    console.log("Refreshing logs with project path:", props.projectPath);
     const response = await window.api.getProjectLogs({
       projectPath: props.projectPath
     });
 
     logs.value = response || [];
 
-    // Limpar análises obsoletas - manter apenas para logs existentes
     cleanupObsoleteAnalyses();
   } catch (error) {
     console.error("Failed to load logs:", error);
@@ -663,31 +633,22 @@ async function refreshLogs() {
   }
 }
 
-// Função para limpar análises obsoletas
 function cleanupObsoleteAnalyses() {
   if (Object.keys(analysisCache.value).length === 0 || logs.value.length === 0) {
     return;
   }
 
-  // Criar um conjunto de IDs estáveis de logs existentes
   const logStableIds = new Set(logs.value.map((log) => createStableLogId(log)));
 
-  // Extrair IDs do cache
   const cachedIds = Object.keys(analysisCache.value);
-  console.log(`Checking ${cachedIds.length} cached analyses against ${logStableIds.size} logs`);
 
-  // Filtrar o cache para manter apenas análises de logs existentes
   const obsoleteIds = cachedIds.filter((id) => !logStableIds.has(id));
 
   if (obsoleteIds.length > 0) {
-    console.log(`Removing ${obsoleteIds.length} obsolete analyses from cache:`, obsoleteIds);
-
-    // Remover análises obsoletas
     obsoleteIds.forEach((id) => {
       delete analysisCache.value[id];
     });
 
-    // Salvar o cache atualizado
     saveAnalysisCache();
   } else {
     console.log("No obsolete analyses found in cache");
@@ -695,26 +656,23 @@ function cleanupObsoleteAnalyses() {
 }
 
 function close() {
-  // Reset analysis results when closing
   analysisResult.value = "";
   hideLogDetails.value = false;
   loadedFromCache.value = false;
   emit("close");
 }
 
-// Function to convert markdown to HTML
 function markdownToHtml(markdown) {
   if (!markdown) return "";
   return marked.parse(markdown);
 }
 
-// Function to analyze the log with AI
 async function performLogAnalysis() {
   if (!selectedLog.value) return;
 
   isAnalyzing.value = true;
   analysisResult.value = "";
-  loadedFromCache.value = false; // Reset cache indicator
+  loadedFromCache.value = false;
 
   try {
     await settingsStore.loadSettings();
@@ -727,15 +685,13 @@ async function performLogAnalysis() {
     const result = await analyzeLogWithAI(selectedLog.value);
     analysisResult.value = result;
 
-    // Salvar a análise no cache usando a chave estável
     if (selectedLog.value) {
       const stableId = createStableLogId(selectedLog.value);
-      console.log("Saving analysis to cache with stable ID:", stableId);
       analysisCache.value[stableId] = result;
       saveAnalysisCache();
     }
 
-    hideLogDetails.value = true; // Auto-hide log details when analysis is ready
+    hideLogDetails.value = true;
   } catch (error) {
     console.error("Error analyzing log with AI:", error);
     showAlert(`Failed to analyze log: ${error.message}`, "error");
@@ -744,7 +700,6 @@ async function performLogAnalysis() {
   }
 }
 
-// Function to copy analysis to clipboard
 async function copyAnalysisToClipboard() {
   try {
     await navigator.clipboard.writeText(analysisResult.value);
@@ -754,7 +709,6 @@ async function copyAnalysisToClipboard() {
   }
 }
 
-// Function to toggle log details visibility
 function toggleLogDetails() {
   hideLogDetails.value = !hideLogDetails.value;
 }
@@ -780,28 +734,10 @@ watch(
 onMounted(async () => {
   await settingsStore.loadSettings();
 
-  // Verificar se o localStorage está funcionando
-  try {
-    const testKey = "larabase_storage_test";
-    localStorage.setItem(testKey, "test");
-    const testValue = localStorage.getItem(testKey);
-    localStorage.removeItem(testKey);
-
-    if (testValue === "test") {
-      console.log("localStorage is working correctly");
-    } else {
-      console.error("localStorage test failed: set value not retrieved");
-      showAlert("Warning: Browser storage is not working properly. Analysis cache may not persist.", "warning");
-    }
-  } catch (storageError) {
-    console.error("localStorage test error:", storageError);
-    showAlert("Warning: Browser storage is not available. Analysis cache will not persist.", "warning");
-  }
-
   loadAnalysisCache();
 
   if (props.projectPath) {
-    refreshLogs();
+    await refreshLogs();
   }
 });
 </script>
@@ -812,12 +748,10 @@ onMounted(async () => {
   max-width: 900px;
 }
 
-/* Animação de transição para mostrar/ocultar log */
 .mb-4 {
   transition: all 0.3s ease;
 }
 
-/* Melhorar legibilidade da análise */
 .prose-invert h1,
 .prose-invert h2,
 .prose-invert h3 {

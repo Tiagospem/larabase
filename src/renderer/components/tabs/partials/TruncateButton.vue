@@ -1,6 +1,6 @@
 <template>
   <button
-    class="btn btn-sm btn-ghost text-error"
+    class="btn btn-sm btn-ghost"
     :disabled="tableDataStore.totalRecords === 0"
     @click="confirmTruncateTable"
   >
@@ -10,7 +10,7 @@
       viewBox="0 0 24 24"
       stroke-width="1.5"
       stroke="currentColor"
-      class="w-5 h-5"
+      class="w-4 h-4"
     >
       <path
         stroke-linecap="round"

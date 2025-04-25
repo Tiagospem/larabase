@@ -1,6 +1,6 @@
 {
   "name": "larabase",
-  "version": "0.7.2",
+  "version": "0.8.0",
   "description": "An Opined Database GUI for Laravel Developers",
   "main": "dist/main.cjs",
   "type": "commonjs",
@@ -20,7 +20,7 @@
   "author": "Tiago Padilha <tiagospem@gmail.com>",
   "license": "ISC",
   "dependencies": {
-    "daisyui": "3.8.0",
+    "@tailwindcss/postcss": "^4.1.4",
     "dockerode": "^4.0.6",
     "electron-dl": "^4.0.0",
     "electron-store": "^8.1.0",
@@ -32,7 +32,7 @@
     "pluralize": "^8.0.0",
     "redis": "^4.6.10",
     "sql-formatter": "^15.6.0",
-    "tailwindcss": "3.3.3",
+    "tailwindcss": "^4.1.4",
     "uuid": "^11.1.0",
     "vue": "^3.3.4",
     "vue-router": "^4.2.4"
@@ -41,9 +41,9 @@
     "@types/node": "^22.14.1",
     "@vitejs/plugin-vue": "^4.3.4",
     "@vue/tsconfig": "^0.7.0",
-    "autoprefixer": "^10.4.15",
     "concurrently": "^8.2.2",
     "cross-env": "^7.0.3",
+    "daisyui": "^5.0.28",
     "electron": "^32.1.0",
     "electron-builder": "^24.6.4",
     "electron-reload": "^2.0.0-alpha.1",
