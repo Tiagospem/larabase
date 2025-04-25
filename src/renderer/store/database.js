@@ -12,6 +12,7 @@ export const useDatabaseStore = defineStore("database", () => {
   const tableForeignKeys = ref({});
   const tableMigrations = ref({});
   const tableModels = ref({});
+  const lastConnectionId = ref(null);
 
   const _EMPTY_RESULT = (page, limit) => ({
     data: [],
@@ -116,7 +117,13 @@ export const useDatabaseStore = defineStore("database", () => {
 
   async function loadTables(id) {
     isLoading.value = true;
+
     try {
+      if (lastConnectionId.value !== id) {
+        clearCaches();
+        lastConnectionId.value = id;
+      }
+
       const conn = _getConnection(id);
       const result = await window.api.listTables(_buildPayload(conn));
       tables.value = result.success && result.tables ? { tables: result.tables } : { tables: [] };
@@ -428,6 +435,32 @@ export const useDatabaseStore = defineStore("database", () => {
 
   const tablesList = computed(() => tables.value.tables || []);
 
+  function clearCaches() {
+    tableRecords.value = {};
+    tableStructures.value = {};
+    tableIndexes.value = {};
+    tableForeignKeys.value = {};
+    tableMigrations.value = {};
+  }
+
+  function limitCacheSize(cacheObject, maxItems = 50) {
+    const keys = Object.keys(cacheObject);
+    if (keys.length > maxItems) {
+      const keysToRemove = keys.slice(0, keys.length - maxItems);
+      keysToRemove.forEach((key) => {
+        delete cacheObject[key];
+      });
+    }
+  }
+
+  function manageCaches() {
+    limitCacheSize(tableRecords.value);
+    limitCacheSize(tableStructures.value);
+    limitCacheSize(tableIndexes.value);
+    limitCacheSize(tableForeignKeys.value);
+    limitCacheSize(tableMigrations.value);
+  }
+
   return {
     tables,
     isLoading,
@@ -450,6 +483,8 @@ export const useDatabaseStore = defineStore("database", () => {
     truncateTables,
     tablesList,
     getConnection: _getConnection,
-    ensureConnection
+    ensureConnection,
+    clearCaches,
+    manageCaches
   };
 });

@@ -654,6 +654,36 @@ onBeforeMount(() => {
   loadSidebarWidth();
 });
 
+// Adiciona função para gerenciar memória
+const lastTabCount = ref(0);
+
+// Gerenciar memória e caches
+function manageMemory() {
+  // Limita o tamanho dos caches
+  databaseStore.manageCaches();
+
+  // Forçar a limpeza de memória quando houver muitas abas abertas e depois fechadas
+  const currentTabCount = tabsStore.openTabs.length;
+  if (lastTabCount.value > 8 && currentTabCount < 4) {
+    console.log("Forcing memory cleanup");
+    setTimeout(() => {
+      if (window.gc) window.gc();
+    }, 100);
+  }
+  lastTabCount.value = currentTabCount;
+}
+
+onUnmounted(() => {
+  window.removeEventListener("resize", mainTabsRef.value?.checkScrollPosition);
+});
+
+watch(
+  () => tabsStore.openTabs.length,
+  () => {
+    manageMemory();
+  }
+);
+
 async function initializeConnection(skipReload = false) {
   try {
     if (!skipReload) {
@@ -693,6 +723,9 @@ async function initializeConnection(skipReload = false) {
 
     document.querySelector(".flex.flex-col.h-full")?.focus();
     initialConnectionLoad.value = true;
+
+    // Limpar memória após a inicialização completa
+    manageMemory();
   } catch (error) {
     console.error(error);
     connectionError.value = true;
