@@ -26,19 +26,6 @@ function socketExists(path) {
   }
 }
 
-function execCommand(cmd, { timeout = 2000, windowsHide = true, stdio = "pipe" } = {}) {
-  try {
-    return execSync(cmd, {
-      timeout,
-      shell: true,
-      windowsHide,
-      stdio
-    }).toString();
-  } catch {
-    return "";
-  }
-}
-
 async function checkDockerByOS() {
   // Use dockerode to check Docker availability
   return await docker.isDockerRunning();
@@ -51,6 +38,19 @@ async function isDockerCliAvailable() {
 
 async function getDockerContainers() {
   return await docker.getDockerContainers();
+}
+
+function execCommand(cmd, { timeout = 2000, windowsHide = true, stdio = "pipe" } = {}) {
+  try {
+    return execSync(cmd, {
+      timeout,
+      shell: true,
+      windowsHide,
+      stdio
+    }).toString();
+  } catch {
+    return "";
+  }
 }
 
 async function detectDockerMysql(port) {
@@ -552,4 +552,4 @@ function registerProjectHandlers() {
   });
 }
 
-module.exports = { registerProjectHandlers, isDockerCliAvailable };
+module.exports = { registerProjectHandlers };

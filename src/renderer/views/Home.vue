@@ -1,14 +1,14 @@
 <template>
   <div class="flex h-full relative">
-    <div class="w-1/3 bg-base-300 flex flex-col items-center justify-between p-6 border-r border-base-300">
-      <div class="flex flex-col items-center">
+    <div class="w-3/12 bg-base-300 flex flex-col items-center justify-between p-6 border-r border-base-300">
+      <div class="flex flex-col items-center mt-12 w-full text-center">
         <img
           src="../assets/icons/png/512x512.png"
           alt="Larabase"
-          class="h-32 w-32 mb-2 draggable"
+          class="h-22 mb-2 draggable"
         />
-        <h1 class="text-3xl font-bold">Larabase</h1>
-        <p class="text-sm">An opinionated database GUI for Laravel developers</p>
+        <h1 class="text-2xl font-bold">Larabase</h1>
+        <p class="text-xs mt-2">An opinionated database GUI for Laravel developers</p>
       </div>
 
       <button
@@ -33,7 +33,7 @@
       </button>
     </div>
 
-    <div class="w-2/3 flex flex-col">
+    <div class="w-9/12 flex flex-col">
       <div class="flex-1 overflow-auto p-6">
         <h2 class="text-xl font-bold mb-4">Your Connections</h2>
 
