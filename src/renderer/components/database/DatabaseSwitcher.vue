@@ -146,7 +146,7 @@ async function switchDatabase(databaseName) {
 
     databaseStore.clearTableRecordCounts();
 
-    window.location.reload();
+    //window.location.reload();
   } catch (error) {
     console.error(`Failed to switch database: ${error.message}`, "error");
   }
