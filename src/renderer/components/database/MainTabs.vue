@@ -611,7 +611,6 @@ defineExpose({
   min-width: 180px;
   max-width: 180px;
   padding: 0 10px;
-  border-right: 1px solid rgb(24, 24, 27);
   background-color: rgb(24, 24, 27);
   cursor: pointer;
   user-select: none;
@@ -624,12 +623,7 @@ defineExpose({
 }
 
 .tab.pinned {
-  background-color: rgba(59, 130, 246, 0.1);
-  border-top: 2px solid rgba(59, 130, 246, 0.7);
-}
-
-.tab.active.pinned {
-  background-color: rgba(59, 130, 246, 0.15);
+  border-top: 2px solid red;
 }
 
 .pin-indicator {
