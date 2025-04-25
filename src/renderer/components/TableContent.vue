@@ -48,7 +48,7 @@ defineOptions({
 
 const props = defineProps({
   connectionId: {
-    type: Number,
+    type: String,
     required: true
   },
   tableName: {

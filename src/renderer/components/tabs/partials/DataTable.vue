@@ -215,6 +215,10 @@ const props = defineProps({
   storeId: {
     type: String,
     required: true
+  },
+  isLoading: {
+    type: Boolean,
+    default: false
   }
 });
 

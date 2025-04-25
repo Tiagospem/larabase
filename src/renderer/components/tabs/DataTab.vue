@@ -140,7 +140,7 @@ const tablesStore = useTablesStore();
 
 const showAlert = inject("showAlert");
 
-const isLoading = computed(() => tableDataStore.isLoading && !tableDataStore.isLiveUpdating);
+const isLoading = ref(false);
 const loadError = computed(() => !!tableDataStore.loadError);
 const isFilteredEmpty = computed(() => (tableDataStore.filterTerm || tableDataStore.activeFilter) && tableDataStore.filteredData.length === 0);
 const hasData = computed(() => tableDataStore.tableData.length > 0);
@@ -153,9 +153,15 @@ const loadRetries = ref(0);
 const maxRetries = 3;
 const wasReloaded = ref(false);
 
+watch(
+  () => [tableDataStore.isLoading, tableDataStore.isLiveUpdating],
+  ([storeIsLoading, storeIsLiveUpdating]) => {
+    isLoading.value = storeIsLoading && !storeIsLiveUpdating;
+  },
+  { immediate: true }
+);
+
 async function safeLoadTableData(forceRetry = false) {
-  isLoading.value = true;
-  
   if (forceRetry) {
     loadRetries.value = 0;
   }
@@ -200,8 +206,6 @@ async function safeLoadTableData(forceRetry = false) {
       }, 800);
       return;
     }
-  } finally {
-    isLoading.value = false;
   }
 }
 
