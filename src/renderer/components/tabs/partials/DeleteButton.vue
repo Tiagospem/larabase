@@ -31,10 +31,28 @@
         Are you sure you want to delete
         {{ tableDataStore.selectedRows.length }} record(s)? This action cannot be undone.
       </p>
+
+      <div class="form-control mt-2">
+        <label class="label cursor-pointer justify-start gap-2">
+          <input
+            type="checkbox"
+            v-model="ignoreForeignKeys"
+            class="checkbox checkbox-sm"
+          />
+          <span class="label-text">Ignore foreign key constraints (use with caution)</span>
+        </label>
+        <p
+          v-if="ignoreForeignKeys"
+          class="text-xs text-warning mt-1"
+        >
+          Warning: This may cause data inconsistency if related records exist in other tables.
+        </p>
+      </div>
+
       <div class="modal-action">
         <button
           class="btn"
-          @click="tableDataStore.showDeleteConfirm = false"
+          @click="closeModal"
         >
           Cancel
         </button>
@@ -48,18 +66,19 @@
     </div>
     <div
       class="modal-backdrop"
-      @click="tableDataStore.showDeleteConfirm = false"
+      @click="closeModal"
     />
   </div>
 </template>
 
 <script setup>
 import { useTableDataStore } from "@/store/table-data";
-import { inject } from "vue";
+import { inject, ref } from "vue";
 import { useDatabaseStore } from "@/store/database";
 import { useTablesStore } from "@/store/tables";
 
 const showAlert = inject("showAlert");
+const ignoreForeignKeys = ref(false);
 
 const props = defineProps({
   storeId: {
@@ -79,16 +98,30 @@ async function confirmDelete() {
     const idsToDelete = [...tableDataStore.deletingIds];
     const countBeforeDeletion = tableDataStore.totalRecords;
 
-    const result = await databaseStore.deleteRecords(tableDataStore.connectionId, tableDataStore.tableName, idsToDelete);
+    const options = {
+      ignoreForeignKeys: ignoreForeignKeys.value === true
+    };
+
+    const result = await databaseStore.deleteRecords(tableDataStore.connectionId, tableDataStore.tableName, idsToDelete, options);
+
+    if (!result.success) {
+      if (result.constraintError || result.message.includes("referenced by other tables")) {
+        showAlert("Cannot delete records because they are referenced by other tables. Try checking 'Ignore foreign key constraints' or remove the related records first.", "error");
+      } else {
+        showAlert(`Error deleting records: ${result.message}`, "error");
+      }
+      return;
+    }
 
     showAlert(result.message, "success");
 
     tableDataStore.selectedRows = [];
+    // Reset the checkbox after deletion
+    ignoreForeignKeys.value = false;
 
-    // Reduzir o total de registros pelo número de registros excluídos
-    // Ou obter o valor atualizado da API se disponível
-    if (result.deletedCount) {
-      tableDataStore.totalRecordsCount = Math.max(0, countBeforeDeletion - result.deletedCount);
+    // Reduce the total record count by the number of deleted records
+    if (result.affectedRows) {
+      tableDataStore.totalRecordsCount = Math.max(0, countBeforeDeletion - result.affectedRows);
     } else {
       tableDataStore.totalRecordsCount = Math.max(0, countBeforeDeletion - idsToDelete.length);
     }
@@ -106,12 +139,12 @@ async function confirmDelete() {
       });
   } catch (error) {
     console.error("Error in confirmDelete:", error);
-
-    if (error.message.includes("referenced by other tables")) {
-      showAlert("Cannot delete records because they are referenced by other tables. Remove the related records first or use CASCADE constraints.", "error");
-    } else {
-      showAlert(`Error deleting records: ${error.message}`, "error");
-    }
+    showAlert(`Error deleting records: ${error.message}`, "error");
   }
+}
+
+function closeModal() {
+  tableDataStore.showDeleteConfirm = false;
+  ignoreForeignKeys.value = false;
 }
 </script>

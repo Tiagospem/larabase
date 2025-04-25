@@ -256,10 +256,11 @@ function registerTableHandlers(store, dbMonitoringConnections) {
     }
   });
 
-  ipcMain.handle("delete-table-records", async (_e, { connection, tableName, ids } = {}) => {
+  ipcMain.handle("delete-table-records", async (_e, { connection, tableName, ids, ignoreForeignKeys = false } = {}) => {
     if (!connection) throw new Error("Connection details are required");
     if (!tableName) throw new Error("Table name is required");
     if (!Array.isArray(ids) || !ids.length) throw new Error("At least one record ID is required");
+    
     let conn;
     try {
       conn = await _createConnection({
@@ -269,27 +270,46 @@ function registerTableHandlers(store, dbMonitoringConnections) {
         password: connection.password || "",
         database: connection.database
       });
+      
       const valIds = ids.map((id) => (typeof id === "string" && !isNaN(Number(id)) ? Number(id) : id));
-      const [cRes] = await conn.query(_REFERENCE_CONSTRAINTS_SQL, [tableName, connection.database]);
-      const restricts = cRes.filter((c) => ["RESTRICT", "NO ACTION"].includes(c.on_delete));
-      const problematic = [];
-      for (const id of valIds) {
-        for (const c of restricts) {
-          const [r] = await conn.query(`SELECT 1 FROM ${conn.escapeId(c.child_table)} WHERE ${conn.escapeId(c.child_column)} = ? LIMIT 1`, [id]);
-          if (r.length) {
-            problematic.push(id);
-            break;
+      
+      // If ignoreForeignKeys is true, disable foreign key checks
+      if (ignoreForeignKeys === true) {
+        await conn.query("SET FOREIGN_KEY_CHECKS = 0");
+      } else {
+        const [cRes] = await conn.query(_REFERENCE_CONSTRAINTS_SQL, [tableName, connection.database]);
+        const restricts = cRes.filter((c) => ["RESTRICT", "NO ACTION"].includes(c.on_delete));
+        const problematic = [];
+        for (const id of valIds) {
+          for (const c of restricts) {
+            const query = `SELECT 1 FROM ${conn.escapeId(c.child_table)} WHERE ${conn.escapeId(c.child_column)} = ? LIMIT 1`;
+            const [r] = await conn.query(query, [id]);
+            if (r.length) {
+              problematic.push(id);
+              break;
+            }
           }
         }
+        
+        if (problematic.length) {
+          return {
+            success: false,
+            message: `Cannot delete records with IDs ${problematic.join(", ")} because they are referenced by other tables`,
+            problematicIds: problematic
+          };
+        }
       }
-      if (problematic.length)
-        return {
-          success: false,
-          message: `Cannot delete records with IDs ${problematic.join(", ")} because they are referenced by other tables`,
-          problematicIds: problematic
-        };
+      
       const placeholders = valIds.map(() => "?").join(",");
-      const [delRes] = await conn.execute(`DELETE FROM ${conn.escapeId(tableName)} WHERE id IN (${placeholders})`, valIds);
+      const deleteQuery = `DELETE FROM ${conn.escapeId(tableName)} WHERE id IN (${placeholders})`;
+      
+      const [delRes] = await conn.execute(deleteQuery, valIds);
+      
+      // Re-enable foreign key checks if they were disabled
+      if (ignoreForeignKeys === true) {
+        await conn.query("SET FOREIGN_KEY_CHECKS = 1");
+      }
+      
       return {
         success: true,
         message: `${delRes.affectedRows} record(s) deleted successfully`,
@@ -306,6 +326,11 @@ function registerTableHandlers(store, dbMonitoringConnections) {
     } finally {
       if (conn) {
         try {
+          if (ignoreForeignKeys === true) {
+            await conn.query("SET FOREIGN_KEY_CHECKS = 1").catch((e) => {
+              console.error("Error re-enabling foreign key checks:", e);
+            });
+          }
           await conn.end();
         } catch (e) {
           console.error("Error closing connection:", e);

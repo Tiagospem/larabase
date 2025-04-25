@@ -251,7 +251,7 @@ export const useTableDataStore = (id) => {
 
         const result = await databaseStore.loadTableData(connectionId.value, tableName.value, rowsPerPage.value, currentPage.value, sortParams);
 
-        if (!result || typeof result !== 'object') {
+        if (!result || typeof result !== "object") {
           console.error("Invalid data response format");
           return Promise.reject(new Error("Invalid data response format"));
         }
@@ -282,7 +282,7 @@ export const useTableDataStore = (id) => {
 
         await loadForeignKeyInfo();
 
-        if (onLoad.value && typeof onLoad.value === 'function') {
+        if (onLoad.value && typeof onLoad.value === "function") {
           try {
             onLoad.value({
               columns: columns.value,
@@ -382,7 +382,7 @@ export const useTableDataStore = (id) => {
 
         const result = await window.api.getFilteredTableData(payload);
 
-        if (!result || typeof result !== 'object') {
+        if (!result || typeof result !== "object") {
           console.error("Invalid filtered data response format");
           return Promise.reject(new Error("Invalid filtered data response format"));
         }
@@ -400,7 +400,7 @@ export const useTableDataStore = (id) => {
 
         await loadForeignKeyInfo();
 
-        if (onLoad.value && typeof onLoad.value === 'function') {
+        if (onLoad.value && typeof onLoad.value === "function") {
           try {
             onLoad.value({
               columns: columns.value,
@@ -555,11 +555,17 @@ export const useTableDataStore = (id) => {
     function deleteSelected() {
       if (selectedRows.value.length === 0) return;
 
-      deletingIds.value = selectedRows.value.map((index) => {
-        const id = paginatedData.value[index].id;
-
-        return typeof id === "object" ? String(id) : id;
-      });
+      deletingIds.value = selectedRows.value
+        .map((index) => {
+          const row = paginatedData.value[index];
+          if (!row || row.id === undefined) {
+            console.error("Invalid row or missing ID at index", index);
+            return null;
+          }
+          const id = row.id;
+          return id;
+        })
+        .filter((id) => id !== null);
 
       showDeleteConfirm.value = true;
     }

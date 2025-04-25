@@ -59,9 +59,8 @@
         @load-filtered-data="tableDataStore.loadFilteredData()"
         @navigate-to-foreign-key="(column, row) => navigateToForeignKey(column, row)"
       />
-      <div
-        v-else-if="isLoading || loadRetries.value > 0">
-      <TableSkeleton />
+      <div v-else-if="isLoading || loadRetries.value > 0">
+        <TableSkeleton />
       </div>
       <NoRecordState
         v-else
@@ -176,31 +175,31 @@ async function safeLoadTableData(forceRetry = false) {
     };
 
     await loadFunc();
-    
+
     // If after loading we still don't have data and we know the table should have records,
     // try again some times
     if (!hasData.value && !tableDataStore.loadError && loadRetries.value < maxRetries) {
       loadRetries.value++;
       console.log(`Retry loading data attempt ${loadRetries.value}/${maxRetries}`);
-      
+
       // Wait a little before trying again
       setTimeout(() => {
         safeLoadTableData();
       }, 500);
       return;
     }
-    
+
     // Reset retries counter on success
     loadRetries.value = 0;
   } catch (error) {
     console.error("Failed to load table data:", error);
     tableDataStore.loadError = error.message || "Failed to load table data";
-    
+
     // Retry on error
     if (loadRetries.value < maxRetries) {
       loadRetries.value++;
       console.log(`Error retry attempt ${loadRetries.value}/${maxRetries}`);
-      
+
       setTimeout(() => {
         safeLoadTableData();
       }, 800);
@@ -211,7 +210,7 @@ async function safeLoadTableData(forceRetry = false) {
 
 // Adding event to reload data when the page is reloaded with F5
 function handlePageReload() {
-  if (document.visibilityState === 'visible') {
+  if (document.visibilityState === "visible") {
     wasReloaded.value = true;
     loadRetries.value = 0;
     safeLoadTableData(true);
@@ -378,7 +377,7 @@ onActivated(() => {
   window.addEventListener("visibilitychange", handlePageReload);
 
   refreshLiveTableState();
-  
+
   // If the table is active but has no data, try to reload
   if (!hasData.value && !isLoading.value) {
     checkAndReloadIfNeeded();
@@ -445,7 +444,7 @@ onMounted(() => {
     }
 
     safeLoadTableData();
-    
+
     // Check again after a short period if we have data
     setTimeout(checkAndReloadIfNeeded, 1000);
   });

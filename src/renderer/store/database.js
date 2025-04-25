@@ -309,16 +309,21 @@ export const useDatabaseStore = defineStore("database", () => {
     return result;
   }
 
-  async function deleteRecords(id, tableName, ids) {
+  async function deleteRecords(id, tableName, ids, options = {}) {
     const conn = _getConnection(id);
     const sanitized = _sanitize(ids);
-    const result = await window.api.deleteRecords({
+
+    const deleteConfig = {
       connection: _buildPayload(conn),
       tableName,
-      ids: sanitized
-    });
-    if (!result.success) throw new Error(result.message);
+      ids: sanitized,
+      ignoreForeignKeys: options.ignoreForeignKeys === true
+    };
+
+    const result = await window.api.deleteRecords(deleteConfig);
+
     clearTableCache(`${id}:${tableName}`);
+
     return result;
   }
 
