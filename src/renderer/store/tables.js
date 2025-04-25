@@ -81,6 +81,15 @@ export const useTablesStore = defineStore("tables", () => {
     lastLoadedConnection.value = connectionId;
   }
 
+  function updateTableRecordCount(tableName, count) {
+    if (!tableName) return;
+
+    const table = databaseStore.tablesList.find(t => t.name === tableName);
+    if (table) {
+      table.rowCount = count;
+    }
+  }
+
   return {
     // State
     localTables,
@@ -101,6 +110,7 @@ export const useTablesStore = defineStore("tables", () => {
     setSortBy,
     toggleSortOrder,
     formatRecordCount,
-    initializeTables
+    initializeTables,
+    updateTableRecordCount
   };
 });

@@ -116,27 +116,15 @@ async function confirmDelete() {
     showAlert(result.message, "success");
 
     tableDataStore.selectedRows = [];
-    // Reset the checkbox after deletion
     ignoreForeignKeys.value = false;
 
-    // Reduce the total record count by the number of deleted records
-    if (result.affectedRows) {
-      tableDataStore.totalRecordsCount = Math.max(0, countBeforeDeletion - result.affectedRows);
-    } else {
-      tableDataStore.totalRecordsCount = Math.max(0, countBeforeDeletion - idsToDelete.length);
-    }
-
+    const deletedCount = result.affectedRows || idsToDelete.length;
+    const newCount = Math.max(0, countBeforeDeletion - deletedCount);
+    tableDataStore.totalRecordsCount = newCount;
+    
+    tablesStore.updateTableRecordCount(tableDataStore.tableName, newCount);
+    
     await tableDataStore.loadTableData();
-
-    // Update table record count in the sidebar
-    await databaseStore
-      .getTableRecordCount(tableDataStore.connectionId, tableDataStore.tableName)
-      .then((count) => {
-        tablesStore.updateTableRecordCount(tableDataStore.tableName, count);
-      })
-      .catch((error) => {
-        console.error(`Error updating record count: ${error.message}`);
-      });
   } catch (error) {
     console.error("Error in confirmDelete:", error);
     showAlert(`Error deleting records: ${error.message}`, "error");
