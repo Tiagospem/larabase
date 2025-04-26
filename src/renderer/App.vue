@@ -15,12 +15,14 @@
 </template>
 
 <script setup>
-import { ref, provide } from "vue";
+import { ref, provide, onMounted } from "vue";
 import AppAlert from "./components/AppAlert.vue";
 import UpdateNotifier from "./components/UpdateNotifier.vue";
+import { useSettingsStore } from "@/store/settings";
 
 const alertMessage = ref("");
 const alertType = ref("info");
+const settingsStore = useSettingsStore();
 
 function showAlert(message, type = "info") {
   alertMessage.value = message;
@@ -33,6 +35,16 @@ function clearAlert() {
 
 provide("showAlert", showAlert);
 provide("clearAlert", clearAlert);
+
+onMounted(async () => {
+  await settingsStore.loadSettings();
+
+  if (settingsStore.settings.theme) {
+    document.documentElement.setAttribute("data-theme", settingsStore.settings.theme);
+  } else {
+    document.documentElement.setAttribute("data-theme", "dim");
+  }
+});
 </script>
 
 <style>

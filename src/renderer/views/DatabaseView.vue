@@ -44,13 +44,13 @@
 
           <button
             v-tooltip.bottom="'Switch Database'"
-            class="btn btn-ghost btn-sm text-white"
+            class="btn btn-ghost btn-sm"
             title="Switch Database"
             @click="databaseSwitchRef?.openDatabaseSwitcher()"
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
-              fill="none"
+              fill="currentColor"
               viewBox="0 0 24 24"
               stroke-width="1.5"
               stroke="currentColor"
@@ -138,7 +138,7 @@
           >
             <svg
               id="Capa_1"
-              fill="#fff"
+              fill="currentColor"
               class="w-5 h-5"
               xmlns="http://www.w3.org/2000/svg"
               viewBox="0 0 60 60"
@@ -185,7 +185,7 @@
 
           <button
             v-tooltip.bottom="'Migration UI'"
-            class="btn btn-ghost btn-sm text-white"
+            class="btn btn-ghost btn-sm"
             title="Run Artisan Commands"
             @click="showArtisanCommands = true"
           >
@@ -230,10 +230,9 @@
             </svg>
           </button>
 
-          <!-- Laravel Commands Button -->
           <button
             v-tooltip.bottom="'Laravel Commands'"
-            class="btn btn-ghost btn-sm text-white"
+            class="btn btn-ghost btn-sm"
             title="Laravel Commands"
             @click="showLaravelCommands = true"
           >
@@ -258,13 +257,13 @@
             :disabled="!hasRedisConnection"
             :class="{ 'opacity-20': !hasRedisConnection }"
             v-tooltip.bottom="'Redis Manager'"
-            class="btn btn-ghost btn-sm text-white"
+            class="btn btn-ghost btn-sm"
             title="Redis Manager"
             @click="showRedisManager = true"
           >
             <svg
               class="w-5 h-5"
-              fill="#fff"
+              fill="currentColor"
               viewBox="0 -2 28 28"
               xmlns="http://www.w3.org/2000/svg"
             >

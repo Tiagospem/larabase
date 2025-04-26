@@ -121,6 +121,45 @@
         </div>
       </div>
 
+      <div class="card bg-neutral shadow-md">
+        <div class="card-body space-y-4">
+          <h3 class="card-title text-md">Theme</h3>
+
+          <fieldset class="fieldset">
+            <label class="label">
+              <span class="label-text">Select Theme</span>
+            </label>
+            <select
+              v-model="settingsData.theme"
+              class="select select-bordered w-full"
+              @change="applyTheme"
+            >
+              <option value="dim">Dim (Default)</option>
+              <option value="dark">Dark</option>
+              <option value="synthwave">Synthwave</option>
+              <option value="retro">Retro</option>
+              <option value="halloween">Halloween</option>
+              <option value="forest">Forest</option>
+              <option value="aqua">Aqua</option>
+              <option value="pastel">Pastel</option>
+              <option value="wireframe">Wireframe</option>
+              <option value="black">Black</option>
+              <option value="luxury">Luxury</option>
+              <option value="dracula">Dracula</option>
+              <option value="autumn">Autumn</option>
+              <option value="business">Business</option>
+              <option value="lemonade">Lemonade</option>
+              <option value="night">Night</option>
+              <option value="coffee">Coffee</option>
+              <option value="nord">Nord</option>
+              <option value="sunset">Sunset</option>
+              <option value="caramellatte">Caramellatte</option>
+              <option value="abyss">Abyss</option>
+            </select>
+          </fieldset>
+        </div>
+      </div>
+
       <div
         v-if="isDevelopment"
         class="card bg-neutral shadow-md"
@@ -195,7 +234,8 @@ const settingsData = ref({
     model: "gemini-pro"
   },
   language: "en",
-  devMode: false
+  devMode: false,
+  theme: "dim"
 });
 
 const showStorageData = ref(false);
@@ -216,8 +256,20 @@ onMounted(async () => {
     settingsStore.settings.aiProvider = "openai";
   }
 
+  if (!settingsStore.settings.theme) {
+    settingsStore.settings.theme = "dim";
+  } else {
+    // Apply saved theme on component mount
+    document.documentElement.setAttribute("data-theme", settingsStore.settings.theme);
+  }
+
   Object.assign(settingsData.value, settingsStore.settings);
 });
+
+function applyTheme() {
+  const selectedTheme = settingsData.value.theme;
+  document.documentElement.setAttribute("data-theme", selectedTheme);
+}
 
 async function saveAndClose() {
   try {

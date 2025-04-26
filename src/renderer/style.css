@@ -1,6 +1,6 @@
 @import "tailwindcss";
 @plugin "daisyui" {
-  themes: dim --default;
+  themes: all;
 }
 
 @layer base {

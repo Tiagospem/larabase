@@ -13,7 +13,8 @@ export const useSettingsStore = defineStore("settings", () => {
       model: "gemini-2.0-flash" // Make sure this is consistent with the v1beta API
     },
     language: "en",
-    devMode: false
+    devMode: false,
+    theme: "dim" // Default theme
   });
 
   const isLoading = ref(true);
@@ -37,6 +38,10 @@ export const useSettingsStore = defineStore("settings", () => {
                 apiKey: "",
                 model: "gemini-2.0-flash"
               };
+            }
+
+            if (!savedSettings.theme) {
+              savedSettings.theme = "dim";
             }
 
             settings.value = savedSettings;
