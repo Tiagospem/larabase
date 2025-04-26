@@ -10,11 +10,11 @@
           <span class="relative flex h-2 w-2">
             <span
               class="absolute inline-flex h-full w-full rounded-full opacity-75"
-              :class="tableDataStore.isLiveTableActive ? 'animate-ping bg-secondary' : 'bg-transparent'"
+              :class="tableDataStore.isLiveTableActive ? 'animate-ping bg-primary-content' : 'bg-transparent'"
             />
             <span
               class="relative inline-flex rounded-full h-2 w-2"
-              :class="tableDataStore.isLiveTableActive ? 'bg-secondary' : 'bg-transparent'"
+              :class="tableDataStore.isLiveTableActive ? 'bg-primary-content' : 'bg-transparent'"
             />
           </span>
           <svg

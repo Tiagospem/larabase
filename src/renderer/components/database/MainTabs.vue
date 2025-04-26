@@ -1,7 +1,7 @@
 <template>
   <div
     v-if="openTabs.length > 0"
-    class="tabs-container border-b border-black/10 bg-base-300"
+    class="tabs-container border-b border-black/10 bg-base-200"
   >
     <button
       v-if="hasScrollLeft"

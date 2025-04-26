@@ -1,115 +1,75 @@
 <template>
-  <div
-    class="modal z-50"
-    :class="{ 'modal-open': tableDataStore.showEditModal }"
+  <Modal
+    :show="tableDataStore.showEditModal"
+    title="Edit Record"
+    @close="closeEditModal"
+    @action="saveRecord"
+    :show-action-button="true"
+    :action-button-text="'Save Changes'"
   >
-    <div class="modal-box max-w-4xl bg-base-300">
-      <h3 class="font-bold text-lg mb-4 flex justify-between items-center">
-        Edit Record
-        <button
-          class="btn btn-sm btn-circle"
-          @click="closeEditModal"
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            class="h-6 w-6"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M6 18L18 6M6 6l12 12"
-            />
-          </svg>
-        </button>
-      </h3>
-
-      <div
-        v-if="editingRecord"
-        class="overflow-y-auto max-h-[60vh] px-2"
-      >
-        <fieldset
-          v-for="column in getEditableColumns()"
-          :key="column"
-          class="fieldset mb-4"
-        >
-          <label class="label w-full flex justify-between items-center">
-            <span class="label-text font-medium">{{ column }}</span>
-            <span class="label-text-alt text-xs bg-base-200 px-2 py-1 rounded-md">
-              {{ Helpers.getFieldTypeLabel(column) }}
-            </span>
-          </label>
-
-          <textarea
-            v-if="Helpers.isLongTextField(column)"
-            v-model="editingRecord[column]"
-            class="textarea textarea-bordered h-24 w-full"
-            :placeholder="column"
-          />
-
-          <input
-            v-else-if="Helpers.isDateField(column)"
-            v-model="editingRecord[column]"
-            type="datetime-local"
-            class="input input-bordered w-full"
-            :max="'9999-12-31T23:59'"
-          />
-
-          <input
-            v-else-if="Helpers.isNumberField(column)"
-            v-model.number="editingRecord[column]"
-            type="number"
-            class="input input-bordered w-full"
-            step="any"
-          />
-
-          <select
-            v-else-if="Helpers.isBooleanField(column)"
-            v-model="editingRecord[column]"
-            class="select select-bordered w-full"
-          >
-            <option :value="true">True</option>
-            <option :value="false">False</option>
-            <option
-              v-if="editingRecord[column] === null"
-              :value="null"
-            >
-              NULL
-            </option>
-          </select>
-
-          <input
-            v-else
-            v-model="editingRecord[column]"
-            type="text"
-            class="input input-bordered w-full"
-          />
-        </fieldset>
-      </div>
-
-      <div class="modal-action">
-        <button
-          class="btn btn-error"
-          @click="closeEditModal"
-        >
-          Cancel
-        </button>
-        <button
-          class="btn btn-primary"
-          @click="saveRecord"
-        >
-          Save Changes
-        </button>
-      </div>
-    </div>
     <div
-      class="modal-backdrop"
-      @click="closeEditModal"
-    />
-  </div>
+      v-if="editingRecord"
+      class="overflow-y-auto max-h-[60vh] px-2"
+    >
+      <fieldset
+        v-for="column in getEditableColumns()"
+        :key="column"
+        class="fieldset mb-4"
+      >
+        <label class="label w-full flex justify-between items-center">
+          <span class="label-text font-medium">{{ column }}</span>
+          <span class="label-text-alt text-xs bg-base-200 px-2 py-1 rounded-md">
+            {{ Helpers.getFieldTypeLabel(column) }}
+          </span>
+        </label>
+
+        <textarea
+          v-if="Helpers.isLongTextField(column)"
+          v-model="editingRecord[column]"
+          class="textarea textarea-bordered h-24 w-full"
+          :placeholder="column"
+        />
+
+        <input
+          v-else-if="Helpers.isDateField(column)"
+          v-model="editingRecord[column]"
+          type="datetime-local"
+          class="input input-bordered w-full"
+          :max="'9999-12-31T23:59'"
+        />
+
+        <input
+          v-else-if="Helpers.isNumberField(column)"
+          v-model.number="editingRecord[column]"
+          type="number"
+          class="input input-bordered w-full"
+          step="any"
+        />
+
+        <select
+          v-else-if="Helpers.isBooleanField(column)"
+          v-model="editingRecord[column]"
+          class="select select-bordered w-full"
+        >
+          <option :value="true">True</option>
+          <option :value="false">False</option>
+          <option
+            v-if="editingRecord[column] === null"
+            :value="null"
+          >
+            NULL
+          </option>
+        </select>
+
+        <input
+          v-else
+          v-model="editingRecord[column]"
+          type="text"
+          class="input input-bordered w-full"
+        />
+      </fieldset>
+    </div>
+  </Modal>
 </template>
 
 <script setup>
@@ -117,6 +77,7 @@ import { Helpers } from "@/utils/helpers";
 import { useTableDataStore } from "@/store/table-data";
 import { inject, ref, nextTick } from "vue";
 import { useDatabaseStore } from "@/store/database";
+import Modal from "@/components/Modal.vue";
 
 const showAlert = inject("showAlert");
 

@@ -148,7 +148,7 @@
       </div>
 
       <div class="hidden md:flex items-center space-x-2">
-        <span class="text-gray-400">Go to page:</span>
+        <span>Go to page:</span>
         <input
           v-model="pageInput"
           type="number"

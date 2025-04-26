@@ -1,206 +1,169 @@
 <template>
-  <div
-    class="modal z-50"
-    :class="{ 'modal-open': show }"
+  <Modal
+    :show="show"
+    title="Data Preview"
+    @close="$emit('close')"
   >
-    <div class="modal-box bg-base-300 max-w-4xl">
-      <h3 class="font-bold text-lg mb-4 flex justify-between items-center">
-        Data Preview
-        <button
-          class="btn btn-sm btn-circle"
-          @click="$emit('close')"
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            class="h-6 w-6"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M6 18L18 6M6 6l12 12"
-            />
-          </svg>
-        </button>
-      </h3>
+    <div
+      v-if="copyFeedback"
+      class="fixed top-4 right-4 bg-primary py-2 px-4 rounded-md shadow-lg z-50 transition-opacity"
+    >
+      {{ copyFeedback }}
+    </div>
 
+    <div
+      v-if="record"
+      class="overflow-y-auto max-h-[60vh] divide-y divide-black/10"
+    >
       <div
-        v-if="copyFeedback"
-        class="fixed top-4 right-4 bg-primary text-white py-2 px-4 rounded-md shadow-lg z-50 transition-opacity"
+        v-for="column in columns"
+        :key="column"
+        class="py-3"
       >
-        {{ copyFeedback }}
-      </div>
-
-      <div
-        v-if="record"
-        class="overflow-y-auto max-h-[60vh] divide-y divide-base-100"
-      >
-        <div
-          v-for="column in columns"
-          :key="column"
-          class="py-3"
-        >
-          <div class="flex items-start mb-2">
-            <div class="flex items-center gap-2 w-1/4">
-              <button
-                class="btn btn-xs btn-ghost"
-                title="Copy to clipboard"
-                @click="copyToClipboard(record[column])"
+        <div class="flex items-start mb-2">
+          <div class="flex items-center gap-2 w-1/4">
+            <button
+              class="btn btn-xs btn-ghost"
+              title="Copy to clipboard"
+              @click="copyToClipboard(record[column])"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke-width="1.5"
+                stroke="currentColor"
+                class="w-4 h-4"
               >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke-width="1.5"
-                  stroke="currentColor"
-                  class="w-4 h-4"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125h-9.75a1.125 1.125 0 01-1.125-1.125V7.875c0-.621.504-1.125 1.125-1.125H6.75a9.06 9.06 0 011.5.124m7.5 10.376h3.375c.621 0 1.125-.504 1.125-1.125V11.25c0-4.46-3.243-8.161-7.5-8.876a9.06 9.06 0 00-1.5-.124H9.375c-.621 0-1.125.504-1.125 1.125v3.5m7.5 10.375H9.375a1.125 1.125 0 01-1.125-1.125v-9.25m12 6.625v-1.875a3.375 3.375 0 00-3.375-3.375h-1.5a1.125 1.125 0 01-1.125-1.125v-1.5a3.375 3.375 0 00-3.375-3.375H9.75"
-                  />
-                </svg>
-              </button>
-              <span class="font-medium text-sm truncate">{{ column }}</span>
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125h-9.75a1.125 1.125 0 01-1.125-1.125V7.875c0-.621.504-1.125 1.125-1.125H6.75a9.06 9.06 0 011.5.124m7.5 10.376h3.375c.621 0 1.125-.504 1.125-1.125V11.25c0-4.46-3.243-8.161-7.5-8.876a9.06 9.06 0 00-1.5-.124H9.375c-.621 0-1.125.504-1.125 1.125v3.5m7.5 10.375H9.375a1.125 1.125 0 01-1.125-1.125v-9.25m12 6.625v-1.875a3.375 3.375 0 00-3.375-3.375h-1.5a1.125 1.125 0 01-1.125-1.125v-1.5a3.375 3.375 0 00-3.375-3.375H9.75"
+                />
+              </svg>
+            </button>
+            <span class="font-medium text-sm truncate">{{ column }}</span>
+          </div>
+          <div class="w-3/4">
+            <div
+              v-if="record[column] === null || record[column] === undefined"
+              class="italic"
+            >
+              NULL
             </div>
-            <div class="w-3/4">
-              <!-- Null/undefined values -->
-              <div
-                v-if="record[column] === null || record[column] === undefined"
-                class="text-gray-500 italic"
-              >
-                NULL
-              </div>
 
-              <!-- JSON/Object data -->
-              <div
-                v-else-if="isJsonObject(record[column])"
-                class="font-mono text-xs"
-              >
-                <div class="bg-base-300 p-2 rounded-md overflow-x-auto">
-                  <pre class="whitespace-pre-wrap">{{ formatJson(record[column]) }}</pre>
+            <!-- JSON/Object data -->
+            <div
+              v-else-if="isJsonObject(record[column])"
+              class="font-mono text-xs"
+            >
+              <div class="bg-base-300 p-2 rounded-md overflow-x-auto">
+                <pre class="whitespace-pre-wrap">{{ formatJson(record[column]) }}</pre>
+              </div>
+            </div>
+
+            <!-- Array data -->
+            <div
+              v-else-if="isArray(record[column])"
+              class="font-mono text-xs"
+            >
+              <div class="bg-base-300 p-2 rounded-md">
+                <div class="mb-1 text-primary">
+                  Array ({{ record[column].length }}
+                  items)
                 </div>
-              </div>
-
-              <!-- Array data -->
-              <div
-                v-else-if="isArray(record[column])"
-                class="font-mono text-xs"
-              >
-                <div class="bg-base-300 p-2 rounded-md">
-                  <div class="mb-1 text-primary">
-                    Array ({{ record[column].length }}
-                    items)
-                  </div>
-                  <div
-                    v-for="(item, i) in record[column].slice(0, 5)"
-                    :key="i"
-                    class="mb-1 pl-2 border-l-2 border-base-content"
-                  >
-                    <span class="text-gray-500">[{{ i }}]</span>
-                    {{ formatPreviewValue(item) }}
-                  </div>
-                  <div
-                    v-if="record[column].length > 5"
-                    class="text-gray-500 italic"
-                  >
-                    ...and
-                    {{ record[column].length - 5 }} more items
-                  </div>
-                </div>
-              </div>
-
-              <!-- Long text data -->
-              <div
-                v-else-if="isLongText(record[column])"
-                class="relative"
-              >
                 <div
-                  class="text-sm"
-                  :class="{
-                    'line-clamp-5': !expandedFields[column]
-                  }"
+                  v-for="(item, i) in record[column].slice(0, 5)"
+                  :key="i"
+                  class="mb-1 pl-2 border-l-2 border-base-content"
                 >
-                  {{ record[column] }}
+                  <span>[{{ i }}]</span>
+                  {{ formatPreviewValue(item) }}
                 </div>
-                <button
-                  v-if="shouldShowExpandButton(record[column])"
-                  class="btn btn-xs mt-1"
-                  @click="toggleFieldExpansion(column)"
-                >
-                  {{ expandedFields[column] ? "Show less" : "Show more" }}
-                </button>
-              </div>
-
-              <!-- Date data -->
-              <div
-                v-else-if="Helpers.isDateField(column) && record[column]"
-                class="text-sm"
-              >
-                <div class="text-primary">
-                  {{ formatDateForDisplay(record[column]) }}
-                </div>
-                <div class="text-xs text-gray-500">
-                  {{ formatDateAgo(record[column]) }}
-                </div>
-              </div>
-
-              <!-- Boolean data -->
-              <div
-                v-else-if="typeof record[column] === 'boolean'"
-                class="text-sm"
-              >
                 <div
-                  class="badge"
-                  :class="record[column] ? 'badge-success' : 'badge-error'"
+                  v-if="record[column].length > 5"
+                  class="italic"
                 >
-                  {{ record[column] ? "true" : "false" }}
+                  ...and
+                  {{ record[column].length - 5 }} more items
                 </div>
               </div>
+            </div>
 
-              <!-- Number data -->
+            <!-- Long text data -->
+            <div
+              v-else-if="isLongText(record[column])"
+              class="relative break-all"
+            >
               <div
-                v-else-if="typeof record[column] === 'number'"
-                class="text-sm font-mono"
-              >
-                {{ record[column].toLocaleString() }}
-              </div>
-
-              <!-- Default/string data -->
-              <div
-                v-else
                 class="text-sm"
+                :class="{
+                  'line-clamp-5': !expandedFields[column]
+                }"
               >
                 {{ record[column] }}
               </div>
+              <button
+                v-if="shouldShowExpandButton(record[column])"
+                class="btn btn-xs mt-1"
+                @click="toggleFieldExpansion(column)"
+              >
+                {{ expandedFields[column] ? "Show less" : "Show more" }}
+              </button>
+            </div>
+
+            <!-- Date data -->
+            <div
+              v-else-if="Helpers.isDateField(column) && record[column]"
+              class="text-sm"
+            >
+              <div class="text-primary">
+                {{ formatDateForDisplay(record[column]) }}
+              </div>
+              <div class="text-xs">
+                {{ formatDateAgo(record[column]) }}
+              </div>
+            </div>
+
+            <!-- Boolean data -->
+            <div
+              v-else-if="typeof record[column] === 'boolean'"
+              class="text-sm"
+            >
+              <div
+                class="badge"
+                :class="record[column] ? 'badge-success' : 'badge-error'"
+              >
+                {{ record[column] ? "true" : "false" }}
+              </div>
+            </div>
+
+            <!-- Number data -->
+            <div
+              v-else-if="typeof record[column] === 'number'"
+              class="text-sm font-mono"
+            >
+              {{ record[column].toLocaleString() }}
+            </div>
+
+            <!-- Default/string data -->
+            <div
+              v-else
+              class="text-sm"
+            >
+              {{ record[column] }}
             </div>
           </div>
         </div>
       </div>
-
-      <div class="modal-action">
-        <button
-          class="btn btn-primary"
-          @click="$emit('close')"
-        >
-          Close
-        </button>
-      </div>
     </div>
-    <div
-      class="modal-backdrop"
-      @click="$emit('close')"
-    />
-  </div>
+  </Modal>
 </template>
 
 <script setup>
 import { ref, defineProps, defineEmits, watch } from "vue";
 import { Helpers } from "@/utils/helpers";
+import Modal from "@/components/Modal.vue";
 
 const props = defineProps({
   show: {

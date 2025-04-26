@@ -1,7 +1,7 @@
 <template>
   <div class="relative h-full flex flex-col">
     <div
-      class="sidebar-container bg-base-300 border-r border-black/10 flex flex-col h-full w-full overflow-hidden"
+      class="sidebar-container bg-base-200 border-r border-black/10 flex flex-col h-full w-full overflow-hidden"
       :style="{ width: sidebarWidth + 'px' }"
     >
       <div class="p-3 border-b border-black/10 shrink-0">
