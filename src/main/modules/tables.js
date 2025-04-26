@@ -139,29 +139,50 @@ function registerTableHandlers(store, dbMonitoringConnections) {
     const { error, connection, isMonitored } = await _getDbConnection({ store, dbMonitoringConnections }, config);
     if (error) return _error("tables", error);
     try {
+      // Primeiro vamos obter a lista de tabelas
       const [tables] = await connection.query(_LIST_TABLES_SQL, [config.database]);
-
-      const [tableCounts] = await connection.query(
-        `
-        SELECT 
-          TABLE_NAME as name, 
-          TABLE_ROWS as rowCount
-        FROM 
-          information_schema.TABLES 
-        WHERE 
-          TABLE_SCHEMA = ?
-      `,
-        [config.database]
-      );
-
-      const countsMap = {};
-      tableCounts.forEach((row) => {
-        countsMap[row.name] = row.rowCount;
-      });
-
-      tables.forEach((table) => {
-        table.rowCount = countsMap[table.name] || 0;
-      });
+      
+      if (tables.length === 0) {
+        return { success: true, tables: [] };
+      }
+      
+      // Construir uma única consulta para contar todas as tabelas
+      // Usando UNION ALL para combinar resultados de cada tabela
+      const tableCountQueries = tables.map(table => {
+        const escapedTable = connection.escapeId(table.name);
+        return `SELECT '${table.name}' AS tableName, COUNT(*) AS rowCount FROM ${escapedTable}`;
+      }).join(' UNION ALL ');
+      
+      try {
+        // Executar a contagem em uma única consulta SQL
+        const [countResults] = await connection.query(tableCountQueries);
+        
+        // Criar um mapa para armazenar os resultados da contagem
+        const countsMap = {};
+        countResults.forEach(row => {
+          countsMap[row.tableName] = row.rowCount;
+        });
+        
+        // Adicionar contagens exatas às tabelas
+        tables.forEach(table => {
+          table.rowCount = countsMap[table.name] || 0;
+        });
+      } catch (countError) {
+        // Se houver erro na contagem em massa, vamos tentar individualmente
+        console.error("Erro na contagem em massa, tentando individualmente:", countError);
+        
+        // Fazer as contagens uma a uma para cada tabela
+        for (const table of tables) {
+          try {
+            const escapedTable = connection.escapeId(table.name);
+            const [rows] = await connection.query(`SELECT COUNT(*) AS rowCount FROM ${escapedTable}`);
+            table.rowCount = rows[0]?.rowCount || 0;
+          } catch (err) {
+            console.error(`Erro ao contar registros da tabela ${table.name}:`, err);
+            table.rowCount = 0;
+          }
+        }
+      }
 
       return { success: true, tables: tables };
     } catch (err) {

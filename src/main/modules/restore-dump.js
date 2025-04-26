@@ -172,7 +172,7 @@ function buildCredentialFlags({ user, password, host, port }) {
 
 function buildInitCommand(database, overwriteCurrentDb = false) {
   if (overwriteCurrentDb) {
-    return ` --init-command="USE \\\`${database}\\\`;"`;
+    return ` --init-command="DROP DATABASE IF EXISTS \\\`${database}\\\`; CREATE DATABASE \\\`${database}\\\`; USE \\\`${database}\\\`;"`;
   }
   return ` --init-command="CREATE DATABASE IF NOT EXISTS \\\`${database}\\\`; USE \\\`${database}\\\`;"`;
 }

@@ -221,7 +221,7 @@ async function executeMysqlFileInContainer(containerName, credentials, database,
         "--binary-mode=1",
         "--force",
         "--init-command",
-        overwriteCurrentDb ? `USE \`${database}\`;` : `CREATE DATABASE IF NOT EXISTS \`${database}\`; USE \`${database}\`;`,
+        overwriteCurrentDb ? `DROP DATABASE IF EXISTS \`${database}\`; CREATE DATABASE \`${database}\`; USE \`${database}\`;` : `CREATE DATABASE IF NOT EXISTS \`${database}\`; USE \`${database}\`;`,
         ...mysqlFlags
           .trim()
           .split(" ")
