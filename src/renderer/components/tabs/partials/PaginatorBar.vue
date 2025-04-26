@@ -1,10 +1,10 @@
 <template>
   <div
     v-if="tableDataStore.tableData.length > 0"
-    class="bg-neutral px-4 py-3 border-t border-neutral flex flex-col sm:flex-row justify-between items-center text-xs sticky bottom-0 left-0 right-0 min-h-[56px] z-20"
+    class="bg-base-300 px-4 py-3 border-t border-black/10 flex flex-col sm:flex-row justify-between items-center text-xs sticky bottom-0 left-0 right-0 min-h-[56px] z-20"
   >
     <div class="flex items-center mb-2 sm:mb-0">
-      <span class="text-gray-400">
+      <span>
         {{ tableDataStore.totalRecords }} records{{ tableDataStore.selectedRows.length > 0 ? ` | ${tableDataStore.selectedRows.length} selected` : "" }} |
         <span>{{ tableDataStore.columns.length }} columns</span>
       </span>
@@ -137,7 +137,7 @@
       <div class="flex items-center space-x-2">
         <select
           v-model="tableDataStore.rowsPerPage"
-          class="select select-xs select-bordered bg-base-300 w-22"
+          class="select select-xs select-bordered w-22"
           @change="tableDataStore.currentPage = 1"
         >
           <option value="10">10 rows</option>
@@ -154,7 +154,7 @@
           type="number"
           min="1"
           :max="totalPages"
-          class="input input-xs input-bordered bg-base-300 w-14"
+          class="input input-xs input-bordered w-14"
           @keyup.enter="goToPage"
         />
         <button

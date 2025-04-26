@@ -1,6 +1,6 @@
 <template>
   <div class="flex h-full relative">
-    <div class="w-3/12 bg-neutral flex flex-col items-center justify-between p-6">
+    <div class="w-3/12 bg-base-300 flex flex-col items-center justify-between p-6">
       <div class="flex flex-col items-center mt-12 w-full text-center">
         <img
           src="../assets/icons/png/512x512.png"
@@ -81,7 +81,7 @@
             viewBox="0 0 24 24"
             stroke-width="1.5"
             stroke="currentColor"
-            class="w-16 h-16 mb-6 text-gray-500"
+            class="w-16 h-16 mb-6"
           >
             <path
               stroke-linecap="round"
@@ -100,7 +100,7 @@
           <div
             v-for="connection in connectionsStore.connections"
             :key="connection.id"
-            class="card bg-neutral shadow-xl transition-colors border border-base-200 hover:border-base-100"
+            class="card bg-base-300 shadow-sm transition-colors border border-base-300 hover:bg-base-200"
           >
             <div class="card-body py-4 px-5">
               <div class="flex flex-col sm:flex-row items-start sm:items-center gap-4">
@@ -108,19 +108,19 @@
                   class="w-10 h-10 rounded-full flex items-center justify-center shrink-0"
                   :class="getConnectionColor(connection.type)"
                 >
-                  <span class="font-bold">{{ connection.icon }}</span>
+                  <span class="font-bold text-base-100">{{ connection.icon }}</span>
                 </div>
                 <div class="flex-1 min-w-0">
                   <h2 class="card-title overflow-hidden whitespace-nowrap text-ellipsis">
-                    {{ connection.name }}
+                    <span>{{ connection.name }}</span>
                     <span
                       v-if="connection.isValid"
-                      class="text-xs text-green-500 ml-1"
+                      class="text-xs text-success ml-1"
                       >{{ connection.status }}</span
                     >
                     <span
                       v-else
-                      class="text-xs text-red-500 ml-1"
+                      class="text-xs text-error ml-1"
                       >Invalid</span
                     >
                   </h2>

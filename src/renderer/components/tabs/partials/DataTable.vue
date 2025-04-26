@@ -12,13 +12,13 @@
       <table class="table table-sm w-[110%] table-fixed min-w-full">
         <thead class="sticky top-0 z-15">
           <tr class="text-xs select-none">
-            <th class="w-10 px-2 py-2 border-r border-base-100 bg-neutral sticky left-0 z-10">
+            <th class="w-10 px-2 py-2 bg-base-300 sticky left-0 z-10">
               <span class="sr-only">Preview</span>
             </th>
             <th
               v-for="(column, index) in tableDataStore.columns"
               :key="column"
-              class="px-4 py-2 border-r border-base-100 last:border-r-0 relative whitespace-nowrap top-0 cursor-pointer bg-neutral"
+              class="px-4 py-2 bg-base-300 last:border-r-0 relative whitespace-nowrap top-0 cursor-pointer"
               :style="{
                 width: tableDataStore.columnWidths[column] || tableDataStore.defaultColumnWidth(column),
                 maxWidth: tableDataStore.columnWidths[column] || tableDataStore.defaultColumnWidth(column)
@@ -94,7 +94,7 @@
             @mouseenter.stop="handleMouseEnter(rowIndex)"
           >
             <td
-              class="w-10 px-2 py-1 border-r border-base-200 text-center sticky left-0 z-10"
+              class="w-10 px-2 py-1 text-center sticky left-0 z-10 bg-base-100"
               :class="getRowBackgroundClass(rowIndex)"
             >
               <button
@@ -126,7 +126,7 @@
             <td
               v-for="(column, colIndex) in tableDataStore.columns"
               :key="`${rowIndex}-${column}-${colIndex}`"
-              class="px-2 py-1 border-r border-base-200 last:border-r-0 truncate whitespace-nowrap overflow-hidden z-1"
+              class="px-2 py-1 bg-base-100 truncate whitespace-nowrap overflow-hidden z-1"
               :style="{
                 width: tableDataStore.columnWidths[column] || tableDataStore.defaultColumnWidth(column),
                 maxWidth: tableDataStore.columnWidths[column] || tableDataStore.defaultColumnWidth(column)

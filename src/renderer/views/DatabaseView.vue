@@ -4,15 +4,15 @@
     class="flex flex-col h-full relative"
     tabindex="0"
   >
-    <div class="absolute w-full h-10 bg-neutral top-0 draggable z-10"></div>
+    <div class="absolute w-full h-10 bg-base-300 top-0 draggable z-10"></div>
 
-    <header class="bg-neutral mt-8 pt-2 px-4 z-20 pb-2 border-b border-neutral flex items-center justify-between">
+    <header class="bg-base-300 mt-8 pt-2 px-4 z-20 pb-2 border-b border-black/10 flex items-center justify-between">
       <div class="flex items-center">
         <div
           class="w-8 h-8 rounded-full flex items-center justify-center mr-2"
           :class="getConnectionColor(connection?.type)"
         >
-          <span class="text-white font-bold text-sm">{{ connection?.icon }}</span>
+          <span class="text-base-100 font-bold text-sm">{{ connection?.icon }}</span>
         </div>
 
         <ShowConnectionInfo :connection-id="connectionId" />
@@ -338,19 +338,19 @@
         @update:sidebar-width="sidebarWidth = $event"
       />
 
-      <div class="flex-1 bg-base-100 overflow-hidden">
+      <div class="flex-1 bg-base-200 overflow-hidden">
         <div
           v-if="!activeTab"
-          class="flex items-center justify-center h-full text-gray-500"
+          class="flex items-center justify-center h-full"
         >
           <div class="text-center">
             <svg
               xmlns="http://www.w3.org/2000/svg"
-              fill="none"
+              fill="currentColor"
               viewBox="0 0 24 24"
               stroke-width="1.5"
               stroke="currentColor"
-              class="w-12 h-12 mx-auto mb-4 text-gray-400"
+              class="w-12 h-12 mx-auto mb-4"
             >
               <path
                 stroke-linecap="round"
@@ -377,7 +377,7 @@
       </div>
     </div>
 
-    <footer class="bg-neutral px-4 py-1 text-xs text-gray-400 border-t border-black/20">
+    <footer class="bg-base-300 px-4 py-1 text-xs border-t border-black/10">
       <div class="flex justify-between">
         <div>
           {{ connection?.type.toUpperCase() }} |
@@ -469,9 +469,9 @@
     v-if="showTablesModelsModal"
     class="modal modal-open"
   >
-    <div class="modal-box w-11/12 max-w-5xl max-h-[90vh]">
+    <div class="modal-box w-11/12 max-w-5xl max-h-[90vh] bg-base-300">
       <h3 class="font-bold text-lg mb-4">All Tables Models Data</h3>
-      <div class="mockup-code bg-neutral mb-4 h-[60vh] overflow-auto">
+      <div class="bg-base-200 mb-4 h-[60vh] overflow-auto">
         <pre><code>{{ allTablesModelsJson }}</code></pre>
       </div>
       <div class="modal-action">
@@ -530,7 +530,6 @@ import DatabaseSwitcher from "@/components/database/DatabaseSwitcher.vue";
 import RedisManager from "@/components/RedisManager.vue";
 import LaravelCommands from "../components/LaravelCommands.vue";
 
-// Define o nome do componente para o keep-alive
 defineOptions({
   name: "DatabaseView"
 });
@@ -653,18 +652,14 @@ onBeforeMount(() => {
   loadSidebarWidth();
 });
 
-// Adiciona função para gerenciar memória
 const lastTabCount = ref(0);
 
-// Gerenciar memória e caches
 function manageMemory() {
-  // Limita o tamanho dos caches
   databaseStore.manageCaches();
 
-  // Forçar a limpeza de memória quando houver muitas abas abertas e depois fechadas
   const currentTabCount = tabsStore.openTabs.length;
+
   if (lastTabCount.value > 8 && currentTabCount < 4) {
-    console.log("Forcing memory cleanup");
     setTimeout(() => {
       if (window.gc) window.gc();
     }, 100);
@@ -696,7 +691,6 @@ async function initializeConnection(skipReload = false) {
       return;
     }
 
-    // Only test connection if not already loaded
     if (!loadedConnections.value.has(connectionId.value)) {
       const connectionValid = await testConnection();
       if (!connectionValid) {
@@ -723,7 +717,6 @@ async function initializeConnection(skipReload = false) {
     document.querySelector(".flex.flex-col.h-full")?.focus();
     initialConnectionLoad.value = true;
 
-    // Limpar memória após a inicialização completa
     manageMemory();
   } catch (error) {
     console.error(error);

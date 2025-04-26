@@ -1,11 +1,11 @@
 <template>
   <div
     v-if="openTabs.length > 0"
-    class="tabs-container border-b border-neutral bg-base-300"
+    class="tabs-container border-b border-black/10 bg-base-300"
   >
     <button
       v-if="hasScrollLeft"
-      class="tab-scroll-button bg-info-content"
+      class="tab-scroll-button bg-accent text-base-100"
       @click="scrollLeft"
     >
       <svg
@@ -30,13 +30,15 @@
       @scroll="checkScrollPosition"
     >
       <div
+        class="border-r border-r-black/10"
         v-for="tab in openTabs"
         :key="tab.id"
         :class="[
-          'tab bg-base-200 hover:bg-base-100',
+          'tab',
           {
-            '!bg-base-100 !text-white': tab.id === activeTabId,
-            'border-t border-primary': isTabPinned(tab.id)
+            'bg-base-200': tab.id !== activeTabId,
+            'bg-base-100 border-t-2 border-accent': tab.id === activeTabId,
+            '': isTabPinned(tab.id)
           }
         ]"
         draggable="true"
@@ -51,11 +53,11 @@
         >
           <IconPin
             v-if="!isTabPinned(tab.id)"
-            class="opacity-50 hover:opacity-100"
+            class="opacity-20 hover:opacity-100"
           />
           <IconPinFilled
             v-else
-            class="text-primary"
+            class="text-accent"
           />
         </span>
         <span class="tab-title">{{ tab.title }}</span>
@@ -83,7 +85,7 @@
 
     <button
       v-if="hasScrollRight"
-      class="tab-scroll-button bg-info-content"
+      class="tab-scroll-button bg-accent text-base-100"
       @click="scrollRight"
     >
       <svg
@@ -103,10 +105,9 @@
     </button>
 
     <div
-      class="tabs-actions flex items-center bg-black"
+      class="tabs-actions flex items-center bg-base-300"
       v-if="pinnedTabs.length > 0"
     >
-      <!-- Pinned tabs actions menu -->
       <div class="dropdown dropdown-end">
         <label
           tabindex="0"
@@ -114,11 +115,11 @@
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
-            fill="none"
+            fill="currentColor"
             viewBox="0 0 24 24"
             stroke-width="1.5"
             stroke="currentColor"
-            class="w-4 h-4 mr-1"
+            class="w-4 h-4"
           >
             <path
               stroke-linecap="round"
@@ -126,7 +127,7 @@
               d="M12 6.75a.75.75 0 110-1.5.75.75 0 010 1.5zM12 12.75a.75.75 0 110-1.5.75.75 0 010 1.5zM12 18.75a.75.75 0 110-1.5.75.75 0 010 1.5z"
             />
           </svg>
-          <div class="bg-neutral text-xs rounded-full px-1.5 text-center ml-1 min-w-[20px]">
+          <div class="bg-accent text-base-100 text-xs rounded-full px-1.5 text-center ml-1 min-w-[20px]">
             {{ pinnedTabs.length }}
           </div>
         </label>
@@ -168,61 +169,43 @@
     </div>
   </div>
 
-  <!-- Truncate Confirmation Modal -->
-  <div
-    class="modal"
-    :class="{ 'modal-open': showTruncateConfirm }"
+  <Modal
+    :show="showTruncateConfirm"
+    title="Truncate Tables"
+    @close="showTruncateConfirm = false"
+    @action="truncatePinnedTables"
+    :show-action-button="true"
+    :is-loading-action="isProcessing"
+    :action-button-text="'Truncate Tables'"
+    width="w-lg"
   >
-    <div class="modal-box">
-      <h3 class="font-bold text-lg text-error">⚠️ Truncate Tables</h3>
-      <p class="py-4">
-        Are you sure you want to truncate <strong>{{ pinnedTabs.length }}</strong> table(s)? This will delete ALL records and cannot be undone.
-      </p>
-      <div class="max-h-40 overflow-y-auto bg-base-300 rounded-sm p-2 mb-4">
-        <ul class="list-disc pl-4 space-y-1">
-          <li
-            v-for="tab in pinnedTabs"
-            :key="tab.id"
-          >
-            {{ tab.tableName }}
-          </li>
-        </ul>
-      </div>
-      <fieldset class="fieldset">
-        <label class="label cursor-pointer justify-start">
-          <input
-            v-model="ignoreForeignKeys"
-            type="checkbox"
-            class="checkbox checkbox-sm checkbox-error mr-2"
-          />
-          <span class="label-text">Ignore foreign key constraints</span>
-        </label>
-      </fieldset>
-      <div class="modal-action">
-        <button
-          class="btn"
-          @click="showTruncateConfirm = false"
+    <p class="py-4">
+      <span class="block font-bold"
+        >Are you sure you want to truncate <strong>{{ pinnedTabs.length }}</strong>
+      </span>
+      <span class="text-sm text-error"> table(s)? This will delete ALL records and cannot be undone. </span>
+    </p>
+    <div class="max-h-40 overflow-y-auto bg-base-100 rounded-sm p-2 mb-4">
+      <ul class="list-disc pl-4 space-y-1">
+        <li
+          v-for="tab in pinnedTabs"
+          :key="tab.id"
         >
-          Cancel
-        </button>
-        <button
-          class="btn btn-error"
-          :disabled="isProcessing"
-          @click="truncatePinnedTables"
-        >
-          <span
-            v-if="isProcessing"
-            class="loading loading-spinner loading-xs mr-2"
-          ></span>
-          Truncate Tables
-        </button>
-      </div>
+          {{ tab.tableName }}
+        </li>
+      </ul>
     </div>
-    <div
-      class="modal-backdrop"
-      @click="showTruncateConfirm = false"
-    />
-  </div>
+    <fieldset class="fieldset">
+      <label class="label cursor-pointer justify-start">
+        <input
+          v-model="ignoreForeignKeys"
+          type="checkbox"
+          class="checkbox checkbox-sm checkbox-error"
+        />
+        <span class="label-text text-error">Ignore foreign key constraints</span>
+      </label>
+    </fieldset>
+  </Modal>
 </template>
 
 <script setup>
@@ -233,6 +216,7 @@ import { useTablesStore } from "@/store/tables";
 import IconPin from "@/components/icons/IconPin.vue";
 import IconPinFilled from "@/components/icons/IconPinFilled.vue";
 import IconTruncate from "@/components/icons/IconTruncate.vue";
+import Modal from "@/components/Modal.vue";
 
 const props = defineProps({
   connectionId: {
@@ -609,20 +593,17 @@ defineExpose({
   height: 100%;
   min-width: 180px;
   max-width: 180px;
-  padding: 0 10px;
+  padding: 0 5px;
   cursor: pointer;
   user-select: none;
-  transition: background-color 0.2s;
 }
 
 .pin-indicator {
-  margin-right: 8px;
   display: inline-flex;
   align-items: center;
   cursor: pointer;
   padding: 3px;
   border-radius: 3px;
-  transition: background-color 0.2s ease;
 }
 
 .tab-title {
@@ -633,7 +614,6 @@ defineExpose({
 }
 
 .close-icon {
-  opacity: 0.7;
   width: 20px;
   height: 20px;
   display: flex;
@@ -641,11 +621,6 @@ defineExpose({
   justify-content: center;
   border-radius: 50%;
   margin-left: 6px;
-  shrink: 0;
-}
-
-.tab:hover .close-icon {
-  opacity: 1;
 }
 
 .tab-scroll-button {
@@ -655,14 +630,11 @@ defineExpose({
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  color: #bbb;
-  shrink: 0;
-  transition: background-color 0.2s;
   z-index: 1;
 }
 
 .tabs-actions {
-  padding: 0 8px;
+  padding: 0 3px;
   z-index: 999;
   position: relative;
 }
@@ -680,12 +652,10 @@ defineExpose({
   border: 1px solid transparent;
 }
 
-/* Fix for dropdown z-index */
 .tabs-actions .absolute {
   z-index: 9999 !important;
 }
 
-/* Fix for dropdown z-index */
 .dropdown-content {
   z-index: 9999 !important;
 }

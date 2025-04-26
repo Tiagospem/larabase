@@ -1,10 +1,10 @@
 <template>
   <div class="h-full flex flex-col">
     <div
-      class="bg-base p-2 border-b border-neutral flex flex-wrap items-center justify-between gap-2"
+      class="bg-base p-2 flex flex-wrap items-center justify-between gap-2"
       v-if="!tablesStore.isLoading"
     >
-      <div class="flex flex-wrap items-center gap-2">
+      <div class="flex flex-wrap items-center gap-1">
         <RefreshButton
           :store-id="storeId"
           @refresh="handleRefresh"
@@ -22,18 +22,18 @@
       </div>
     </div>
     <div
-      class="bg-base-200 p-2 border-b border-neutral flex flex-wrap items-center justify-between gap-2"
+      class="bg-base-200 p-2 border-b border-black/10 flex flex-wrap items-center justify-between gap-2"
       v-else
     >
       <div class="flex flex-wrap items-center gap-2">
-        <button class="btn btn-sm text-transparent w-36 animate-pulse bg-neutral pointer-events-none"></button>
-        <button class="btn btn-sm text-transparent w-36 animate-pulse bg-neutral pointer-events-none"></button>
-        <button class="btn btn-sm text-transparent w-36 animate-pulse bg-neutral pointer-events-none"></button>
-        <button class="btn btn-sm text-transparent w-36 animate-pulse bg-neutral pointer-events-none"></button>
+        <div class="rounded-sm h-8 text-transparent w-36 animate-pulse bg-base-100 border-none"></div>
+        <div class="rounded-sm h-8 text-transparent w-36 animate-pulse bg-base-100 border-none"></div>
+        <div class="rounded-sm h-8 text-transparent w-36 animate-pulse bg-base-100 border-none"></div>
+        <div class="rounded-sm h-8 text-transparent w-36 animate-pulse bg-base-100 border-none"></div>
       </div>
 
       <div class="flex flex-wrap items-center gap-2">
-        <button class="btn btn-sm text-transparent w-80 animate-pulse bg-neutral pointer-events-none"></button>
+        <div class="rounded-sm h-8 text-transparent w-80 animate-pulse bg-base-100 border-none"></div>
       </div>
     </div>
 

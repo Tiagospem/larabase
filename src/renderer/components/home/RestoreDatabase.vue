@@ -38,7 +38,7 @@
         >
           <span class="label-text-alt text-error">{{ restoreFileError }}</span>
         </label>
-        <p class="text-xs text-gray-500 mt-1">Select a .sql or .sql.gz file to restore</p>
+        <p class="text-xs text-info mt-1">Select a .sql or .sql.gz file to restore</p>
       </fieldset>
 
       <div
@@ -65,13 +65,13 @@
         v-if="isRestoring"
         class="mb-4"
       >
-        <div class="w-full bg-gray-700 rounded-md h-2 mb-2">
+        <div class="w-full bg-base-100 rounded-md h-2 mb-2">
           <div
-            class="bg-primary h-2 rounded-md"
+            class="bg-neutral h-2 rounded-md"
             :style="{ width: restoreProgress + '%' }"
           />
         </div>
-        <p class="text-sm">{{ restoreStatus }} {{ Math.floor(restoreProgress) }}%</p>
+        <p class="text-xs animate-pulse">{{ restoreStatus }} {{ Math.floor(restoreProgress) }}%</p>
       </div>
 
       <fieldset class="fieldset w-full mb-4">
@@ -84,7 +84,7 @@
           />
           <span class="label-text">Restore to current database ({{ restoreConfig.connection?.database }})</span>
         </label>
-        <p class="text-xs text-gray-500 mt-1">The backup will overwrite your current database</p>
+        <p class="text-xs text-info mt-1">The backup will overwrite your current database</p>
       </fieldset>
 
       <fieldset
@@ -129,7 +129,7 @@
         class="fieldset w-full mb-4"
       >
         <label class="label">
-          <span class="label-text">Tables to Ignore (Optional)</span>
+          <span class="label-text">Tables to Ignore Records (Optional)</span>
         </label>
 
         <div class="mb-2">
@@ -143,7 +143,7 @@
         </div>
 
         <div
-          class="h-48 overflow-y-auto bg-base-300 rounded-md p-2"
+          class="h-48 overflow-auto bg-base-200 rounded-md p-2"
           :class="{ 'opacity-50': isRestoring || isProcessingSql }"
         >
           <div
@@ -178,13 +178,13 @@
           </div>
           <div
             v-if="filteredTables.length === 0"
-            class="p-2 text-sm text-gray-400"
+            class="text-sm text-info"
           >
             No tables match your search
           </div>
         </div>
         <label class="label">
-          <span class="label-text-alt">Select tables to ignore during restore</span>
+          <span class="label-text-alt text-info">Select tables to ignore during restore</span>
         </label>
       </fieldset>
     </div>
