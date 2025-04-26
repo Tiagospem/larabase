@@ -26,7 +26,7 @@ async function createWindow() {
     center: true,
     titleBarStyle: "hiddenInset",
     webPreferences: {
-      nodeIntegration: false,
+      nodeIntegration: true,
       contextIsolation: true,
       preload: preloadPath,
       devTools: isDev
