@@ -192,7 +192,8 @@ async function extractTables(filePath, isGzipped) {
 
     const patterns = {
       create: /CREATE\s+TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?[`"']?([a-zA-Z0-9_]+)[`"']?/i,
-      insert: /INSERT\s+INTO\s+[`"']?([a-zA-Z0-9_]+)[`"']?\s+VALUES/i,
+      insert: /INSERT\s+INTO\s+[`"']?([a-zA-Z0-9_]+)[`"']?(?:\s*\([^)]+\))?\s+VALUES/i,
+      values: /VALUES\s*\(([^)]+)\)/i,
       drop: /DROP\s+TABLE\s+(?:IF\s+EXISTS\s+)?[`"']?([a-zA-Z0-9_]+)[`"']?/i,
       alter: /ALTER\s+TABLE\s+[`"']?([a-zA-Z0-9_]+)[`"']?/i
     };
@@ -201,6 +202,21 @@ async function extractTables(filePath, isGzipped) {
     let insertBuffer = "";
     let lineCounter = 0;
     const maxLines = 100000;
+
+    function countValues(text) {
+      const valuesSets = text.match(/\([^)]+\)/g) || [];
+      return valuesSets.length;
+    }
+
+    function countLargeInsert(buffer) {
+      const valueMatches = buffer.match(/\),\s*\(/g) || [];
+      const rowCount = valueMatches.length + 1;
+
+      const multipleInserts = buffer.match(/INSERT\s+INTO/gi) || [];
+      const insertCount = multipleInserts.length;
+
+      return insertCount > 1 ? rowCount * insertCount : rowCount;
+    }
 
     rl.on("line", (line) => {
       lineCounter++;
@@ -224,7 +240,20 @@ async function extractTables(filePath, isGzipped) {
         insertBuffer = line;
 
         if (trimmed.endsWith(";")) {
-          processInsert();
+          const stats = tableStats.get(currentTable) || { estimatedRows: 0 };
+
+          const valueMatches = line.match(/\),\s*\(/g) || [];
+          if (valueMatches.length > 0) {
+            stats.estimatedRows += valueMatches.length + 1;
+          } else if (patterns.values.test(line)) {
+            stats.estimatedRows += 1;
+          } else {
+            stats.estimatedRows += 1;
+          }
+
+          tableStats.set(currentTable, stats);
+          currentTable = null;
+          insertBuffer = "";
         }
         return;
       }
@@ -246,21 +275,32 @@ async function extractTables(filePath, isGzipped) {
       if (!currentTable) return;
 
       try {
-        const valueMatches = insertBuffer.match(/\),\s*\(/g) || [];
-        const rowCount = valueMatches.length + 1;
-
-        const multipleInserts = insertBuffer.match(/INSERT\s+INTO/gi) || [];
-        const insertCount = multipleInserts.length;
-
-        const totalRowCount = insertCount > 1 ? rowCount * insertCount : rowCount;
+        const largeRowCount = countLargeInsert(insertBuffer);
 
         const stats = tableStats.get(currentTable) || { estimatedRows: 0 };
-        stats.estimatedRows += totalRowCount;
+
+        if (largeRowCount > 1) {
+          stats.estimatedRows += largeRowCount;
+        } else {
+          const valuesCount = countValues(insertBuffer);
+          if (valuesCount > 0) {
+            stats.estimatedRows += valuesCount;
+          } else {
+            stats.estimatedRows += 1;
+          }
+        }
+
         tableStats.set(currentTable, stats);
       } catch (e) {
         const stats = tableStats.get(currentTable) || { estimatedRows: 0 };
+
         const roughEstimate = Math.ceil(insertBuffer.length / 100);
-        stats.estimatedRows += roughEstimate;
+        if (roughEstimate > 0) {
+          stats.estimatedRows += roughEstimate;
+        } else {
+          stats.estimatedRows += 1;
+        }
+
         tableStats.set(currentTable, stats);
       }
 
@@ -271,6 +311,23 @@ async function extractTables(filePath, isGzipped) {
     rl.on("close", () => {
       if (currentTable && insertBuffer) {
         processInsert();
+      }
+
+      for (const tableName of tableNames) {
+        const stats = tableStats.get(tableName);
+        if (stats && stats.estimatedRows === 0) {
+          let fileHasContent = false;
+          try {
+            const fileSize = fs.statSync(filePath).size;
+            fileHasContent = fileSize > 1000;
+          } catch (err) {
+            console.error("Error checking file size:", err);
+          }
+
+          if (fileHasContent) {
+            stats.estimatedRows = 1;
+          }
+        }
       }
 
       const system = ["mysql", "information_schema", "performance_schema", "sys"];
