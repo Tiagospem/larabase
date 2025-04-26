@@ -59,7 +59,7 @@
         @load-filtered-data="tableDataStore.loadFilteredData()"
         @navigate-to-foreign-key="(column, row) => navigateToForeignKey(column, row)"
       />
-      <div v-else-if="isLoading || loadRetries.value > 0">
+      <div v-else-if="isLoading && !loadRetries">
         <TableSkeleton />
       </div>
       <NoRecordState
@@ -149,7 +149,7 @@ const filterButtonRef = ref(null);
 const dataTableRef = ref(null);
 const isActive = ref(true);
 const loadRetries = ref(0);
-const maxRetries = 3;
+const maxRetries = 2;
 const wasReloaded = ref(false);
 const wasEmptyChecked = ref(false);
 
@@ -165,6 +165,8 @@ async function safeLoadTableData(forceRetry = false) {
   if (forceRetry) {
     loadRetries.value = 0;
   }
+
+  console.log(`Loading table data (attempt ${loadRetries.value}/${maxRetries})`);
 
   try {
     const loadFunc = () => {
@@ -187,7 +189,6 @@ async function safeLoadTableData(forceRetry = false) {
         return;
       } else {
         wasEmptyChecked.value = true;
-        console.log("Table appears to be empty, stopping reload attempts");
       }
     }
 
@@ -207,7 +208,6 @@ async function safeLoadTableData(forceRetry = false) {
   }
 }
 
-// Adding event to reload data when the page is reloaded with F5
 function handlePageReload() {
   if (document.visibilityState === "visible") {
     wasReloaded.value = true;
@@ -216,7 +216,6 @@ function handlePageReload() {
   }
 }
 
-// Adding function to check if there is data and reload if there is no data
 function checkAndReloadIfNeeded() {
   if (!hasData.value && !isLoading.value && !loadError.value && !wasEmptyChecked.value) {
     console.log("No data found, attempting to reload");
@@ -525,7 +524,6 @@ watch(highlightChanges, (newValue) => {
 
 watch([() => props.tableName, () => props.connectionId], async ([newTableName, newConnectionId], [oldTableName, oldConnectionId]) => {
   if (newTableName !== oldTableName || newConnectionId !== oldConnectionId) {
-    // Reset states when table changes
     wasEmptyChecked.value = false;
     loadRetries.value = 0;
 
