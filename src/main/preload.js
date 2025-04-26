@@ -10,7 +10,6 @@ const safeIpcRenderer = {
   }
 };
 
-// Helper to relay IPC events to DOM events
 function relayEventToDom(channel, data) {
   try {
     const event = new CustomEvent(channel, {
@@ -18,7 +17,6 @@ function relayEventToDom(channel, data) {
     });
     window.dispatchEvent(event);
 
-    // Also log event for debugging
     if (channel.includes("progress")) {
       console.log(`[Preload] Relayed ${channel}:`, typeof data === "object" && data?.percent !== undefined ? data.percent : data);
     }
@@ -27,7 +25,6 @@ function relayEventToDom(channel, data) {
   }
 }
 
-// Set up IPC event listeners that relay to DOM events
 const validChannels = ["update-status", "update-available", "update-info", "autoUpdater:update-info", "autoUpdater:download-progress", "autoUpdater:download-complete", "restoration-progress"];
 
 validChannels.forEach((channel) => {
@@ -36,11 +33,9 @@ validChannels.forEach((channel) => {
   });
 });
 
-// Store event listeners for cleanup
 const eventListeners = new Map();
 
 try {
-  // Expose ipcRenderer for update events
   contextBridge.exposeInMainWorld("electron", {
     ipcRenderer: {
       on: (channel, func) => {
@@ -48,7 +43,6 @@ try {
           const wrappedFunc = (event, ...args) => func(event, ...args);
           ipcRenderer.on(channel, wrappedFunc);
 
-          // Store the wrapped function for cleanup
           if (!eventListeners.has(channel)) {
             eventListeners.set(channel, []);
           }
@@ -61,7 +55,6 @@ try {
         if (validChannels.includes(channel)) {
           ipcRenderer.removeListener(channel, func);
 
-          // Remove from our stored listeners
           if (eventListeners.has(channel)) {
             const listeners = eventListeners.get(channel);
             const idx = listeners.indexOf(func);
@@ -80,7 +73,6 @@ try {
     }
   });
 
-  // Expose the API
   contextBridge.exposeInMainWorld("api", {
     selectSqlDumpFile: () => safeIpcRenderer.invoke("select-sql-dump-file"),
     cancelDatabaseRestore: (connectionId) => safeIpcRenderer.invoke("cancel-database-restore", connectionId),
@@ -123,13 +115,13 @@ try {
     saveConnections: (connections) => safeIpcRenderer.invoke("save-connections", connections),
     getOpenTabs: () => safeIpcRenderer.invoke("get-open-tabs"),
     saveOpenTabs: (tabs) => safeIpcRenderer.invoke("save-open-tabs", tabs),
-    stopMonitoringDatabaseOperations: (channel) => {
+    stopMonitoringDatabaseOperations: (channel, clearDataOnStop = false) => {
       ipcRenderer.removeAllListeners(channel);
 
       const connectionId = channel.replace("db-operation-", "");
 
       return ipcRenderer
-        .invoke("stop-db-monitoring", connectionId)
+        .invoke("stop-db-monitoring", connectionId, clearDataOnStop)
         .then((result) => {
           return result;
         })
