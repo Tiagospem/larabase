@@ -189,7 +189,6 @@
         </div>
       </div>
 
-      <!-- System Message -->
       <div
         v-if="selectedUpdate.message"
         class="mt-4"
@@ -200,7 +199,6 @@
         </div>
       </div>
 
-      <!-- Additional info: Affected Rows, etc. -->
       <div
         v-if="selectedUpdate.affectedRows"
         class="mt-4"
@@ -211,7 +209,6 @@
         </div>
       </div>
 
-      <!-- Raw Update Data -->
       <div class="mt-4">
         <h4 class="font-semibold text-sm mb-1">Raw Data:</h4>
         <div class="bg-base-200 p-3 rounded-lg overflow-auto max-h-60 whitespace-pre-wrap font-mono text-xs">
@@ -326,6 +323,8 @@ function clearUpdates() {
     setTimeout(() => {
       startMonitoring(true);
     }, 300);
+  } else {
+    startMonitoring(true);
   }
 }
 
@@ -340,7 +339,6 @@ function startMonitoring(clearHistory = false) {
   }
 
   loading.value = true;
-
   updates.value = [];
 
   window.api
@@ -358,6 +356,8 @@ function startMonitoring(clearHistory = false) {
           if (updates.value.length > 1000) {
             updates.value = updates.value.slice(0, 500);
           }
+
+          updates.value = [...updates.value];
         }
       },
       clearHistory
@@ -395,7 +395,7 @@ function stopMonitoring() {
   }
 
   window.api
-    .stopMonitoringDatabaseOperations(monitoringChannel)
+    .stopMonitoringDatabaseOperations(monitoringChannel, true)
     .then(() => {
       connected.value = false;
       monitoringChannel = null;
@@ -411,6 +411,26 @@ function stopMonitoring() {
 }
 
 function close() {
+  if (connected.value) {
+    stopMonitoring();
+  } else {
+    try {
+      if (window.api && window.api.monitorDatabaseOperations) {
+        window.api
+          .monitorDatabaseOperations(props.connectionId, () => {}, true)
+          .then(() => {
+            if (window.api.stopMonitoringDatabaseOperations) {
+              window.api.stopMonitoringDatabaseOperations(`db-operation-${props.connectionId}`, true);
+            }
+          })
+          .catch((err) => console.error("Error clearing history:", err));
+      }
+    } catch (e) {
+      console.error("Error on cleanup:", e);
+    }
+  }
+
+  updates.value = [];
   emit("close");
 }
 
@@ -441,7 +461,6 @@ onUnmounted(() => {
 function formatSql(sql) {
   if (!sql) return "";
 
-  // Simple formatting to make SQL more readable
   return sql
     .replace(/SELECT/gi, "SELECT\n  ")
     .replace(/FROM/gi, "\nFROM\n  ")
@@ -451,10 +470,3 @@ function formatSql(sql) {
     .replace(/LIMIT/gi, "\nLIMIT ");
 }
 </script>
-
-<style scoped>
-.modal-box {
-  width: 90%;
-  max-width: 900px;
-}
-</style>
