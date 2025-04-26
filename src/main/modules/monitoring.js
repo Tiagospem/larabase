@@ -2,12 +2,9 @@ const { ipcMain } = require("electron");
 const mysql = require("mysql2/promise");
 
 function startActivityPolling(connectionId, connection, activityLogTable, lastId, dbMonitoringConnections, mainWindow) {
-  console.log(`Starting activity polling for connection ${connectionId}, last ID: ${lastId}`);
-
   connection._lastActivityId = lastId;
   connection._pollingInterval = setInterval(async () => {
     if (!dbMonitoringConnections.has(connectionId)) {
-      console.log(`Polling stopped for connection ${connectionId}`);
       if (connection._pollingInterval) {
         clearInterval(connection._pollingInterval);
         connection._pollingInterval = null;
@@ -32,7 +29,6 @@ function startActivityPolling(connectionId, connection, activityLogTable, lastId
       );
 
       if (activities.length > 0) {
-        console.log(`Found ${activities.length} new activities, types: ${activities.map((a) => a.type).join(", ")}`);
         connection._lastActivityId = activities[activities.length - 1].id;
 
         if (mainWindow) {
@@ -44,6 +40,8 @@ function startActivityPolling(connectionId, connection, activityLogTable, lastId
               details: activity.details || "No details available"
             });
           });
+        } else {
+          console.error("No mainWindow available to send db operations to");
         }
       }
     } catch (error) {
@@ -54,21 +52,66 @@ function startActivityPolling(connectionId, connection, activityLogTable, lastId
   connection._pollingInterval._onTimeout();
 }
 
+async function clearMonitoringConnections(dbMonitoringConnections, dbActivityConnections) {
+  for (const [connectionId, connection] of dbMonitoringConnections.entries()) {
+    try {
+      const activityLogTable = "lb_db_activity_log";
+      await connection.query(`TRUNCATE TABLE ${activityLogTable}`);
+
+      if (connection._pollingInterval) {
+        clearInterval(connection._pollingInterval);
+        connection._pollingInterval = null;
+      }
+
+      await connection.end();
+    } catch (error) {
+      console.error(`Error closing monitoring connection for ${connectionId}:`, error);
+    }
+  }
+
+  dbMonitoringConnections.clear();
+
+  for (const [connectionId, connectionData] of dbActivityConnections.entries()) {
+    try {
+      if (connectionData.connection) {
+        await connectionData.connection.end();
+      }
+
+      if (connectionData.triggerConnection) {
+        await connectionData.triggerConnection.end();
+      }
+    } catch (error) {
+      console.error(`Error closing trigger-based monitoring connections for ${connectionId}:`, error);
+    }
+  }
+
+  dbActivityConnections.clear();
+}
+
 function registerMonitoringHandlers(store, dbMonitoringConnections, mainWindow) {
-  ipcMain.handle("start-db-monitoring", async (event, connectionId, clearHistory = false) => {
-    const activityLogTable = "larabase_db_activity_log";
-    console.log(`Starting database monitoring for connection ${connectionId}, clearHistory: ${clearHistory}`);
+  ipcMain.handle("start-db-monitoring", async (event, connectionId, callbackFn, clearHistory = false) => {
+    const activityLogTable = "lb_db_activity_log";
 
     if (!connectionId) {
       console.error("Invalid connectionId or not provided");
       return { success: false, message: "Invalid connection ID" };
     }
 
+    if (mainWindow) {
+      mainWindow.webContents.send(`db-operation-${connectionId}`, {
+        timestamp: new Date().toISOString(),
+        type: "INFO",
+        table: "system",
+        message: "Initializing database monitoring..."
+      });
+    } else {
+      console.error("No mainWindow available for IPC communication");
+    }
+
     if (dbMonitoringConnections.has(connectionId)) {
       try {
         const existingConnection = dbMonitoringConnections.get(connectionId);
         if (existingConnection) {
-          console.log(`Closing existing monitoring connection for ${connectionId}`);
           await existingConnection.end();
         }
         dbMonitoringConnections.delete(connectionId);
@@ -84,9 +127,6 @@ function registerMonitoringHandlers(store, dbMonitoringConnections, mainWindow) 
       console.error(`Connection ID ${connectionId} not found`);
       return { success: false, message: "Connection not found" };
     }
-
-    console.log(`Connection found: ${connection.name}`);
-    console.log(`Details: ${connection.host}:${connection.port}/${connection.database}`);
 
     if (!connection.host || !connection.port || !connection.username || !connection.database) {
       return { success: false, message: "Incomplete connection information" };
@@ -106,13 +146,22 @@ function registerMonitoringHandlers(store, dbMonitoringConnections, mainWindow) 
       if (clearHistory) {
         try {
           await dbConnection.query(`TRUNCATE TABLE ${activityLogTable}`);
+
+          if (mainWindow) {
+            mainWindow.webContents.send(`db-operation-${connectionId}`, {
+              timestamp: new Date().toISOString(),
+              type: "INFO",
+              table: "system",
+              message: "Activity history cleared successfully"
+            });
+          }
         } catch (clearError) {
           console.error(`Error clearing activity log:`, clearError);
         }
       }
 
-      console.log(`Connection established to ${connection.database}`);
       await dbConnection.query("SELECT 1");
+
       await dbConnection.query(`
         CREATE TABLE IF NOT EXISTS ${activityLogTable} (
           id INT AUTO_INCREMENT PRIMARY KEY,
@@ -126,7 +175,6 @@ function registerMonitoringHandlers(store, dbMonitoringConnections, mainWindow) 
           INDEX idx_created_at (created_at)
         ) ENGINE=InnoDB;
       `);
-      console.log(`Activity log table created/verified: ${activityLogTable}`);
 
       const [tables] = await dbConnection.query(
         `
@@ -138,13 +186,11 @@ function registerMonitoringHandlers(store, dbMonitoringConnections, mainWindow) 
       `,
         [connection.database]
       );
-      console.log(`Found ${tables.length} tables to monitor in ${connection.database}`);
 
       let triggersCreated = 0;
       for (const table of tables) {
         const tableName = table.table_name || table.TABLE_NAME;
         try {
-          console.log(`Setting up triggers for table ${tableName}`);
           await dbConnection.query(`DROP TRIGGER IF EXISTS ${tableName}_after_insert`);
           await dbConnection.query(`DROP TRIGGER IF EXISTS ${tableName}_after_update`);
           await dbConnection.query(`DROP TRIGGER IF EXISTS ${tableName}_after_delete`);
@@ -167,15 +213,12 @@ function registerMonitoringHandlers(store, dbMonitoringConnections, mainWindow) 
             const idColumn = primaryKeyColumn.COLUMN_NAME;
             idRef = `COALESCE(NEW.\`${idColumn}\`, 'unknown')`;
             oldIdRef = `COALESCE(OLD.\`${idColumn}\`, 'unknown')`;
-            console.log(`Using primary key column: ${idColumn} for table ${tableName}`);
           } else if (columnNames.length > 0) {
             idRef = `CONCAT('Row with ${columnNames[0]}=', COALESCE(NEW.\`${columnNames[0]}\`, 'null'))`;
             oldIdRef = `CONCAT('Row with ${columnNames[0]}=', COALESCE(OLD.\`${columnNames[0]}\`, 'null'))`;
-            console.log(`Using first column: ${columnNames[0]} for table ${tableName}`);
           } else {
             idRef = "'unknown'";
             oldIdRef = "'unknown'";
-            console.log(`No suitable identifier column found for table ${tableName}`);
           }
 
           const previewColumns = columnNames.slice(0, 5);
@@ -244,13 +287,10 @@ function registerMonitoringHandlers(store, dbMonitoringConnections, mainWindow) 
           `);
 
           triggersCreated += 3;
-          console.log(`Successfully created triggers for table ${tableName}`);
         } catch (triggerError) {
           console.error(`Error creating triggers for table ${tableName}:`, triggerError);
         }
       }
-
-      console.log(`Created ${triggersCreated} triggers across ${tables.length} tables`);
 
       const [initialActivities] = await dbConnection.query(`
         SELECT 
@@ -264,7 +304,6 @@ function registerMonitoringHandlers(store, dbMonitoringConnections, mainWindow) 
         ORDER BY created_at DESC
         LIMIT 50
       `);
-      console.log(`Found ${initialActivities.length} initial activities`);
 
       dbMonitoringConnections.set(connectionId, dbConnection);
 
@@ -294,10 +333,8 @@ function registerMonitoringHandlers(store, dbMonitoringConnections, mainWindow) 
     }
   });
 
-  ipcMain.handle("stop-db-monitoring", async (event, connectionId) => {
+  ipcMain.handle("stop-db-monitoring", async (event, connectionId, clearDataOnStop = false) => {
     try {
-      console.log(`Stopping database monitoring for ${connectionId}`);
-
       const connection = dbMonitoringConnections.get(connectionId);
 
       if (!connection) {
@@ -305,6 +342,24 @@ function registerMonitoringHandlers(store, dbMonitoringConnections, mainWindow) 
           success: false,
           message: "Not monitoring this connection"
         };
+      }
+
+      if (clearDataOnStop && connection) {
+        try {
+          const activityLogTable = "lb_db_activity_log";
+          await connection.query(`TRUNCATE TABLE ${activityLogTable}`);
+
+          if (mainWindow) {
+            mainWindow.webContents.send(`db-operation-${connectionId}`, {
+              timestamp: new Date().toISOString(),
+              type: "INFO",
+              table: "system",
+              message: "Data cleared on monitoring stop"
+            });
+          }
+        } catch (clearError) {
+          console.error(`Error clearing activity log on stop:`, clearError);
+        }
       }
 
       if (connection._pollingInterval) {
@@ -325,5 +380,6 @@ function registerMonitoringHandlers(store, dbMonitoringConnections, mainWindow) 
 }
 
 module.exports = {
-  registerMonitoringHandlers
+  registerMonitoringHandlers,
+  clearMonitoringConnections
 };
