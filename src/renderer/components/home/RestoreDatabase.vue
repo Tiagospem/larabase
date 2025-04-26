@@ -72,7 +72,7 @@
           />
         </div>
         <p class="text-sm">
-          {{ restoreStatus }}
+          {{ restoreStatus }} {{ Math.floor(restoreProgress) }}%
         </p>
       </div>
 
