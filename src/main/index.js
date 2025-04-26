@@ -55,21 +55,6 @@ app.on("window-all-closed", () => {
 });
 
 app.on("before-quit", async () => {
-  for (const [connectionId, connection] of dbMonitoringConnections.entries()) {
-    try {
-      try {
-        const activityLogTable = "lb_db_activity_log";
-        await connection.query(`TRUNCATE TABLE ${activityLogTable}`);
-      } catch (clearError) {
-        console.error(`Error clearing activity log for ${connectionId}:`, clearError);
-      }
-
-      await connection.end();
-    } catch (error) {
-      console.error(`Error closing monitoring connection for ${connectionId}:`, error);
-    }
-  }
-
   await clearMonitoringConnections(dbMonitoringConnections, dbActivityConnections);
 });
 
