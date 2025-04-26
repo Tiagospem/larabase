@@ -71,9 +71,7 @@
             :style="{ width: restoreProgress + '%' }"
           />
         </div>
-        <p class="text-sm">
-          {{ restoreStatus }} {{ Math.floor(restoreProgress) }}%
-        </p>
+        <p class="text-sm">{{ restoreStatus }} {{ Math.floor(restoreProgress) }}%</p>
       </div>
 
       <fieldset class="fieldset w-full mb-4">
