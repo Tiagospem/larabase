@@ -82,39 +82,6 @@ export const useDatabaseStore = defineStore("database", () => {
     }
   }
 
-  async function loadFilteredTableData(id, tableName, filter, limit = 100, page = 1, sortOptions = {}) {
-    try {
-      const conn = _getConnection(id);
-
-      const payload = {
-        ..._buildPayload(conn),
-        tableName,
-        filter,
-        limit,
-        page,
-        sortColumn: sortOptions.sortColumn,
-        sortDirection: sortOptions.sortDirection
-      };
-
-      const result = await window.api.getFilteredTableData(payload);
-
-      if (result.success) {
-        const key = `${id}:${tableName}:filter`;
-        tableRecords.value[key] = { filter };
-
-        return {
-          data: result.data || [],
-          totalRecords: result.totalRecords || 0,
-          page,
-          limit
-        };
-      }
-      return _EMPTY_RESULT(page, limit);
-    } catch (error) {
-      return _EMPTY_RESULT(page, limit);
-    }
-  }
-
   async function loadTables(id) {
     isLoading.value = true;
 
@@ -207,21 +174,33 @@ export const useDatabaseStore = defineStore("database", () => {
     return JSON.stringify(result, null, 2);
   }
 
-  async function getTableRecordCount(id, tableName) {
+  async function getTableRecordCount(id, tableName, useCache = true, cacheTimeoutMs = 60000) {
     const key = `${id}:${tableName}`;
-    if (tableRecords.value[key]?.count != null) return tableRecords.value[key].count;
+
+    if (useCache && tableRecords.value[key]?.count != null && tableRecords.value[key]?.timestamp && Date.now() - tableRecords.value[key].timestamp < cacheTimeoutMs) {
+      return tableRecords.value[key].count;
+    }
+
     try {
       const conn = connectionStore.getConnection(id);
+
       const { success, count } = await window.api.getTableRecordCount({
         ..._buildPayload(conn),
         tableName
       });
+
       if (success) {
-        tableRecords.value[key] = { count };
-        return count;
+        tableRecords.value[key] = {
+          count: parseInt(count, 10),
+          timestamp: Date.now()
+        };
+        return tableRecords.value[key].count;
       }
-    } catch {}
-    return 0;
+    } catch (error) {
+      console.error(`Error getting record count for ${tableName}:`, error);
+    }
+
+    return tableRecords.value[key]?.count || 0;
   }
 
   async function getTableStructure(id, name, force = false) {
@@ -412,27 +391,6 @@ export const useDatabaseStore = defineStore("database", () => {
     }
   }
 
-  async function ensureConnection(id) {
-    try {
-      const conn = _getConnection(id);
-      if (!conn) {
-        throw new Error("Connection not found");
-      }
-
-      // Test the connection to make sure it's active
-      const result = await window.api.testMySQLConnection(_buildPayload(conn));
-
-      if (!result.success) {
-        throw new Error(`Failed to connect to database: ${result.message || "Unknown error"}`);
-      }
-
-      return true;
-    } catch (error) {
-      console.error("Connection verification failed:", error);
-      throw error;
-    }
-  }
-
   const tablesList = computed(() => tables.value.tables || []);
 
   function clearCaches() {
@@ -483,8 +441,6 @@ export const useDatabaseStore = defineStore("database", () => {
     truncateTables,
     tablesList,
     getConnection: _getConnection,
-    ensureConnection,
-    clearCaches,
     manageCaches
   };
 });

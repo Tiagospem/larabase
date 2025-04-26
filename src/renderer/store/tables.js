@@ -75,13 +75,13 @@ export const useTablesStore = defineStore("tables", () => {
     return count.toString();
   }
 
-  function initializeTables(connectionId) {
+  async function initializeTables(connectionId) {
     if (connectionId === lastLoadedConnection.value && !isLoading.value) {
       return;
     }
 
-    databaseStore.loadTables(connectionId);
     lastLoadedConnection.value = connectionId;
+    return databaseStore.loadTables(connectionId);
   }
 
   function updateTableRecordCount(tableName, count) {

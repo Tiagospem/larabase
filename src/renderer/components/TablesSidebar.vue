@@ -42,7 +42,7 @@
           <div class="flex items-center gap-1">
             <button
               v-tooltip.right="'Sort by name'"
-              class="btn btn-xs btn-ghost tooltip tooltip-left"
+              class="btn btn-xs btn-ghost"
               :class="{
                 'text-primary bg-neutral': tablesStore.sortBy === 'name'
               }"
@@ -72,7 +72,7 @@
             </button>
             <button
               v-tooltip.right="'Sort by records'"
-              class="btn btn-xs btn-ghost tooltip tooltip-left"
+              class="btn btn-xs btn-ghost"
               :class="{
                 'text-primary bg-neutral': tablesStore.sortBy === 'records'
               }"
@@ -95,7 +95,7 @@
             </button>
             <button
               v-tooltip.right="'Toggle sort order'"
-              class="btn btn-xs btn-ghost tooltip tooltip-left"
+              class="btn btn-xs btn-ghost"
               @click="tablesStore.toggleSortOrder"
             >
               <svg
@@ -131,7 +131,7 @@
             </button>
             <button
               v-tooltip.right="isDeleteMode ? 'Cancel deletion' : 'Delete tables'"
-              class="btn btn-xs btn-ghost tooltip tooltip-left"
+              class="btn btn-xs btn-ghost"
               :class="{
                 'text-error bg-neutral': isDeleteMode
               }"
@@ -375,6 +375,8 @@ const showAlert = inject("showAlert");
 
 const databaseStore = useDatabaseStore();
 const tablesStore = useTablesStore();
+const loadingCounts = ref({});
+const lastConnectionId = ref(null);
 
 // Table deletion state
 const isDeleteMode = ref(false);
@@ -383,16 +385,16 @@ const showDeleteConfirmation = ref(false);
 const ignoreForeignKeys = ref(false);
 const cascadeDelete = ref(false);
 const isDeleting = ref(false);
-const lastConnectionId = ref(null);
 
 watch(
   () => props.connectionId,
-  (newConnectionId) => {
+  async (newConnectionId) => {
     if (newConnectionId) {
       const savedSearchTerm = localStorage.getItem(`tableSearch_${newConnectionId}`) || "";
       tablesStore.setSearchTerm(newConnectionId, savedSearchTerm);
-      tablesStore.initializeTables(newConnectionId);
+      await tablesStore.initializeTables(newConnectionId);
       lastConnectionId.value = newConnectionId;
+      await loadTableCounts();
     }
   },
   { immediate: true }
@@ -407,11 +409,82 @@ watch(
   }
 );
 
+// Fetch row counts for visible tables
+async function loadTableCounts() {
+  if (!props.connectionId) return;
+
+  const visibleTables = tablesStore.filteredTables.slice(0, 10);
+
+  for (const table of visibleTables) {
+    await fetchTableCount(table.name);
+  }
+
+  setTimeout(() => {
+    const remainingTables = tablesStore.filteredTables.slice(10);
+    loadRemainingCounts(remainingTables);
+  }, 500);
+}
+
+// Load remaining tables in batches to avoid blocking UI
+async function loadRemainingCounts(tables, batchSize = 5) {
+  if (!tables.length) return;
+
+  const batch = tables.slice(0, batchSize);
+  const remaining = tables.slice(batchSize);
+
+  for (const table of batch) {
+    await fetchTableCount(table.name);
+  }
+
+  if (remaining.length) {
+    setTimeout(() => {
+      loadRemainingCounts(remaining, batchSize);
+    }, 100);
+  }
+}
+
+async function fetchTableCount(tableName) {
+  if (loadingCounts.value[tableName] || !props.connectionId) return;
+
+  try {
+    loadingCounts.value[tableName] = true;
+
+    const config = {
+      connectionId: props.connectionId,
+      tableName: tableName
+    };
+
+    const result = await window.api.getTableRecordCount(config);
+
+    if (result && result.success) {
+      const table = tablesStore.localTables.find((t) => t.name === tableName);
+      if (table) {
+        table.rowCount = parseInt(result.count, 10);
+        table.isEstimate = false;
+      }
+    }
+  } catch (error) {
+    console.error(`Error fetching count for ${tableName}:`, error);
+  } finally {
+    loadingCounts.value[tableName] = false;
+  }
+}
+
+onActivated(() => {
+  if (props.connectionId) {
+    loadTableCounts();
+  }
+});
+
 function isTableActive(tableName) {
   return props.activeTabName === tableName;
 }
 
 function openTable(table) {
+  if ((table && typeof table.rowCount !== "number") || table.rowCount === 0) {
+    fetchTableCount(table.name);
+  }
+
   emit("table-open", table);
 }
 
@@ -462,19 +535,15 @@ async function deleteTables() {
 
   isDeleting.value = true;
 
-  // Convert proxy array to plain JavaScript array using JSON serialization
   const tablesToDelete = JSON.parse(JSON.stringify(selectedTables.value));
 
   try {
-    // Create a clean params object with primitive types
     const params = {
       connectionId: props.connectionId,
       tables: tablesToDelete,
       ignoreForeignKeys: Boolean(ignoreForeignKeys.value),
       cascade: Boolean(cascadeDelete.value)
     };
-
-    console.log("Calling API with params:", JSON.stringify(params));
 
     const result = await window.api.dropTables(params);
 
@@ -588,15 +657,6 @@ function handleCascadeDeleteChange() {
   margin: 2px 0;
 }
 
-.table-link {
-  border-radius: 6px !important;
-}
-
-.table-link:hover {
-  background-color: hsl(var(--b3)) !important;
-  border-radius: 6px !important;
-}
-
 @keyframes pulse {
   0%,
   100% {
@@ -626,11 +686,5 @@ function handleCascadeDeleteChange() {
 
 .skeleton-badge {
   opacity: 0.7;
-}
-
-.tooltip:before {
-  max-width: 200px;
-  white-space: normal;
-  z-index: 100;
 }
 </style>
