@@ -177,7 +177,7 @@ async function executeMysqlInContainer(containerName, credentials, database, sql
   }
 }
 
-async function executeMysqlFileInContainer(containerName, credentials, database, sqlFilePath, ignoredTables = [], progressCallback, overwriteCurrentDb = false) {
+async function executeMysqlFileInContainer(containerName, credentials, database, sqlFilePath, ignoredTables = [], progressCallback, overwriteCurrentDb = false, ignoreCreateDatabase = false) {
   let isCancelled = false;
 
   const safeProgressCallback = (progress) => {
@@ -297,7 +297,9 @@ async function executeMysqlFileInContainer(containerName, credentials, database,
           }
         }, 300);
 
-        const fileStream = fs.createReadStream(sqlFilePath);
+        const fileStream = fs.createReadStream(sqlFilePath, {
+          highWaterMark: 64 * 1024 // Reduzindo o tamanho do buffer
+        });
         let processStream;
 
         fileStream.on("error", (err) => {
@@ -322,49 +324,98 @@ async function executeMysqlFileInContainer(containerName, credentials, database,
           updateProgress(processedSize + chunk.length);
         });
 
-        if (hasFilters) {
+        if (hasFilters || ignoreCreateDatabase) {
           let buffer = "";
           let inIgnoredInsert = false;
+          let batchSize = 0;
+          const maxBatchSize = 512 * 1024; // 512KB por lote
 
           const ignoredTablePatterns = ignoredTables.map((table) => new RegExp(`INSERT\\s+INTO\\s+\`?${table}\`?`, "i"));
+          const createDatabasePattern = ignoreCreateDatabase ? new RegExp(`CREATE\\s+DATABASE|USE\\s+\``, "i") : null;
+
+          const processBatch = () => {
+            if (buffer.length > 0) {
+              let lines = buffer.split("\n");
+              buffer = lines.pop() || "";
+
+              let batch = "";
+              let shouldWrite = false;
+
+              for (const line of lines) {
+                if (isCancelled) break;
+
+                if (!inIgnoredInsert) {
+                  const shouldIgnoreTable = ignoredTablePatterns.some((pattern) => pattern.test(line));
+                  const shouldIgnoreDbCommand = ignoreCreateDatabase && createDatabasePattern && createDatabasePattern.test(line);
+
+                  if (shouldIgnoreTable) {
+                    inIgnoredInsert = true;
+                    continue;
+                  }
+
+                  if (shouldIgnoreDbCommand) {
+                    continue;
+                  }
+                }
+
+                if (inIgnoredInsert && line.trim().endsWith(";")) {
+                  inIgnoredInsert = false;
+                  continue;
+                }
+
+                if (!inIgnoredInsert) {
+                  batch += line + "\n";
+                  shouldWrite = true;
+                }
+              }
+
+              if (shouldWrite && batch.length > 0) {
+                try {
+                  const canContinue = execStream.write(batch);
+                  if (!canContinue) {
+                    processStream.pause();
+                    execStream.once("drain", () => {
+                      processStream.resume();
+                    });
+                  }
+                } catch (err) {
+                  console.error("Error writing to stream:", err);
+                }
+              }
+
+              batchSize = buffer.length;
+            }
+          };
 
           processStream.on("data", (chunk) => {
             if (isCancelled) return;
 
             buffer += chunk.toString();
+            batchSize += chunk.length;
 
-            let lines = buffer.split("\n");
-            buffer = lines.pop();
-
-            for (const line of lines) {
-              if (isCancelled) break;
-
-              if (!inIgnoredInsert) {
-                const shouldIgnore = ignoredTablePatterns.some((pattern) => pattern.test(line));
-                if (shouldIgnore) {
-                  inIgnoredInsert = true;
-                  continue;
-                }
-              }
-
-              if (inIgnoredInsert && line.trim().endsWith(";")) {
-                inIgnoredInsert = false;
-                continue;
-              }
-
-              if (!inIgnoredInsert) {
-                execStream.write(line + "\n");
-              }
+            if (batchSize >= maxBatchSize) {
+              processBatch();
             }
           });
 
           processStream.on("end", () => {
             if (isCancelled) return;
 
-            if (buffer && !inIgnoredInsert) {
-              execStream.write(buffer);
+            processBatch();
+
+            if (buffer.length > 0 && !inIgnoredInsert) {
+              try {
+                execStream.write(buffer);
+              } catch (err) {
+                console.error("Error writing final buffer:", err);
+              }
             }
-            execStream.end();
+
+            try {
+              execStream.end();
+            } catch (err) {
+              console.error("Error ending stream:", err);
+            }
           });
         } else {
           processStream.pipe(execStream);

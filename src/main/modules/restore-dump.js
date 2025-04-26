@@ -151,9 +151,15 @@ function buildSedFilters(ignoredTables = []) {
   return ` | sed '${sedCommands.join("; ")}'`;
 }
 
-function buildBaseCommand(sqlFilePath, sedFilters, useGunzip) {
+function buildBaseCommand(sqlFilePath, sedFilters, useGunzip, ignoreCreateDatabase = false) {
   const reader = useGunzip ? `gunzip -c "${sqlFilePath}"` : `cat "${sqlFilePath}"`;
-  return `set -o pipefail && ${reader}${sedFilters}`;
+  let command = `${reader}${sedFilters}`;
+
+  if (ignoreCreateDatabase) {
+    command += ` | sed '/CREATE DATABASE/d; /USE \`/d'`;
+  }
+
+  return `set -o pipefail && ${command}`;
 }
 
 function buildCredentialFlags({ user, password, host, port }) {
@@ -374,7 +380,8 @@ async function _buildDockerRestoreCommand(config) {
     sqlFilePath,
     ignoredTables: ignoredTables || [],
     overwriteCurrentDb: overwriteCurrentDb === true,
-    useDockerApi: true
+    useDockerApi: true,
+    ignoreCreateDatabase: overwriteCurrentDb === true
   };
 }
 
@@ -388,7 +395,7 @@ function _buildLocalRestoreCommand(config) {
   const sedFilters = buildSedFilters(ignoredTables);
   const useGunzip = sqlFilePath.toLowerCase().endsWith(".gz");
 
-  let command = buildBaseCommand(sqlFilePath, sedFilters, useGunzip);
+  let command = buildBaseCommand(sqlFilePath, sedFilters, useGunzip, overwriteCurrentDb);
 
   command += " | mysql";
   command += buildCredentialFlags(connection);
@@ -523,7 +530,8 @@ async function restoreDatabase(event, config) {
           commandConfig.sqlFilePath,
           commandConfig.ignoredTables,
           progressCallback,
-          commandConfig.overwriteCurrentDb
+          commandConfig.overwriteCurrentDb,
+          commandConfig.ignoreCreateDatabase
         )
           .then((stream) => {
             if (global.cancelRestoreRequested || !global.ongoingRestoreOperation) {
