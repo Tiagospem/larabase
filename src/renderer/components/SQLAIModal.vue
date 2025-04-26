@@ -1,36 +1,33 @@
 <template>
   <div class="modal modal-open z-30">
-    <div class="modal-box w-11/12 max-w-3xl bg-base-300">
+    <div class="modal-box w-11/12 max-w-3xl bg-base-300 max-h-[90vh]">
       <h3 class="font-bold text-lg mb-4">SQL-to-Eloquent Converter</h3>
 
-      <!-- User Input Section -->
       <fieldset class="fieldset mb-4">
         <label class="label">
-          <span class="label-text">Describe the query you want to generate (e.g., "Show all users with their orders")</span>
+          <span class="label-text text-info">Describe the query you want to generate (e.g., "Show all users with their orders")</span>
         </label>
         <textarea
           v-model="userQuery"
-          class="textarea textarea-bordered h-32 text-white font-mono"
+          class="textarea textarea-bordered h-32 font-mono w-full"
           placeholder="Example: Show all podcast episodes with their series"
           :disabled="isLoading"
         />
       </fieldset>
 
-      <!-- Response Section -->
       <div
         v-if="isLoading"
         class="flex justify-center items-center my-4 py-8"
       >
         <div class="loading loading-spinner text-primary" />
-        <span class="ml-3">Generating your SQL/Eloquent code...</span>
+        <span class="ml-3 text-sm">Generating your SQL/Eloquent code...</span>
       </div>
 
       <div
         v-if="aiResponse && !isLoading"
         class="space-y-6"
       >
-        <!-- SQL Response -->
-        <div class="card bg-neutral shadow-md">
+        <div class="card bg-base-100">
           <div class="card-body">
             <div class="flex justify-between items-center mb-2">
               <h3 class="card-title text-md">SQL Code</h3>
@@ -55,7 +52,7 @@
                 </svg>
               </button>
             </div>
-            <div class="mockup-code bg-base-300 text-sm overflow-auto max-h-60">
+            <div class="mockup-code bg-primary text-sm overflow-auto max-h-60">
               <pre><code>{{ sqlCode }}</code></pre>
             </div>
             <button
@@ -67,8 +64,7 @@
           </div>
         </div>
 
-        <!-- Eloquent Response -->
-        <div class="card bg-neutral shadow-md">
+        <div class="card bg-base-100">
           <div class="card-body">
             <div class="flex justify-between items-center mb-2">
               <h3 class="card-title text-md">Eloquent Equivalent</h3>
@@ -93,7 +89,7 @@
                 </svg>
               </button>
             </div>
-            <div class="mockup-code bg-base-300 text-sm overflow-auto max-h-80">
+            <div class="mockup-code bg-primary text-sm overflow-auto max-h-80">
               <pre class="language-php"><code>{{ eloquentCode }}</code></pre>
             </div>
           </div>

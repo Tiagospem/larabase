@@ -9,29 +9,22 @@ const zlib = require("zlib");
 const readline = require("readline");
 const docker = require("./docker");
 
-// Destructure needed functions from docker module for easier access
 const { executeMysqlFileInContainer, createDockerClient } = docker;
 
-// Add restore process tracking variable
 let activeRestoreProcess = null;
 
-// Declare a global variable for tracking ongoing operations
-// This will persist even if the process reference is lost
 global.ongoingRestoreOperation = false;
 
 function cancelDatabaseRestoreHandler() {
   ipcMain.handle("cancel-database-restore", async () => {
     console.log("Cancelling database restore process");
 
-    // Set global flags for cancellation
     global.cancelRestoreRequested = true;
 
-    // Force immediate termination of any ongoing operation
     if (global.ongoingRestoreOperation) {
       console.log("Force terminating ongoing restore operation");
       global.ongoingRestoreOperation = false;
 
-      // Directly trigger restoration event with cancellation status
       if (global.mainWindow) {
         global.mainWindow.webContents.send("restoration-progress", {
           status: "cancelled",
@@ -43,17 +36,13 @@ function cancelDatabaseRestoreHandler() {
 
     if (activeRestoreProcess) {
       try {
-        // Kill the process more aggressively
         if (activeRestoreProcess.kill) {
-          // For child_process instances
           console.log("Killing process with SIGKILL");
           activeRestoreProcess.kill("SIGKILL");
         } else if (activeRestoreProcess.destroy) {
-          // For streams
           console.log("Destroying stream");
           activeRestoreProcess.destroy();
         } else if (activeRestoreProcess.stdin) {
-          // Try closing stdin if available
           console.log("Closing stdin");
           activeRestoreProcess.stdin.end();
           if (activeRestoreProcess.kill) {
@@ -61,7 +50,6 @@ function cancelDatabaseRestoreHandler() {
           }
         }
 
-        // For Docker container executions that might still be running
         if (activeRestoreProcess.dockerExecId && activeRestoreProcess.dockerContainer) {
           try {
             console.log("Attempting to kill Docker exec process");
@@ -69,7 +57,6 @@ function cancelDatabaseRestoreHandler() {
             const container = docker.getContainer(activeRestoreProcess.dockerContainer);
             const exec = container.getExec(activeRestoreProcess.dockerExecId);
 
-            // Try to stop the exec instance
             exec.stop().catch((err) => console.error("Error stopping Docker exec:", err));
           } catch (dockerErr) {
             console.error("Error terminating Docker exec:", dockerErr);
@@ -87,19 +74,15 @@ function cancelDatabaseRestoreHandler() {
     } else {
       console.log("No active restore process to cancel");
 
-      // Even if there's no active process handle, we can check the current progress
-      // and notify the frontend about cancellation
       if (global.currentRestoreProgress) {
         console.log("Cancellation requested while operation is in progress");
 
-        // For emergency Docker termination
         if (global.currentRestoreConfig && global.currentRestoreConfig.container) {
           try {
             console.log("Attempting emergency kill of Docker processes");
             const docker = createDockerClient();
             const container = docker.getContainer(global.currentRestoreConfig.container);
 
-            // Force stop MySQL process in the container using a new exec
             const execOptions = {
               Cmd: ["pkill", "-9", "mysql"],
               AttachStdout: true,
@@ -112,7 +95,6 @@ function cancelDatabaseRestoreHandler() {
               .then(() => console.log("Emergency MySQL process termination sent to container"))
               .catch((err) => console.error("Failed to send kill command to container:", err));
 
-            // Alternative approach: send a mysql kill query
             const killOptions = {
               Cmd: ["mysql", "-e", "KILL CONNECTION_ID()"],
               AttachStdout: true,
@@ -164,14 +146,20 @@ function buildSedFilters(ignoredTables = []) {
   if (!Array.isArray(ignoredTables) || ignoredTables.length === 0) {
     return "";
   }
-  // Only filter INSERT statements, not table creation
+
   const sedCommands = ignoredTables.map((table) => `/INSERT INTO \`${table}\`/d; /INSERT INTO "${table}"/d`);
   return ` | sed '${sedCommands.join("; ")}'`;
 }
 
-function buildBaseCommand(sqlFilePath, sedFilters, useGunzip) {
+function buildBaseCommand(sqlFilePath, sedFilters, useGunzip, ignoreCreateDatabase = false) {
   const reader = useGunzip ? `gunzip -c "${sqlFilePath}"` : `cat "${sqlFilePath}"`;
-  return `set -o pipefail && ${reader}${sedFilters}`;
+  let command = `${reader}${sedFilters}`;
+
+  if (ignoreCreateDatabase) {
+    command += ` | sed '/CREATE DATABASE/d; /USE \`/d'`;
+  }
+
+  return `set -o pipefail && ${command}`;
 }
 
 function buildCredentialFlags({ user, password, host, port }) {
@@ -184,8 +172,7 @@ function buildCredentialFlags({ user, password, host, port }) {
 
 function buildInitCommand(database, overwriteCurrentDb = false) {
   if (overwriteCurrentDb) {
-    // When overwriting current DB, we don't need to create a new one, just use the existing one
-    return ` --init-command="USE \\\`${database}\\\`;"`;
+    return ` --init-command="DROP DATABASE IF EXISTS \\\`${database}\\\`; CREATE DATABASE \\\`${database}\\\`; USE \\\`${database}\\\`;"`;
   }
   return ` --init-command="CREATE DATABASE IF NOT EXISTS \\\`${database}\\\`; USE \\\`${database}\\\`;"`;
 }
@@ -211,7 +198,8 @@ async function extractTables(filePath, isGzipped) {
 
     const patterns = {
       create: /CREATE\s+TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?[`"']?([a-zA-Z0-9_]+)[`"']?/i,
-      insert: /INSERT\s+INTO\s+[`"']?([a-zA-Z0-9_]+)[`"']?\s+VALUES/i,
+      insert: /INSERT\s+INTO\s+[`"']?([a-zA-Z0-9_]+)[`"']?(?:\s*\([^)]+\))?\s+VALUES/i,
+      values: /VALUES\s*\(([^)]+)\)/i,
       drop: /DROP\s+TABLE\s+(?:IF\s+EXISTS\s+)?[`"']?([a-zA-Z0-9_]+)[`"']?/i,
       alter: /ALTER\s+TABLE\s+[`"']?([a-zA-Z0-9_]+)[`"']?/i
     };
@@ -219,7 +207,22 @@ async function extractTables(filePath, isGzipped) {
     let currentTable = null;
     let insertBuffer = "";
     let lineCounter = 0;
-    const maxLines = 100000; // Limite para evitar problemas de memória
+    const maxLines = 100000;
+
+    function countValues(text) {
+      const valuesSets = text.match(/\([^)]+\)/g) || [];
+      return valuesSets.length;
+    }
+
+    function countLargeInsert(buffer) {
+      const valueMatches = buffer.match(/\),\s*\(/g) || [];
+      const rowCount = valueMatches.length + 1;
+
+      const multipleInserts = buffer.match(/INSERT\s+INTO/gi) || [];
+      const insertCount = multipleInserts.length;
+
+      return insertCount > 1 ? rowCount * insertCount : rowCount;
+    }
 
     rl.on("line", (line) => {
       lineCounter++;
@@ -242,9 +245,21 @@ async function extractTables(filePath, isGzipped) {
         tableNames.add(currentTable);
         insertBuffer = line;
 
-        // Se a linha já termina com ponto e vírgula, processa imediatamente
         if (trimmed.endsWith(";")) {
-          processInsert();
+          const stats = tableStats.get(currentTable) || { estimatedRows: 0 };
+
+          const valueMatches = line.match(/\),\s*\(/g) || [];
+          if (valueMatches.length > 0) {
+            stats.estimatedRows += valueMatches.length + 1;
+          } else if (patterns.values.test(line)) {
+            stats.estimatedRows += 1;
+          } else {
+            stats.estimatedRows += 1;
+          }
+
+          tableStats.set(currentTable, stats);
+          currentTable = null;
+          insertBuffer = "";
         }
         return;
       }
@@ -256,7 +271,6 @@ async function extractTables(filePath, isGzipped) {
         }
       }
 
-      // Evita problemas de memória para arquivos muito grandes
       if (lineCounter % maxLines === 0) {
         insertBuffer = "";
         currentTable = null;
@@ -267,26 +281,32 @@ async function extractTables(filePath, isGzipped) {
       if (!currentTable) return;
 
       try {
-        // Conta os valores na declaração INSERT
-        const valueMatches = insertBuffer.match(/\),\s*\(/g) || [];
-        const rowCount = valueMatches.length + 1;
-
-        // Contar múltiplas instruções INSERT
-        const multipleInserts = insertBuffer.match(/INSERT\s+INTO/gi) || [];
-        const insertCount = multipleInserts.length;
-
-        // Se houver múltiplas instruções INSERT, ajusta a contagem
-        const totalRowCount = insertCount > 1 ? rowCount * insertCount : rowCount;
+        const largeRowCount = countLargeInsert(insertBuffer);
 
         const stats = tableStats.get(currentTable) || { estimatedRows: 0 };
-        stats.estimatedRows += totalRowCount;
+
+        if (largeRowCount > 1) {
+          stats.estimatedRows += largeRowCount;
+        } else {
+          const valuesCount = countValues(insertBuffer);
+          if (valuesCount > 0) {
+            stats.estimatedRows += valuesCount;
+          } else {
+            stats.estimatedRows += 1;
+          }
+        }
+
         tableStats.set(currentTable, stats);
       } catch (e) {
-        // Em caso de erro, faz uma estimativa baseada no tamanho do buffer
         const stats = tableStats.get(currentTable) || { estimatedRows: 0 };
-        // Estimativa grosseira: cada linha tem cerca de 100 caracteres em média
+
         const roughEstimate = Math.ceil(insertBuffer.length / 100);
-        stats.estimatedRows += roughEstimate;
+        if (roughEstimate > 0) {
+          stats.estimatedRows += roughEstimate;
+        } else {
+          stats.estimatedRows += 1;
+        }
+
         tableStats.set(currentTable, stats);
       }
 
@@ -295,9 +315,25 @@ async function extractTables(filePath, isGzipped) {
     }
 
     rl.on("close", () => {
-      // Processa qualquer INSERT restante
       if (currentTable && insertBuffer) {
         processInsert();
+      }
+
+      for (const tableName of tableNames) {
+        const stats = tableStats.get(tableName);
+        if (stats && stats.estimatedRows === 0) {
+          let fileHasContent = false;
+          try {
+            const fileSize = fs.statSync(filePath).size;
+            fileHasContent = fileSize > 1000;
+          } catch (err) {
+            console.error("Error checking file size:", err);
+          }
+
+          if (fileHasContent) {
+            stats.estimatedRows = 1;
+          }
+        }
       }
 
       const system = ["mysql", "information_schema", "performance_schema", "sys"];
@@ -337,8 +373,6 @@ async function _buildDockerRestoreCommand(config) {
 
   getFileSizeOrThrow(sqlFilePath);
 
-  // Instead of building a shell command, return the configuration
-  // that will be used with docker.executeMysqlFileInContainer
   return {
     container,
     connection,
@@ -346,7 +380,8 @@ async function _buildDockerRestoreCommand(config) {
     sqlFilePath,
     ignoredTables: ignoredTables || [],
     overwriteCurrentDb: overwriteCurrentDb === true,
-    useDockerApi: true
+    useDockerApi: true,
+    ignoreCreateDatabase: overwriteCurrentDb === true
   };
 }
 
@@ -360,7 +395,7 @@ function _buildLocalRestoreCommand(config) {
   const sedFilters = buildSedFilters(ignoredTables);
   const useGunzip = sqlFilePath.toLowerCase().endsWith(".gz");
 
-  let command = buildBaseCommand(sqlFilePath, sedFilters, useGunzip);
+  let command = buildBaseCommand(sqlFilePath, sedFilters, useGunzip, overwriteCurrentDb);
 
   command += " | mysql";
   command += buildCredentialFlags(connection);
@@ -415,12 +450,10 @@ async function restoreDatabase(event, config) {
     sender.send("restoration-progress", { status, progress, message });
   };
 
-  // Set global tracking variables
   global.ongoingRestoreOperation = true;
   global.cancelRestoreRequested = false;
   global.currentRestoreProgress = { status: "starting", progress: 0, message: "Starting database restoration process" };
 
-  // Save main window reference for emergency cancellation
   global.mainWindow = getMainWindow();
 
   sendProgress("starting", 0, "Starting database restoration process");
@@ -441,7 +474,7 @@ async function restoreDatabase(event, config) {
   try {
     if (config.connection.docker) {
       commandConfig = await _buildDockerRestoreCommand(config);
-      // Store for emergency cancellation
+
       global.currentRestoreConfig = commandConfig;
     } else {
       commandConfig = _buildLocalRestoreCommand(config);
@@ -461,12 +494,10 @@ async function restoreDatabase(event, config) {
   let stdoutData = "";
   let stderrData = "";
 
-  // Flag to track if the operation was cancelled
   let wasCancelled = false;
 
   try {
     await new Promise((resolve, reject) => {
-      // Early cancellation check
       if (global.cancelRestoreRequested || !global.ongoingRestoreOperation) {
         wasCancelled = true;
         reject(new Error("Operation cancelled by user"));
@@ -474,19 +505,16 @@ async function restoreDatabase(event, config) {
       }
 
       if (commandConfig.useDockerApi) {
-        // Use dockerode API for Docker operations
         global.currentRestoreProgress = { status: "restoring", progress: 30, message: "Executing SQL restore in Docker container" };
         sendProgress("restoring", 30, "Executing SQL restore in Docker container");
 
-        // Progress tracking callback
         const progressCallback = (progress) => {
-          // Check for cancellation during progress updates
           if (global.cancelRestoreRequested || !global.ongoingRestoreOperation) {
             console.log("Cancellation detected during progress update");
             return;
           }
 
-          const adjustedProgress = 30 + progress * 0.6; // Scale to 30-90% range
+          const adjustedProgress = 30 + progress * 0.6;
           global.currentRestoreProgress = {
             status: "restoring",
             progress: adjustedProgress,
@@ -502,15 +530,14 @@ async function restoreDatabase(event, config) {
           commandConfig.sqlFilePath,
           commandConfig.ignoredTables,
           progressCallback,
-          commandConfig.overwriteCurrentDb
+          commandConfig.overwriteCurrentDb,
+          commandConfig.ignoreCreateDatabase
         )
           .then((stream) => {
-            // Check for cancellation
             if (global.cancelRestoreRequested || !global.ongoingRestoreOperation) {
               console.log("Cancellation detected after Docker execution");
               wasCancelled = true;
 
-              // Try to terminate the stream
               if (stream && typeof stream === "object" && stream.destroy) {
                 stream.destroy();
               }
@@ -519,25 +546,21 @@ async function restoreDatabase(event, config) {
               return;
             }
 
-            // If the function returns a stream, track it for cancellation
             if (stream && typeof stream === "object") {
               activeRestoreProcess = stream;
 
-              // Create an interval to check if the process was cancelled
               const checkCancelInterval = setInterval(() => {
                 if (global.cancelRestoreRequested || !global.ongoingRestoreOperation) {
                   console.log("Cancel request detected, terminating Docker stream");
                   wasCancelled = true;
                   global.cancelRestoreRequested = false;
 
-                  // Attempt to destroy the stream
                   try {
                     if (activeRestoreProcess) {
                       if (activeRestoreProcess.destroy) {
                         activeRestoreProcess.destroy();
                       }
 
-                      // Handle Docker-specific cancellation
                       if (activeRestoreProcess.dockerExecId && activeRestoreProcess.dockerContainer) {
                         try {
                           console.log("Attempting to kill Docker exec process");
@@ -545,7 +568,6 @@ async function restoreDatabase(event, config) {
                           const container = docker.getContainer(activeRestoreProcess.dockerContainer);
                           const exec = container.getExec(activeRestoreProcess.dockerExecId);
 
-                          // Try to stop the exec instance
                           exec.stop().catch((err) => console.error("Error stopping Docker exec:", err));
                         } catch (dockerErr) {
                           console.error("Error terminating Docker exec:", dockerErr);
@@ -562,7 +584,6 @@ async function restoreDatabase(event, config) {
                 }
               }, 500);
 
-              // Clean up interval on stream end
               stream.on("end", () => {
                 clearInterval(checkCancelInterval);
               });
@@ -583,13 +604,10 @@ async function restoreDatabase(event, config) {
             reject(err);
           });
       } else if (commandConfig.useShell) {
-        // Use shell execution with piping for complex commands (local MySQL)
         const child = exec(commandConfig.command, { shell: "/bin/bash" });
 
-        // Keep track of the child process for cancellation
         activeRestoreProcess = child;
 
-        // Create an interval to check if the process was cancelled
         const checkCancelInterval = setInterval(() => {
           if (global.cancelRestoreRequested || !global.ongoingRestoreOperation) {
             console.log("Cancel request detected, terminating shell process");
@@ -640,7 +658,6 @@ async function restoreDatabase(event, config) {
         });
 
         child.on("close", (code) => {
-          // Clear the active process reference
           clearInterval(checkCancelInterval);
           activeRestoreProcess = null;
 
@@ -662,7 +679,6 @@ async function restoreDatabase(event, config) {
       }
     });
   } catch (err) {
-    // Clear active process reference if error occurs
     activeRestoreProcess = null;
 
     if (wasCancelled || err.message === "Operation cancelled by user" || !global.ongoingRestoreOperation) {
@@ -678,10 +694,8 @@ async function restoreDatabase(event, config) {
     return { success: false, error: err.message };
   }
 
-  // Clear active process reference after completion
   activeRestoreProcess = null;
 
-  // Clear global tracking
   global.currentRestoreProgress = null;
   global.cancelRestoreRequested = false;
   global.ongoingRestoreOperation = false;

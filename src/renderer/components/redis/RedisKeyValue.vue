@@ -1,5 +1,5 @@
 <template>
-  <div class="bg-base-200 rounded-lg p-4 h-[400px] overflow-auto md:col-span-2">
+  <div class="bg-base-200 rounded-lg p-4 md:col-span-2">
     <div
       v-if="loading"
       class="flex justify-center items-center h-full"
@@ -136,10 +136,3 @@ defineProps({
   }
 });
 </script>
-
-<style scoped>
-/* Ensure long text wraps properly */
-.break-all {
-  word-break: break-all;
-}
-</style>

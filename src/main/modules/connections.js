@@ -96,6 +96,68 @@ function registerConnectionHandlers(store) {
       message: `Connection database updated to ${newDb}`
     };
   });
+
+  safeRegisterHandler("save-connections", (event, connections) => {
+    try {
+      store.set("connections", connections);
+      return true;
+    } catch (error) {
+      console.error("Error saving connections:", error);
+      throw error;
+    }
+  });
+
+  safeRegisterHandler("remove-connection", async (event, connectionId) => {
+    try {
+      if (!connectionId) {
+        return {
+          success: false,
+          message: "Connection ID is required"
+        };
+      }
+
+      const connections = store.get("connections") || [];
+      const connectionIndex = connections.findIndex((conn) => conn.id === connectionId);
+
+      if (connectionIndex === -1) {
+        return {
+          success: false,
+          message: "Connection not found"
+        };
+      }
+
+      connections.splice(connectionIndex, 1);
+
+      store.set("connections", connections);
+
+      const openTabs = store.get("openTabs") || {
+        tabs: [],
+        activeTabId: null
+      };
+
+      const updatedTabs = {
+        tabs: openTabs.tabs.filter((tab) => tab.connectionId !== connectionId),
+        activeTabId: openTabs.activeTabId
+      };
+
+      if (updatedTabs.tabs.length === 0 || !updatedTabs.tabs.find((tab) => tab.id === updatedTabs.activeTabId)) {
+        updatedTabs.activeTabId = updatedTabs.tabs.length > 0 ? updatedTabs.tabs[0].id : null;
+      }
+
+      store.set("openTabs", updatedTabs);
+
+      return {
+        success: true,
+        message: "Connection and related data removed successfully"
+      };
+    } catch (error) {
+      console.error("Error removing connection:", error);
+      return {
+        success: false,
+        message: error.message || "Failed to remove connection"
+      };
+    }
+  });
 }
 
 module.exports = {

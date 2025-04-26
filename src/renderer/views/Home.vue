@@ -1,6 +1,6 @@
 <template>
   <div class="flex h-full relative">
-    <div class="w-3/12 bg-base-300 flex flex-col items-center justify-between p-6 border-r border-base-300">
+    <div class="w-3/12 bg-base-300 flex flex-col items-center justify-between p-6">
       <div class="flex flex-col items-center mt-12 w-full text-center">
         <img
           src="../assets/icons/png/512x512.png"
@@ -11,26 +11,53 @@
         <p class="text-xs mt-2">An opinionated database GUI for Laravel developers</p>
       </div>
 
-      <button
-        class="btn w-full flex items-center gap-2 mt-8"
-        @click="openCreateConnectionModal"
-      >
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke-width="1.5"
-          stroke="currentColor"
-          class="w-5 h-5"
+      <div class="flex items-center gap-2 mt-8 w-full">
+        <button
+          class="btn flex-1 flex items-center gap-2"
+          @click="openCreateConnectionModal"
         >
-          <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            d="M12 4.5v15m7.5-7.5h-15"
-          />
-        </svg>
-        Create Connection
-      </button>
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke-width="1.5"
+            stroke="currentColor"
+            class="w-5 h-5"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              d="M12 4.5v15m7.5-7.5h-15"
+            />
+          </svg>
+          Create Connection
+        </button>
+
+        <button
+          class="btn btn-square"
+          @click="showSettings = true"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke-width="1.5"
+            stroke="currentColor"
+            class="w-5 h-5"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.324.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 011.37.49l1.296 2.247a1.125 1.125 0 01-.26 1.431l-1.003.827c-.293.24-.438.613-.431.992a6.759 6.759 0 010 .255c-.007.378.138.75.43.99l1.005.828c.424.35.534.954.26 1.43l-1.298 2.247a1.125 1.125 0 01-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.57 6.57 0 01-.22.128c-.331.183-.581.495-.644.869l-.213 1.28c-.09.543-.56.941-1.11.941h-2.594c-.55 0-1.02-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 01-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 01-1.369-.49l-1.297-2.247a1.125 1.125 0 01.26-1.431l1.004-.827c.292-.24.437-.613.43-.992a6.932 6.932 0 010-.255c.007-.378-.138-.75-.43-.99l-1.004-.828a1.125 1.125 0 01-.26-1.43l1.297-2.247a1.125 1.125 0 011.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.087.22-.128.332-.183.582-.495.644-.869l.214-1.281z"
+            />
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+            />
+          </svg>
+        </button>
+      </div>
     </div>
 
     <div class="w-9/12 flex flex-col">
@@ -54,7 +81,7 @@
             viewBox="0 0 24 24"
             stroke-width="1.5"
             stroke="currentColor"
-            class="w-16 h-16 mb-6 text-gray-500"
+            class="w-16 h-16 mb-6"
           >
             <path
               stroke-linecap="round"
@@ -73,7 +100,7 @@
           <div
             v-for="connection in connectionsStore.connections"
             :key="connection.id"
-            class="card bg-neutral shadow-xl transition-colors border border-base-200 hover:border-base-100"
+            class="card bg-base-300 shadow-sm transition-colors border border-base-300 hover:bg-base-200"
           >
             <div class="card-body py-4 px-5">
               <div class="flex flex-col sm:flex-row items-start sm:items-center gap-4">
@@ -81,19 +108,19 @@
                   class="w-10 h-10 rounded-full flex items-center justify-center shrink-0"
                   :class="getConnectionColor(connection.type)"
                 >
-                  <span class="font-bold">{{ connection.icon }}</span>
+                  <span class="font-bold text-base-100">{{ connection.icon }}</span>
                 </div>
                 <div class="flex-1 min-w-0">
                   <h2 class="card-title overflow-hidden whitespace-nowrap text-ellipsis">
-                    {{ connection.name }}
+                    <span>{{ connection.name }}</span>
                     <span
                       v-if="connection.isValid"
-                      class="text-xs text-green-500 ml-1"
+                      class="text-xs text-success ml-1"
                       >{{ connection.status }}</span
                     >
                     <span
                       v-else
-                      class="text-xs text-red-500 ml-1"
+                      class="text-xs text-error ml-1"
                       >Invalid</span
                     >
                   </h2>
@@ -200,6 +227,10 @@
       ref="manageConnection"
       :is-loading="isLoading"
     />
+    <Settings
+      v-if="showSettings"
+      @close="showSettings = false"
+    />
 
     <div class="absolute w-full h-16 top-0 draggable"></div>
   </div>
@@ -212,6 +243,7 @@ import { useConnectionsStore } from "@/store/connections";
 
 import RestoreDatabase from "@/components/home/RestoreDatabase.vue";
 import ManageConnection from "@/components/home/ManageConnection.vue";
+import Settings from "@/components/Settings.vue";
 
 const router = useRouter();
 const connectionsStore = useConnectionsStore();
@@ -220,6 +252,7 @@ const showAlert = inject("showAlert");
 
 const restoreDatabase = ref(null);
 const manageConnection = ref(null);
+const showSettings = ref(false);
 
 const isLoading = computed(() => connectionsStore.isLoading);
 
@@ -242,7 +275,7 @@ function removeConnection(connectionId) {
 onMounted(async () => {
   setTimeout(async () => {
     await loadConnectionsWithRetry();
-  }, 300);
+  }, 500);
 });
 
 async function loadConnectionsWithRetry(retries = 3) {

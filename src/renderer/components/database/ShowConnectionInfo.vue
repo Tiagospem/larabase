@@ -3,10 +3,10 @@
     <h1 class="text-lg font-semibold">
       {{ connection?.name }}
     </h1>
-    <div class="text-xs text-gray-400 flex items-center">
+    <div class="text-xs flex items-center">
       <span>{{ connection?.database || connection?.path }}</span>
       <button
-        class="ml-1 text-gray-400 hover:text-gray-300"
+        class="ml-1"
         @click="showConnectionInfo = true"
       >
         <svg
@@ -29,24 +29,14 @@
         v-if="!databaseMatch && connection?.projectPath && !isLoading"
         class="ml-2 flex items-center text-amber-400"
       >
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke-width="1.5"
-          stroke="currentColor"
-          class="w-3 h-3 mr-1"
+        <span
+          v-tooltip.bottom="comparisonTooltip"
+          class="text-error"
+          >Mismatch project database</span
         >
-          <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"
-          />
-        </svg>
-        <span v-tooltip.bottom="comparisonTooltip">Mismatch with project database</span>
         <button
           v-tooltip.bottom="'Update database in .env file'"
-          class="ml-1 text-amber-400 hover:text-amber-300"
+          class="ml-1 text-error"
           @click="updateProjectEnv"
         >
           <svg
@@ -113,7 +103,7 @@
           </p>
           <p v-if="projectDatabase && connection.database">
             <span class="font-semibold">Project Database: </span>
-            <span :class="{ 'text-amber-400': !databaseMatch, 'text-green-400': databaseMatch }">
+            <span :class="{ 'text-warning': !databaseMatch, 'text-success': databaseMatch }">
               {{ projectDatabase }}
             </span>
           </p>

@@ -1,6 +1,6 @@
 <template>
   <div class="h-full flex flex-col">
-    <div class="bg-base-200 p-2 border-b border-neutral flex items-center justify-between">
+    <div class="bg-base-200 p-2 border-b border-black/10 flex items-center justify-between">
       <div class="flex items-center space-x-2">
         <button
           class="btn btn-sm btn-ghost"
@@ -64,7 +64,7 @@
 
       <div
         v-else-if="foreignKeys.length === 0"
-        class="flex items-center justify-center h-full text-gray-500"
+        class="flex items-center justify-center h-full"
       >
         <div class="text-center">
           <svg
@@ -73,7 +73,7 @@
             viewBox="0 0 24 24"
             stroke-width="1.5"
             stroke="currentColor"
-            class="w-12 h-12 mx-auto mb-4 text-gray-400"
+            class="w-12 h-12 mx-auto mb-4"
           >
             <path
               stroke-linecap="round"
@@ -81,9 +81,9 @@
               d="M13.19 8.688a4.5 4.5 0 011.242 7.244l-4.5 4.5a4.5 4.5 0 01-6.364-6.364l1.757-1.757m13.35-.622l1.757-1.757a4.5 4.5 0 00-6.364-6.364l-4.5 4.5a4.5 4.5 0 001.242 7.244"
             />
           </svg>
-          <p>No foreign keys found in this table</p>
+          <p class="text-sm">No foreign keys found in this table</p>
           <button
-            class="btn btn-sm btn-ghost mt-4"
+            class="btn btn-sm mt-4"
             @click="loadForeignKeys"
           >
             Reload
@@ -95,7 +95,6 @@
         v-else
         class="p-4 pb-16 h-full overflow-auto"
       >
-        <!-- Outgoing Foreign Keys -->
         <div
           v-if="outgoingRelations.length > 0"
           class="mb-6"
@@ -103,7 +102,7 @@
           <h3 class="text-lg font-bold mb-3">References to Other Tables</h3>
           <div class="overflow-x-auto">
             <table class="table table-sm w-full min-w-full">
-              <thead class="bg-base-300 sticky top-0 z-10">
+              <thead class="bg-base-100 shadow-sm sticky top-0 z-10">
                 <tr class="text-xs">
                   <th class="px-4 py-2 text-left">Name</th>
                   <th class="px-4 py-2 text-left">Local Column</th>
@@ -117,7 +116,7 @@
                 <tr
                   v-for="fk in outgoingRelations"
                   :key="fk.name"
-                  class="border-b border-neutral hover:bg-base-200"
+                  class="border-b border-black/10 hover:bg-base-200 bg-base-100"
                 >
                   <td class="px-4 py-3 font-medium">
                     {{ fk.name }}
@@ -143,12 +142,11 @@
           </div>
         </div>
 
-        <!-- Incoming Foreign Keys -->
         <div v-if="incomingRelations.length > 0">
           <h3 class="text-lg font-bold mb-3">References from Other Tables</h3>
           <div class="overflow-x-auto">
             <table class="table table-sm w-full min-w-full">
-              <thead class="bg-base-300 sticky top-0 z-10">
+              <thead class="bg-base-100 shadow-sm sticky top-0 z-10">
                 <tr class="text-xs">
                   <th class="px-4 py-2 text-left">Name</th>
                   <th class="px-4 py-2 text-left">Table</th>
@@ -162,7 +160,7 @@
                 <tr
                   v-for="fk in incomingRelations"
                   :key="fk.name"
-                  class="border-b border-neutral hover:bg-base-200"
+                  class="border-b border-neutral hover:bg-base-200 bg-base-100"
                 >
                   <td class="px-4 py-3 font-medium">
                     {{ fk.name }}

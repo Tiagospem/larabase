@@ -141,27 +141,40 @@ function registerTableHandlers(store, dbMonitoringConnections) {
     try {
       const [tables] = await connection.query(_LIST_TABLES_SQL, [config.database]);
 
-      const [tableCounts] = await connection.query(
-        `
-        SELECT 
-          TABLE_NAME as name, 
-          TABLE_ROWS as rowCount
-        FROM 
-          information_schema.TABLES 
-        WHERE 
-          TABLE_SCHEMA = ?
-      `,
-        [config.database]
-      );
+      if (tables.length === 0) {
+        return { success: true, tables: [] };
+      }
 
-      const countsMap = {};
-      tableCounts.forEach((row) => {
-        countsMap[row.name] = row.rowCount;
-      });
+      const tableCountQueries = tables
+        .map((table) => {
+          const escapedTable = connection.escapeId(table.name);
+          return `SELECT '${table.name}' AS tableName, COUNT(*) AS rowCount FROM ${escapedTable}`;
+        })
+        .join(" UNION ALL ");
 
-      tables.forEach((table) => {
-        table.rowCount = countsMap[table.name] || 0;
-      });
+      try {
+        const [countResults] = await connection.query(tableCountQueries);
+
+        const countsMap = {};
+
+        countResults.forEach((row) => {
+          countsMap[row.tableName] = row.rowCount;
+        });
+
+        tables.forEach((table) => {
+          table.rowCount = countsMap[table.name] || 0;
+        });
+      } catch (countError) {
+        for (const table of tables) {
+          try {
+            const escapedTable = connection.escapeId(table.name);
+            const [rows] = await connection.query(`SELECT COUNT(*) AS rowCount FROM ${escapedTable}`);
+            table.rowCount = rows[0]?.rowCount || 0;
+          } catch (err) {
+            table.rowCount = 0;
+          }
+        }
+      }
 
       return { success: true, tables: tables };
     } catch (err) {
@@ -590,7 +603,6 @@ function registerTableHandlers(store, dbMonitoringConnections) {
   });
 
   ipcMain.handle("drop-tables", async (_e, config = {}) => {
-    // Safely clone input to prevent serialization issues
     try {
       config = JSON.parse(
         JSON.stringify({
@@ -630,7 +642,6 @@ function registerTableHandlers(store, dbMonitoringConnections) {
     let conn;
 
     try {
-      // Create a new connection
       conn = await mysql.createConnection({
         host: connection.host,
         port: connection.port || 3306,
@@ -640,10 +651,8 @@ function registerTableHandlers(store, dbMonitoringConnections) {
         connectTimeout: 10000
       });
 
-      // Begin transaction
       await conn.query("START TRANSACTION");
 
-      // Disable foreign key checks if needed
       if (config.ignoreForeignKeys) {
         await conn.query("SET FOREIGN_KEY_CHECKS = 0");
       }
@@ -651,7 +660,6 @@ function registerTableHandlers(store, dbMonitoringConnections) {
       let successCount = 0;
       let failedTables = [];
 
-      // Process each table
       for (const tableName of config.tables) {
         try {
           console.log(`Attempting to drop table: ${tableName}`);
@@ -674,12 +682,10 @@ function registerTableHandlers(store, dbMonitoringConnections) {
         }
       }
 
-      // Re-enable foreign key checks if they were disabled
       if (config.ignoreForeignKeys) {
         await conn.query("SET FOREIGN_KEY_CHECKS = 1");
       }
 
-      // Commit or rollback based on results
       if (failedTables.length === 0) {
         await conn.query("COMMIT");
         console.log(`Successfully dropped ${successCount} tables`);
@@ -696,7 +702,6 @@ function registerTableHandlers(store, dbMonitoringConnections) {
         };
       }
     } catch (err) {
-      // Handle any uncaught errors
       console.error("Error in drop-tables handler:", err);
 
       if (conn) {
@@ -705,9 +710,7 @@ function registerTableHandlers(store, dbMonitoringConnections) {
           if (config.ignoreForeignKeys) {
             await conn.query("SET FOREIGN_KEY_CHECKS = 1");
           }
-        } catch (rollbackErr) {
-          // Ignore rollback errors
-        }
+        } catch (rollbackErr) {}
       }
 
       return {
@@ -715,12 +718,231 @@ function registerTableHandlers(store, dbMonitoringConnections) {
         message: "Error dropping tables: " + (err.message || "Unknown error")
       };
     } finally {
-      // Always close the connection
       if (conn) {
         try {
           await conn.end();
+        } catch (err) {}
+      }
+    }
+  });
+
+  ipcMain.handle("get-database-relationships", async (event, config) => {
+    let connection;
+
+    try {
+      function getConnectionDetails(connectionId) {
+        const connections = store.get("connections") || [];
+        return connections.find((conn) => conn.id === connectionId);
+      }
+
+      if (config.connectionId && (!config.host || !config.port || !config.username || !config.database)) {
+        const connectionDetails = getConnectionDetails(config.connectionId);
+        if (!connectionDetails) {
+          console.error(`Connection details not found for ID: ${config.connectionId}`);
+          return {
+            success: false,
+            message: "Connection details not found"
+          };
+        }
+        config.host = connectionDetails.host;
+        config.port = connectionDetails.port;
+        config.username = connectionDetails.username;
+        config.password = connectionDetails.password;
+        config.database = connectionDetails.database;
+      }
+
+      if (!config.host || !config.port || !config.username || !config.database) {
+        console.error("Missing connection parameters for diagram:", config);
+        return {
+          success: false,
+          message: "Missing required connection parameters"
+        };
+      }
+
+      connection = await mysql.createConnection({
+        host: config.host,
+        port: config.port,
+        user: config.username,
+        password: config.password,
+        database: config.database,
+        multipleStatements: true
+      });
+
+      const [rows] = await connection.query(
+        `
+      SELECT 
+        TABLE_NAME AS sourceTable,
+        COLUMN_NAME AS sourceColumn,
+        REFERENCED_TABLE_NAME AS targetTable,
+        REFERENCED_COLUMN_NAME AS targetColumn,
+        CONSTRAINT_NAME AS constraintName
+      FROM
+        INFORMATION_SCHEMA.KEY_COLUMN_USAGE
+      WHERE
+        REFERENCED_TABLE_SCHEMA = ? 
+        AND REFERENCED_TABLE_NAME IS NOT NULL
+        AND REFERENCED_COLUMN_NAME IS NOT NULL
+      ORDER BY
+        TABLE_NAME, COLUMN_NAME;
+    `,
+        [config.database]
+      );
+
+      if (rows.length === 0) {
+        const [tables] = await connection.query(
+          `
+        SELECT table_name 
+        FROM information_schema.tables 
+        WHERE table_schema = ? 
+          AND table_type = 'BASE TABLE'
+      `,
+          [config.database]
+        );
+
+        const inferredRelationships = [];
+
+        for (const table of tables) {
+          const tableName = table.table_name || table.TABLE_NAME;
+
+          const [columns] = await connection.query(
+            `
+          SELECT 
+            COLUMN_NAME as name,
+            COLUMN_TYPE as type,
+            COLUMN_KEY as \`key\`
+          FROM 
+            information_schema.COLUMNS 
+          WHERE 
+            TABLE_SCHEMA = ? 
+            AND TABLE_NAME = ?
+          ORDER BY 
+            ORDINAL_POSITION
+        `,
+            [config.database, tableName]
+          );
+
+          for (const column of columns) {
+            const columnName = column.name;
+
+            if (columnName.endsWith("_id") || columnName.endsWith("_fk") || (columnName.startsWith("id_") && columnName !== "id")) {
+              let targetTable = null;
+
+              if (columnName.endsWith("_id")) {
+                targetTable = columnName.substring(0, columnName.length - 3);
+              } else if (columnName.endsWith("_fk")) {
+                targetTable = columnName.substring(0, columnName.length - 3);
+              } else if (columnName.startsWith("id_")) {
+                targetTable = columnName.substring(3);
+              }
+
+              const targetExists = tables.some((t) => (t.table_name || t.TABLE_NAME).toLowerCase() === targetTable.toLowerCase());
+
+              if (targetExists) {
+                inferredRelationships.push({
+                  sourceTable: tableName,
+                  sourceColumn: columnName,
+                  targetTable: targetTable,
+                  targetColumn: "id",
+                  constraintName: `inferred_${tableName}_${columnName}`,
+                  inferred: true
+                });
+
+                console.log(`Inferred relationship: ${tableName}.${columnName} -> ${targetTable}.id`);
+              }
+            }
+          }
+        }
+
+        if (inferredRelationships.length > 0) {
+          console.log(`Generated ${inferredRelationships.length} inferred relationships`);
+          await connection.end();
+          return inferredRelationships;
+        }
+      }
+
+      if (connection) {
+        await connection.end();
+      }
+
+      return rows;
+    } catch (error) {
+      console.error("Error getting database relationships:", error);
+
+      if (connection) {
+        try {
+          await connection.end();
         } catch (err) {
-          // Ignore connection close errors
+          console.error("Error closing MySQL connection:", err);
+        }
+      }
+
+      return {
+        success: false,
+        message: error.message || "Failed to get database relationships",
+        error: error.toString()
+      };
+    }
+  });
+
+  ipcMain.handle("execute-sql-query", async (event, config) => {
+    let connection;
+    let monitoredConnection = null;
+
+    try {
+      if (!config.connectionId || !config.query) {
+        return {
+          success: false,
+          error: "Missing connectionId or query",
+          results: []
+        };
+      }
+
+      const connections = store.get("connections") || [];
+      const connectionDetails = connections.find((conn) => conn.id === config.connectionId);
+
+      if (!connectionDetails) {
+        return {
+          success: false,
+          error: "Connection not found",
+          results: []
+        };
+      }
+
+      monitoredConnection = dbMonitoringConnections.get(config.connectionId);
+
+      if (monitoredConnection) {
+        connection = monitoredConnection;
+      } else {
+        connection = await mysql.createConnection({
+          host: connectionDetails.host,
+          port: connectionDetails.port,
+          user: connectionDetails.username,
+          password: connectionDetails.password || "",
+          database: connectionDetails.database,
+          connectTimeout: 10000,
+          multipleStatements: true
+        });
+      }
+
+      const [results] = await connection.query(config.query);
+
+      return {
+        success: true,
+        results: Array.isArray(results) ? results : [results]
+      };
+    } catch (error) {
+      console.error("Error executing SQL query:", error);
+      return {
+        success: false,
+        error: error.message || "Failed to execute SQL query",
+        results: []
+      };
+    } finally {
+      if (connection && !monitoredConnection) {
+        try {
+          await connection.end();
+        } catch (err) {
+          console.error("Error closing MySQL connection:", err);
         }
       }
     }

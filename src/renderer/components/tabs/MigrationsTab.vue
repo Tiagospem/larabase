@@ -1,6 +1,6 @@
 <template>
   <div class="h-full flex flex-col">
-    <div class="bg-base-200 p-2 border-b border-neutral flex items-center justify-between">
+    <div class="bg-base-200 p-2 border-b border-black/10 flex items-center justify-between">
       <div class="flex items-center space-x-2">
         <button
           class="btn btn-sm btn-ghost"
@@ -28,7 +28,7 @@
         v-if="!isLoading"
         class="flex items-center space-x-2"
       >
-        <span class="text-xs text-gray-400">{{ migrations.length }} migrations found</span>
+        <span class="text-xs">{{ migrations.length }} migrations found</span>
 
         <button
           v-if="!connection?.projectPath"
@@ -93,7 +93,7 @@
 
       <div
         v-else-if="!connection?.projectPath"
-        class="flex items-center justify-center h-full text-gray-500"
+        class="flex items-center justify-center h-full"
       >
         <div class="text-center">
           <svg
@@ -102,7 +102,7 @@
             viewBox="0 0 24 24"
             stroke-width="1.5"
             stroke="currentColor"
-            class="w-12 h-12 mx-auto mb-4 text-gray-400"
+            class="w-12 h-12 mx-auto mb-4"
           >
             <path
               stroke-linecap="round"
@@ -122,7 +122,7 @@
 
       <div
         v-else-if="migrations.length === 0"
-        class="flex items-center justify-center h-full text-gray-500"
+        class="flex items-center justify-center h-full"
       >
         <div class="text-center">
           <svg
@@ -131,7 +131,7 @@
             viewBox="0 0 24 24"
             stroke-width="1.5"
             stroke="currentColor"
-            class="w-12 h-12 mx-auto mb-4 text-gray-400"
+            class="w-12 h-12 mx-auto mb-4"
           >
             <path
               stroke-linecap="round"
@@ -139,10 +139,10 @@
               d="M7.5 7.5h-.75A2.25 2.25 0 004.5 9.75v7.5a2.25 2.25 0 002.25 2.25h7.5a2.25 2.25 0 002.25-2.25v-7.5a2.25 2.25 0 00-2.25-2.25h-.75m-6 3.75l3 3m0 0l3-3m-3 3V1.5m6 9h.75a2.25 2.25 0 012.25 2.25v7.5a2.25 2.25 0 01-2.25 2.25h-7.5a2.25 2.25 0 01-2.25-2.25v-.75"
             />
           </svg>
-          <p>No migrations found for {{ tableName }} table</p>
+          <p class="text-sm">No migrations found for {{ tableName }} table</p>
           <button
             v-if="connection?.projectPath"
-            class="btn btn-sm btn-ghost mt-4"
+            class="btn btn-sm mt-4"
             @click="loadMigrations"
           >
             Reload
@@ -158,7 +158,7 @@
           <div
             v-for="migration in migrations"
             :key="migration.id"
-            class="collapse collapse-arrow bg-base-300 mb-2"
+            class="collapse collapse-arrow bg-base-100 mb-2"
           >
             <input type="checkbox" />
             <div class="collapse-title font-medium flex items-center justify-between">
@@ -177,7 +177,7 @@
               </div>
             </div>
             <div class="collapse-content">
-              <div class="text-sm text-gray-400 mb-2">
+              <div class="text-sm mb-2">
                 {{ migration.created_at }}
               </div>
               <div class="divider my-2" />
@@ -187,7 +187,7 @@
                   <div
                     v-for="(action, actionIndex) in migration.actions"
                     :key="actionIndex"
-                    class="bg-base-300 p-2 rounded-md"
+                    class="bg-base-200 p-2 rounded-md"
                   >
                     <div class="flex items-center space-x-2">
                       <div

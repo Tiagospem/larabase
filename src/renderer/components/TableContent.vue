@@ -1,11 +1,11 @@
 <template>
   <div class="h-full flex flex-col">
-    <div class="bg-neutral px-2 py-1 border-b border-neutral flex items-center">
-      <div class="flex gap-2">
+    <div class="bg-base-300 px-2 py-1 border-b border-black/10 flex items-center">
+      <div class="flex gap-1">
         <a
           v-for="tab in contentTabs"
           :key="tab.id"
-          class="flex items-center gap-1 px-2 py-1 cursor-pointer transition-colors text-sm"
+          class="flex items-center gap-1 px-2 py-1 cursor-pointer transition-colors text-sm tracking-tighter"
           :class="{
             'text-primary': activeContentTab === tab.id,
             'hover:text-primary': activeContentTab !== tab.id,

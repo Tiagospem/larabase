@@ -1,10 +1,11 @@
-const { ipcMain, dialog } = require("electron");
+const { ipcMain, dialog, shell } = require("electron");
 const { getMainWindow } = require("../modules/window");
 const fs = require("fs");
 const path = require("path");
-const { execSync } = require("child_process");
+const { execSync, spawn } = require("child_process");
 const pluralize = require("pluralize");
 const docker = require("./docker");
+const mysql = require("mysql2/promise");
 
 function extractEnvValue(content, key) {
   const regex = new RegExp(`^${key}=(.*)$`, "m");
@@ -13,28 +14,6 @@ function extractEnvValue(content, key) {
     return match[1].trim().replace(/^["']|["']$/g, "");
   }
   return null;
-}
-
-const DOCKER_SOCKET = "/var/run/docker.sock";
-
-function socketExists(path) {
-  try {
-    return fs.existsSync(path);
-  } catch {
-    return false;
-  }
-}
-
-async function checkDockerByOS() {
-  return await docker.isDockerRunning();
-}
-
-async function isDockerCliAvailable() {
-  return await docker.isDockerAvailable();
-}
-
-async function getDockerContainers() {
-  return await docker.getDockerContainers();
 }
 
 function execCommand(cmd, { timeout = 2000, windowsHide = true, stdio = "pipe" } = {}) {
@@ -546,6 +525,671 @@ function registerProjectHandlers() {
         commands: []
       };
     }
+  });
+
+  ipcMain.handle("clear-all-project-logs", async (event, config) => {
+    try {
+      if (!config || !config.projectPath) {
+        return { success: false, message: "No project path provided" };
+      }
+
+      const logsPath = path.join(config.projectPath, "storage", "logs");
+
+      if (!fs.existsSync(logsPath)) {
+        return { success: false, message: "Logs directory not found" };
+      }
+
+      const logFiles = fs.readdirSync(logsPath).filter((file) => file.endsWith(".log"));
+
+      if (logFiles.length === 0) {
+        return { success: true, message: "No log files found" };
+      }
+
+      let clearedCount = 0;
+
+      for (const logFile of logFiles) {
+        try {
+          const logFilePath = path.join(logsPath, logFile);
+
+          fs.writeFileSync(logFilePath, "", "utf8");
+          clearedCount++;
+        } catch (fileError) {
+          console.error(`Error clearing log file ${logFile}:`, fileError);
+        }
+      }
+
+      return {
+        success: true,
+        message: `Cleared ${clearedCount} log files`,
+        clearedFiles: clearedCount
+      };
+    } catch (error) {
+      console.error("Error clearing project logs:", error);
+      return { success: false, message: error.message };
+    }
+  });
+
+  ipcMain.handle("open-file", async (event, filePath) => {
+    try {
+      const editors = [
+        {
+          name: "PHPStorm",
+          paths: [
+            "/Applications/PhpStorm.app/Contents/MacOS/phpstorm",
+            "/usr/local/bin/phpstorm",
+            "C:\\Program Files\\JetBrains\\PhpStorm\\bin\\phpstorm64.exe",
+            "C:\\Program Files (x86)\\JetBrains\\PhpStorm\\bin\\phpstorm.exe"
+          ]
+        },
+        {
+          name: "VSCode",
+          paths: [
+            "/Applications/Visual Studio Code.app/Contents/Resources/app/bin/code",
+            "/usr/bin/code",
+            "/usr/local/bin/code",
+            "C:\\Program Files\\Microsoft VS Code\\bin\\code.cmd",
+            "C:\\Program Files (x86)\\Microsoft VS Code\\bin\\code.cmd",
+            "C:\\Users\\%USERNAME%\\AppData\\Local\\Programs\\Microsoft VS Code\\bin\\code.cmd"
+          ]
+        },
+        {
+          name: "Sublime Text",
+          paths: [
+            "/Applications/Sublime Text.app/Contents/SharedSupport/bin/subl",
+            "/usr/local/bin/subl",
+            "C:\\Program Files\\Sublime Text\\subl.exe",
+            "C:\\Program Files (x86)\\Sublime Text\\subl.exe"
+          ]
+        }
+      ];
+
+      for (const editor of editors) {
+        for (const editorPath of editor.paths) {
+          try {
+            if (fs.existsSync(editorPath)) {
+              const child = require("child_process").spawn(editorPath, [filePath], {
+                detached: true,
+                stdio: "ignore"
+              });
+              child.unref();
+              return { success: true, editor: editor.name };
+            }
+          } catch (e) {
+            console.error(`Error checking editor path ${editorPath}:`, e);
+          }
+        }
+      }
+
+      await shell.openPath(filePath);
+
+      return { success: true, editor: "default" };
+    } catch (error) {
+      console.error("Failed to open file:", error);
+      return { success: false, error: error.message };
+    }
+  });
+
+  ipcMain.handle("get-project-logs", async (event, config) => {
+    try {
+      if (!config || !config.projectPath) {
+        return [];
+      }
+
+      const logsPath = path.join(config.projectPath, "storage", "logs");
+
+      if (!fs.existsSync(logsPath)) {
+        console.error("Logs directory not found at:", logsPath);
+        return [];
+      }
+
+      const allFiles = fs.readdirSync(logsPath);
+
+      const logFiles = allFiles.filter((file) => file.endsWith(".log"));
+
+      if (logFiles.length === 0) {
+        return [];
+      }
+
+      let logFilePath;
+      let logFileName;
+
+      if (logFiles.includes("laravel.log")) {
+        logFileName = "laravel.log";
+        logFilePath = path.join(logsPath, logFileName);
+      } else {
+        const dailyLogPattern = /laravel-\d{4}-\d{2}-\d{2}\.log/;
+        const dailyLogFiles = logFiles.filter((file) => dailyLogPattern.test(file));
+
+        if (dailyLogFiles.length > 0) {
+          dailyLogFiles.sort().reverse();
+          logFileName = dailyLogFiles[0];
+          logFilePath = path.join(logsPath, logFileName);
+        } else {
+          logFileName = logFiles[0];
+          logFilePath = path.join(logsPath, logFileName);
+        }
+      }
+
+      const logContent = fs.readFileSync(logFilePath, "utf8");
+
+      if (!logContent || logContent.trim() === "") {
+        return [];
+      }
+
+      const lines = logContent.split("\n");
+
+      const logEntries = [];
+      let currentEntry = null;
+
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i].trim();
+        if (!line) continue;
+
+        const timestampMatch = line.match(/^\[(\d{4}-\d{2}-\d{2}[T\s]\d{2}:\d{2}:\d{2}\.?\d*(?:[\+-]\d{4})?)\]/);
+
+        if (timestampMatch) {
+          if (currentEntry) {
+            logEntries.push(currentEntry);
+          }
+
+          let type = "info";
+          if (line.toLowerCase().includes("error") || line.toLowerCase().includes("exception")) {
+            type = "error";
+          } else if (line.toLowerCase().includes("warning")) {
+            type = "warning";
+          } else if (line.toLowerCase().includes("debug")) {
+            type = "debug";
+          } else if (line.toLowerCase().includes("info")) {
+            type = "info";
+          }
+
+          currentEntry = {
+            id: `log_${Date.now()}_${i}`,
+            timestamp: new Date(timestampMatch[1]).getTime(),
+            type: type.toLowerCase(),
+            message: line,
+            stack: null,
+            file: logFileName
+          };
+        } else if (currentEntry) {
+          if (line.includes("Stack trace:")) {
+            currentEntry.stack = "";
+          } else if (currentEntry.stack !== null) {
+            currentEntry.stack += line + "\n";
+          } else {
+            currentEntry.message += "\n" + line;
+          }
+        }
+      }
+
+      if (currentEntry) {
+        logEntries.push(currentEntry);
+      }
+
+      if (logEntries.length === 0) {
+        const sampleContent = logContent.substring(0, Math.min(500, logContent.length));
+
+        return [
+          {
+            id: `log_raw_${Date.now()}`,
+            timestamp: Date.now(),
+            type: "info",
+            message: "Raw log content sample:\n\n" + sampleContent,
+            stack: null,
+            file: logFileName
+          }
+        ];
+      }
+
+      return logEntries;
+    } catch (error) {
+      console.error("Error reading project logs:", error);
+      return [
+        {
+          id: `log_error_${Date.now()}`,
+          timestamp: Date.now(),
+          type: "error",
+          message: `Error reading logs: ${error.message}`,
+          stack: error.stack,
+          file: "error"
+        }
+      ];
+    }
+  });
+
+  ipcMain.handle("get-migration-status", async (event, config) => {
+    try {
+      if (!config.projectPath) {
+        return {
+          success: false,
+          message: "Project path is required",
+          pendingMigrations: [],
+          batches: []
+        };
+      }
+
+      const artisanPath = path.join(config.projectPath, "artisan");
+
+      if (!fs.existsSync(artisanPath)) {
+        return {
+          success: false,
+          message: "Artisan file not found in project path",
+          pendingMigrations: [],
+          batches: []
+        };
+      }
+
+      const hasSail = fs.existsSync(path.join(config.projectPath, "vendor/bin/sail"));
+      const useSail = config.useSail && hasSail;
+
+      const statusCommand = useSail ? ["vendor/bin/sail", "artisan", "migrate:status", "--no-ansi"] : ["php", "artisan", "migrate:status", "--no-ansi"];
+
+      const statusProcess = spawn(statusCommand[0], statusCommand.slice(1), {
+        cwd: config.projectPath,
+        shell: true
+      });
+
+      let statusOutput = "";
+      statusProcess.stdout.on("data", (data) => {
+        statusOutput += data.toString();
+      });
+
+      let errorOutput = "";
+      statusProcess.stderr.on("data", (data) => {
+        errorOutput += data.toString();
+      });
+
+      await new Promise((resolve) => {
+        statusProcess.on("close", resolve);
+      });
+
+      if (errorOutput && !statusOutput) {
+        console.error("Migration status command error:", errorOutput);
+        return {
+          success: false,
+          message: "Error running migration status command: " + errorOutput.split("\n")[0],
+          pendingMigrations: [],
+          batches: []
+        };
+      }
+
+      const pendingMigrations = [];
+      const batches = new Map();
+
+      const lines = statusOutput.split("\n");
+
+      for (const line of lines) {
+        if (line.includes("Pending")) {
+          const match = line.match(/^\s*([^\s].*?)\s+\.+\s+Pending\s*$/);
+          if (match && match[1]) {
+            const migrationName = match[1].trim();
+            pendingMigrations.push(migrationName);
+          }
+        }
+
+        const ranMatch = line.match(/^\s*([^\s].*?)\s+\.+\s+\[(\d+)\]\s+Ran\s*$/);
+        if (ranMatch && ranMatch[1] && ranMatch[2]) {
+          const migrationName = ranMatch[1].trim();
+          const batchNumber = parseInt(ranMatch[2], 10);
+
+          if (!batches.has(batchNumber)) {
+            batches.set(batchNumber, []);
+          }
+          batches.get(batchNumber).push(migrationName);
+        }
+
+        if (line.includes("| No ")) {
+          const match = line.match(/\|\s*No\s*\|\s*(.*?)\s*\|/);
+          if (match && match[1]) {
+            const migrationName = match[1].trim();
+            if (migrationName && !migrationName.includes("Migration") && !pendingMigrations.includes(migrationName)) {
+              pendingMigrations.push(migrationName);
+            }
+          }
+        }
+
+        if (line.includes("| Yes ")) {
+          const match = line.match(/\|\s*Yes\s*\|\s*(.*?)\s*\|\s*(\d+)\s*\|/);
+          if (match && match[1] && match[2]) {
+            const migrationName = match[1].trim();
+            const batchNumber = parseInt(match[2].trim(), 10);
+
+            if (migrationName && !isNaN(batchNumber)) {
+              if (!batches.has(batchNumber)) {
+                batches.set(batchNumber, []);
+              }
+              if (!batches.get(batchNumber).includes(migrationName)) {
+                batches.get(batchNumber).push(migrationName);
+              }
+            }
+          }
+        }
+      }
+
+      if (batches.size === 0) {
+        try {
+          const envFilePath = path.join(config.projectPath, ".env");
+          const envContent = fs.readFileSync(envFilePath, "utf8");
+          const dbConfig = {
+            host: extractEnvValue(envContent, "DB_HOST") || "localhost",
+            port: parseInt(extractEnvValue(envContent, "DB_PORT") || "3306", 10),
+            user: extractEnvValue(envContent, "DB_USERNAME") || "root",
+            password: extractEnvValue(envContent, "DB_PASSWORD") || "",
+            database: extractEnvValue(envContent, "DB_DATABASE") || "laravel"
+          };
+
+          const connection = await mysql.createConnection(dbConfig);
+
+          const [rows] = await connection.query("SELECT * FROM migrations ORDER BY batch DESC, id DESC");
+
+          if (rows && rows.length > 0) {
+            for (const row of rows) {
+              const batchNumber = row.batch;
+              const migrationName = row.migration;
+
+              if (!batches.has(batchNumber)) {
+                batches.set(batchNumber, []);
+              }
+
+              batches.get(batchNumber).push(migrationName);
+            }
+          }
+
+          await connection.end();
+        } catch (dbError) {
+          console.error("Error getting migrations from database:", dbError);
+
+          if (batches.size === 0) {
+            batches.set(1, ["Example migration in batch 1"]);
+          }
+        }
+      }
+
+      if (batches.size === 0) {
+        batches.set(1, ["No migrations found in batch 1"]);
+      }
+
+      const batchesArray = Array.from(batches.entries()).map(([batchNumber, migrations]) => {
+        const sortedMigrations = [...migrations].sort((a, b) => {
+          const timestampA = a.substring(0, 17);
+          const timestampB = b.substring(0, 17);
+
+          return timestampB.localeCompare(timestampA);
+        });
+
+        return {
+          batch: batchNumber,
+          migrations: sortedMigrations
+        };
+      });
+
+      batchesArray.sort((a, b) => b.batch - a.batch);
+
+      return {
+        success: true,
+        pendingMigrations,
+        batches: batchesArray,
+        hasSail,
+        output: statusOutput
+      };
+    } catch (error) {
+      console.error("Error getting migration status:", error);
+      return {
+        success: false,
+        message: error.message,
+        pendingMigrations: [],
+        batches: []
+      };
+    }
+  });
+
+  ipcMain.handle("read-model-file", async (event, filePath) => {
+    try {
+      if (!filePath) {
+        return {
+          success: false,
+          message: "Missing file path",
+          content: null
+        };
+      }
+
+      if (!fs.existsSync(filePath)) {
+        return {
+          success: false,
+          message: "File not found",
+          content: null
+        };
+      }
+
+      const content = fs.readFileSync(filePath, "utf8");
+
+      return {
+        success: true,
+        content: content
+      };
+    } catch (error) {
+      console.error("Error reading model file:", error);
+      return {
+        success: false,
+        message: error.message,
+        content: null
+      };
+    }
+  });
+
+  ipcMain.handle("update-env-database", async (event, projectPath, database) => {
+    try {
+      if (!projectPath || !database) {
+        return {
+          success: false,
+          message: "Missing project path or database name"
+        };
+      }
+
+      const envPath = path.join(projectPath, ".env");
+      if (!fs.existsSync(envPath)) {
+        return {
+          success: false,
+          message: ".env file not found in project"
+        };
+      }
+
+      let envContent = fs.readFileSync(envPath, "utf8");
+
+      const lines = envContent.split("\n");
+      let dbLineFound = false;
+
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+
+        if (line.trim().startsWith("#")) {
+          continue;
+        }
+
+        if (line.trim().startsWith("DB_DATABASE=")) {
+          lines[i] = `DB_DATABASE=${database}`;
+          dbLineFound = true;
+          break;
+        }
+      }
+
+      if (!dbLineFound) {
+        lines.push(`DB_DATABASE=${database}`);
+      }
+
+      const updatedContent = lines.join("\n");
+
+      fs.writeFileSync(envPath, updatedContent);
+
+      return {
+        success: true,
+        message: `Updated database to ${database} in .env file`
+      };
+    } catch (error) {
+      console.error("Error updating .env database:", error);
+      return {
+        success: false,
+        message: error.message || "Failed to update database in .env file"
+      };
+    }
+  });
+
+  ipcMain.handle("list-files", async (event, dirPath) => {
+    try {
+      if (!dirPath) {
+        return {
+          success: false,
+          message: "Missing directory path",
+          files: []
+        };
+      }
+
+      if (!fs.existsSync(dirPath)) {
+        return {
+          success: false,
+          message: "Directory not found",
+          files: []
+        };
+      }
+
+      const entries = fs.readdirSync(dirPath, { withFileTypes: true });
+      const files = entries.map((entry) => ({
+        name: entry.name,
+        isDirectory: entry.isDirectory()
+      }));
+
+      return {
+        success: true,
+        files: files
+      };
+    } catch (error) {
+      console.error("Error listing files:", error);
+      return {
+        success: false,
+        message: error.message,
+        files: []
+      };
+    }
+  });
+
+  ipcMain.handle("run-artisan-command", async (event, config) => {
+    try {
+      if (!config.projectPath) {
+        return {
+          success: false,
+          message: "Project path is required",
+          output: ""
+        };
+      }
+
+      if (!config.command) {
+        return {
+          success: false,
+          message: "Command is required",
+          output: ""
+        };
+      }
+
+      const artisanPath = path.join(config.projectPath, "artisan");
+      if (!fs.existsSync(artisanPath)) {
+        return {
+          success: false,
+          message: "Artisan file not found in project path",
+          output: ""
+        };
+      }
+
+      const commandId = Date.now().toString();
+
+      let commandArgs;
+      const hasSail = fs.existsSync(path.join(config.projectPath, "vendor/bin/sail"));
+
+      if (config.useSail && hasSail) {
+        commandArgs = ["vendor/bin/sail", "artisan", ...config.command.split(" ")];
+      } else {
+        commandArgs = ["php", "artisan", ...config.command.split(" ")];
+      }
+
+      const process = spawn(commandArgs[0], commandArgs.slice(1), {
+        cwd: config.projectPath,
+        shell: true
+      });
+
+      const response = {
+        success: true,
+        commandId: commandId,
+        command: commandArgs.join(" "),
+        output: "",
+        isComplete: false
+      };
+
+      const outputChannel = `command-output-${commandId}`;
+
+      process.stdout.on("data", (data) => {
+        const output = data.toString();
+        if (event.sender) {
+          event.sender.send(outputChannel, {
+            commandId,
+            output,
+            type: "stdout",
+            isComplete: false
+          });
+        }
+      });
+
+      process.stderr.on("data", (data) => {
+        const output = data.toString();
+
+        if (event.sender) {
+          event.sender.send(outputChannel, {
+            commandId,
+            output,
+            type: "stderr",
+            isComplete: false
+          });
+        }
+      });
+
+      process.on("close", (code) => {
+        const success = code === 0;
+
+        if (event.sender) {
+          event.sender.send(outputChannel, {
+            commandId,
+            output: success ? "Command completed successfully." : `Command exited with code ${code}`,
+            type: success ? "stdout" : "stderr",
+            isComplete: true,
+            success
+          });
+        }
+      });
+
+      process.on("error", (err) => {
+        if (event.sender) {
+          event.sender.send(outputChannel, {
+            commandId,
+            output: `Error: ${err.message}`,
+            type: "stderr",
+            isComplete: true,
+            success: false
+          });
+        }
+      });
+
+      return response;
+    } catch (error) {
+      console.error("Error running artisan command:", error);
+      return {
+        success: false,
+        message: error.message,
+        pendingMigrations: [],
+        batches: []
+      };
+    }
+  });
+
+  ipcMain.handle("get-singular-form", (event, word) => {
+    return pluralize.singular(word);
   });
 }
 

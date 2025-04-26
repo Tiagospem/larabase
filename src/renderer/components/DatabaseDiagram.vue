@@ -1,155 +1,140 @@
 <template>
-  <div
-    class="modal"
-    :class="{ 'modal-open': isOpen }"
-    @transitionend="onModalFullyOpen"
+  <Modal
+    width="w-[90%] max-w-[1200px]"
+    :show="isOpen"
+    :title="hasRelationships ? 'Database Schema Diagram' : 'Database Relationship Explorer'"
+    @close="close"
   >
-    <div class="modal-box max-w-4xl bg-base-300">
-      <div class="flex justify-between items-center mb-4">
-        <h3 class="font-bold text-lg">
-          {{ hasRelationships ? "Database Schema Diagram" : "Database Relationship Explorer" }}
-        </h3>
-        <div class="flex gap-2">
-          <div
-            class="badge"
-            :class="hasRelationships ? 'badge-success' : 'badge-warning'"
-          >
-            {{ hasRelationships ? `${relationships.length} Relations Found` : "No Relations" }}
-          </div>
-
-          <button
-            class="btn btn-sm btn-ghost"
-            @click="onRefreshClick"
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke-width="1.5"
-              stroke="currentColor"
-              class="w-4 h-4"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99"
-              />
-            </svg>
-          </button>
-        </div>
-      </div>
-
-      <!-- Loading indicator -->
-      <div
-        v-if="loading"
-        class="flex justify-center items-center py-8"
-      >
-        <div class="animate-spin rounded-full h-12 w-12 border-4 border-primary border-t-transparent" />
-        <span class="ml-3 text-sm">Analyzing database schema...</span>
-      </div>
-
-      <!-- No relationships found -->
-      <div
-        v-else-if="!loading && !hasRelationships"
-        class="alert alert-warning mb-4"
-      >
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          fill="none"
-          viewBox="0 0 24 24"
-          class="stroke-current shrink-0 w-6 h-6"
-        >
-          <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-          />
-        </svg>
-        <span>No relationships found between tables. The database schema might not have defined foreign key constraints.</span>
-      </div>
-
-      <!-- Diagram visualization area -->
-      <div
-        v-else
-        ref="diagramContainer"
-        class="diagram-container bg-base-200 rounded-lg p-4"
-      >
-        <div class="diagram-controls mb-2 flex justify-between">
-          <div>
-            <button
-              class="btn btn-xs"
-              @click="zoomIn"
-            >
-              Zoom In
-            </button>
-            <button
-              class="btn btn-xs ml-1"
-              @click="zoomOut"
-            >
-              Zoom Out
-            </button>
-            <button
-              class="btn btn-xs ml-1"
-              @click="resetZoom"
-            >
-              Reset
-            </button>
-          </div>
-          <select
-            v-model="focusTable"
-            class="select select-xs select-bordered"
-          >
-            <option value="">Show All Tables</option>
-            <option
-              v-for="table in tablesList"
-              :key="table"
-              :value="table"
-            >
-              {{ table }}
-            </option>
-          </select>
-        </div>
-
+    <div class="flex justify-between items-center mb-4 w-full">
+      <div class="flex gap-2 w-full items-center justify-between">
         <div
-          ref="svgContainer"
-          class="diagram-svg-container"
+          class="badge"
+          :class="hasRelationships ? 'badge-success' : 'badge-warning'"
         >
-          <!-- SVG diagram will be rendered here -->
+          {{ hasRelationships ? `${relationships.length} Relations Found` : "No Relations" }}
         </div>
 
-        <!-- Info panel with instructions -->
-        <div class="info-panel">
-          <div class="mb-2">
-            <span class="font-bold">Tips:</span>
-            <ul class="mt-1 text-xs">
-              <li>• Drag tables to reposition</li>
-              <li>• Click a table to focus on it</li>
-              <li>• Use mouse wheel to zoom in/out</li>
-              <li>• Drag background to pan when zoomed</li>
-              <li>• Dotted lines indicate inferred relationships</li>
-              <li>• Use dropdown to filter by table</li>
-            </ul>
-          </div>
-          <div class="text-xs mt-3">Relationship count: {{ relationships.length }}</div>
-        </div>
-      </div>
-
-      <div class="modal-action">
         <button
-          class="btn btn-primary"
-          @click="close"
+          class="btn btn-sm btn-ghost"
+          @click="onRefreshClick"
         >
-          Close
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke-width="1.5"
+            stroke="currentColor"
+            class="w-4 h-4"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99"
+            />
+          </svg>
         </button>
       </div>
     </div>
-  </div>
+
+    <div
+      v-if="loading"
+      class="flex justify-center items-center py-8"
+    >
+      <div class="animate-spin rounded-full h-12 w-12 border-4 border-primary border-t-transparent" />
+      <span class="ml-3 text-sm">Analyzing database schema...</span>
+    </div>
+
+    <div
+      v-else-if="!loading && !hasRelationships"
+      class="alert alert-warning mb-4"
+    >
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        fill="none"
+        viewBox="0 0 24 24"
+        class="stroke-current shrink-0 w-6 h-6"
+      >
+        <path
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+        />
+      </svg>
+      <span>No relationships found between tables. The database schema might not have defined foreign key constraints.</span>
+    </div>
+
+    <div
+      v-else
+      ref="diagramContainer"
+      class="diagram-container bg-base-200 rounded-lg p-4"
+    >
+      <div class="diagram-controls mb-2 flex justify-between">
+        <div>
+          <button
+            class="btn btn-xs"
+            @click="zoomIn"
+          >
+            Zoom In
+          </button>
+          <button
+            class="btn btn-xs ml-1"
+            @click="zoomOut"
+          >
+            Zoom Out
+          </button>
+          <button
+            class="btn btn-xs ml-1"
+            @click="resetZoom"
+          >
+            Reset
+          </button>
+        </div>
+        <select
+          v-model="focusTable"
+          class="select select-xs select-bordered"
+        >
+          <option value="">Show All Tables</option>
+          <option
+            v-for="table in tablesList"
+            :key="table"
+            :value="table"
+          >
+            {{ table }}
+          </option>
+        </select>
+      </div>
+
+      <div
+        ref="svgContainer"
+        class="diagram-svg-container"
+      >
+        <!-- SVG diagram will be rendered here -->
+      </div>
+
+      <!-- Info panel with instructions -->
+      <div class="info-panel">
+        <div class="mb-2">
+          <span class="font-bold">Tips:</span>
+          <ul class="mt-1 text-xs">
+            <li>• Drag tables to reposition</li>
+            <li>• Click a table to focus on it</li>
+            <li>• Use mouse wheel to zoom in/out</li>
+            <li>• Drag background to pan when zoomed</li>
+            <li>• Dotted lines indicate inferred relationships</li>
+            <li>• Use dropdown to filter by table</li>
+          </ul>
+        </div>
+        <div class="text-xs mt-3">Relationship count: {{ relationships.length }}</div>
+      </div>
+    </div>
+  </Modal>
 </template>
 
 <script setup>
 import { ref, computed, watch, onMounted, onUnmounted, nextTick } from "vue";
 import { useDatabaseStore } from "@/store/database";
+import Modal from "@/components/Modal.vue";
 
 const props = defineProps({
   isOpen: {
@@ -173,12 +158,10 @@ const diagramContainer = ref(null);
 const svgContainer = ref(null);
 const zoomLevel = ref(1);
 
-// D3.js will be loaded dynamically when the component is mounted
 let d3;
 
 const hasRelationships = computed(() => relationships.value.length > 0);
 
-// Add panning variables to track the diagram position
 const panPosition = ref({ x: 0, y: 0 });
 const isPanning = ref(false);
 const lastMousePosition = ref({ x: 0, y: 0 });
@@ -218,7 +201,6 @@ async function refreshDiagram() {
     } else {
       if (Array.isArray(relationshipsData)) {
         relationships.value = relationshipsData;
-        console.log(`Loaded ${relationshipsData.length} relationships for diagram`);
       } else {
         console.error("Invalid relationships data format:", relationshipsData);
         relationships.value = [];
@@ -242,13 +224,10 @@ function renderDiagram() {
   const width = svgContainer.value.clientWidth;
   const height = 500;
 
-  // Filter relationships based on the selected focus table
   const filteredRelationships = focusTable.value ? relationships.value.filter((rel) => rel.sourceTable === focusTable.value || rel.targetTable === focusTable.value) : relationships.value;
 
-  // Extract unique tables from relationships
   const tables = [...new Set([...filteredRelationships.map((r) => r.sourceTable), ...filteredRelationships.map((r) => r.targetTable)])];
 
-  // Create SVG
   const svg = d3.select(svgContainer.value).append("svg").attr("width", width).attr("height", height).attr("viewBox", [0, 0, width, height]);
 
   svg
@@ -416,8 +395,6 @@ function renderDiagram() {
     focusTable.value = d.id === focusTable.value ? "" : d.id;
   });
 
-  // Position nodes and links initially before simulation
-  // This prevents the diagram from being invisible until interaction
   link
     .attr("x1", (d) => {
       const sourceNode = nodes.find((n) => n.id === d.source);
@@ -544,7 +521,7 @@ watch(
       loading.value = true;
       await refreshDiagram();
 
-      nextTick(() => {
+      await nextTick(() => {
         setTimeout(() => {
           if (relationships.value.length > 0) {
             renderDiagram();
@@ -615,18 +592,10 @@ function handleWheel(event) {
   renderDiagram();
 }
 
-function onModalFullyOpen() {
-  if (relationships.value.length > 0 && svgContainer.value) {
-    console.log("Modal fully opened, rendering diagram");
-    renderDiagram();
-    setupWheelZoom();
-  }
-}
-
 async function onRefreshClick() {
   loading.value = true;
   await refreshDiagram();
-  nextTick(() => {
+  await nextTick(() => {
     if (relationships.value.length > 0) {
       renderDiagram();
       setupWheelZoom();

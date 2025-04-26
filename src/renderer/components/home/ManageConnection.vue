@@ -1,13 +1,10 @@
 <template>
-  <div
-    class="modal"
-    :class="{ 'modal-open': isCreateModalOpen }"
+  <Modal
+    :show="isCreateModalOpen"
+    :title="isEditMode ? 'Edit Connection' : 'Create New Connection'"
+    @close="isCreateModalOpen = false"
   >
-    <div class="modal-box w-11/12 max-w-4xl max-h-[90vh]">
-      <h3 class="font-bold text-lg mb-4">
-        {{ isEditMode ? "Edit Connection" : "Create New Connection" }}
-      </h3>
-
+    <div>
       <fieldset class="fieldset w-full mb-4">
         <label class="label">
           <span class="label-text">Laravel Project Path</span>
@@ -33,7 +30,7 @@
         >
           <span class="label-text-alt text-error">{{ projectPathError }}</span>
         </label>
-        <p class="text-xs text-gray-500 mt-1">Path to your Laravel project (.env file will be read from this location)</p>
+        <p class="text-xs text-info mt-1">Path to your Laravel project (.env file will be read from this location)</p>
       </fieldset>
 
       <fieldset class="fieldset w-full mb-4">
@@ -45,7 +42,7 @@
             class="toggle toggle-primary"
           />
         </label>
-        <p class="text-xs text-gray-500 mt-1">Enable if your project uses Laravel Sail (Docker)</p>
+        <p class="text-xs text-info mt-1">Enable if your project uses Laravel Sail (Docker)</p>
       </fieldset>
 
       <div
@@ -252,32 +249,28 @@
           />
         </fieldset>
       </div>
-
-      <div class="modal-action">
-        <button
-          class="btn"
-          @click="isCreateModalOpen = false"
-        >
-          Cancel
-        </button>
-        <button
-          class="btn btn-primary"
-          :disabled="isLoading || !newConnection.projectPath"
-          @click="saveNewConnection"
-        >
-          <span
-            v-if="isSaving"
-            class="loading loading-spinner loading-xs mr-2"
-          />
-          {{ isEditMode ? "Update Connection" : "Save Connection" }}
-        </button>
-      </div>
     </div>
-    <div
-      class="modal-backdrop"
-      @click="isCreateModalOpen = false"
-    />
-  </div>
+
+    <template #footer>
+      <button
+        class="btn"
+        @click="isCreateModalOpen = false"
+      >
+        Cancel
+      </button>
+      <button
+        class="btn btn-primary"
+        :disabled="isLoading || !newConnection.projectPath"
+        @click="saveNewConnection"
+      >
+        <span
+          v-if="isSaving"
+          class="loading loading-spinner loading-xs mr-2"
+        />
+        {{ isEditMode ? "Update Connection" : "Save Connection" }}
+      </button>
+    </template>
+  </Modal>
 </template>
 
 <script setup>
@@ -285,6 +278,7 @@ import { inject, ref } from "vue";
 import { v4 as uuid } from "uuid";
 import { useConnectionsStore } from "@/store/connections";
 import { useTabsStore } from "@/store/tabs";
+import Modal from "@/components/Modal.vue";
 
 const connectionsStore = useConnectionsStore();
 const tabsStore = useTabsStore();

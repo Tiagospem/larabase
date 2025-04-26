@@ -26,7 +26,7 @@ async function createWindow() {
     center: true,
     titleBarStyle: "hiddenInset",
     webPreferences: {
-      nodeIntegration: false,
+      nodeIntegration: true,
       contextIsolation: true,
       preload: preloadPath,
       devTools: isDev
@@ -58,6 +58,34 @@ async function createWindow() {
 }
 
 function getMainWindow() {
+  if (mainWindow) {
+    mainWindow.webContents.on("before-input-event", (event, input) => {
+      if (!mainWindow.isFocused()) {
+        return;
+      }
+
+      if (input.key === "F12" && !input.alt && !input.control && !input.meta && !input.shift) {
+        if (mainWindow.webContents.isDevToolsOpened()) {
+          mainWindow.webContents.closeDevTools();
+        } else {
+          mainWindow.webContents.openDevTools();
+        }
+      }
+
+      if (input.key === "I" && !input.alt && input.shift && (input.control || input.meta)) {
+        if (mainWindow.webContents.isDevToolsOpened()) {
+          mainWindow.webContents.closeDevTools();
+        } else {
+          mainWindow.webContents.openDevTools();
+        }
+      }
+
+      if (input.key === "r" && !input.alt && !input.shift && (input.control || input.meta)) {
+        mainWindow.reload();
+      }
+    });
+  }
+
   return mainWindow;
 }
 

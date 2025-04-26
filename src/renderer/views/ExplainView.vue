@@ -1,46 +1,11 @@
 <template>
-  <div class="flex flex-col h-full">
+  <div class="flex flex-col h-full bg-base-200">
     <template v-if="!hasRenderError">
-      <div class="absolute w-full h-10 bg-neutral top-0 draggable z-10"></div>
-
-      <header class="bg-neutral mt-8 z-20 px-4 pb-2 border-b border-neutral flex items-center justify-between">
-        <div class="flex items-center">
-          <button
-            class="btn btn-ghost btn-sm mr-2"
-            @click="goBack"
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke-width="1.5"
-              stroke="currentColor"
-              class="w-5 h-5"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18"
-              />
-            </svg>
-          </button>
-
-          <div
-            class="w-8 h-8 rounded-full flex items-center justify-center mr-2"
-            :class="getConnectionColor(connection?.type)"
-          >
-            <span class="text-white font-bold text-sm">{{ connection?.icon }}</span>
-          </div>
-
-          <div>
-            <h1 class="text-lg font-semibold">Query Explain Tool - {{ connection?.name }}</h1>
-            <div class="text-xs text-gray-400">
-              {{ connection?.database || connection?.path }}
-            </div>
-          </div>
-        </div>
-
-        <div class="flex">
+      <BaseHeader
+        @goBack="goBack"
+        title="Query Explain Tool"
+      >
+        <template #actions>
           <button
             v-if="!hasResults"
             class="btn btn-primary btn-sm mr-2"
@@ -106,21 +71,19 @@
             </svg>
             Clear
           </button>
-        </div>
-      </header>
+        </template>
+      </BaseHeader>
 
-      <!-- Main Content Area -->
       <div class="flex flex-col flex-1 overflow-auto p-6">
-        <!-- SQL Input Mode -->
         <div
           v-if="!hasResults"
           class="flex flex-col"
         >
           <div
-            class="bg-base-100 overflow-hidden flex flex-col rounded-lg shadow-md"
+            class="bg-base-100 overflow-hidden flex flex-col rounded-lg"
             :style="{ height: `${editorHeight}px` }"
           >
-            <div class="p-3 text-sm font-semibold border-b border-neutral flex justify-between">
+            <div class="p-3 text-sm bg-base-300 font-semibold border-b border-black/10 flex justify-between">
               <span>SQL Query to Analyze</span>
               <div class="flex items-center">
                 <button
@@ -153,14 +116,13 @@
             </div>
             <textarea
               v-model="queryToAnalyze"
-              class="w-full h-full p-4 resize-none bg-base-200 text-base-content font-mono text-sm focus:outline-hidden"
+              class="w-full h-full p-4 resize-none bg-base-100 text-base-content font-mono text-sm focus:outline-hidden"
               placeholder="Enter your SQL query here (e.g., SELECT * FROM table WHERE column = value)"
               @keydown.tab.prevent="handleTab"
             />
           </div>
         </div>
 
-        <!-- Loading State -->
         <div
           v-if="isLoading"
           class="flex-1 flex flex-col items-center justify-center"
@@ -169,12 +131,11 @@
           <p class="text-base-content">Analyzing query performance...</p>
         </div>
 
-        <!-- Error State -->
         <div
           v-else-if="errorMessage"
           class="flex-1 flex items-center justify-center text-error"
         >
-          <div class="text-center p-8 bg-base-100 rounded-lg shadow-md max-w-md">
+          <div class="text-center p-8 bg-base-100 rounded-lg max-w-md">
             <svg
               xmlns="http://www.w3.org/2000/svg"
               fill="none"
@@ -199,13 +160,11 @@
           </div>
         </div>
 
-        <!-- Results Mode -->
         <div
           v-else-if="hasResults"
           class="flex flex-col space-y-6"
         >
-          <!-- Formatted Query -->
-          <div class="bg-base-100 rounded-lg shadow-md p-4">
+          <div class="bg-base-100 rounded-lg p-4">
             <div class="flex justify-between items-center mb-2">
               <h2 class="text-lg font-semibold text-base-content">SQL Query</h2>
               <button
@@ -232,10 +191,9 @@
             <pre class="bg-base-200 p-3 rounded-md overflow-x-auto text-sm"><code class="hljs" v-html="formattedQuery"></code></pre>
           </div>
 
-          <!-- Execution Plan Results -->
           <div
             ref="resultTableRef"
-            class="bg-base-100 rounded-lg shadow-md p-4"
+            class="bg-base-100 rounded-lg p-4"
           >
             <h2 class="text-lg font-semibold text-base-content mb-3">Execution Plan</h2>
             <div class="overflow-x-auto">
@@ -270,10 +228,9 @@
             </div>
           </div>
 
-          <!-- Performance Insights -->
           <div
             v-if="performanceInsights.length > 0"
-            class="bg-base-100 rounded-lg shadow-md p-4"
+            class="bg-base-100 rounded-lg p-4"
           >
             <h2 class="text-lg font-semibold text-base-content mb-3">Performance Insights</h2>
             <div class="space-y-4">
@@ -346,10 +303,9 @@
             </div>
           </div>
 
-          <!-- AI Analysis -->
           <div
             v-if="aiEnabled && !isAiLoading && aiAnalysis"
-            class="bg-base-100 rounded-lg shadow-md p-4"
+            class="bg-base-100 rounded-lg p-4"
           >
             <div class="flex justify-between items-center mb-3">
               <h2 class="text-lg font-semibold text-base-content">AI Analysis</h2>
@@ -380,10 +336,9 @@
             ></div>
           </div>
 
-          <!-- AI Analysis Loading -->
           <div
             v-if="aiEnabled && isAiLoading"
-            class="bg-base-100 rounded-lg shadow-md p-6"
+            class="bg-base-100 rounded-lg p-6"
           >
             <div class="flex flex-col items-center justify-center">
               <span class="loading loading-spinner loading-md mb-4"></span>
@@ -391,10 +346,9 @@
             </div>
           </div>
 
-          <!-- AI Analysis Button -->
           <div
             v-if="aiEnabled && !isAiLoading && !aiAnalysis"
-            class="bg-base-100 rounded-lg shadow-md p-6"
+            class="bg-base-100 rounded-lg p-6"
           >
             <div class="text-center">
               <p class="mb-4 text-base-content opacity-70">Get advanced AI analysis of your query execution plan to identify optimization opportunities.</p>
@@ -422,12 +376,11 @@
           </div>
         </div>
 
-        <!-- Empty State (when no results and not loading) -->
         <div
           v-else-if="!hasResults && !isLoading && !errorMessage"
           class="flex-1 flex items-center justify-center text-base-content opacity-70"
         >
-          <div class="text-center p-8 bg-base-100 rounded-lg shadow-md max-w-md">
+          <div class="text-center p-8 bg-base-100 rounded-lg max-w-md">
             <svg
               xmlns="http://www.w3.org/2000/svg"
               fill="none"
@@ -442,7 +395,7 @@
                 d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m6.75 12H9m1.5-12H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z"
               />
             </svg>
-            <p>Enter a SQL query and click "Analyze Performance" to see the execution plan</p>
+            <p class="text-sm">Enter a SQL query and click "Analyze Performance" to see the execution plan</p>
           </div>
         </div>
       </div>
@@ -451,7 +404,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, inject, nextTick, markRaw, onErrorCaptured } from "vue";
+import { ref, computed, onMounted, inject, nextTick, onErrorCaptured } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { useConnectionsStore } from "@/store/connections";
 import { useDatabaseStore } from "@/store/database";
@@ -460,6 +413,7 @@ import { analyzeExplainWithAI } from "@/services/ai/ExplainAnalysisService";
 import { marked } from "marked";
 import hljs from "highlight.js/lib/core";
 import sql from "highlight.js/lib/languages/sql";
+import BaseHeader from "@/components/ui/BaseHeader.vue";
 
 hljs.registerLanguage("sql", sql);
 
@@ -494,16 +448,6 @@ onErrorCaptured((error, instance, info) => {
   renderErrorMessage.value = `${error.message}\n\nInfo: ${info}`;
   return false;
 });
-
-function resetComponent() {
-  hasRenderError.value = false;
-  renderErrorMessage.value = "";
-  explainResults.value = [];
-  explainColumns.value = [];
-  performanceInsights.value = [];
-  aiAnalysis.value = "";
-  errorMessage.value = "";
-}
 
 const aiEnabled = computed(() => {
   const settings = settingsStore.settings;
@@ -562,11 +506,8 @@ const connection = computed(() => {
 });
 
 onMounted(async () => {
-  console.log("ExplainView mounted");
-
   if (!route.params.id) {
-    console.log("No connection ID, redirecting to home");
-    router.push("/");
+    await router.push("/");
     return;
   }
 
@@ -575,19 +516,6 @@ onMounted(async () => {
 
 function goBack() {
   router.push(`/database/${connectionId.value}`);
-}
-
-function getConnectionColor(type) {
-  switch (type) {
-    case "mysql":
-      return "bg-orange-500";
-    case "pgsql":
-      return "bg-indigo-600";
-    case "sqlite":
-      return "bg-green-600";
-    default:
-      return "bg-gray-600";
-  }
 }
 
 function toggleEditorFullscreen() {
@@ -615,27 +543,6 @@ function handleTab(e) {
   nextTick(() => {
     e.target.selectionStart = e.target.selectionEnd = start + 2;
   });
-}
-
-function startResize(e) {
-  isResizing.value = true;
-  document.addEventListener("mousemove", onResize);
-  document.addEventListener("mouseup", stopResize);
-}
-
-function onResize(e) {
-  if (isResizing.value) {
-    const minHeight = 100;
-    const maxHeight = window.innerHeight - 200;
-
-    editorHeight.value = Math.max(minHeight, Math.min(maxHeight, e.clientY - 60));
-  }
-}
-
-function stopResize() {
-  isResizing.value = false;
-  document.removeEventListener("mousemove", onResize);
-  document.removeEventListener("mouseup", stopResize);
 }
 
 function clearQuery() {
@@ -743,28 +650,6 @@ function generatePerformanceInsights() {
       description: "No major performance issues were detected in the execution plan.",
       recommendation: null
     });
-  }
-}
-
-function getRowClass(row) {
-  if (row.type === "ALL") {
-    return "bg-red-800/10";
-  } else if (row.key === null) {
-    return "bg-yellow-800/10";
-  }
-  return "";
-}
-
-function getInsightSeverityClass(severity) {
-  switch (severity) {
-    case "high":
-      return "bg-red-600";
-    case "medium":
-      return "bg-yellow-600";
-    case "low":
-      return "bg-green-600";
-    default:
-      return "bg-blue-600";
   }
 }
 

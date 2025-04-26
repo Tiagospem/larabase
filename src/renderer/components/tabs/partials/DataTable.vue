@@ -10,15 +10,15 @@
       style="max-height: calc(100% - 40px)"
     >
       <table class="table table-sm w-[110%] table-fixed min-w-full">
-        <thead class="sticky top-0 z-15">
+        <thead class="sticky shadow-xs top-0 z-15">
           <tr class="text-xs select-none">
-            <th class="w-10 px-2 py-2 border-r border-base-100 bg-neutral sticky left-0 z-10">
+            <th class="w-10 px-2 py-2 bg-base-100 sticky left-0 z-10">
               <span class="sr-only">Preview</span>
             </th>
             <th
               v-for="(column, index) in tableDataStore.columns"
               :key="column"
-              class="px-4 py-2 border-r border-base-100 last:border-r-0 relative whitespace-nowrap top-0 cursor-pointer bg-neutral"
+              class="px-4 py-2 bg-base-100 last:border-r-0 relative whitespace-nowrap top-0 cursor-pointer"
               :style="{
                 width: tableDataStore.columnWidths[column] || tableDataStore.defaultColumnWidth(column),
                 maxWidth: tableDataStore.columnWidths[column] || tableDataStore.defaultColumnWidth(column)
@@ -94,7 +94,7 @@
             @mouseenter.stop="handleMouseEnter(rowIndex)"
           >
             <td
-              class="w-10 px-2 py-1 border-r border-base-200 text-center sticky left-0 z-10"
+              class="w-10 px-2 py-1 text-center sticky left-0 z-10 bg-base-100"
               :class="getRowBackgroundClass(rowIndex)"
             >
               <button
@@ -126,7 +126,7 @@
             <td
               v-for="(column, colIndex) in tableDataStore.columns"
               :key="`${rowIndex}-${column}-${colIndex}`"
-              class="px-2 py-1 border-r border-base-200 last:border-r-0 truncate whitespace-nowrap overflow-hidden z-1"
+              class="px-2 py-1 bg-base-100 truncate whitespace-nowrap overflow-hidden z-1"
               :style="{
                 width: tableDataStore.columnWidths[column] || tableDataStore.defaultColumnWidth(column),
                 maxWidth: tableDataStore.columnWidths[column] || tableDataStore.defaultColumnWidth(column)
@@ -512,6 +512,11 @@ defineExpose({ scrollToTop });
   color: white !important;
 }
 
+.selected-row td {
+  background-color: #ea4331 !important;
+  color: white !important;
+}
+
 .updated-row {
   background-color: rgba(234, 67, 49, 0.1) !important;
   position: relative;
@@ -533,6 +538,12 @@ defineExpose({ scrollToTop });
 
 .table tr.selected-row:nth-child(odd),
 .table tr.selected-row:nth-child(even) {
+  background-color: #ea4331 !important;
+  color: white !important;
+}
+
+.table tr.selected-row:nth-child(odd) td,
+.table tr.selected-row:nth-child(even) td {
   background-color: #ea4331 !important;
   color: white !important;
 }
@@ -561,6 +572,19 @@ thead {
   z-index: 15 !important;
 }
 
+/* Fix hover styles */
+tr:hover td {
+  background-color: hsl(var(--b2)) !important;
+}
+
+tr.selected-row:hover td,
+tr.selected-row:hover td.sticky,
+tr.selected-row td.sticky {
+  background-color: #ea4331 !important;
+  color: white !important;
+}
+
+/* Remove these conflicting styles */
 tbody tr:not(.selected-row):hover td.sticky,
 tbody tr:not(.selected-row):hover td[class*="sticky"],
 tbody tr:not(.selected-row).hover td.sticky,

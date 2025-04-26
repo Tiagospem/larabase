@@ -1,5 +1,5 @@
 <template>
-  <div class="bg-base-200 rounded-lg p-2 h-[400px] overflow-auto md:col-span-1">
+  <div class="bg-base-200 rounded-lg p-2 h-[500px] overflow-auto md:col-span-1">
     <div
       v-if="loading"
       class="flex justify-center items-center h-full"

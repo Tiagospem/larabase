@@ -3,7 +3,7 @@
     class="code-viewer"
     :style="{ height: heightStyle }"
   >
-    <div class="mockup-code bg-neutral h-full w-full overflow-auto text-xs">
+    <div class="mockup-code bg-black/90 h-full w-full overflow-auto text-xs">
       <pre class="w-full"><code v-html="highlightedCode"/></pre>
     </div>
   </div>
@@ -37,7 +37,6 @@ const props = defineProps({
 
 const highlightedCode = ref("");
 
-// Compute the proper CSS height value based on the height prop
 const heightStyle = computed(() => {
   if (props.height.endsWith("rem") || props.height.endsWith("px") || props.height.endsWith("%") || props.height.endsWith("vh")) {
     return props.height;
@@ -48,13 +47,11 @@ const heightStyle = computed(() => {
 function highlightCode() {
   try {
     if (props.code) {
-      // First highlight the code
       const highlighted = hljs.highlight(props.code, {
         language: props.language,
         ignoreIllegals: true
       }).value;
 
-      // Add line numbers to the highlighted code
       const lines = highlighted.split("\n");
       let processedCode = "";
 
@@ -70,7 +67,7 @@ function highlightCode() {
     }
   } catch (error) {
     console.error("Error highlighting code:", error);
-    // Fallback to plain code with line numbers if highlighting fails
+
     if (props.code) {
       const lines = props.code.split("\n");
       let processedCode = "";
@@ -78,7 +75,7 @@ function highlightCode() {
       lines.forEach((line, index) => {
         const lineNumber = index + 1;
         const lineNumberPadded = String(lineNumber).padStart(3, " ");
-        // Escape HTML entities
+
         const escapedLine = line.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
         processedCode += `<span class="line-number">${lineNumberPadded}</span>${escapedLine}\n`;
       });
@@ -90,12 +87,10 @@ function highlightCode() {
   }
 }
 
-// Process code on initial render
 onMounted(() => {
   highlightCode();
 });
 
-// Watch for changes in the code prop
 watch(() => props.code, highlightCode, { immediate: true });
 </script>
 
@@ -113,7 +108,6 @@ watch(() => props.code, highlightCode, { immediate: true });
   min-height: 100%;
 }
 
-/* Base syntax highlighting styles */
 :deep(.hljs) {
   background: transparent;
   padding: 0;
@@ -146,7 +140,6 @@ watch(() => props.code, highlightCode, { immediate: true });
   color: #61aeee;
 }
 
-/* Line number styling */
 :deep(.line-number) {
   display: inline-block;
   width: 2.5em;
@@ -159,7 +152,6 @@ watch(() => props.code, highlightCode, { immediate: true });
   border-right: 1px solid #444;
   position: sticky;
   left: 0;
-  background-color: rgba(42, 42, 46, 0.8);
 }
 
 :deep(pre) {

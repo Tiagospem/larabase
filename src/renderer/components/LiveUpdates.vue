@@ -1,21 +1,13 @@
 <template>
-  <div
-    class="modal"
-    :class="{ 'modal-open': isOpen }"
+  <Modal
+    :show="isOpen"
+    title="Live Database Updates"
+    @close="close"
+    @action="clearUpdates"
+    :show-action-button="true"
+    :action-button-text="'Clear'"
   >
-    <div class="modal-box max-w-4xl bg-base-300">
-      <div class="flex justify-between items-center mb-4">
-        <h3 class="font-bold text-lg">Live Database Updates</h3>
-        <div class="flex gap-2">
-          <button
-            class="btn btn-sm btn-error"
-            @click="clearUpdates"
-          >
-            Clear
-          </button>
-        </div>
-      </div>
-
+    <div>
       <div class="flex mb-4 gap-2">
         <select
           v-model="operationTypeFilter"
@@ -35,7 +27,6 @@
         />
       </div>
 
-      <!-- Loading indicator -->
       <div
         v-if="loading"
         class="flex justify-center items-center py-8"
@@ -44,7 +35,6 @@
         <span class="ml-3 text-sm">Initializing monitoring...</span>
       </div>
 
-      <!-- No data message -->
       <div
         v-else-if="!loading && filteredUpdates.length === 0"
         class="alert alert-info mb-4"
@@ -65,7 +55,6 @@
         <span>No database operations detected yet. Any changes to the database will appear here automatically.</span>
       </div>
 
-      <!-- Data table -->
       <div
         v-else
         class="overflow-x-auto max-h-[60vh]"
@@ -85,7 +74,7 @@
             <tr
               v-for="(update, index) in filteredUpdates"
               :key="index"
-              class="hover:bg-base-200"
+              class="hover:bg-base-200 bg-base-100"
             >
               <td class="text-xs">
                 {{ formatTimestamp(update.timestamp) }}
@@ -139,7 +128,7 @@
                     viewBox="0 0 24 24"
                     stroke-width="1.5"
                     stroke="currentColor"
-                    class="size-4"
+                    class="w-4 h-4"
                   >
                     <path
                       stroke-linecap="round"
@@ -153,107 +142,85 @@
           </tbody>
         </table>
       </div>
-
-      <div class="modal-action">
-        <button
-          class="btn btn-primary"
-          @click="close"
-        >
-          Close
-        </button>
-      </div>
     </div>
-  </div>
+  </Modal>
 
-  <div
-    class="modal"
-    :class="{ 'modal-open': showSqlDetails }"
+  <Modal
+    :show="showSqlDetails"
+    :title="selectedUpdate?.table"
+    @close="showSqlDetails = false"
   >
-    <div class="modal-box bg-base-300">
-      <h3 class="font-bold text-lg">
-        <span
-          class="badge mr-2"
-          :class="getOperationBadgeClass(selectedUpdate?.operation || selectedUpdate?.type)"
-        >
-          {{ selectedUpdate?.operation || selectedUpdate?.type }}
-        </span>
-        {{ selectedUpdate?.table }}
-      </h3>
+    <h3 class="font-bold text-lg">
+      <span
+        class="badge mr-2"
+        :class="getOperationBadgeClass(selectedUpdate?.operation || selectedUpdate?.type)"
+      >
+        {{ selectedUpdate?.operation || selectedUpdate?.type }}
+      </span>
+      {{ selectedUpdate?.table }}
+    </h3>
+
+    <div
+      v-if="selectedUpdate"
+      class="py-4"
+    >
+      <div class="mb-4 text-xs flex justify-between">
+        <span class="badge badge-neutral">ID: {{ selectedUpdate.recordId || "N/A" }}</span>
+        <span>{{ formatTimestamp(selectedUpdate.timestamp, true) }}</span>
+      </div>
 
       <div
-        v-if="selectedUpdate"
-        class="py-4"
+        v-if="selectedUpdate.sql"
+        class="mt-4"
       >
-        <div class="mb-4 text-xs flex justify-between">
-          <span class="badge badge-neutral">ID: {{ selectedUpdate.recordId || "N/A" }}</span>
-          <span>{{ formatTimestamp(selectedUpdate.timestamp, true) }}</span>
-        </div>
-
-        <div
-          v-if="selectedUpdate.sql"
-          class="mt-4"
-        >
-          <h4 class="font-semibold text-sm mb-1">SQL Query:</h4>
-          <div class="bg-base-200 p-3 rounded-lg overflow-auto max-h-60 whitespace-pre-wrap font-mono text-sm">
-            {{ formatSql(selectedUpdate.sql) }}
-          </div>
-        </div>
-
-        <div
-          v-if="selectedUpdate.details"
-          class="mt-4"
-        >
-          <h4 class="font-semibold text-sm mb-1">Details:</h4>
-          <div class="bg-base-200 p-3 rounded-lg overflow-auto max-h-60 font-mono text-sm whitespace-pre-wrap">
-            {{ selectedUpdate.details }}
-          </div>
-        </div>
-
-        <!-- System Message -->
-        <div
-          v-if="selectedUpdate.message"
-          class="mt-4"
-        >
-          <h4 class="font-semibold text-sm mb-1">Message:</h4>
-          <div class="bg-base-200 p-3 rounded-lg overflow-auto max-h-60 text-sm">
-            {{ selectedUpdate.message }}
-          </div>
-        </div>
-
-        <!-- Additional info: Affected Rows, etc. -->
-        <div
-          v-if="selectedUpdate.affectedRows"
-          class="mt-4"
-        >
-          <h4 class="font-semibold text-sm mb-1">Affected Rows:</h4>
-          <div class="bg-base-200 p-2 rounded-lg text-sm">
-            {{ selectedUpdate.affectedRows }}
-          </div>
-        </div>
-
-        <!-- Raw Update Data -->
-        <div class="mt-4">
-          <h4 class="font-semibold text-sm mb-1">Raw Data:</h4>
-          <div class="bg-base-200 p-3 rounded-lg overflow-auto max-h-60 whitespace-pre-wrap font-mono text-xs">
-            {{ JSON.stringify(selectedUpdate, null, 2) }}
-          </div>
+        <h4 class="font-semibold text-sm mb-1">SQL Query:</h4>
+        <div class="bg-base-200 p-3 rounded-lg overflow-auto max-h-60 whitespace-pre-wrap font-mono text-sm">
+          {{ formatSql(selectedUpdate.sql) }}
         </div>
       </div>
 
-      <div class="modal-action">
-        <button
-          class="btn btn-primary"
-          @click="showSqlDetails = false"
-        >
-          Close
-        </button>
+      <div
+        v-if="selectedUpdate.details"
+        class="mt-4"
+      >
+        <h4 class="font-semibold text-sm mb-1">Details:</h4>
+        <div class="bg-base-200 p-3 rounded-lg overflow-auto max-h-60 font-mono text-sm whitespace-pre-wrap">
+          {{ selectedUpdate.details }}
+        </div>
+      </div>
+
+      <div
+        v-if="selectedUpdate.message"
+        class="mt-4"
+      >
+        <h4 class="font-semibold text-sm mb-1">Message:</h4>
+        <div class="bg-base-200 p-3 rounded-lg overflow-auto max-h-60 text-sm">
+          {{ selectedUpdate.message }}
+        </div>
+      </div>
+
+      <div
+        v-if="selectedUpdate.affectedRows"
+        class="mt-4"
+      >
+        <h4 class="font-semibold text-sm mb-1">Affected Rows:</h4>
+        <div class="bg-base-200 p-2 rounded-lg text-sm">
+          {{ selectedUpdate.affectedRows }}
+        </div>
+      </div>
+
+      <div class="mt-4">
+        <h4 class="font-semibold text-sm mb-1">Raw Data:</h4>
+        <div class="bg-base-200 p-3 rounded-lg overflow-auto max-h-60 whitespace-pre-wrap font-mono text-xs">
+          {{ JSON.stringify(selectedUpdate, null, 2) }}
+        </div>
       </div>
     </div>
-  </div>
+  </Modal>
 </template>
-
 <script setup>
 import { ref, computed, watch, onUnmounted } from "vue";
+import Modal from "@/components/Modal.vue";
 
 const props = defineProps({
   isOpen: {
@@ -356,6 +323,8 @@ function clearUpdates() {
     setTimeout(() => {
       startMonitoring(true);
     }, 300);
+  } else {
+    startMonitoring(true);
   }
 }
 
@@ -370,7 +339,6 @@ function startMonitoring(clearHistory = false) {
   }
 
   loading.value = true;
-
   updates.value = [];
 
   window.api
@@ -388,6 +356,8 @@ function startMonitoring(clearHistory = false) {
           if (updates.value.length > 1000) {
             updates.value = updates.value.slice(0, 500);
           }
+
+          updates.value = [...updates.value];
         }
       },
       clearHistory
@@ -425,7 +395,7 @@ function stopMonitoring() {
   }
 
   window.api
-    .stopMonitoringDatabaseOperations(monitoringChannel)
+    .stopMonitoringDatabaseOperations(monitoringChannel, true)
     .then(() => {
       connected.value = false;
       monitoringChannel = null;
@@ -441,6 +411,26 @@ function stopMonitoring() {
 }
 
 function close() {
+  if (connected.value) {
+    stopMonitoring();
+  } else {
+    try {
+      if (window.api && window.api.monitorDatabaseOperations) {
+        window.api
+          .monitorDatabaseOperations(props.connectionId, () => {}, true)
+          .then(() => {
+            if (window.api.stopMonitoringDatabaseOperations) {
+              window.api.stopMonitoringDatabaseOperations(`db-operation-${props.connectionId}`, true);
+            }
+          })
+          .catch((err) => console.error("Error clearing history:", err));
+      }
+    } catch (e) {
+      console.error("Error on cleanup:", e);
+    }
+  }
+
+  updates.value = [];
   emit("close");
 }
 
@@ -471,7 +461,6 @@ onUnmounted(() => {
 function formatSql(sql) {
   if (!sql) return "";
 
-  // Simple formatting to make SQL more readable
   return sql
     .replace(/SELECT/gi, "SELECT\n  ")
     .replace(/FROM/gi, "\nFROM\n  ")
@@ -481,10 +470,3 @@ function formatSql(sql) {
     .replace(/LIMIT/gi, "\nLIMIT ");
 }
 </script>
-
-<style scoped>
-.modal-box {
-  width: 90%;
-  max-width: 900px;
-}
-</style>

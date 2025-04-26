@@ -1,10 +1,10 @@
 <template>
   <div class="relative h-full flex flex-col">
     <div
-      class="sidebar-container bg-neutral border-r border-neutral flex flex-col h-full w-full overflow-hidden"
+      class="sidebar-container bg-base-200 border-r border-black/10 flex flex-col h-full w-full overflow-hidden"
       :style="{ width: sidebarWidth + 'px' }"
     >
-      <div class="p-3 border-y border-base-100 shrink-0">
+      <div class="p-3 border-b border-black/10 shrink-0">
         <div class="relative mb-2">
           <label class="input input-sm">
             <svg
@@ -38,13 +38,13 @@
         </div>
 
         <div class="flex justify-between items-center">
-          <span class="text-xs text-gray-400">{{ tablesStore.filteredTables.length }} tables</span>
+          <span class="text-xs">{{ tablesStore.filteredTables.length }} tables</span>
           <div class="flex items-center gap-1">
             <button
               v-tooltip.right="'Sort by name'"
-              class="btn btn-xs btn-ghost tooltip tooltip-left"
+              class="btn btn-xs btn-ghost"
               :class="{
-                'text-primary bg-neutral': tablesStore.sortBy === 'name'
+                'bg-base-100': tablesStore.sortBy === 'name'
               }"
               @click="tablesStore.setSortBy('name')"
             >
@@ -72,9 +72,9 @@
             </button>
             <button
               v-tooltip.right="'Sort by records'"
-              class="btn btn-xs btn-ghost tooltip tooltip-left"
+              class="btn btn-xs btn-ghost"
               :class="{
-                'text-primary bg-neutral': tablesStore.sortBy === 'records'
+                'bg-base-100': tablesStore.sortBy === 'records'
               }"
               @click="tablesStore.setSortBy('records')"
             >
@@ -95,7 +95,7 @@
             </button>
             <button
               v-tooltip.right="'Toggle sort order'"
-              class="btn btn-xs btn-ghost tooltip tooltip-left"
+              class="btn btn-xs btn-ghost"
               @click="tablesStore.toggleSortOrder"
             >
               <svg
@@ -131,9 +131,9 @@
             </button>
             <button
               v-tooltip.right="isDeleteMode ? 'Cancel deletion' : 'Delete tables'"
-              class="btn btn-xs btn-ghost tooltip tooltip-left"
+              class="btn btn-xs btn-ghost"
               :class="{
-                'text-error bg-neutral': isDeleteMode
+                'bg-base-100': isDeleteMode
               }"
               @click="toggleDeleteMode"
             >
@@ -185,7 +185,7 @@
             <span class="text-xs">Select All</span>
           </div>
           <button
-            class="btn btn-xs btn-error"
+            class="btn btn-xs btn-success"
             :disabled="selectedTables.length === 0"
             @click="confirmDelete"
           >
@@ -204,24 +204,24 @@
             :key="i"
             class="skeleton-item flex items-center gap-2 p-2 mb-1 rounded-sm bg-base-100 animate-pulse"
           >
-            <div class="skeleton-icon w-4 h-4 mr-3 bg-neutral rounded-sm" />
-            <div class="skeleton-name h-4 bg-neutral rounded-sm w-4/5" />
-            <div class="skeleton-badge ml-auto w-8 h-4 bg-neutral rounded-sm" />
+            <div class="w-4 h-4 bg-base-300 rounded-sm" />
+            <div class="h-4 bg-base-300 rounded-sm w-4/5" />
+            <div class="w-8 h-4 bg-base-300 rounded-sm" />
           </div>
         </div>
 
         <ul
           v-else
-          class="menu menu-sm p-2 w-full"
+          class="w-full"
         >
           <li
             v-for="table in tablesStore.sortedTables"
             :key="table.name"
-            class="table-item"
+            class="p-0.5"
           >
             <a
               :class="{ 'bg-base-100': isTableActive(table.name) }"
-              class="rounded-md"
+              class="rounded-md hover:bg-base-100 flex items-center gap-2 px-2 py-1 cursor-pointer"
               @click="isDeleteMode ? toggleTableSelection(table.name) : openTable(table)"
             >
               <div
@@ -238,7 +238,7 @@
               <svg
                 v-else
                 xmlns="http://www.w3.org/2000/svg"
-                fill="none"
+                fill="currentColor"
                 viewBox="0 0 24 24"
                 stroke-width="1.5"
                 stroke="currentColor"
@@ -250,18 +250,18 @@
                   d="M3.375 19.5h17.25m-17.25 0a1.125 1.125 0 0 1-1.125-1.125M3.375 19.5h7.5c.621 0 1.125-.504 1.125-1.125m-9.75 0V5.625m0 12.75v-1.5c0-.621.504-1.125 1.125-1.125m18.375 2.625V5.625m0 12.75c0 .621-.504 1.125-1.125 1.125m1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125m0 3.75h-7.5A1.125 1.125 0 0 1 12 18.375m9.75-12.75c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125m19.5 0v1.5c0 .621-.504 1.125-1.125 1.125M2.25 5.625v1.5c0 .621.504 1.125 1.125 1.125m0 0h17.25m-17.25 0h7.5c.621 0 1.125.504 1.125 1.125M3.375 8.25c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125m17.25-3.75h-7.5c-.621 0-1.125.504-1.125 1.125m8.625-1.125c.621 0 1.125.504 1.125 1.125v1.5c0 .621-.504 1.125-1.125 1.125m-17.25 0h7.5m-7.5 0c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125M12 10.875v-1.5m0 1.5c0 .621-.504 1.125-1.125 1.125M12 10.875c0 .621.504 1.125 1.125 1.125m-2.25 0c.621 0 1.125.504 1.125 1.125M13.125 12h7.5m-7.5 0c-.621 0-1.125.504-1.125 1.125M20.625 12c.621 0 1.125.504 1.125 1.125v1.5c0 .621-.504 1.125-1.125 1.125m-17.25 0h7.5M12 14.625v-1.5m0 1.5c0 .621-.504 1.125-1.125 1.125M12 14.625c0 .621.504 1.125 1.125 1.125m-2.25 0c.621 0 1.125.504 1.125 1.125m0 1.5v-1.5m0 0c0-.621.504-1.125 1.125-1.125m0 0h7.5"
                 />
               </svg>
-              <div class="flex flex-col table-name-container">
-                <span class="table-name text-sm font-semibold text-neutral-content">{{ table.name }}</span>
+              <div class="flex flex-1 flex-col table-name-container">
+                <span class="table-name text-sm font-semibold">{{ table.name }}</span>
                 <span
                   v-if="getTableModel(table.name)"
-                  class="text-xs table-model"
+                  class="text-xs table-model opacity-60"
                 >
                   {{ getTableModel(table.name)?.namespace }}\{{ getTableModel(table.name)?.name }}</span
                 >
               </div>
               <span
-                class="badge badge-soft badge-xs"
-                :class="{ 'badge-primary': table.rowCount > 0 }"
+                class="badge badge-xs"
+                :class="{ 'badge-accent': table.rowCount > 0 }"
               >
                 {{ tablesStore.formatRecordCount(table.rowCount) }}
               </span>
@@ -276,84 +276,66 @@
       @mousedown="startResize"
     />
 
-    <!-- Delete Tables Confirmation Modal -->
-    <div
-      v-if="showDeleteConfirmation"
-      class="modal modal-open"
+    <Modal
+      :show="showDeleteConfirmation"
+      title="Delete Tables"
+      @close="showDeleteConfirmation = false"
+      @action="deleteTables"
+      :is-loading-action="isDeleting"
+      :show-action-button="true"
+      width="w-lg"
     >
-      <div class="modal-box">
-        <h3 class="font-bold text-lg">Delete Tables</h3>
-        <p class="py-4">
-          Are you sure you want to delete {{ selectedTables.length }} table(s)?
-          <br />
-          <span class="font-bold text-error">This action cannot be undone.</span>
-        </p>
-        <div class="py-2">
-          <fieldset class="fieldset">
-            <label class="label cursor-pointer justify-start">
-              <input
-                v-model="ignoreForeignKeys"
-                type="checkbox"
-                class="checkbox checkbox-sm checkbox-error mr-2"
-                @change="handleIgnoreForeignKeysChange"
-              />
-              <span class="label-text">Ignore foreign key constraints</span>
-            </label>
-          </fieldset>
-          <fieldset class="fieldset">
-            <label class="label cursor-pointer justify-start">
-              <input
-                v-model="cascadeDelete"
-                type="checkbox"
-                class="checkbox checkbox-sm checkbox-error mr-2"
-                @change="handleCascadeDeleteChange"
-              />
-              <span class="label-text">Cascade delete (drop dependent objects)</span>
-            </label>
-          </fieldset>
-        </div>
-        <div class="mt-2 text-sm">
-          <div class="font-semibold mb-1">Selected tables:</div>
-          <div class="max-h-32 overflow-y-auto bg-base-300 p-2 rounded-sm">
-            <ul class="list-disc pl-4 space-y-1">
-              <li
-                v-for="table in selectedTables"
-                :key="table"
-              >
-                {{ table }}
-              </li>
-            </ul>
-          </div>
-        </div>
-        <div class="modal-action">
-          <button
-            class="btn btn-error"
-            :disabled="isDeleting"
-            @click="deleteTables"
-          >
-            <span
-              v-if="isDeleting"
-              class="loading loading-spinner loading-xs mr-2"
-            ></span>
-            Delete Tables
-          </button>
-          <button
-            class="btn"
-            :disabled="isDeleting"
-            @click="showDeleteConfirmation = false"
-          >
-            Cancel
-          </button>
+      <p>
+        <span class="font-bold"> Are you sure you want to delete {{ selectedTables.length }} table(s)? </span>
+        <br />
+        <span class="text-error text-sm">This action cannot be undone.</span>
+      </p>
+      <div class="py-2">
+        <fieldset class="fieldset">
+          <label class="label cursor-pointer justify-start">
+            <input
+              v-model="ignoreForeignKeys"
+              type="checkbox"
+              class="checkbox checkbox-sm checkbox-error mr-2"
+              @change="handleIgnoreForeignKeysChange"
+            />
+            <span class="label-text">Ignore foreign key constraints</span>
+          </label>
+        </fieldset>
+        <fieldset class="fieldset">
+          <label class="label cursor-pointer justify-start">
+            <input
+              v-model="cascadeDelete"
+              type="checkbox"
+              class="checkbox checkbox-sm checkbox-error mr-2"
+              @change="handleCascadeDeleteChange"
+            />
+            <span class="label-text">Cascade delete (drop dependent objects)</span>
+          </label>
+        </fieldset>
+      </div>
+      <div class="mt-2 text-sm">
+        <div class="font-semibold mb-1">Selected tables:</div>
+        <div class="max-h-32 overflow-y-auto bg-base-200 p-2 rounded-sm">
+          <ul class="list-disc pl-4 space-y-1">
+            <li
+              v-for="table in selectedTables"
+              :key="table"
+            >
+              {{ table }}
+            </li>
+          </ul>
         </div>
       </div>
-    </div>
+    </Modal>
   </div>
 </template>
 
 <script setup>
-import { computed, inject, onMounted, onActivated, ref, watch } from "vue";
+import { computed, inject, onActivated, ref, watch } from "vue";
 import { useDatabaseStore } from "@/store/database";
 import { useTablesStore } from "@/store/tables";
+import Modal from "@/components/Modal.vue";
 
 const props = defineProps({
   connectionId: {
@@ -375,6 +357,8 @@ const showAlert = inject("showAlert");
 
 const databaseStore = useDatabaseStore();
 const tablesStore = useTablesStore();
+const loadingCounts = ref({});
+const lastConnectionId = ref(null);
 
 // Table deletion state
 const isDeleteMode = ref(false);
@@ -383,16 +367,16 @@ const showDeleteConfirmation = ref(false);
 const ignoreForeignKeys = ref(false);
 const cascadeDelete = ref(false);
 const isDeleting = ref(false);
-const lastConnectionId = ref(null);
 
 watch(
   () => props.connectionId,
-  (newConnectionId) => {
+  async (newConnectionId) => {
     if (newConnectionId) {
       const savedSearchTerm = localStorage.getItem(`tableSearch_${newConnectionId}`) || "";
       tablesStore.setSearchTerm(newConnectionId, savedSearchTerm);
-      tablesStore.initializeTables(newConnectionId);
+      await tablesStore.initializeTables(newConnectionId);
       lastConnectionId.value = newConnectionId;
+      await loadTableCounts();
     }
   },
   { immediate: true }
@@ -407,11 +391,82 @@ watch(
   }
 );
 
+// Fetch row counts for visible tables
+async function loadTableCounts() {
+  if (!props.connectionId) return;
+
+  const visibleTables = tablesStore.filteredTables.slice(0, 10);
+
+  for (const table of visibleTables) {
+    await fetchTableCount(table.name);
+  }
+
+  setTimeout(() => {
+    const remainingTables = tablesStore.filteredTables.slice(10);
+    loadRemainingCounts(remainingTables);
+  }, 500);
+}
+
+// Load remaining tables in batches to avoid blocking UI
+async function loadRemainingCounts(tables, batchSize = 5) {
+  if (!tables.length) return;
+
+  const batch = tables.slice(0, batchSize);
+  const remaining = tables.slice(batchSize);
+
+  for (const table of batch) {
+    await fetchTableCount(table.name);
+  }
+
+  if (remaining.length) {
+    setTimeout(() => {
+      loadRemainingCounts(remaining, batchSize);
+    }, 100);
+  }
+}
+
+async function fetchTableCount(tableName) {
+  if (loadingCounts.value[tableName] || !props.connectionId) return;
+
+  try {
+    loadingCounts.value[tableName] = true;
+
+    const config = {
+      connectionId: props.connectionId,
+      tableName: tableName
+    };
+
+    const result = await window.api.getTableRecordCount(config);
+
+    if (result && result.success) {
+      const table = tablesStore.localTables.find((t) => t.name === tableName);
+      if (table) {
+        table.rowCount = parseInt(result.count, 10);
+        table.isEstimate = false;
+      }
+    }
+  } catch (error) {
+    console.error(`Error fetching count for ${tableName}:`, error);
+  } finally {
+    loadingCounts.value[tableName] = false;
+  }
+}
+
+onActivated(() => {
+  if (props.connectionId) {
+    loadTableCounts();
+  }
+});
+
 function isTableActive(tableName) {
   return props.activeTabName === tableName;
 }
 
 function openTable(table) {
+  if ((table && typeof table.rowCount !== "number") || table.rowCount === 0) {
+    fetchTableCount(table.name);
+  }
+
   emit("table-open", table);
 }
 
@@ -462,19 +517,15 @@ async function deleteTables() {
 
   isDeleting.value = true;
 
-  // Convert proxy array to plain JavaScript array using JSON serialization
   const tablesToDelete = JSON.parse(JSON.stringify(selectedTables.value));
 
   try {
-    // Create a clean params object with primitive types
     const params = {
       connectionId: props.connectionId,
       tables: tablesToDelete,
       ignoreForeignKeys: Boolean(ignoreForeignKeys.value),
       cascade: Boolean(cascadeDelete.value)
     };
-
-    console.log("Calling API with params:", JSON.stringify(params));
 
     const result = await window.api.dropTables(params);
 
@@ -520,14 +571,8 @@ function handleCascadeDeleteChange() {
 .resize-handle {
   width: 5px;
   cursor: col-resize;
-  transition: background-color 0.2s;
   z-index: 10;
   opacity: 0;
-}
-
-.resize-handle:hover {
-  background-color: #4e4e50;
-  opacity: 0.5;
 }
 
 .sidebar-container {
@@ -543,29 +588,9 @@ function handleCascadeDeleteChange() {
   min-height: 0;
 }
 
-/* Custom scrollbar styling */
-.scrollable-container::-webkit-scrollbar {
-  width: 8px;
-}
-
-.scrollable-container::-webkit-scrollbar-track {
-  background: #1e1e1e;
-  border-radius: 4px;
-}
-
-.scrollable-container::-webkit-scrollbar-thumb {
-  background: #4a4a4a;
-  border-radius: 4px;
-}
-
-.scrollable-container::-webkit-scrollbar-thumb:hover {
-  background: #555;
-}
-
 .table-name-container {
   max-width: calc(100% - 5px);
   overflow: hidden;
-  grow: 1;
 }
 
 .table-name {
@@ -582,55 +607,5 @@ function handleCascadeDeleteChange() {
   text-overflow: ellipsis;
   max-width: 100%;
   display: block;
-}
-
-.table-item {
-  margin: 2px 0;
-}
-
-.table-link {
-  border-radius: 6px !important;
-}
-
-.table-link:hover {
-  background-color: hsl(var(--b3)) !important;
-  border-radius: 6px !important;
-}
-
-@keyframes pulse {
-  0%,
-  100% {
-    opacity: 0.6;
-  }
-  50% {
-    opacity: 0.3;
-  }
-}
-
-.animate-pulse {
-  animation: pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-}
-
-.skeleton-item {
-  height: 40px;
-  transition: all 0.3s ease;
-}
-
-.skeleton-icon {
-  opacity: 0.7;
-}
-
-.skeleton-name {
-  opacity: 0.7;
-}
-
-.skeleton-badge {
-  opacity: 0.7;
-}
-
-.tooltip:before {
-  max-width: 200px;
-  white-space: normal;
-  z-index: 100;
 }
 </style>

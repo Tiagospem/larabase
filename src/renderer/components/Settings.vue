@@ -1,232 +1,227 @@
 <template>
-  <div class="modal modal-open z-30">
-    <div class="modal-box w-11/12 max-w-3xl max-h-[90vh] bg-base-300">
-      <h3 class="font-bold text-lg mb-4">Settings</h3>
-
-      <div class="space-y-4">
-        <!-- AI Provider Selection -->
-        <div class="card bg-neutral shadow-md">
-          <div class="card-body space-y-4">
-            <h3 class="card-title text-md">AI Provider</h3>
-
-            <fieldset class="fieldset">
-              <label class="label">
-                <span class="label-text">Select AI Provider</span>
-              </label>
-              <select
-                v-model="settingsData.aiProvider"
-                class="select select-bordered w-full"
-              >
-                <option value="openai">OpenAI</option>
-                <option value="gemini">Google Gemini</option>
-              </select>
-            </fieldset>
-          </div>
-        </div>
-
-        <!-- OpenAI Settings -->
-        <div
-          v-if="settingsData.aiProvider === 'openai'"
-          class="card bg-neutral shadow-md"
-        >
-          <div class="card-body space-y-4">
-            <h3 class="card-title text-md">OpenAI API</h3>
-
-            <fieldset class="fieldset">
-              <label class="label">
-                <span class="label-text">API Key</span>
-              </label>
-              <input
-                v-model="settingsData.openai.apiKey"
-                type="password"
-                placeholder="Enter your OpenAI API key"
-                class="input input-bordered w-full"
-              />
-            </fieldset>
-
-            <fieldset class="fieldset">
-              <label class="label">
-                <span class="label-text">AI Model</span>
-              </label>
-              <select
-                v-model="settingsData.openai.model"
-                class="select select-bordered w-full"
-              >
-                <option value="gpt-3.5-turbo">GPT-3.5 Turbo</option>
-                <option value="gpt-4">GPT-4</option>
-                <option value="gpt-4-turbo">GPT-4 Turbo</option>
-              </select>
-            </fieldset>
-          </div>
-        </div>
-
-        <!-- Gemini Settings -->
-        <div
-          v-if="settingsData.aiProvider === 'gemini'"
-          class="card bg-neutral shadow-md"
-        >
-          <div class="card-body space-y-4">
-            <h3 class="card-title text-md">Google Gemini API</h3>
-
-            <fieldset class="fieldset">
-              <label class="label">
-                <span class="label-text">API Key</span>
-              </label>
-              <input
-                v-model="settingsData.gemini.apiKey"
-                type="password"
-                placeholder="Enter your Google Gemini API key"
-                class="input input-bordered w-full"
-              />
-            </fieldset>
-
-            <fieldset class="fieldset">
-              <label class="label">
-                <span class="label-text">AI Model</span>
-              </label>
-              <select
-                v-model="settingsData.gemini.model"
-                class="select select-bordered w-full"
-              >
-                <option value="gemini-2.5-pro-preview-03-25">Gemini 2.5 Pro (Preview)</option>
-                <option value="gemini-2.0-flash">Gemini 2.0 Flash</option>
-                <option value="gemini-2.0-flash-lite">Gemini 2.0 Flash-Lite</option>
-              </select>
-            </fieldset>
-          </div>
-        </div>
-
-        <!-- Language Settings -->
-        <div class="card bg-neutral shadow-md">
-          <div class="card-body space-y-4">
-            <h3 class="card-title text-md">Language</h3>
-
-            <fieldset class="fieldset">
-              <label class="label">
-                <span class="label-text">AI Response Language</span>
-              </label>
-              <select
-                v-model="settingsData.language"
-                class="select select-bordered w-full"
-              >
-                <option
-                  v-for="option in settingsStore.languageOptions"
-                  :key="option.value"
-                  :value="option.value"
-                >
-                  {{ option.label }}
-                </option>
-              </select>
-            </fieldset>
-          </div>
-        </div>
-
-        <!-- Developer Mode (only in development) -->
-        <div
-          v-if="isDevelopment"
-          class="card bg-neutral shadow-md"
-        >
-          <div class="card-body space-y-4">
-            <h3 class="card-title text-md">Developer Options</h3>
-
-            <fieldset class="fieldset">
-              <label class="label cursor-pointer">
-                <span class="label-text">Developer Mode</span>
-                <input
-                  v-model="settingsData.devMode"
-                  type="checkbox"
-                  class="toggle toggle-primary"
-                />
-              </label>
-            </fieldset>
-
-            <div
-              v-if="settingsData.devMode"
-              class="mt-4"
-            >
-              <button
-                class="btn btn-sm btn-outline"
-                @click="showStorageData = true"
-              >
-                View Electron Storage Data
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div class="modal-action mt-6">
-        <button
-          class="btn btn-primary"
-          @click="saveAndClose"
-        >
-          Save
-        </button>
-        <button
-          class="btn"
-          @click="close"
-        >
-          Cancel
-        </button>
-      </div>
-    </div>
-    <div
-      class="modal-backdrop"
-      @click="close"
-    />
-  </div>
-
-  <!-- Storage Data Modal (for developer mode) -->
-  <div
-    v-if="showStorageData"
-    class="modal modal-open z-40"
+  <Modal
+    :show="true"
+    title="Settings"
+    @close="close"
+    @action="saveAndClose"
+    :show-action-button="true"
+    :action-button-text="'Save'"
   >
-    <div class="modal-box w-11/12 max-w-5xl max-h-[90vh] bg-base-300">
-      <h3 class="font-bold text-lg mb-4">Electron Storage Data</h3>
-      <div class="mockup-code bg-neutral mb-4 h-[60vh] overflow-auto">
-        <pre><code>{{ JSON.stringify(storageData, null, 2) }}</code></pre>
+    <div class="space-y-4 max-h-[500px] overflow-auto">
+      <div class="card bg-base-100">
+        <div class="card-body space-y-4">
+          <h3 class="card-title text-md">AI Provider</h3>
+
+          <fieldset class="fieldset">
+            <label class="label">
+              <span class="label-text">Select AI Provider</span>
+            </label>
+            <select
+              v-model="settingsData.aiProvider"
+              class="select select-bordered w-full"
+            >
+              <option value="openai">OpenAI</option>
+              <option value="gemini">Google Gemini</option>
+            </select>
+          </fieldset>
+        </div>
       </div>
-      <div class="modal-action">
-        <button
-          class="btn btn-sm btn-primary"
-          @click="copyStorageDataToClipboard"
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke-width="1.5"
-            stroke="currentColor"
-            class="w-4 h-4 mr-1"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125h-9.75a1.125 1.125 0 0 1-1.125-1.125V7.875c0-.621.504-1.125 1.125-1.125H6.75a9.06 9.06 0 0 1 1.5.124m7.5 10.376h3.375c.621 0 1.125-.504 1.125-1.125V11.25c0-4.46-3.243-8.161-7.5-8.876a9.06 9.06 0 0 0-1.5-.124H9.375c-.621 0-1.125.504-1.125 1.125v3.5m7.5 10.375H9.375a1.125 1.125 0 0 1-1.125-1.125v-9.25m12 6.625v-1.875a3.375 3.375 0 0 0-3.375-3.375h-1.5a1.125 1.125 0 0 1-1.125-1.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H9.75"
+
+      <div
+        v-if="settingsData.aiProvider === 'openai'"
+        class="card bg-base-100"
+      >
+        <div class="card-body space-y-4">
+          <h3 class="card-title text-md">OpenAI API</h3>
+
+          <fieldset class="fieldset">
+            <label class="label">
+              <span class="label-text">API Key</span>
+            </label>
+            <input
+              v-model="settingsData.openai.apiKey"
+              type="password"
+              placeholder="Enter your OpenAI API key"
+              class="input input-bordered w-full"
             />
-          </svg>
-          Copy to Clipboard
-        </button>
-        <button
-          class="btn"
-          @click="showStorageData = false"
-        >
-          Close
-        </button>
+          </fieldset>
+
+          <fieldset class="fieldset">
+            <label class="label">
+              <span class="label-text">AI Model</span>
+            </label>
+            <select
+              v-model="settingsData.openai.model"
+              class="select select-bordered w-full"
+            >
+              <option value="gpt-3.5-turbo">GPT-3.5 Turbo</option>
+              <option value="gpt-4">GPT-4</option>
+              <option value="gpt-4-turbo">GPT-4 Turbo</option>
+            </select>
+          </fieldset>
+        </div>
+      </div>
+
+      <div
+        v-if="settingsData.aiProvider === 'gemini'"
+        class="card bg-base-100"
+      >
+        <div class="card-body space-y-4">
+          <h3 class="card-title text-md">Google Gemini API</h3>
+
+          <fieldset class="fieldset">
+            <label class="label">
+              <span class="label-text">API Key</span>
+            </label>
+            <input
+              v-model="settingsData.gemini.apiKey"
+              type="password"
+              placeholder="Enter your Google Gemini API key"
+              class="input input-bordered w-full"
+            />
+          </fieldset>
+
+          <fieldset class="fieldset">
+            <label class="label">
+              <span class="label-text">AI Model</span>
+            </label>
+            <select
+              v-model="settingsData.gemini.model"
+              class="select select-bordered w-full"
+            >
+              <option value="gemini-2.5-pro-preview-03-25">Gemini 2.5 Pro (Preview)</option>
+              <option value="gemini-2.0-flash">Gemini 2.0 Flash</option>
+              <option value="gemini-2.0-flash-lite">Gemini 2.0 Flash-Lite</option>
+            </select>
+          </fieldset>
+        </div>
+      </div>
+
+      <div class="card bg-base-100">
+        <div class="card-body space-y-4">
+          <h3 class="card-title text-md">Language</h3>
+
+          <fieldset class="fieldset">
+            <label class="label">
+              <span class="label-text">AI Response Language</span>
+            </label>
+            <select
+              v-model="settingsData.language"
+              class="select select-bordered w-full"
+            >
+              <option
+                v-for="option in settingsStore.languageOptions"
+                :key="option.value"
+                :value="option.value"
+              >
+                {{ option.label }}
+              </option>
+            </select>
+          </fieldset>
+        </div>
+      </div>
+
+      <div class="card bg-base-100">
+        <div class="card-body space-y-4">
+          <h3 class="card-title text-md">Theme</h3>
+
+          <fieldset class="fieldset">
+            <label class="label">
+              <span class="label-text">Select Theme</span>
+            </label>
+            <select
+              v-model="settingsData.theme"
+              class="select select-bordered w-full"
+              @change="applyTheme"
+            >
+              <option value="light">Light</option>
+              <option value="dark">Dark</option>
+              <option value="cupcake">Cupcake</option>
+              <option value="bumblebee">Bumblebee</option>
+              <option value="emerald">Emerald</option>
+              <option value="corporate">Corporate</option>
+              <option value="synthwave">Synthwave</option>
+              <option value="retro">Retro</option>
+              <option value="cyberpunk">Cyberpunk</option>
+              <option value="valentine">Valentine</option>
+              <option value="halloween">Halloween</option>
+              <option value="garden">Garden</option>
+              <option value="forest">Forest</option>
+              <option value="aqua">Aqua</option>
+              <option value="lofi">Lofi</option>
+              <option value="pastel">Pastel</option>
+              <option value="fantasy">Fantasy</option>
+              <option value="wireframe">Wireframe</option>
+              <option value="black">Black</option>
+              <option value="luxury">Luxury</option>
+              <option value="dracula">Dracula</option>
+              <option value="cmyk">CMYK</option>
+              <option value="autumn">Autumn</option>
+              <option value="business">Business</option>
+              <option value="acid">Acid</option>
+              <option value="lemonade">Lemonade</option>
+              <option value="night">Night</option>
+              <option value="coffee">Coffee</option>
+              <option value="winter">Winter</option>
+              <option value="dim">Dim</option>
+              <option value="nord">Nord</option>
+              <option value="sunset">Sunset</option>
+              <option value="caramellatte">Caramellatte</option>
+              <option value="abyss">Abyss</option>
+            </select>
+          </fieldset>
+        </div>
+      </div>
+
+      <div
+        v-if="isDevelopment"
+        class="card bg-base-100"
+      >
+        <div class="card-body space-y-4">
+          <h3 class="card-title text-md">Developer Options</h3>
+
+          <fieldset class="fieldset">
+            <label class="label cursor-pointer">
+              <span class="label-text">Developer Mode</span>
+              <input
+                v-model="settingsData.devMode"
+                type="checkbox"
+                class="toggle toggle-primary"
+              />
+            </label>
+          </fieldset>
+
+          <div
+            v-if="settingsData.devMode"
+            class="mt-4"
+          >
+            <button
+              class="btn btn-sm btn-outline"
+              @click="showStorageData = true"
+            >
+              View Electron Storage Data
+            </button>
+          </div>
+        </div>
       </div>
     </div>
-    <div
-      class="modal-backdrop"
-      @click="showStorageData = false"
-    />
-  </div>
-</template>
+  </Modal>
 
+  <Modal
+    :show="showStorageData"
+    title="Electron Storage Data"
+    @close="showStorageData = false"
+  >
+    <div class="mockup-code bg-neutral mb-4 h-[60vh] overflow-auto">
+      <pre><code>{{ JSON.stringify(storageData, null, 2) }}</code></pre>
+    </div>
+  </Modal>
+</template>
 <script setup>
 import { ref, inject, onMounted, computed, watch } from "vue";
 import { useSettingsStore } from "@/store/settings";
 import { useConnectionsStore } from "@/store/connections";
-import { useTabsStore } from "@/store/tabs";
+import Modal from "@/components/Modal.vue";
 
 const props = defineProps({
   isOpen: {
@@ -240,10 +235,9 @@ const emit = defineEmits(["close"]);
 const showAlert = inject("showAlert");
 const settingsStore = useSettingsStore();
 const connectionsStore = useConnectionsStore();
-const tabsStore = useTabsStore();
 
 const settingsData = ref({
-  aiProvider: "openai", // Default to OpenAI
+  aiProvider: "openai",
   openai: {
     apiKey: "",
     model: "gpt-3.5-turbo"
@@ -253,7 +247,8 @@ const settingsData = ref({
     model: "gemini-pro"
   },
   language: "en",
-  devMode: false
+  devMode: false,
+  theme: "dim"
 });
 
 const showStorageData = ref(false);
@@ -263,7 +258,6 @@ const isDevelopment = computed(() => process.env.NODE_ENV === "development");
 onMounted(async () => {
   await settingsStore.loadSettings();
 
-  // Initialize gemini settings if they don't exist
   if (!settingsStore.settings.gemini) {
     settingsStore.settings.gemini = {
       apiKey: "",
@@ -271,13 +265,24 @@ onMounted(async () => {
     };
   }
 
-  // Initialize aiProvider if it doesn't exist
   if (!settingsStore.settings.aiProvider) {
     settingsStore.settings.aiProvider = "openai";
   }
 
+  if (!settingsStore.settings.theme) {
+    settingsStore.settings.theme = "dim";
+  } else {
+    // Apply saved theme on component mount
+    document.documentElement.setAttribute("data-theme", settingsStore.settings.theme);
+  }
+
   Object.assign(settingsData.value, settingsStore.settings);
 });
+
+function applyTheme() {
+  const selectedTheme = settingsData.value.theme;
+  document.documentElement.setAttribute("data-theme", selectedTheme);
+}
 
 async function saveAndClose() {
   try {
@@ -309,16 +314,6 @@ async function loadStorageData() {
   } catch (error) {
     console.error("Error loading storage data:", error);
     showAlert("Failed to load storage data", "error");
-  }
-}
-
-async function copyStorageDataToClipboard() {
-  try {
-    await navigator.clipboard.writeText(JSON.stringify(storageData.value, null, 2));
-    showAlert("Storage data copied to clipboard", "success");
-  } catch (error) {
-    console.error("Error copying to clipboard:", error);
-    showAlert("Failed to copy to clipboard", "error");
   }
 }
 

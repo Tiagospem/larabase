@@ -1,7 +1,7 @@
 <template>
   <div
     v-if="showCommandOutput"
-    class="command-output-panel"
+    class="bg-neutral text-white fixed bottom-0 left-0 right-0"
   >
     <div class="command-output-header">
       <div class="flex items-center">
@@ -78,19 +78,13 @@
       <div
         v-if="commandResult"
         ref="outputContainer"
-        class="mockup-code bg-neutral h-full overflow-auto"
+        class="mockup-code bg-primary h-full overflow-auto"
       >
-        <pre
-          class="whitespace-pre-wrap"
-          :class="{
-            'text-green-400': commandResult.success,
-            'text-red-400': !commandResult.success
-          }"
-        ><code>{{ sanitizedOutput }}</code></pre>
+        <pre class="whitespace-pre-wrap text-base-100"><code>{{ sanitizedOutput }}</code></pre>
       </div>
       <div
         v-else
-        class="flex items-center justify-center h-full text-gray-500"
+        class="flex items-center justify-center h-full"
       >
         <p>No command output</p>
       </div>
@@ -116,15 +110,14 @@ const command = computed(() => {
   return cmd;
 });
 
-// Function to remove ANSI color codes and formatting
 const sanitizedOutput = computed(() => {
   if (!commandResult.value?.output) {
     return commandResult.value?.message || "No output";
   }
 
   return commandResult.value.output
-    .replace(/\u001b\[\d+(;\d+)?m/g, "") // Remove all ANSI color codes
-    .replace(/\[90m|\[39m|\[32;1m|\[39;22m|\[1m|\[22m/g, "") // Remove specific color format codes
+    .replace(/\u001b\[\d+(;\d+)?m/g, "")
+    .replace(/\[90m|\[39m|\[32;1m|\[39;22m|\[1m|\[22m/g, "")
     .replace(/\u001b/g, "");
 });
 
@@ -161,23 +154,11 @@ function scrollToBottom() {
 </script>
 
 <style scoped>
-.command-output-panel {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  background-color: rgb(24, 24, 27);
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
-  z-index: 20;
-  box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.3);
-}
-
 .command-output-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 8px 16px;
-  background-color: rgba(0, 0, 0, 0.2);
 }
 
 .command-output-content {

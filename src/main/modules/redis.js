@@ -4,7 +4,6 @@ const os = require("os");
 const docker = require("./docker");
 
 function createRedisClient(config, isRunningInDocker = false) {
-  // Basic options with timeouts
   const options = {
     socket: {
       connectTimeout: 5000,
@@ -13,15 +12,12 @@ function createRedisClient(config, isRunningInDocker = false) {
   };
 
   if (config.path) {
-    // Unix socket connection
     options.socket.path = config.path;
   } else {
-    // TCP connection
     options.socket.host = isRunningInDocker ? "localhost" : config.host || "localhost";
     options.socket.port = parseInt(config.port || 6379, 10);
   }
 
-  // Add password if provided
   if (config.password) {
     options.password = config.password;
   }
@@ -40,10 +36,8 @@ async function checkRedisStatus(event, config) {
     const isRunningInDocker = await checkDockerRedis();
     const runningMode = isRunningInDocker ? "Docker" : "Local";
 
-    // Create client
     client = createRedisClient(config, isRunningInDocker);
 
-    // Try to connect with a timeout
     try {
       const connectPromise = client.connect();
       const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error("Connection timeout")), 5000));
@@ -82,28 +76,22 @@ async function getRedisDatabases(event, config) {
   let client = null;
 
   try {
-    // First, check if Redis is running
     const statusCheck = await checkRedisStatus(event, config);
     if (!statusCheck.success) {
       return statusCheck;
     }
 
-    // Create client
     client = createRedisClient(config, statusCheck.runningMode === "Docker");
     await client.connect();
 
-    // Get a list of databases with key counts and memory usage
     const info = await client.sendCommand(["INFO", "keyspace"]);
     const memory = await client.sendCommand(["INFO", "memory"]);
 
-    // Parse memory usage
     const usedMemory = parseRedisInfo(memory)["used_memory"] || 0;
 
-    // Parse database info
     const keyspaceInfo = parseRedisInfo(info);
     const databases = [];
 
-    // Redis typically has 16 databases (0-15) by default
     for (let i = 0; i < 16; i++) {
       const dbKey = `db${i}`;
       if (keyspaceInfo[dbKey]) {
@@ -117,7 +105,6 @@ async function getRedisDatabases(event, config) {
           memory: calculateDbMemory(dbInfo.keys, usedMemory, getTotalKeys(keyspaceInfo))
         });
       } else {
-        // Database exists but is empty
         databases.push({
           id: `db${i}`,
           name: `Database ${i}`,
@@ -204,17 +191,14 @@ async function clearAllRedisDatabases(event, config) {
   let client = null;
 
   try {
-    // First, check if Redis is running
     const statusCheck = await checkRedisStatus(event, config);
     if (!statusCheck.success) {
       return statusCheck;
     }
 
-    // Create client
     client = createRedisClient(config, statusCheck.runningMode === "Docker");
     await client.connect();
 
-    // Clear all databases
     await client.sendCommand(["FLUSHALL"]);
     await client.quit();
 
@@ -265,7 +249,6 @@ function parseDbInfo(infoString) {
 function calculateDbMemory(dbKeys, totalMemory, totalKeys) {
   if (totalKeys === 0 || dbKeys === 0) return 0;
 
-  // Approximate memory usage based on key count ratio
   return Math.floor((dbKeys / totalKeys) * totalMemory);
 }
 
@@ -293,8 +276,8 @@ async function getRedisKeys(event, config) {
       };
     }
 
-    // Extract the numeric index from dbIndex (e.g., 'db0' -> 0)
     const dbIndex = parseInt(config.dbIndex.replace("db", ""), 10);
+
     if (isNaN(dbIndex) || dbIndex < 0 || dbIndex > 15) {
       return {
         success: false,
@@ -302,44 +285,35 @@ async function getRedisKeys(event, config) {
       };
     }
 
-    // First, check if Redis is running
     const statusCheck = await checkRedisStatus(event, config);
     if (!statusCheck.success) {
       return statusCheck;
     }
 
-    // Create client
     client = createRedisClient(config, statusCheck.runningMode === "Docker");
     await client.connect();
 
-    // Select the database
     await client.sendCommand(["SELECT", dbIndex.toString()]);
 
-    // Get all keys with pattern match and pagination
     const pattern = config.pattern || "*";
     const limit = config.limit || 100;
     const offset = config.offset || 0;
 
-    // Use SCAN for pagination
     let keys = [];
     let cursor = "0";
     let count = 0;
 
     do {
-      // SCAN cursor COUNTS 50 MATCH pattern
       const result = await client.sendCommand(["SCAN", cursor, "MATCH", pattern, "COUNT", "50"]);
       cursor = result[0];
       const batchKeys = result[1];
 
-      // Add keys within our offset/limit range
       for (const key of batchKeys) {
         if (count >= offset && keys.length < limit) {
           keys.push(key);
         }
         count++;
       }
-
-      // Stop if we've collected enough keys or there are no more keys
     } while (cursor !== "0" && keys.length < limit);
 
     await client.quit();
@@ -379,8 +353,8 @@ async function getRedisKeyValue(event, config) {
       };
     }
 
-    // Extract the numeric index from dbIndex (e.g., 'db0' -> 0)
     const dbIndex = parseInt(config.dbIndex.replace("db", ""), 10);
+
     if (isNaN(dbIndex) || dbIndex < 0 || dbIndex > 15) {
       return {
         success: false,
@@ -388,25 +362,20 @@ async function getRedisKeyValue(event, config) {
       };
     }
 
-    // First check if Redis is running
     const statusCheck = await checkRedisStatus(event, config);
     if (!statusCheck.success) {
       return statusCheck;
     }
 
-    // Create client
     client = createRedisClient(config, statusCheck.runningMode === "Docker");
     await client.connect();
 
-    // Select the database
     await client.sendCommand(["SELECT", dbIndex.toString()]);
 
-    // Get the type of key
     const keyType = await client.sendCommand(["TYPE", config.key]);
     let value;
     let ttl = await client.sendCommand(["TTL", config.key]);
 
-    // Get the value based on the key type
     switch (keyType.toLowerCase()) {
       case "string":
         value = await client.sendCommand(["GET", config.key]);
@@ -419,7 +388,7 @@ async function getRedisKeyValue(event, config) {
         break;
       case "zset":
         value = await client.sendCommand(["ZRANGE", config.key, "0", "99", "WITHSCORES"]);
-        // Convert array to score-value pairs
+
         if (Array.isArray(value)) {
           const result = [];
           for (let i = 0; i < value.length; i += 2) {
@@ -433,7 +402,7 @@ async function getRedisKeyValue(event, config) {
         break;
       case "hash":
         value = await client.sendCommand(["HGETALL", config.key]);
-        // Convert array to key-value pairs
+
         if (Array.isArray(value)) {
           const result = {};
           for (let i = 0; i < value.length; i += 2) {

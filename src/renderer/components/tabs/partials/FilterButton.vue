@@ -5,13 +5,13 @@
         v-model="tableDataStore.filterTerm"
         type="text"
         placeholder="Filter..."
-        class="input input-sm input-bordered bg-base-300 w-full sm:w-64"
+        class="input input-sm input-bordered w-full sm:w-64"
         @keyup.enter="applyFilter"
       />
       <button
         class="btn btn-sm"
         :class="{
-          'border-base-300': !tableDataStore.activeFilter && !tableDataStore.filterTerm,
+          'btn-base-300': !tableDataStore.activeFilter && !tableDataStore.filterTerm,
           'btn-primary border-primary': tableDataStore.activeFilter || tableDataStore.filterTerm
         }"
         @click="toggleAdvancedFilter"
@@ -54,133 +54,93 @@
     </button>
   </div>
 
-  <div
-    class="modal z-50"
-    :class="{ 'modal-open': showFilterModal }"
+  <Modal
+    :show="showFilterModal"
+    title="Advanced Filter"
+    @close="cancelAdvancedFilter"
+    @action="applyAdvancedFilter"
+    :show-action-button="true"
+    :action-button-text="'Apply Filter'"
   >
-    <div class="modal-box max-w-3xl bg-base-300">
-      <h3 class="font-bold text-lg mb-4 flex justify-between items-center">
-        Advanced Filter
-        <button
-          class="btn btn-sm btn-circle"
-          @click="showFilterModal = false"
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            class="h-6 w-6"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M6 18L18 6M6 6l12 12"
-            />
-          </svg>
-        </button>
-      </h3>
-
-      <div class="mb-4">
-        <fieldset class="fieldset">
-          <label class="label">
-            <span class="label-text font-medium">SQL WHERE Clause</span>
-          </label>
-          <textarea
-            v-model="tableDataStore.advancedFilterTerm"
-            class="textarea textarea-bordered h-32 font-mono w-full"
-            placeholder="id = 1"
-          />
-          <label class="label">
-            <span class="label-text-alt text-xs">
-              Examples:
-              <code
-                class="bg-base-300 p-1 cursor-pointer"
-                @click="setExampleFilter('id = 2')"
-                >id = 2</code
-              >,
-              <code
-                class="bg-base-300 p-1 cursor-pointer"
-                @click="setExampleFilter('email LIKE \'%example%\'')"
-                >email LIKE '%example%'</code
-              >,
-              <code
-                class="bg-base-300 p-1 cursor-pointer"
-                @click="setExampleFilter('created_at IS NOT NULL')"
-                >created_at IS NOT NULL</code
-              >,
-              <code
-                class="bg-base-300 p-1 cursor-pointer"
-                @click="setExampleFilter('id > 10 AND id < 20')"
-                >id > 10 AND id < 20</code
-              >
-            </span>
-          </label>
-        </fieldset>
-
-        <div class="mt-2 text-xs">
-          <p class="mb-2">Available columns:</p>
-          <div class="flex flex-wrap gap-1 mb-4">
-            <span
-              v-for="column in tableDataStore.columns"
-              :key="column"
-              class="badge badge-primary badge-sm cursor-pointer"
-              @click="insertColumnName(column)"
+    <div class="mb-4">
+      <fieldset class="fieldset">
+        <label class="label">
+          <span class="label-text font-medium">SQL WHERE Clause</span>
+        </label>
+        <textarea
+          v-model="tableDataStore.advancedFilterTerm"
+          class="textarea textarea-bordered h-32 font-mono w-full"
+          placeholder="id = 1"
+        />
+        <label class="label">
+          <span class="label-text-alt text-xs">
+            Examples:
+            <code
+              class="bg-base-300 p-1 cursor-pointer"
+              @click="setExampleFilter('id = 2')"
+              >id = 2</code
+            >,
+            <code
+              class="bg-base-300 p-1 cursor-pointer"
+              @click="setExampleFilter('email LIKE \'%example%\'')"
+              >email LIKE '%example%'</code
+            >,
+            <code
+              class="bg-base-300 p-1 cursor-pointer"
+              @click="setExampleFilter('created_at IS NOT NULL')"
+              >created_at IS NOT NULL</code
+            >,
+            <code
+              class="bg-base-300 p-1 cursor-pointer"
+              @click="setExampleFilter('id > 10 AND id < 20')"
+              >id > 10 AND id < 20</code
             >
-              {{ column }}
-            </span>
-          </div>
-
-          <p class="mb-2">Common operators:</p>
-          <div class="flex flex-wrap gap-1">
-            <span
-              v-for="op in ['=', '!=', '>', '<', '>=', '<=', 'LIKE', 'IN', 'IS NULL', 'IS NOT NULL', 'BETWEEN', 'AND', 'OR']"
-              :key="op"
-              class="badge badge-secondary badge-sm cursor-pointer"
-              @click="insertOperator(op)"
-            >
-              {{ op }}
-            </span>
-          </div>
-        </div>
-      </div>
-
-      <fieldset class="fieldset mb-4">
-        <label class="label cursor-pointer justify-start">
-          <input
-            v-model="persistFilter"
-            type="checkbox"
-            class="checkbox checkbox-primary"
-          />
-          <span class="label-text ml-2">Persist filter (remember after reload)</span>
+          </span>
         </label>
       </fieldset>
 
-      <div class="modal-action">
-        <button
-          class="btn btn-primary"
-          @click="applyAdvancedFilter"
-        >
-          Apply Filter
-        </button>
-        <button
-          class="btn btn-error"
-          @click="cancelAdvancedFilter"
-        >
-          Cancel
-        </button>
+      <div class="mt-2 text-xs">
+        <p class="mb-2">Available columns:</p>
+        <div class="flex flex-wrap gap-1 mb-4">
+          <span
+            v-for="column in tableDataStore.columns"
+            :key="column"
+            class="badge badge-primary badge-sm cursor-pointer"
+            @click="insertColumnName(column)"
+          >
+            {{ column }}
+          </span>
+        </div>
+
+        <p class="mb-2">Common operators:</p>
+        <div class="flex flex-wrap gap-1">
+          <span
+            v-for="op in ['=', '!=', '>', '<', '>=', '<=', 'LIKE', 'IN', 'IS NULL', 'IS NOT NULL', 'BETWEEN', 'AND', 'OR']"
+            :key="op"
+            class="badge badge-secondary badge-sm cursor-pointer"
+            @click="insertOperator(op)"
+          >
+            {{ op }}
+          </span>
+        </div>
       </div>
     </div>
-    <div
-      class="modal-backdrop"
-      @click="showFilterModal = false"
-    />
-  </div>
+
+    <fieldset class="fieldset mb-4">
+      <label class="label cursor-pointer justify-start">
+        <input
+          v-model="persistFilter"
+          type="checkbox"
+          class="checkbox checkbox-primary checkbox-sm"
+        />
+        <span class="label-text text-primary">Persist filter (remember after reload)</span>
+      </label>
+    </fieldset>
+  </Modal>
 
   <select
     v-model="tableDataStore.rowsPerPage"
-    class="select select-sm select-bordered bg-base-300 w-24 sm:w-32"
+    class="select select-sm select-bordered w-24 sm:w-32"
   >
     <option value="10">10 rows</option>
     <option value="25">25 rows</option>
@@ -193,6 +153,7 @@
 import { useTableDataStore } from "@/store/table-data";
 import { inject, ref } from "vue";
 import { useDatabaseStore } from "@/store/database";
+import Modal from "@/components/Modal.vue";
 
 const showAlert = inject("showAlert");
 

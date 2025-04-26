@@ -80,7 +80,7 @@
             <input
               v-model="includeHeaders"
               type="checkbox"
-              class="checkbox checkbox-primary"
+              class="checkbox checkbox-primary checkbox-sm"
               :disabled="exportFormat === 'sql' || isExporting"
             />
             <span class="label-text ml-2">Include headers</span>
@@ -92,7 +92,7 @@
             <input
               v-model="exportAllRecords"
               type="checkbox"
-              class="checkbox checkbox-primary"
+              class="checkbox checkbox-primary checkbox-sm"
               :disabled="isExporting"
             />
             <span class="label-text ml-2">Export all records (uncheck to export only current page)</span>
