@@ -149,7 +149,7 @@ const filterButtonRef = ref(null);
 const dataTableRef = ref(null);
 const isActive = ref(true);
 const loadRetries = ref(0);
-const maxRetries = 2;
+const maxRetries = 1;
 const wasReloaded = ref(false);
 const wasEmptyChecked = ref(false);
 
