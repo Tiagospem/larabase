@@ -26,7 +26,7 @@ app.whenReady().then(async () => {
 
   mainWindow = getMainWindow();
 
-  registerMonitoringHandlers(store, dbMonitoringConnections, mainWindow);
+  registerMonitoringHandlers(store, dbMonitoringConnections);
 
   registerRestoreDumpHandlers(store);
   registerTabsHandlers(store);

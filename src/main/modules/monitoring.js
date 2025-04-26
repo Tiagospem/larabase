@@ -1,7 +1,8 @@
 const { ipcMain } = require("electron");
 const mysql = require("mysql2/promise");
+const { getMainWindow } = require("../modules/window");
 
-function startActivityPolling(connectionId, connection, activityLogTable, lastId, dbMonitoringConnections, mainWindow) {
+function startActivityPolling(connectionId, connection, activityLogTable, lastId, dbMonitoringConnections) {
   connection._lastActivityId = lastId;
   connection._pollingInterval = setInterval(async () => {
     if (!dbMonitoringConnections.has(connectionId)) {
@@ -31,6 +32,7 @@ function startActivityPolling(connectionId, connection, activityLogTable, lastId
       if (activities.length > 0) {
         connection._lastActivityId = activities[activities.length - 1].id;
 
+        const mainWindow = getMainWindow();
         if (mainWindow) {
           activities.forEach((activity) => {
             mainWindow.webContents.send(`db-operation-${connectionId}`, {
@@ -88,7 +90,7 @@ async function clearMonitoringConnections(dbMonitoringConnections, dbActivityCon
   dbActivityConnections.clear();
 }
 
-function registerMonitoringHandlers(store, dbMonitoringConnections, mainWindow) {
+function registerMonitoringHandlers(store, dbMonitoringConnections) {
   ipcMain.handle("start-db-monitoring", async (event, connectionId, callbackFn, clearHistory = false) => {
     const activityLogTable = "lb_db_activity_log";
 
@@ -97,6 +99,7 @@ function registerMonitoringHandlers(store, dbMonitoringConnections, mainWindow) 
       return { success: false, message: "Invalid connection ID" };
     }
 
+    const mainWindow = getMainWindow();
     if (mainWindow) {
       mainWindow.webContents.send(`db-operation-${connectionId}`, {
         timestamp: new Date().toISOString(),
@@ -147,8 +150,9 @@ function registerMonitoringHandlers(store, dbMonitoringConnections, mainWindow) 
         try {
           await dbConnection.query(`TRUNCATE TABLE ${activityLogTable}`);
 
-          if (mainWindow) {
-            mainWindow.webContents.send(`db-operation-${connectionId}`, {
+          const currentWindow = getMainWindow();
+          if (currentWindow) {
+            currentWindow.webContents.send(`db-operation-${connectionId}`, {
               timestamp: new Date().toISOString(),
               type: "INFO",
               table: "system",
@@ -307,12 +311,13 @@ function registerMonitoringHandlers(store, dbMonitoringConnections, mainWindow) 
 
       dbMonitoringConnections.set(connectionId, dbConnection);
 
-      if (mainWindow) {
+      const currentWindow = getMainWindow();
+      if (currentWindow) {
         initialActivities.forEach((activity) => {
-          mainWindow.webContents.send(`db-operation-${connectionId}`, activity);
+          currentWindow.webContents.send(`db-operation-${connectionId}`, activity);
         });
 
-        mainWindow.webContents.send(`db-operation-${connectionId}`, {
+        currentWindow.webContents.send(`db-operation-${connectionId}`, {
           timestamp: Date.now(),
           type: "INFO",
           table: "system",
@@ -321,7 +326,7 @@ function registerMonitoringHandlers(store, dbMonitoringConnections, mainWindow) 
       }
 
       const lastId = initialActivities.length > 0 ? initialActivities[0].id : 0;
-      startActivityPolling(connectionId, dbConnection, activityLogTable, lastId, dbMonitoringConnections, mainWindow);
+      startActivityPolling(connectionId, dbConnection, activityLogTable, lastId, dbMonitoringConnections);
 
       return { success: true, message: "Monitoring started successfully" };
     } catch (error) {
@@ -349,8 +354,9 @@ function registerMonitoringHandlers(store, dbMonitoringConnections, mainWindow) 
           const activityLogTable = "lb_db_activity_log";
           await connection.query(`TRUNCATE TABLE ${activityLogTable}`);
 
-          if (mainWindow) {
-            mainWindow.webContents.send(`db-operation-${connectionId}`, {
+          const currentWindow = getMainWindow();
+          if (currentWindow) {
+            currentWindow.webContents.send(`db-operation-${connectionId}`, {
               timestamp: new Date().toISOString(),
               type: "INFO",
               table: "system",
