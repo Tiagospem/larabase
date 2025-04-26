@@ -19,7 +19,7 @@
       </div>
 
       <div class="flex">
-        <div class="border-r border-neutral-700 pr-2 mr-2">
+        <div class="border-r border-black/10 pr-2 mr-2">
           <button
             v-tooltip.bottom="'Database Structure'"
             class="btn btn-ghost btn-sm"

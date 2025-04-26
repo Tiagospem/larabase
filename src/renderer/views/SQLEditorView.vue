@@ -1,46 +1,10 @@
 <template>
   <div class="flex flex-col h-full relative">
-    <!-- Header -->
-    <div class="absolute w-full h-10 bg-neutral top-0 draggable z-10"></div>
-
-    <header class="bg-neutral mt-8 z-20 px-4 pb-2 border-b border-neutral flex items-center justify-between">
-      <div class="flex items-center">
-        <button
-          class="btn btn-ghost btn-sm mr-2"
-          @click="goBack"
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke-width="1.5"
-            stroke="currentColor"
-            class="w-5 h-5"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18"
-            />
-          </svg>
-        </button>
-
-        <div
-          class="w-8 h-8 rounded-full flex items-center justify-center mr-2"
-          :class="getConnectionColor(connection?.type)"
-        >
-          <span class="text-white font-bold text-sm">{{ connection?.icon }}</span>
-        </div>
-
-        <div>
-          <h1 class="text-lg font-semibold">SQL Editor - {{ connection?.name }}</h1>
-          <div class="text-xs text-gray-400">
-            {{ connection?.database || connection?.path }}
-          </div>
-        </div>
-      </div>
-
-      <div class="flex">
+    <BaseHeader
+      @goBack="goBack"
+      title="SQL Editor"
+    >
+      <template #actions>
         <button
           v-if="hasOpenAIConfig"
           class="btn btn-accent btn-sm mr-2"
@@ -84,7 +48,7 @@
           Run Query
         </button>
         <button
-          class="btn btn-ghost btn-sm"
+          class="btn btn-sm btn-error"
           @click="clearQuery"
         >
           <svg
@@ -103,17 +67,15 @@
           </svg>
           Clear
         </button>
-      </div>
-    </header>
+      </template>
+    </BaseHeader>
 
-    <!-- Main content -->
     <div class="flex flex-col flex-1 overflow-hidden">
-      <!-- SQL Editor -->
       <div
         class="bg-base-100 overflow-hidden flex flex-col"
         :style="{ height: `${editorHeight}px` }"
       >
-        <div class="p-2 text-sm font-semibold border-b border-neutral flex justify-between">
+        <div class="p-2 text-sm font-semibold border-b border-black/10 flex justify-between">
           <span>SQL Query Editor</span>
           <div class="flex items-center">
             <button
@@ -146,21 +108,19 @@
         </div>
         <textarea
           v-model="sqlQuery"
-          class="w-full h-full p-4 resize-none bg-base-200 text-white font-mono text-sm focus:outline-hidden"
+          class="w-full h-full p-4 resize-none bg-base-100 font-mono text-sm focus:outline-hidden"
           placeholder="Enter your SQL query here..."
           @keydown.tab.prevent="handleTab"
         />
       </div>
 
-      <!-- Resizer -->
       <div
-        class="h-1 bg-neutral cursor-row-resize hover:bg-primary"
+        class="h-1 bg-base-300 cursor-row-resize hover:bg-primary"
         @mousedown="startResize"
       />
 
-      <!-- Results Preview -->
       <div class="flex-1 bg-base-100 overflow-hidden flex flex-col">
-        <div class="p-2 text-sm font-semibold border-b border-neutral flex justify-between items-center">
+        <div class="p-2 text-sm font-semibold border-b border-black/10 flex justify-between items-center">
           <span>Query Results</span>
           <div class="flex items-center">
             <div
@@ -169,7 +129,7 @@
             />
             <span
               v-if="results.length && !isLoading"
-              class="text-xs text-gray-400 mr-2"
+              class="text-xs mr-2"
             >
               {{ rowCount }} rows returned in {{ queryTime }}ms
             </span>
@@ -186,7 +146,7 @@
 
           <div
             v-else-if="!results.length && !isLoading"
-            class="flex items-center justify-center h-full text-gray-500"
+            class="flex items-center justify-center h-full"
           >
             <div class="text-center">
               <svg
@@ -195,7 +155,7 @@
                 viewBox="0 0 24 24"
                 stroke-width="1.5"
                 stroke="currentColor"
-                class="w-12 h-12 mx-auto mb-4 text-gray-400"
+                class="w-12 h-12 mx-auto mb-4"
               >
                 <path
                   stroke-linecap="round"
@@ -203,7 +163,7 @@
                   d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m6.75 12H9m1.5-12H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z"
                 />
               </svg>
-              <p>Run a query to see results</p>
+              <p class="text-sm">Run a query to see results</p>
             </div>
           </div>
 
@@ -213,12 +173,12 @@
           >
             <div class="relative overflow-x-auto">
               <table class="w-full text-sm text-left border-collapse">
-                <thead>
+                <thead class="sticky">
                   <tr>
                     <th
                       v-for="(column, index) in columns"
                       :key="index"
-                      class="px-4 py-2 font-semibold sticky top-0 bg-base-300 border-b border-gray-700"
+                      class="px-4 py-2 font-semibold sticky top-0 bg-base-300"
                     >
                       {{ column }}
                     </th>
@@ -228,7 +188,7 @@
                   <tr
                     v-for="(row, rowIndex) in results"
                     :key="rowIndex"
-                    class="border-b border-gray-700 hover:bg-base-300"
+                    class="border-b border-black/10 hover:bg-base-300"
                   >
                     <td
                       v-for="(column, colIndex) in columns"
@@ -254,7 +214,6 @@
       </div>
     </div>
 
-    <!-- AI SQL Modal -->
     <SQLAIModal
       v-if="showAIModal"
       :database-structure="databaseStructure"
@@ -265,12 +224,13 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, inject, nextTick, onErrorCaptured } from "vue";
+import { computed, inject, nextTick, onErrorCaptured, onMounted, ref } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { useConnectionsStore } from "@/store/connections";
 import { useDatabaseStore } from "@/store/database";
 import { useSettingsStore } from "@/store/settings";
 import SQLAIModal from "../components/SQLAIModal.vue";
+import BaseHeader from "@/components/ui/BaseHeader.vue";
 
 const route = useRoute();
 const router = useRouter();
@@ -299,7 +259,6 @@ const connection = computed(() => {
   return connectionsStore.getConnection(connectionId.value);
 });
 
-// Check if OpenAI API key is configured
 const hasOpenAIConfig = computed(() => {
   return settingsStore.isAIConfigured;
 });
@@ -311,30 +270,16 @@ onErrorCaptured((error, instance, info) => {
   return false;
 });
 
-function resetComponent() {
-  hasRenderError.value = false;
-  renderErrorMessage.value = "";
-  errorMessage.value = "";
-}
-
 onMounted(async () => {
-  console.log("SQLEditorView mounted");
-
-  // Save current connection ID to localStorage if available
   if (connectionId.value) {
     localStorage.setItem("sqlEditorConnectionId", connectionId.value);
   }
 
-  // If there's no connection ID in the route, try to get it from localStorage
   let currentConnectionId = connectionId.value;
   if (!currentConnectionId) {
     currentConnectionId = localStorage.getItem("sqlEditorConnectionId");
-    if (currentConnectionId) {
-      console.log("Retrieved connection ID from localStorage:", currentConnectionId);
-    }
   }
 
-  // Try to load connections if we don't have one yet
   if (!connection.value && currentConnectionId) {
     try {
       await connectionsStore.loadConnections();
@@ -343,41 +288,24 @@ onMounted(async () => {
     }
   }
 
-  // If still no connection, redirect to home
   if (!connectionsStore.getConnection(currentConnectionId)) {
-    console.log("No valid connection found, redirecting to home");
-    router.push("/");
+    await router.push("/");
     return;
   }
 
-  // Set default query example
   if (connection.value) {
     sqlQuery.value = `SELECT * FROM ${connection.value.database}.users LIMIT 10;`;
   }
 
-  // Listen for window resize events to adjust editor height
   window.addEventListener("resize", handleWindowResize);
 
   await settingsStore.loadSettings();
 
-  loadDatabaseStructure();
+  await loadDatabaseStructure();
 });
 
 function goBack() {
   router.push(`/database/${connectionId.value || localStorage.getItem("sqlEditorConnectionId")}`);
-}
-
-function getConnectionColor(type) {
-  switch (type) {
-    case "mysql":
-      return "bg-orange-500";
-    case "pgsql":
-      return "bg-indigo-600";
-    case "sqlite":
-      return "bg-green-600";
-    default:
-      return "bg-gray-600";
-  }
 }
 
 function toggleEditorFullscreen() {
@@ -407,15 +335,12 @@ async function runQuery() {
 
   try {
     const startTime = performance.now();
-
-    // Get connection ID from route or localStorage
     const currentConnectionId = connectionId.value || localStorage.getItem("sqlEditorConnectionId");
 
     if (!currentConnectionId) {
       throw new Error("No connection ID found. Please return to the home page and try again.");
     }
 
-    // Call the main process to execute the query
     const response = await window.api.executeSQLQuery({
       connectionId: currentConnectionId,
       query: sqlQuery.value
@@ -452,13 +377,11 @@ function clearQuery() {
 }
 
 function handleTab(e) {
-  // Insert tab at cursor position
   const start = e.target.selectionStart;
   const end = e.target.selectionEnd;
 
   sqlQuery.value = sqlQuery.value.substring(0, start) + "  " + sqlQuery.value.substring(end);
 
-  // Move cursor position
   nextTick(() => {
     e.target.selectionStart = e.target.selectionEnd = start + 2;
   });
@@ -494,16 +417,13 @@ async function loadDatabaseStructure() {
   try {
     databaseStructure.value = JSON.stringify({ loading: true });
 
-    // Get connection ID from route or localStorage
     const currentConnectionId = connectionId.value || localStorage.getItem("sqlEditorConnectionId");
 
     if (!currentConnectionId) {
       throw new Error("No connection ID found for loading database structure");
     }
 
-    const fullStructure = await databaseStore.getAllTablesModelsJson(currentConnectionId);
-
-    databaseStructure.value = fullStructure;
+    databaseStructure.value = await databaseStore.getAllTablesModelsJson(currentConnectionId);
   } catch (error) {
     console.error("Error loading database structure:", error);
     databaseStructure.value = '{"tables": []}';

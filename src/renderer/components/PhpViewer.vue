@@ -3,7 +3,7 @@
     class="code-viewer"
     :style="{ height: heightStyle }"
   >
-    <div class="mockup-code bg-neutral h-full w-full overflow-auto text-xs">
+    <div class="mockup-code bg-black/90 h-full w-full overflow-auto text-xs">
       <pre class="w-full"><code v-html="highlightedCode"/></pre>
     </div>
   </div>

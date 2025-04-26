@@ -1,6 +1,6 @@
 <template>
   <div class="h-full flex flex-col">
-    <div class="bg-base-200 p-2 border-b border-neutral flex items-center justify-between">
+    <div class="bg-base-200 p-2 border-b border-black/10 flex items-center justify-between">
       <div class="flex items-center space-x-2">
         <button
           class="btn btn-sm btn-ghost"
@@ -64,7 +64,7 @@
 
       <div
         v-else-if="indexes.length === 0"
-        class="flex items-center justify-center h-full text-gray-500"
+        class="flex items-center justify-center h-full"
       >
         <div class="text-center">
           <svg
@@ -73,7 +73,7 @@
             viewBox="0 0 24 24"
             stroke-width="1.5"
             stroke="currentColor"
-            class="w-12 h-12 mx-auto mb-4 text-gray-400"
+            class="w-12 h-12 mx-auto mb-4"
           >
             <path
               stroke-linecap="round"
@@ -102,7 +102,7 @@
       >
         <div class="overflow-x-auto">
           <table class="table table-sm w-full min-w-full">
-            <thead class="bg-base-300 sticky top-0 z-10">
+            <thead class="bg-base-100 shadow-sm sticky top-0 z-10">
               <tr class="text-xs">
                 <th class="px-4 py-2 text-left">Name</th>
                 <th class="px-4 py-2 text-left">Type</th>
@@ -116,7 +116,7 @@
               <tr
                 v-for="index in indexes"
                 :key="index.name"
-                class="border-b border-neutral hover:bg-base-200"
+                class="border-b border-black/10 hover:bg-base-200 bg-base-100"
               >
                 <td class="px-4 py-3 font-medium">
                   {{ index.name }}

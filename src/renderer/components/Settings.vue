@@ -8,7 +8,7 @@
     :action-button-text="'Save'"
   >
     <div class="space-y-4 max-h-[500px] overflow-auto">
-      <div class="card bg-neutral shadow-md">
+      <div class="card bg-base-100">
         <div class="card-body space-y-4">
           <h3 class="card-title text-md">AI Provider</h3>
 
@@ -29,7 +29,7 @@
 
       <div
         v-if="settingsData.aiProvider === 'openai'"
-        class="card bg-neutral shadow-md"
+        class="card bg-base-100"
       >
         <div class="card-body space-y-4">
           <h3 class="card-title text-md">OpenAI API</h3>
@@ -64,7 +64,7 @@
 
       <div
         v-if="settingsData.aiProvider === 'gemini'"
-        class="card bg-neutral shadow-md"
+        class="card bg-base-100"
       >
         <div class="card-body space-y-4">
           <h3 class="card-title text-md">Google Gemini API</h3>
@@ -97,7 +97,7 @@
         </div>
       </div>
 
-      <div class="card bg-neutral shadow-md">
+      <div class="card bg-base-100">
         <div class="card-body space-y-4">
           <h3 class="card-title text-md">Language</h3>
 
@@ -121,7 +121,7 @@
         </div>
       </div>
 
-      <div class="card bg-neutral shadow-md">
+      <div class="card bg-base-100">
         <div class="card-body space-y-4">
           <h3 class="card-title text-md">Theme</h3>
 
@@ -134,23 +134,36 @@
               class="select select-bordered w-full"
               @change="applyTheme"
             >
-              <option value="dim">Dim (Default)</option>
+              <option value="light">Light</option>
               <option value="dark">Dark</option>
+              <option value="cupcake">Cupcake</option>
+              <option value="bumblebee">Bumblebee</option>
+              <option value="emerald">Emerald</option>
+              <option value="corporate">Corporate</option>
               <option value="synthwave">Synthwave</option>
               <option value="retro">Retro</option>
+              <option value="cyberpunk">Cyberpunk</option>
+              <option value="valentine">Valentine</option>
               <option value="halloween">Halloween</option>
+              <option value="garden">Garden</option>
               <option value="forest">Forest</option>
               <option value="aqua">Aqua</option>
+              <option value="lofi">Lofi</option>
               <option value="pastel">Pastel</option>
+              <option value="fantasy">Fantasy</option>
               <option value="wireframe">Wireframe</option>
               <option value="black">Black</option>
               <option value="luxury">Luxury</option>
               <option value="dracula">Dracula</option>
+              <option value="cmyk">CMYK</option>
               <option value="autumn">Autumn</option>
               <option value="business">Business</option>
+              <option value="acid">Acid</option>
               <option value="lemonade">Lemonade</option>
               <option value="night">Night</option>
               <option value="coffee">Coffee</option>
+              <option value="winter">Winter</option>
+              <option value="dim">Dim</option>
               <option value="nord">Nord</option>
               <option value="sunset">Sunset</option>
               <option value="caramellatte">Caramellatte</option>
@@ -162,7 +175,7 @@
 
       <div
         v-if="isDevelopment"
-        class="card bg-neutral shadow-md"
+        class="card bg-base-100"
       >
         <div class="card-body space-y-4">
           <h3 class="card-title text-md">Developer Options</h3>

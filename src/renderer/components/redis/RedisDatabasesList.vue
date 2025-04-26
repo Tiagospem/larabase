@@ -1,7 +1,7 @@
 <template>
   <div>
     <div class="overflow-x-auto">
-      <table class="table w-full">
+      <table class="table table-xs w-full">
         <thead>
           <tr>
             <th>Database</th>
@@ -14,11 +14,11 @@
           <tr
             v-for="db in databases"
             :key="db.id"
-            class="hover"
+            class="bg-base-100"
           >
             <td>
               <div class="font-medium">{{ db.name }}</div>
-              <div class="text-xs text-gray-500">{{ db.id }}</div>
+              <div class="text-xs">{{ db.id }}</div>
             </td>
             <td>{{ db.keys }}</td>
             <td>{{ formatMemory(db.memory) }}</td>

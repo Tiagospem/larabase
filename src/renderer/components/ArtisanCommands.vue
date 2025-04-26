@@ -5,8 +5,7 @@
     @close="close"
   >
     <div class="space-y-4 max-h-[500px] overflow-auto">
-      <!-- Migration Commands Section -->
-      <div class="card bg-neutral shadow-md">
+      <div class="card bg-base-100">
         <div class="card-body space-y-4">
           <h3 class="card-title text-sm">Migration Commands</h3>
 
@@ -62,8 +61,7 @@
         </div>
       </div>
 
-      <!-- Pending Migrations Section -->
-      <div class="card bg-neutral shadow-md">
+      <div class="card bg-base-100">
         <div class="card-body space-y-4">
           <div class="flex justify-between items-center">
             <h3 class="card-title text-sm">Pending Migrations</h3>
@@ -157,8 +155,7 @@
         </div>
       </div>
 
-      <!-- Migration Batches for Rollback -->
-      <div class="card bg-neutral shadow-md">
+      <div class="card bg-base-100">
         <div class="card-body space-y-4">
           <h3 class="card-title text-sm">Rollback Migrations</h3>
 
@@ -337,7 +334,7 @@
 
       <div
         v-if="projectPath"
-        class="text-xs text-gray-400"
+        class="text-xs text-info"
       >
         <span>Project: {{ projectPath }}</span>
       </div>

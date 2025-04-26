@@ -38,13 +38,13 @@
         v-else
         class="max-h-60 overflow-y-auto"
       >
-        <ul class="menu bg-base-200 rounded-box w-full flex gap-2">
+        <ul class="menu bg-base-100 rounded-box w-full flex gap-2">
           <li
             v-for="db in availableDatabases"
             :key="db"
             class="rounded-lg"
             :class="{
-              'bg-primary text-neutral': db === connection?.database
+              'bg-base-200 text-neutral': db === connection?.database
             }"
           >
             <a

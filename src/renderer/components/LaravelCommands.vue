@@ -14,26 +14,10 @@
               placeholder="Search commands..."
               class="input input-sm w-full pr-10 focus:outline-hidden"
             />
-            <div class="absolute inset-y-0 right-0 flex items-center pr-3">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke-width="1.5"
-                stroke="currentColor"
-                class="w-4 h-4 text-gray-400"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z"
-                />
-              </svg>
-            </div>
           </div>
         </fieldset>
         <button
-          class="btn btn-sm btn-accent"
+          class="btn btn-sm btn-primary"
           :disabled="isLoading"
           @click="loadCommands"
         >
@@ -56,11 +40,9 @@
         </button>
       </div>
 
-      <!-- Commands List -->
-      <div class="card bg-neutral shadow-md flex-1 flex flex-col overflow-hidden">
+      <div class="card bg-base-100 shadow-md flex-1 flex flex-col overflow-hidden">
         <div class="card-body flex-1 flex flex-col overflow-hidden">
           <h3 class="card-title text-sm">Available Commands</h3>
-
           <div
             v-if="isLoading"
             class="flex justify-center py-4"
@@ -70,7 +52,7 @@
 
           <div
             v-else-if="filteredCommands.length === 0"
-            class="text-center py-6 text-gray-400 flex-1 flex flex-col justify-center"
+            class="text-center py-6 flex-1 flex flex-col justify-center"
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -78,7 +60,7 @@
               viewBox="0 0 24 24"
               stroke-width="1.5"
               stroke="currentColor"
-              class="w-10 h-10 mx-auto mb-2 text-gray-500"
+              class="w-10 h-10 mx-auto mb-2"
             >
               <path
                 stroke-linecap="round"
@@ -102,55 +84,38 @@
             class="overflow-auto max-h-[300px] flex-1"
           >
             <table class="table table-compact w-full">
-              <thead class="top-0 bg-neutral z-10">
-                <tr>
-                  <th>Command</th>
-                  <th>Signature</th>
-                  <th class="w-32 text-right">Actions</th>
-                </tr>
-              </thead>
               <tbody>
                 <tr
                   v-for="command in filteredCommands"
                   :key="command.name"
                 >
                   <td class="font-mono text-xs">
-                    <div class="flex items-center gap-2">
-                      <div
-                        v-if="command.isBuiltIn"
-                        class="badge badge-sm badge-outline"
+                    <div class="text-xs text-primary font-semibold flex items-center gap-1">
+                      <span>{{ getFilename(command.relativePath) }}</span>
+                      <button
+                        class="btn btn-xs btn-ghost btn-square p-0"
+                        title="Open in editor"
+                        @click.stop="openFileInEditor(command.path)"
                       >
-                        Built-in
-                      </div>
-                    </div>
-                    <template v-if="!command.isBuiltIn && command.relativePath">
-                      <div class="text-xs text-primary font-semibold mt-1 flex items-center gap-1">
-                        <span>{{ getFilename(command.relativePath) }}</span>
-                        <button
-                          class="btn btn-xs btn-ghost btn-square p-0"
-                          title="Open in editor"
-                          @click.stop="openFileInEditor(command.path)"
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke-width="1.5"
+                          stroke="currentColor"
+                          class="size-3"
                         >
-                          <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            stroke-width="1.5"
-                            stroke="currentColor"
-                            class="size-3"
-                          >
-                            <path
-                              stroke-linecap="round"
-                              stroke-linejoin="round"
-                              d="M13.5 6H5.25A2.25 2.25 0 0 0 3 8.25v10.5A2.25 2.25 0 0 0 5.25 21h10.5A2.25 2.25 0 0 0 18 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25"
-                            />
-                          </svg>
-                        </button>
-                      </div>
-                    </template>
+                          <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            d="M13.5 6H5.25A2.25 2.25 0 0 0 3 8.25v10.5A2.25 2.25 0 0 0 5.25 21h10.5A2.25 2.25 0 0 0 18 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25"
+                          />
+                        </svg>
+                      </button>
+                    </div>
                     <div
                       v-if="command.description"
-                      class="text-xs mt-1"
+                      class="text-xs"
                     >
                       {{ command.description }}
                     </div>
@@ -237,7 +202,7 @@
 
           <div
             v-if="!isLoading && filteredCommands.length > 0"
-            class="text-xs text-gray-400 mt-2"
+            class="text-xs mt-2"
           >
             Showing {{ filteredCommands.length }} of {{ commands.length }} commands
           </div>
@@ -246,13 +211,13 @@
 
       <div
         v-if="projectPath"
-        class="text-xs text-gray-400"
+        class="text-xs text-info"
       >
         <span>Project: {{ projectPath }}</span>
       </div>
       <div
         v-else
-        class="text-xs text-red-400"
+        class="text-xs text-error"
       >
         <span>No Laravel project path configured. Please set a project path in the connection settings.</span>
       </div>
@@ -284,7 +249,7 @@
   >
     <div class="mb-4">
       <div class="font-medium text-primary mb-2">Command:</div>
-      <div class="bg-neutral p-3 rounded-md font-mono text-sm mb-4">
+      <div class="bg-base-100 p-3 rounded-md font-mono text-sm mb-4">
         {{ currentCommand?.signature }}
       </div>
 
@@ -299,7 +264,7 @@
           class="input input-bordered w-full font-mono"
         />
         <label class="label">
-          <span class="label-text-alt">Add any additional flags for this command</span>
+          <span class="label-text-alt text-info">Add any additional flags for this command</span>
         </label>
       </fieldset>
     </div>

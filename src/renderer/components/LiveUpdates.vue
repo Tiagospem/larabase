@@ -74,7 +74,7 @@
             <tr
               v-for="(update, index) in filteredUpdates"
               :key="index"
-              class="hover:bg-base-200"
+              class="hover:bg-base-200 bg-base-100"
             >
               <td class="text-xs">
                 {{ formatTimestamp(update.timestamp) }}
@@ -128,7 +128,7 @@
                     viewBox="0 0 24 24"
                     stroke-width="1.5"
                     stroke="currentColor"
-                    class="size-4"
+                    class="w-4 h-4"
                   >
                     <path
                       stroke-linecap="round"

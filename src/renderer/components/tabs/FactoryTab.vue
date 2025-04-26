@@ -1,6 +1,6 @@
 <template>
   <div class="h-full flex flex-col">
-    <div class="bg-base-200 p-2 border-b border-neutral flex items-center justify-between">
+    <div class="bg-base-200 p-2 border-b border-black/10 flex items-center justify-between">
       <div class="flex items-center space-x-2">
         <button
           class="btn btn-sm btn-ghost"
@@ -50,7 +50,7 @@
         v-if="!isLoading"
         class="flex items-center space-x-2"
       >
-        <span class="text-xs text-gray-400">{{ factoryFound ? "Factory found" : "No factory found" }}</span>
+        <span class="text-xs">{{ factoryFound ? "Factory found" : "No factory found" }}</span>
 
         <button
           v-if="!connection?.projectPath"
@@ -86,7 +86,7 @@
 
       <div
         v-else-if="!connection?.projectPath"
-        class="flex items-center justify-center h-full text-gray-500"
+        class="flex items-center justify-center h-full"
       >
         <div class="text-center">
           <svg
@@ -95,7 +95,7 @@
             viewBox="0 0 24 24"
             stroke-width="1.5"
             stroke="currentColor"
-            class="w-12 h-12 mx-auto mb-4 text-gray-400"
+            class="w-12 h-12 mx-auto mb-4"
           >
             <path
               stroke-linecap="round"
@@ -115,7 +115,7 @@
 
       <div
         v-else-if="!factoryFound"
-        class="flex items-center justify-center h-full text-gray-500"
+        class="flex items-center justify-center h-full"
       >
         <div class="text-center">
           <svg
@@ -124,7 +124,7 @@
             viewBox="0 0 24 24"
             stroke-width="1.5"
             stroke="currentColor"
-            class="w-12 h-12 mx-auto mb-4 text-gray-400"
+            class="w-12 h-12 mx-auto mb-4"
           >
             <path
               stroke-linecap="round"
@@ -132,11 +132,11 @@
               d="M7.5 7.5h-.75A2.25 2.25 0 004.5 9.75v7.5a2.25 2.25 0 002.25 2.25h7.5a2.25 2.25 0 002.25-2.25v-7.5a2.25 2.25 0 00-2.25-2.25h-.75m-6 3.75l3 3m0 0l3-3m-3 3V1.5m6 9h.75a2.25 2.25 0 012.25 2.25v7.5a2.25 2.25 0 01-2.25 2.25h-7.5a2.25 2.25 0 01-2.25-2.25v-.75"
             />
           </svg>
-          <p>No Laravel factory found for {{ tableName }} table</p>
-          <p class="text-xs mt-2 text-gray-500">Factories are typically named using singular form and located in database/factories directory</p>
+          <p class="text-sm">No Laravel factory found for {{ tableName }} table</p>
+          <p class="text-xs mt-2 text-info">Factories are typically named using singular form and located in database/factories directory</p>
           <button
             v-if="connection?.projectPath"
-            class="btn btn-sm btn-ghost mt-4"
+            class="btn btn-sm mt-4"
             @click="loadFactory"
           >
             Reload
@@ -148,7 +148,7 @@
         v-else
         class="p-4"
       >
-        <div class="card bg-base-200">
+        <div class="card bg-base-100">
           <div class="card-body">
             <h3 class="card-title flex items-center gap-2">
               <svg
@@ -171,7 +171,7 @@
             <div class="mt-2">
               <div class="flex flex-col space-y-3">
                 <div class="flex items-start">
-                  <div class="w-28 font-medium text-gray-400">File Path</div>
+                  <div class="w-28 font-medium">File Path</div>
                   <div class="flex-1 flex items-center gap-2">
                     <span class="truncate">{{ factory.relativePath }}</span>
                     <button
@@ -198,7 +198,7 @@
                 </div>
 
                 <div class="flex items-start">
-                  <div class="w-28 font-medium text-gray-400">Table Name</div>
+                  <div class="w-28 font-medium">Table Name</div>
                   <div class="flex-1">
                     {{ tableName }}
                   </div>
@@ -212,11 +212,11 @@
               v-if="factoryContent"
               class="mb-4"
             >
-              <h4 class="text-sm font-medium text-gray-400 mb-2">Factory Code</h4>
+              <h4 class="text-sm font-medium mb-2">Factory Code</h4>
               <PhpViewer
                 :code="factoryContent"
                 language="php"
-                height="64"
+                height="500px"
               />
             </div>
 
@@ -249,390 +249,382 @@
 
     <div
       v-if="factoryFound"
-      class="bg-base-200 px-4 py-2 border-t border-gray-800 flex justify-between items-center text-xs text-gray-400"
+      class="bg-base-200 px-4 py-2 border-t border-black/10 flex justify-between items-center text-xs"
     >
       <div>{{ tableName }} | Factory</div>
       <div>Factory Path: {{ factory.relativePath }}</div>
     </div>
 
-    <div
-      v-if="showGenerateDataModal"
-      class="modal modal-open"
+    <Modal
+      :show="showGenerateDataModal"
+      title="Generate Factory Data"
+      @close="showGenerateDataModal = false"
+      :showCancelButton="false"
     >
-      <div class="modal-box bg-base-300 max-w-xl">
-        <h3 class="font-bold text-lg mb-2 text-center">Generate Factory Data</h3>
+      <p class="mb-4 text-sm">Create test records for {{ tableName }}</p>
 
-        <p class="text-center mb-4 text-sm">Create test records for {{ tableName }}</p>
-
-        <div class="bg-base-100 bg-opacity-10 p-4 rounded-lg mb-4">
-          <div class="flex justify-between items-center mb-3">
-            <p class="font-medium">Number of records:</p>
-          </div>
-
-          <fieldset class="fieldset">
-            <input
-              v-model="recordCount"
-              type="number"
-              min="1"
-              max="1000"
-              class="input input-bordered w-full"
-              :class="{
-                'input-error': recordCount < 1 || recordCount > 1000
-              }"
-            />
-            <label
-              v-if="recordCount < 1 || recordCount > 1000"
-              class="label"
-            >
-              <span class="label-text-alt text-error">Please enter a number between 1 and 1000</span>
-            </label>
-          </fieldset>
+      <div class="bg-base-100 bg-opacity-10 p-4 rounded-lg mb-4">
+        <div class="flex justify-between items-center mb-3">
+          <p class="font-medium">Number of records:</p>
         </div>
 
-        <div class="tabs tabs-boxed mb-4">
-          <a
-            class="tab relative"
-            :class="{ 'tab-active text-primary': activeTab === 'relationships' }"
-            @click="activeTab = 'relationships'"
+        <fieldset class="fieldset">
+          <input
+            v-model="recordCount"
+            type="number"
+            min="1"
+            max="1000"
+            class="input input-bordered w-full"
+            :class="{
+              'input-error': recordCount < 1 || recordCount > 1000
+            }"
+          />
+          <label
+            v-if="recordCount < 1 || recordCount > 1000"
+            class="label"
           >
-            Relationships
-            <span
-              v-if="selectedRelation && relatedModelId"
-              class="badge badge-xs badge-primary absolute -top-1 -right-1"
-            />
-          </a>
-          <a
-            class="tab relative"
-            :class="{ 'tab-active text-primary': activeTab === 'attributes' }"
-            @click="activeTab = 'attributes'"
-          >
-            Attributes
-            <span
-              v-if="customAttributes.filter((a) => a.field && a.value).length > 0"
-              class="badge badge-xs badge-primary absolute -top-1 -right-1"
-              >{{ customAttributes.filter((a) => a.field && a.value).length }}</span
-            >
-          </a>
-        </div>
+            <span class="label-text-alt text-error">Please enter a number between 1 and 1000</span>
+          </label>
+        </fieldset>
+      </div>
 
-        <!-- Tab: Relationships -->
-        <div
-          v-if="activeTab === 'relationships'"
-          class="bg-base-100 bg-opacity-10 p-4 rounded-lg mb-5"
+      <div class="tabs tabs-boxed mb-4">
+        <a
+          class="tab relative"
+          :class="{ 'tab-active text-primary': activeTab === 'relationships' }"
+          @click="activeTab = 'relationships'"
         >
-          <div class="flex justify-between items-center mb-3">
-            <p class="font-medium">Assign to specific model:</p>
-            <div
-              v-if="selectedRelation && relatedModelId"
-              class="badge badge-primary badge-sm gap-1"
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke-width="1.5"
-                stroke="currentColor"
-                class="w-3 h-3"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  d="M13.19 8.688a4.5 4.5 0 011.242 7.244l-4.5 4.5a4.5 4.5 0 01-6.364-6.364l1.757-1.757m13.35-.622l1.757-1.757a4.5 4.5 0 00-6.364-6.364l-4.5 4.5a4.5 4.5 0 001.242 7.244"
-                />
-              </svg>
-              {{ selectedRelation }} #{{ relatedModelId }}
-            </div>
-          </div>
-
-          <fieldset class="fieldset mb-4">
-            <select
-              v-model="selectedRelation"
-              class="select select-bordered w-full"
-            >
-              <option value="">No relationship (create standalone)</option>
-              <option
-                v-for="rel in availableRelations"
-                :key="rel.model"
-                :value="rel.model"
-              >
-                {{ rel.model }} ({{ rel.table }})
-              </option>
-            </select>
-          </fieldset>
-
-          <fieldset
-            v-if="selectedRelation"
-            class="fieldset mb-4"
-          >
-            <label class="label">
-              <span class="label-text">Select ID from {{ selectedRelation }}</span>
-            </label>
-            <div class="flex gap-2">
-              <input
-                v-model="relatedModelId"
-                type="number"
-                min="1"
-                placeholder="Enter ID"
-                class="input input-bordered w-full"
-              />
-              <button
-                class="btn btn-square btn-outline"
-                title="Browse records"
-                @click="toggleRelatedRecords"
-              >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke-width="1.5"
-                  stroke="currentColor"
-                  class="w-5 h-5"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z"
-                  />
-                </svg>
-              </button>
-            </div>
-          </fieldset>
-
-          <div
-            v-if="isLoadingRelatedRecords"
-            class="flex justify-center my-2"
-          >
-            <span class="loading loading-spinner loading-sm" />
-          </div>
-
-          <div
-            v-if="showRelatedRecords && relatedRecords.length > 0"
-            class="overflow-x-auto"
-          >
-            <div class="flex justify-between items-center mb-2">
-              <span class="text-sm font-medium">Selected records</span>
-              <button
-                class="btn btn-xs btn-ghost"
-                title="Close"
-                @click="showRelatedRecords = false"
-              >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  class="h-4 w-4"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M6 18L18 6M6 6l12 12"
-                  />
-                </svg>
-              </button>
-            </div>
-            <table class="table table-xs table-zebra">
-              <thead>
-                <tr>
-                  <th>ID</th>
-                  <th>Preview</th>
-                  <th>Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr
-                  v-for="record in relatedRecords"
-                  :key="record.id"
-                  :class="{
-                    'bg-primary bg-opacity-10': record.id == relatedModelId
-                  }"
-                >
-                  <td>{{ record.id }}</td>
-                  <td class="font-mono text-xs truncate max-w-[200px]">
-                    {{ formatRecordPreview(record) }}
-                  </td>
-                  <td>
-                    <button
-                      class="btn btn-xs"
-                      :class="record.id == relatedModelId ? 'btn-primary' : 'btn-ghost'"
-                      @click="selectRelatedRecord(record.id)"
-                    >
-                      {{ record.id == relatedModelId ? "Selected" : "Select" }}
-                    </button>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        <!-- Tab: Attributes -->
-        <div
-          v-if="activeTab === 'attributes'"
-          class="bg-base-100 bg-opacity-10 p-4 rounded-lg mb-5"
+          Relationships
+          <span
+            v-if="selectedRelation && relatedModelId"
+            class="badge badge-xs badge-primary absolute -top-1 -right-1"
+          />
+        </a>
+        <a
+          class="tab relative"
+          :class="{ 'tab-active text-primary': activeTab === 'attributes' }"
+          @click="activeTab = 'attributes'"
         >
-          <div class="flex justify-between items-center mb-3">
-            <p class="font-medium">Customize attributes:</p>
-            <div
-              v-if="customAttributes.filter((a) => a.field && a.value).length > 0"
-              class="badge badge-primary badge-sm gap-1"
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke-width="1.5"
-                stroke="currentColor"
-                class="w-3 h-3"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  d="M9.568 3H5.25A2.25 2.25 0 003 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581c.699.699 1.78.872 2.607.33a18.095 18.095 0 005.223-5.223c.542-.827.369-1.908-.33-2.607L11.16 3.66A2.25 2.25 0 009.568 3z"
-                />
-              </svg>
-              {{ customAttributes.filter((a) => a.field && a.value).length }}
-              Fields
-            </div>
-          </div>
-
-          <div
-            v-if="isLoadingTableColumns"
-            class="flex justify-center my-4"
+          Attributes
+          <span
+            v-if="customAttributes.filter((a) => a.field && a.value).length > 0"
+            class="badge badge-xs badge-primary absolute -top-1 -right-1"
+            >{{ customAttributes.filter((a) => a.field && a.value).length }}</span
           >
-            <span class="loading loading-spinner loading-md" />
-          </div>
+        </a>
+      </div>
 
+      <div
+        v-if="activeTab === 'relationships'"
+        class="bg-base-100 bg-opacity-10 p-4 rounded-lg mb-5"
+      >
+        <div class="flex justify-between items-center mb-3">
+          <p class="font-medium">Assign to specific model:</p>
           <div
-            v-else-if="tableColumns.length === 0"
-            class="alert alert-info shadow-lg mb-4"
+            v-if="selectedRelation && relatedModelId"
+            class="badge badge-primary badge-sm gap-1"
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
               fill="none"
               viewBox="0 0 24 24"
-              class="stroke-current shrink-0 w-6 h-6"
+              stroke-width="1.5"
+              stroke="currentColor"
+              class="w-3 h-3"
             >
               <path
                 stroke-linecap="round"
                 stroke-linejoin="round"
-                stroke-width="2"
-                d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                d="M13.19 8.688a4.5 4.5 0 011.242 7.244l-4.5 4.5a4.5 4.5 0 01-6.364-6.364l1.757-1.757m13.35-.622l1.757-1.757a4.5 4.5 0 00-6.364-6.364l-4.5 4.5a4.5 4.5 0 001.242 7.244"
               />
             </svg>
-            <span>No table columns found. Please refresh the factory data.</span>
+            {{ selectedRelation }} #{{ relatedModelId }}
           </div>
+        </div>
 
-          <div v-else>
-            <div class="mb-4">
-              <button
-                class="btn btn-sm btn-outline"
-                @click="addCustomAttribute"
-              >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke-width="1.5"
-                  stroke="currentColor"
-                  class="w-4 h-4 mr-1"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    d="M12 4.5v15m7.5-7.5h-15"
-                  />
-                </svg>
-                Add Attribute
-              </button>
-            </div>
-
-            <div
-              v-for="(attr, index) in customAttributes"
-              :key="index"
-              class="mb-2 flex gap-2"
+        <fieldset class="fieldset mb-4">
+          <select
+            v-model="selectedRelation"
+            class="select select-bordered w-full"
+          >
+            <option value="">No relationship (create standalone)</option>
+            <option
+              v-for="rel in availableRelations"
+              :key="rel.model"
+              :value="rel.model"
             >
-              <select
-                v-model="attr.field"
-                class="select select-bordered select-sm w-1/3"
-              >
-                <option
-                  value=""
-                  disabled
-                >
-                  Select field
-                </option>
-                <option
-                  v-for="col in tableColumns"
-                  :key="col.name"
-                  :value="col.name"
-                  :disabled="isColumnSelected(col.name, index)"
-                >
-                  {{ col.name }}
-                </option>
-              </select>
-              <input
-                v-model="attr.value"
-                type="text"
-                :placeholder="getPlaceholderForField(attr.field)"
-                class="input input-bordered input-sm grow"
-              />
-              <button
-                class="btn btn-sm btn-square btn-error"
-                @click="removeCustomAttribute(index)"
-              >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke-width="1.5"
-                  stroke="currentColor"
-                  class="w-4 h-4"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    d="M6 18L18 6M6 6l12 12"
-                  />
-                </svg>
-              </button>
-            </div>
-          </div>
-        </div>
+              {{ rel.model }} ({{ rel.table }})
+            </option>
+          </select>
+        </fieldset>
 
-        <div class="bg-neutral bg-opacity-10 p-4 rounded-lg mb-6">
-          <p class="text-sm font-medium mb-2">Command preview:</p>
-          <div class="mockup-code text-xs">
-            <pre><code>{{ generateCommandPreview() }}</code></pre>
-          </div>
-        </div>
-
-        <div class="flex gap-2 justify-end">
-          <button
-            class="btn"
-            @click="showGenerateDataModal = false"
-          >
-            Cancel
-          </button>
-          <button
-            class="btn btn-primary"
-            :disabled="isGenerating || recordCount < 1 || recordCount > 1000"
-            @click="generateFactoryData"
-          >
-            <span
-              v-if="isGenerating"
-              class="loading loading-spinner loading-xs mr-1"
+        <fieldset
+          v-if="selectedRelation"
+          class="fieldset mb-4"
+        >
+          <label class="label">
+            <span class="label-text">Select ID from {{ selectedRelation }}</span>
+          </label>
+          <div class="flex gap-2">
+            <input
+              v-model="relatedModelId"
+              type="number"
+              min="1"
+              placeholder="Enter ID"
+              class="input input-bordered w-full"
             />
-            Generate
-          </button>
+            <button
+              class="btn btn-square btn-outline"
+              title="Browse records"
+              @click="toggleRelatedRecords"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke-width="1.5"
+                stroke="currentColor"
+                class="w-5 h-5"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z"
+                />
+              </svg>
+            </button>
+          </div>
+        </fieldset>
+
+        <div
+          v-if="isLoadingRelatedRecords"
+          class="flex justify-center my-2"
+        >
+          <span class="loading loading-spinner loading-sm" />
+        </div>
+
+        <div
+          v-if="showRelatedRecords && relatedRecords.length > 0"
+          class="overflow-x-auto"
+        >
+          <div class="flex justify-between items-center mb-2">
+            <span class="text-sm font-medium">Selected records</span>
+            <button
+              class="btn btn-xs btn-ghost"
+              title="Close"
+              @click="showRelatedRecords = false"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                class="h-4 w-4"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M6 18L18 6M6 6l12 12"
+                />
+              </svg>
+            </button>
+          </div>
+          <table class="table table-xs table-zebra">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Preview</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr
+                v-for="record in relatedRecords"
+                :key="record.id"
+                :class="{
+                  'bg-primary bg-opacity-10': record.id == relatedModelId
+                }"
+              >
+                <td>{{ record.id }}</td>
+                <td class="font-mono text-xs truncate max-w-[200px]">
+                  {{ formatRecordPreview(record) }}
+                </td>
+                <td>
+                  <button
+                    class="btn btn-xs"
+                    :class="record.id == relatedModelId ? 'btn-primary' : 'btn-ghost'"
+                    @click="selectRelatedRecord(record.id)"
+                  >
+                    {{ record.id == relatedModelId ? "Selected" : "Select" }}
+                  </button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
         </div>
       </div>
+
       <div
-        class="modal-backdrop"
-        @click="showGenerateDataModal = false"
-      />
-    </div>
+        v-if="activeTab === 'attributes'"
+        class="bg-base-100 bg-opacity-10 p-4 rounded-lg mb-5"
+      >
+        <div class="flex justify-between items-center mb-3">
+          <p class="font-medium">Customize attributes:</p>
+          <div
+            v-if="customAttributes.filter((a) => a.field && a.value).length > 0"
+            class="badge badge-primary badge-sm gap-1"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke-width="1.5"
+              stroke="currentColor"
+              class="w-3 h-3"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                d="M9.568 3H5.25A2.25 2.25 0 003 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581c.699.699 1.78.872 2.607.33a18.095 18.095 0 005.223-5.223c.542-.827.369-1.908-.33-2.607L11.16 3.66A2.25 2.25 0 009.568 3z"
+              />
+            </svg>
+            {{ customAttributes.filter((a) => a.field && a.value).length }}
+            Fields
+          </div>
+        </div>
+
+        <div
+          v-if="isLoadingTableColumns"
+          class="flex justify-center my-4"
+        >
+          <span class="loading loading-spinner loading-md" />
+        </div>
+
+        <div
+          v-else-if="tableColumns.length === 0"
+          class="alert alert-info shadow-lg mb-4"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+            class="stroke-current shrink-0 w-6 h-6"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+            />
+          </svg>
+          <span>No table columns found. Please refresh the factory data.</span>
+        </div>
+
+        <div v-else>
+          <div class="mb-4">
+            <button
+              class="btn btn-sm btn-outline"
+              @click="addCustomAttribute"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke-width="1.5"
+                stroke="currentColor"
+                class="w-4 h-4 mr-1"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  d="M12 4.5v15m7.5-7.5h-15"
+                />
+              </svg>
+              Add Attribute
+            </button>
+          </div>
+
+          <div
+            v-for="(attr, index) in customAttributes"
+            :key="index"
+            class="mb-2 flex gap-2"
+          >
+            <select
+              v-model="attr.field"
+              class="select select-bordered select-sm w-1/3"
+            >
+              <option
+                value=""
+                disabled
+              >
+                Select field
+              </option>
+              <option
+                v-for="col in tableColumns"
+                :key="col.name"
+                :value="col.name"
+                :disabled="isColumnSelected(col.name, index)"
+              >
+                {{ col.name }}
+              </option>
+            </select>
+            <input
+              v-model="attr.value"
+              type="text"
+              :placeholder="getPlaceholderForField(attr.field)"
+              class="input input-bordered input-sm grow"
+            />
+            <button
+              class="btn btn-sm btn-square btn-error"
+              @click="removeCustomAttribute(index)"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke-width="1.5"
+                stroke="currentColor"
+                class="w-4 h-4"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  d="M6 18L18 6M6 6l12 12"
+                />
+              </svg>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="bg-base-100 bg-opacity-10 p-4 rounded-lg mb-6">
+        <p class="text-sm font-medium mb-2">Command preview:</p>
+        <div class="mockup-code bg-black text-xs">
+          <pre><code>{{ generateCommandPreview() }}</code></pre>
+        </div>
+      </div>
+
+      <div class="flex gap-2 justify-end">
+        <button
+          class="btn"
+          @click="showGenerateDataModal = false"
+        >
+          Cancel
+        </button>
+        <button
+          class="btn btn-primary"
+          :disabled="isGenerating || recordCount < 1 || recordCount > 1000"
+          @click="generateFactoryData"
+        >
+          <span
+            v-if="isGenerating"
+            class="loading loading-spinner loading-xs mr-1"
+          />
+          Generate
+        </button>
+      </div>
+    </Modal>
   </div>
 </template>
 
@@ -642,6 +634,7 @@ import { useDatabaseStore } from "@/store/database";
 import { useConnectionsStore } from "@/store/connections";
 import { useCommandsStore } from "@/store/commands";
 import PhpViewer from "@/components/PhpViewer.vue";
+import Modal from "@/components/Modal.vue";
 
 const showAlert = inject("showAlert");
 

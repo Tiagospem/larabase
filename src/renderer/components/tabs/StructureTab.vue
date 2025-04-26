@@ -1,6 +1,6 @@
 <template>
   <div class="h-full flex flex-col">
-    <div class="bg-base-200 p-2 border-b border-neutral flex items-center justify-between">
+    <div class="bg-base-200 p-2 border-b border-black/10 flex items-center justify-between">
       <div class="flex items-center space-x-2">
         <button
           class="btn btn-sm btn-ghost"
@@ -30,7 +30,7 @@
             v-model="filterTerm"
             type="text"
             placeholder="Filter columns..."
-            class="input input-sm input-bordered bg-base-300 w-40"
+            class="input input-sm input-bordered w-40"
           />
         </div>
       </div>
@@ -79,7 +79,7 @@
       >
         <div class="overflow-x-auto">
           <table class="table table-sm w-full min-w-full">
-            <thead class="bg-base-300 sticky top-0 z-10">
+            <thead class="bg-base-100 shadow-sm sticky top-0 z-10">
               <tr class="text-xs">
                 <th class="px-4 py-2 text-left">Column Name</th>
                 <th class="px-4 py-2 text-left">Type</th>
@@ -93,13 +93,13 @@
               <tr
                 v-for="column in filteredColumns"
                 :key="column.name"
-                class="border-b border-gray-800 hover:bg-base-200"
+                class="border-b border-black/10 hover:bg-base-200 bg-base-100"
               >
                 <td class="px-4 py-2 font-medium">
                   <div class="flex items-center">
                     <span
                       v-if="column.primary_key"
-                      class="mr-2 text-yellow-500"
+                      class="mr-2 text-warning"
                     >
                       <svg
                         xmlns="http://www.w3.org/2000/svg"
@@ -121,7 +121,7 @@
                   </div>
                 </td>
                 <td class="px-4 py-2">
-                  <span class="text-gray-400">{{ column.type }}</span>
+                  <span>{{ column.type }}</span>
                 </td>
                 <td class="px-4 py-2 text-center">
                   <svg
@@ -131,7 +131,7 @@
                     viewBox="0 0 24 24"
                     stroke-width="1.5"
                     stroke="currentColor"
-                    class="w-5 h-5 mx-auto text-gray-400"
+                    class="w-5 h-5 mx-auto"
                   >
                     <path
                       stroke-linecap="round"
@@ -146,7 +146,7 @@
                     viewBox="0 0 24 24"
                     stroke-width="1.5"
                     stroke="currentColor"
-                    class="w-5 h-5 mx-auto text-gray-400"
+                    class="w-5 h-5 mx-auto"
                   >
                     <path
                       stroke-linecap="round"
@@ -174,13 +174,9 @@
                 </td>
                 <td class="px-4 py-2">
                   <span v-if="column.default !== null">{{ column.default }}</span>
-                  <span
-                    v-else
-                    class="text-gray-500"
-                    >NULL</span
-                  >
+                  <span v-else>NULL</span>
                 </td>
-                <td class="px-4 py-2 text-gray-400">
+                <td class="px-4 py-2">
                   {{ column.extra }}
                 </td>
               </tr>
@@ -191,7 +187,7 @@
 
       <div
         v-else
-        class="flex items-center justify-center h-full text-gray-500"
+        class="flex items-center justify-center h-full"
       >
         <div class="text-center">
           <svg
@@ -200,7 +196,7 @@
             viewBox="0 0 24 24"
             stroke-width="1.5"
             stroke="currentColor"
-            class="w-12 h-12 mx-auto mb-4 text-gray-400"
+            class="w-12 h-12 mx-auto mb-4"
           >
             <path
               stroke-linecap="round"
@@ -221,7 +217,7 @@
 
     <div
       v-if="columns.length > 0"
-      class="bg-base-200 px-4 py-2 border-t border-neutral flex justify-between items-center text-xs text-gray-400 sticky bottom-0 left-0 right-0 min-h-[40px] z-20"
+      class="bg-base-200 px-4 py-2 border-t border-black/10 flex justify-between items-center text-xs sticky bottom-0 left-0 right-0 min-h-[40px] z-20"
     >
       <div>{{ tableName }} | {{ columns.length }} columns</div>
       <div>

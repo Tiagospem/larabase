@@ -1,6 +1,6 @@
 <template>
   <div class="h-full flex flex-col">
-    <div class="bg-base-200 p-2 border-b border-neutral flex items-center justify-between">
+    <div class="bg-base-200 p-2 border-b border-black/10 flex items-center justify-between">
       <div class="flex items-center space-x-2">
         <button
           class="btn btn-sm btn-ghost"
@@ -28,7 +28,7 @@
         v-if="!isLoading"
         class="flex items-center space-x-2"
       >
-        <span class="text-xs text-gray-400">{{ modelFound ? "Model found" : "No model found" }}</span>
+        <span class="text-xs">{{ modelFound ? "Model found" : "No model found" }}</span>
 
         <button
           v-if="!connection?.projectPath"
@@ -64,7 +64,7 @@
 
       <div
         v-else-if="!connection?.projectPath"
-        class="flex items-center justify-center h-full text-gray-500"
+        class="flex items-center justify-center h-full"
       >
         <div class="text-center">
           <svg
@@ -73,7 +73,7 @@
             viewBox="0 0 24 24"
             stroke-width="1.5"
             stroke="currentColor"
-            class="w-12 h-12 mx-auto mb-4 text-gray-400"
+            class="w-12 h-12 mx-auto mb-4"
           >
             <path
               stroke-linecap="round"
@@ -93,7 +93,7 @@
 
       <div
         v-else-if="!modelFound"
-        class="flex items-center justify-center h-full text-gray-500"
+        class="flex items-center justify-center h-full"
       >
         <div class="text-center">
           <svg
@@ -102,7 +102,7 @@
             viewBox="0 0 24 24"
             stroke-width="1.5"
             stroke="currentColor"
-            class="w-12 h-12 mx-auto mb-4 text-gray-400"
+            class="w-12 h-12 mx-auto mb-4"
           >
             <path
               stroke-linecap="round"
@@ -110,11 +110,11 @@
               d="M7.5 7.5h-.75A2.25 2.25 0 004.5 9.75v7.5a2.25 2.25 0 002.25 2.25h7.5a2.25 2.25 0 002.25-2.25v-7.5a2.25 2.25 0 00-2.25-2.25h-.75m-6 3.75l3 3m0 0l3-3m-3 3V1.5m6 9h.75a2.25 2.25 0 012.25 2.25v7.5a2.25 2.25 0 01-2.25 2.25h-7.5a2.25 2.25 0 01-2.25-2.25v-.75"
             />
           </svg>
-          <p>No Laravel model found for {{ tableName }} table</p>
-          <p class="text-xs mt-2 text-gray-500">Models are typically named using singular form or with different naming conventions</p>
+          <p class="text-sm">No Laravel model found for {{ tableName }} table</p>
+          <p class="text-xs mt-2 text-info">Models are typically named using singular form or with different naming conventions</p>
           <button
             v-if="connection?.projectPath"
-            class="btn btn-sm btn-ghost mt-4"
+            class="btn btn-sm mt-4"
             @click="loadModel"
           >
             Reload
@@ -126,7 +126,7 @@
         v-else
         class="p-4"
       >
-        <div class="card bg-base-200">
+        <div class="card bg-base-100">
           <div class="card-body">
             <h3 class="card-title flex items-center gap-2">
               <svg
@@ -149,21 +149,21 @@
             <div class="mt-2">
               <div class="flex flex-col space-y-3">
                 <div class="flex items-start">
-                  <div class="w-28 font-medium text-gray-400">Namespace</div>
+                  <div class="w-28 font-medium">Namespace</div>
                   <div class="flex-1">
                     {{ model.namespace || "Not specified" }}
                   </div>
                 </div>
 
                 <div class="flex items-start">
-                  <div class="w-28 font-medium text-gray-400">Full Name</div>
-                  <div class="flex-1 font-mono text-sm bg-base-300 p-1 rounded-sm">
+                  <div class="w-28 font-medium">Full Name</div>
+                  <div class="flex-1 font-mono text-sm bg-base-200 p-1 rounded-sm">
                     {{ model.fullName }}
                   </div>
                 </div>
 
                 <div class="flex items-start">
-                  <div class="w-28 font-medium text-gray-400">File Path</div>
+                  <div class="w-28 font-medium">File Path</div>
                   <div class="flex-1 flex items-center gap-2">
                     <span class="truncate">{{ model.relativePath }}</span>
                     <button
@@ -190,7 +190,7 @@
                 </div>
 
                 <div class="flex items-start">
-                  <div class="w-28 font-medium text-gray-400">Table Name</div>
+                  <div class="w-28 font-medium">Table Name</div>
                   <div class="flex-1">
                     {{ tableName }}
                   </div>
@@ -204,56 +204,12 @@
               v-if="modelContent"
               class="mb-4"
             >
-              <h4 class="text-sm font-medium text-gray-400 mb-2">Model Code</h4>
+              <h4 class="text-sm font-medium mb-2">Model Code</h4>
               <PhpViewer
                 :code="modelContent"
                 language="php"
-                height="64"
+                height="500px"
               />
-            </div>
-
-            <div class="flex justify-between">
-              <button
-                class="btn btn-sm btn-primary"
-                @click="viewModelJson"
-              >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke-width="1.5"
-                  stroke="currentColor"
-                  class="w-4 h-4 mr-1"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    d="M7.5 8.25h9m-9 3H12m-9.75 1.51c0 1.6 1.123 2.994 2.707 3.227 1.129.166 2.27.293 3.423.379.35.026.67.21.865.501L12 21l2.755-4.133a1.14 1.14 0 01.865-.501 48.172 48.172 0 003.423-.379c1.584-.233 2.707-1.626 2.707-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0012 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018z"
-                  />
-                </svg>
-                View Model JSON
-              </button>
-
-              <button
-                class="btn btn-sm btn-ghost"
-                @click="openFileInEditor(model.path)"
-              >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke-width="1.5"
-                  stroke="currentColor"
-                  class="w-4 h-4 mr-1"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25"
-                  />
-                </svg>
-                Open File
-              </button>
             </div>
           </div>
         </div>
@@ -262,57 +218,10 @@
 
     <div
       v-if="modelFound"
-      class="bg-base-200 px-4 py-2 border-t border-gray-800 flex justify-between items-center text-xs text-gray-400"
+      class="bg-base-200 px-4 py-2 border-t border-black/10 flex justify-between items-center text-xs"
     >
       <div>{{ tableName }} | {{ model.fullName }}</div>
       <div>Model Path: {{ model.relativePath }}</div>
-    </div>
-
-    <!-- Model JSON Modal -->
-    <div
-      v-if="showJsonModal"
-      class="modal modal-open"
-    >
-      <div class="modal-box w-11/12 max-w-5xl max-h-[90vh]">
-        <h3 class="font-bold text-lg mb-4">Model JSON for {{ tableName }}</h3>
-        <PhpViewer
-          :code="formattedJson"
-          language="json"
-          height="60"
-        />
-        <div class="modal-action">
-          <button
-            class="btn btn-sm btn-primary"
-            @click="copyJsonToClipboard"
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke-width="1.5"
-              stroke="currentColor"
-              class="w-4 h-4 mr-1"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125h-9.75a1.125 1.125 0 0 1-1.125-1.125V7.875c0-.621.504-1.125 1.125-1.125H6.75a9.06 9.06 0 0 1 1.5.124m7.5 10.376h3.375c.621 0 1.125-.504 1.125-1.125V11.25c0-4.46-3.243-8.161-7.5-8.876a9.06 9.06 0 0 0-1.5-.124H9.375c-.621 0-1.125.504-1.125 1.125v3.5m7.5 10.375H9.375a1.125 1.125 0 0 1-1.125-1.125v-9.25m12 6.625v-1.875a3.375 3.375 0 0 0-3.375-3.375h-1.5a1.125 1.125 0 0 1-1.125-1.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H9.75"
-              />
-            </svg>
-            Copy to Clipboard
-          </button>
-          <button
-            class="btn"
-            @click="showJsonModal = false"
-          >
-            Close
-          </button>
-        </div>
-      </div>
-      <div
-        class="modal-backdrop"
-        @click="showJsonModal = false"
-      />
     </div>
   </div>
 </template>

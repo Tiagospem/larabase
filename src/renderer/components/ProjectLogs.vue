@@ -136,14 +136,14 @@
               <th class="w-28">Timestamp</th>
               <th class="w-24">Type</th>
               <th>Message</th>
-              <th class="w-28 text-right">Actions</th>
+              <th class="w-10 text-right">Actions</th>
             </tr>
           </thead>
           <tbody>
             <tr
               v-for="(log, index) in filteredLogs"
               :key="index"
-              class="hover:bg-base-200"
+              class="hover:bg-base-200 bg-base-100"
             >
               <td class="text-xs">
                 {{ formatTimestamp(log.timestamp) }}
@@ -192,7 +192,7 @@
             <tr v-if="filteredLogs.length === 0">
               <td
                 colspan="4"
-                class="text-center py-4 text-gray-500"
+                class="text-center py-4 bg-base-100"
               >
                 No logs found
               </td>

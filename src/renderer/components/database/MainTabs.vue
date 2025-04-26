@@ -635,7 +635,7 @@ defineExpose({
 
 .tabs-actions {
   padding: 0 3px;
-  z-index: 999;
+  z-index: 20;
   position: relative;
 }
 
