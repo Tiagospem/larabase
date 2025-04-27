@@ -4,68 +4,16 @@
     title=".env Editor"
     width="max-w-5xl"
     :show-footer="false"
-    @close="$emit('close')"
+    @close="handleClose"
   >
     <div class="flex items-center gap-2 mb-4">
-      <div class="flex-1 flex items-center gap-2">
-        <!-- Search box -->
-        <div class="relative flex-1 max-w-md">
-          <input
-            type="text"
-            v-model="searchQuery"
-            placeholder="Search in .env file..."
-            class="input input-sm input-bordered w-full pr-8 bg-base-200 border-2"
-            @keydown.enter.prevent="searchNext"
-            @keydown.tab.prevent
-            @click.stop
-          />
-          <button
-            class="btn btn-xs btn-ghost absolute right-1 top-1"
-            @click="clearSearch"
-            v-if="searchQuery"
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke-width="1.5"
-              stroke="currentColor"
-              class="w-4 h-4"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                d="M6 18 18 6M6 6l12 12"
-              />
-            </svg>
-          </button>
-        </div>
-        <button
-          class="btn btn-sm btn-ghost"
-          @click="searchNext"
-          :disabled="!searchQuery"
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke-width="1.5"
-            stroke="currentColor"
-            class="w-4 h-4"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              d="m19.5 8.25-7.5 7.5-7.5-7.5"
-            />
-          </svg>
-        </button>
+      <div class="flex-1 text-sm opacity-75">
         <span
-          v-if="searchResults.length > 0"
-          class="text-xs opacity-70"
+          v-if="fileStatus"
+          :class="fileStatus.class"
+          >{{ fileStatus.text }}</span
         >
-          {{ currentSearchIndex + 1 }}/{{ searchResults.length }}
-        </span>
+        <span v-else-if="connection?.projectPath">{{ connection.projectPath }}</span>
       </div>
 
       <button
@@ -107,7 +55,7 @@
           <path
             stroke-linecap="round"
             stroke-linejoin="round"
-            d="M3.75 9.776c.112-.017.227-.026.344-.026h15.812c.117 0 .232.009.344.026m-16.5 0a2.25 2.25 0 00-1.883 2.542l.857 6a2.25 2.25 0 002.227 1.932H19.05a2.25 2.25 0 002.227-1.932l.857-6a2.25 2.25 0 00-1.883-2.542m-16.5 0V6A2.25 2.25 0 016 3.75h3.879a1.5 1.5 0 011.06.44l2.122 2.12a1.5 1.5 0 001.06.44H18A2.25 2.25 0 0120.25 9v.776"
+            d="M3.75 9.776c.112-.017.227-.026.344-.026h15.812c.117 0 .232.009.344.026m-16.5 0a2.25 2.25 0 00-1.883 2.542l.857 6a2.25 2.25 0 002.227 1.932H19.05a2.25 2.25 0 002.227-1.932l.857-6a2.25 2.25 0 00-1.883-2.542m-16.5 0V6A2.25 2.25 0 016 3.75h3.879a1.5 1.5 0 011.06.44l2.122 2.12a1.5 1.5 0 001.06.44H18A2.25 2.25 0 0120.25 9v .776"
           />
         </svg>
         <p>No Laravel project path selected</p>
@@ -159,248 +107,177 @@
     <div
       v-else
       class="h-[60vh]"
-      ref="editorContainer"
     >
-      <EnvCodeEditor
-        ref="codeEditor"
-        v-model="envContent"
-      />
+      <EnvCodeEditor v-model="envContent" />
     </div>
   </Modal>
 </template>
 
-<script setup>
-import { computed, nextTick, onMounted, ref, watch } from "vue";
+<script>
+import { computed, onMounted, onUnmounted, ref, watch } from "vue";
 import { useConnectionsStore } from "@/store/connections";
 import EnvCodeEditor from "./EnvCodeEditor.vue";
 import Modal from "./Modal.vue";
 
-const props = defineProps({
-  isOpen: {
-    type: Boolean,
-    default: false
+export default {
+  name: "EnvEditor",
+  components: {
+    EnvCodeEditor,
+    Modal
   },
-  connectionId: {
-    type: String,
-    required: true
-  }
-});
-
-const emit = defineEmits(["close"]);
-
-const connectionsStore = useConnectionsStore();
-const connection = computed(() => {
-  return connectionsStore.getConnection(props.connectionId);
-});
-
-const codeEditor = ref(null);
-const editorContainer = ref(null);
-const projectPath = computed(() => connection.value?.projectPath || null);
-const envContent = ref("");
-const originalContent = ref("");
-const isLoading = ref(false);
-const fileStatus = ref(null);
-const hasChanges = ref(false);
-
-const searchQuery = ref("");
-const searchResults = ref([]);
-const currentSearchIndex = ref(-1);
-
-const escapeRegExp = (string) => {
-  return string.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-};
-
-watch(
-  () => props.isOpen,
-  (newValue) => {
-    if (newValue && projectPath.value) {
-      loadEnvFile();
+  props: {
+    isOpen: {
+      type: Boolean,
+      default: false
+    },
+    connectionId: {
+      type: String,
+      required: true
     }
-  }
-);
-
-watch(
-  () => projectPath.value,
-  (newValue) => {
-    if (newValue && props.isOpen) {
-      loadEnvFile();
-    }
-  }
-);
-
-watch(searchQuery, () => {
-  if (searchQuery.value) {
-    performSearch();
-  } else {
-    searchResults.value = [];
-    currentSearchIndex.value = -1;
-  }
-});
-
-function clearSearch() {
-  searchQuery.value = "";
-  searchResults.value = [];
-  currentSearchIndex.value = -1;
-}
-
-const performSearch = () => {
-  if (!searchQuery.value.trim() || !envContent.value) {
-    searchResults.value = [];
-    currentSearchIndex.value = -1;
-    return;
-  }
-
-  const content = envContent.value;
-  const query = searchQuery.value;
-  const regex = new RegExp(escapeRegExp(query), "gi");
-
-  const results = [];
-  let match;
-  while ((match = regex.exec(content)) !== null) {
-    results.push({
-      start: match.index,
-      end: match.index + query.length,
-      text: match[0]
+  },
+  emits: ["close"],
+  setup(props, { emit }) {
+    const connectionsStore = useConnectionsStore();
+    const connection = computed(() => {
+      return connectionsStore.getConnection(props.connectionId);
     });
-  }
 
-  searchResults.value = results;
+    const projectPath = computed(() => connection.value?.projectPath || null);
+    const envContent = ref("");
+    const originalContent = ref("");
+    const isLoading = ref(false);
+    const fileStatus = ref(null);
+    let isSaving = false;
 
-  if (results.length > 0) {
-    currentSearchIndex.value = 0;
-    nextTick(() => {
-      highlightCurrentSearch();
+    const hasChanges = computed(() => {
+      return envContent.value !== originalContent.value;
     });
-  } else {
-    currentSearchIndex.value = -1;
-  }
-};
 
-const searchNext = () => {
-  if (searchResults.value.length === 0) {
-    performSearch();
-    return;
-  }
-
-  currentSearchIndex.value = (currentSearchIndex.value + 1) % searchResults.value.length;
-  highlightCurrentSearch();
-};
-
-const highlightCurrentSearch = () => {
-  if (currentSearchIndex.value < 0 || !searchResults.value.length || !codeEditor.value?.textarea) return;
-
-  const result = searchResults.value[currentSearchIndex.value];
-  const textarea = codeEditor.value.textarea;
-
-  textarea.setSelectionRange(result.start, result.end);
-
-  const content = envContent.value;
-  const textBeforeMatch = content.substring(0, result.start);
-  const lineBreaks = (textBeforeMatch.match(/\n/g) || []).length;
-
-  const lineHeight = 21;
-  const scrollPosition = lineHeight * lineBreaks;
-
-  textarea.scrollTop = Math.max(0, scrollPosition - textarea.clientHeight / 3);
-};
-
-async function loadEnvFile() {
-  if (!projectPath.value) return;
-
-  isLoading.value = true;
-  fileStatus.value = null;
-  clearSearch();
-
-  try {
-    const result = await window.api.readEnvFileRaw(projectPath.value);
-
-    if (result.success) {
-      envContent.value = result.content;
-      originalContent.value = result.content;
-      fileStatus.value = { text: "File loaded successfully", class: "text-success" };
-      hasChanges.value = false;
-    } else {
-      envContent.value = "";
-      originalContent.value = "";
-      fileStatus.value = { text: `Error: ${result.message}`, class: "text-error" };
+    function handleClose() {
+      emit("close");
     }
-  } catch (error) {
-    console.error("Error loading .env file:", error);
-    fileStatus.value = { text: `Error: ${error.message}`, class: "text-error" };
-    envContent.value = "";
-    originalContent.value = "";
-  } finally {
-    isLoading.value = false;
-  }
-}
 
-async function saveEnvFile() {
-  if (!projectPath.value || !envContent.value || !hasChanges.value) return;
+    watch(
+      () => props.isOpen,
+      (newValue) => {
+        if (newValue && projectPath.value) {
+          loadEnvFile();
+        }
+      }
+    );
 
-  const scrollPosition = codeEditor.value?.textarea?.scrollTop || 0;
-  isLoading.value = true;
+    watch(
+      () => projectPath.value,
+      (newValue) => {
+        if (newValue && props.isOpen) {
+          loadEnvFile();
+        }
+      }
+    );
 
-  try {
-    const result = await window.api.saveEnvFile(projectPath.value, envContent.value);
+    async function loadEnvFile() {
+      if (!projectPath.value) return;
 
-    if (result.success) {
-      fileStatus.value = { text: "File saved successfully", class: "text-success" };
-      hasChanges.value = false;
-      originalContent.value = envContent.value;
-    } else {
-      fileStatus.value = { text: `Error saving: ${result.message}`, class: "text-error" };
+      isLoading.value = true;
+      fileStatus.value = null;
+
+      try {
+        const result = await window.api.readEnvFileRaw(projectPath.value);
+
+        if (result.success) {
+          envContent.value = result.content;
+          originalContent.value = result.content;
+          fileStatus.value = { text: "File loaded successfully", class: "text-success" };
+        } else {
+          envContent.value = "";
+          originalContent.value = "";
+          fileStatus.value = { text: `Error: ${result.message}`, class: "text-error" };
+        }
+      } catch (error) {
+        console.error("Error loading .env file:", error);
+        fileStatus.value = { text: `Error: ${error.message}`, class: "text-error" };
+        envContent.value = "";
+        originalContent.value = "";
+      } finally {
+        isLoading.value = false;
+      }
     }
-  } catch (error) {
-    console.error("Error saving .env file:", error);
-    fileStatus.value = { text: `Error saving: ${error.message}`, class: "text-error" };
-  } finally {
-    isLoading.value = false;
 
-    await nextTick(() => {
-      if (codeEditor.value?.textarea) {
-        codeEditor.value.textarea.scrollTop = scrollPosition;
+    async function saveEnvFile() {
+      if (!projectPath.value || !envContent.value || !hasChanges.value || isSaving) return;
+
+      isSaving = true;
+      fileStatus.value = { text: "Saving...", class: "text-info" };
+
+      try {
+        const result = await window.api.saveEnvFile(projectPath.value, envContent.value);
+
+        if (result.success) {
+          originalContent.value = envContent.value;
+          fileStatus.value = { text: "File saved successfully", class: "text-success" };
+
+          setTimeout(() => {
+            if (fileStatus.value && fileStatus.value.text === "File saved successfully") {
+              fileStatus.value = null;
+            }
+          }, 3000);
+        } else {
+          fileStatus.value = { text: `Error saving: ${result.message}`, class: "text-error" };
+        }
+      } catch (error) {
+        console.error("Error saving .env file:", error);
+        fileStatus.value = { text: `Error saving: ${error.message}`, class: "text-error" };
+      } finally {
+        isSaving = false;
+      }
+    }
+
+    async function selectProjectPath() {
+      try {
+        const result = await window.api.selectDirectory();
+
+        if (result.canceled) {
+          return;
+        }
+
+        const selectedPath = result.filePaths[0];
+        const isLaravel = await window.api.validateLaravelProject(selectedPath);
+
+        if (!isLaravel) {
+          fileStatus.value = { text: "Selected directory is not a valid Laravel project", class: "text-error" };
+          return;
+        }
+
+        await connectionsStore.updateConnection(props.connectionId, {
+          projectPath: selectedPath
+        });
+
+        fileStatus.value = { text: "Laravel project path set successfully", class: "text-success" };
+        await loadEnvFile();
+      } catch (error) {
+        console.error("Error selecting project path:", error);
+        fileStatus.value = { text: `Failed to select project path: ${error.message}`, class: "text-error" };
+      }
+    }
+
+    onMounted(() => {
+      if (props.isOpen && projectPath.value) {
+        loadEnvFile();
       }
     });
+
+    return {
+      connection,
+      envContent,
+      fileStatus,
+      hasChanges,
+      isLoading,
+      projectPath,
+      handleClose,
+      loadEnvFile,
+      saveEnvFile,
+      selectProjectPath
+    };
   }
-}
-
-async function selectProjectPath() {
-  try {
-    const result = await window.api.selectDirectory();
-
-    if (result.canceled) {
-      return;
-    }
-
-    const selectedPath = result.filePaths[0];
-    const isLaravel = await window.api.validateLaravelProject(selectedPath);
-
-    if (!isLaravel) {
-      fileStatus.value = { text: "Selected directory is not a valid Laravel project", class: "text-error" };
-      return;
-    }
-
-    await connectionsStore.updateConnection(props.connectionId, {
-      projectPath: selectedPath
-    });
-
-    fileStatus.value = { text: "Laravel project path set successfully", class: "text-success" };
-    await loadEnvFile();
-  } catch (error) {
-    console.error("Error selecting project path:", error);
-    fileStatus.value = { text: `Failed to select project path: ${error.message}`, class: "text-error" };
-  }
-}
-
-onMounted(() => {
-  if (props.isOpen && projectPath.value) {
-    loadEnvFile();
-  }
-});
+};
 </script>
-
-<style scoped>
-.input {
-  z-index: 20 !important;
-}
-</style>
