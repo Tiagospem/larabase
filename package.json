@@ -85,7 +85,7 @@
       "main": "dist/main.cjs"
     },
     "asar": true,
-    "compression": "store",
+    "compression": "maximum",
     "artifactName": "${productName}-${version}-${os}-${arch}.${ext}",
     "publish": {
       "provider": "github",
