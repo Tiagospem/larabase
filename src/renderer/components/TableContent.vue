@@ -3,7 +3,7 @@
     <div class="bg-base-300 px-2 py-1 border-b border-black/10 flex items-center">
       <div class="flex gap-1">
         <a
-          v-for="tab in contentTabs"
+          v-for="tab in visibleTabs"
           :key="tab.id"
           class="flex items-center gap-1 px-2 py-1 cursor-pointer transition-colors text-sm tracking-tighter"
           :class="{
@@ -28,8 +28,9 @@
 </template>
 
 <script setup>
-import { ref, computed, markRaw, defineAsyncComponent, onActivated } from "vue";
+import { ref, computed, markRaw, defineAsyncComponent, onActivated, onMounted, watchEffect } from "vue";
 import { useTablesStore } from "@/store/tables";
+import { useDatabaseStore } from "@/store/database";
 
 const DataTab = markRaw(defineAsyncComponent(() => import("./tabs/DataTab.vue")));
 const StructureTab = markRaw(defineAsyncComponent(() => import("./tabs/StructureTab.vue")));
@@ -38,8 +39,10 @@ const ForeignKeysTab = markRaw(defineAsyncComponent(() => import("./tabs/Foreign
 const MigrationsTab = markRaw(defineAsyncComponent(() => import("./tabs/MigrationsTab.vue")));
 const ModelTab = markRaw(defineAsyncComponent(() => import("./tabs/ModelTab.vue")));
 const FactoryTab = markRaw(defineAsyncComponent(() => import("./tabs/FactoryTab.vue")));
+const MonitoringTab = markRaw(defineAsyncComponent(() => import("./tabs/MonitoringTab.vue")));
 
 const tablesStore = useTablesStore();
+const databaseStore = useDatabaseStore();
 
 // Explicitly name this component for keep-alive caching
 defineOptions({
@@ -71,8 +74,11 @@ const tabsLoaded = ref({
   foreignKeys: false,
   migrations: false,
   model: false,
-  factory: false
+  factory: false,
+  monitoring: false
 });
+
+const isJobBatchesTable = ref(false);
 
 const contentTabs = [
   { id: "data", label: "Data" },
@@ -81,8 +87,18 @@ const contentTabs = [
   { id: "foreignKeys", label: "Foreign Keys" },
   { id: "migrations", label: "Migrations" },
   { id: "model", label: "Model" },
-  { id: "factory", label: "Factory" }
+  { id: "factory", label: "Factory" },
+  { id: "monitoring", label: "Monitoring" }
 ];
+
+const visibleTabs = computed(() => {
+  return contentTabs.filter((tab) => {
+    if (tab.id === "monitoring") {
+      return isJobBatchesTable.value;
+    }
+    return true;
+  });
+});
 
 const currentTabComponent = computed(() => {
   switch (activeContentTab.value) {
@@ -100,6 +116,8 @@ const currentTabComponent = computed(() => {
       return ModelTab;
     case "factory":
       return FactoryTab;
+    case "monitoring":
+      return MonitoringTab;
     default:
       return DataTab;
   }
@@ -142,6 +160,20 @@ function handleTabData(tabId, data) {
   }
 }
 
+async function checkIfJobBatchesTable() {
+  isJobBatchesTable.value = props.tableName === "job_batches";
+}
+
+onMounted(() => {
+  checkIfJobBatchesTable();
+});
+
+watchEffect(() => {
+  if (props.tableName) {
+    checkIfJobBatchesTable();
+  }
+});
+
 onActivated(() => {
   // When component is reactivated from cache, ensure the active tab data is refreshed if needed
   if (activeContentTab.value === "data") {
@@ -150,5 +182,6 @@ onActivated(() => {
       activeContentTab: activeContentTab.value
     });
   }
+  checkIfJobBatchesTable();
 });
 </script>

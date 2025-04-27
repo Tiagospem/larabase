@@ -21,6 +21,7 @@
   "license": "ISC",
   "dependencies": {
     "@tailwindcss/postcss": "^4.1.4",
+    "dayjs": "^1.11.13",
     "dockerode": "^4.0.6",
     "electron-dl": "^4.0.0",
     "electron-store": "^8.1.0",

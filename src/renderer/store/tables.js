@@ -6,12 +6,10 @@ export const useTablesStore = defineStore("tables", () => {
   const databaseStore = useDatabaseStore();
   const lastLoadedConnection = ref(null);
 
-  // Table sorting and filtering
   const searchTerm = ref("");
   const sortBy = ref(localStorage.getItem("tableSort") || "name");
   const sortOrder = ref(localStorage.getItem("tableSortOrder") || "asc");
 
-  // Computed properties
   const localTables = computed(() => databaseStore.tablesList || []);
   const isLoading = computed(() => databaseStore.isLoading);
   const allTablesLoaded = computed(() => !isLoading.value);
@@ -36,7 +34,6 @@ export const useTablesStore = defineStore("tables", () => {
     });
   });
 
-  // Methods
   function setSearchTerm(connectionId, term) {
     searchTerm.value = term;
     localStorage.setItem(`tableSearch_${connectionId}`, term);
@@ -94,22 +91,16 @@ export const useTablesStore = defineStore("tables", () => {
   }
 
   return {
-    // State
     localTables,
     lastLoadedConnection,
     searchTerm,
     sortBy,
     sortOrder,
-
-    // Computed
     isLoading,
     allTablesLoaded,
     filteredTables,
     sortedTables,
-
-    // Methods
     setSearchTerm,
-    clearSearch,
     setSortBy,
     toggleSortOrder,
     formatRecordCount,
