@@ -84,6 +84,8 @@ try {
     selectDirectory: () => safeIpcRenderer.invoke("select-directory"),
     validateLaravelProject: (projectPath) => safeIpcRenderer.invoke("validate-laravel-project", projectPath),
     readEnvFile: (projectPath) => safeIpcRenderer.invoke("read-env-file", projectPath),
+    readEnvFileRaw: (projectPath) => safeIpcRenderer.invoke("read-env-file-raw", projectPath),
+    saveEnvFile: (projectPath, content) => safeIpcRenderer.invoke("save-env-file", projectPath, content),
     getConnections: () => safeIpcRenderer.invoke("get-connections"),
     listTables: (config) => safeIpcRenderer.invoke("list-tables", config),
     findModelsForTables: (config) => safeIpcRenderer.invoke("find-models-for-tables", config),

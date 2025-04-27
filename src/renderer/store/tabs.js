@@ -272,8 +272,8 @@ export const useTabsStore = defineStore("tabs", () => {
 
     openTabs.value = [];
     activeTabId.value = null;
-    pinnedTabIds.value = []; // Clear pinned tabs when closing all tabs
-    saveTabPinState(); // Save the cleared pinned state
+    pinnedTabIds.value = [];
+    saveTabPinState();
     await saveOpenTabs();
   }
 

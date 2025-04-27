@@ -332,7 +332,55 @@ function registerProjectHandlers() {
     }
   });
 
-  ipcMain.handle("validate-laravel-project", async (event, projectPath) => {
+  ipcMain.handle("read-env-file-raw", async (_, projectPath) => {
+    try {
+      const envPath = path.join(projectPath, ".env");
+
+      if (!fs.existsSync(envPath)) {
+        console.error(".env file not found at:", envPath);
+        return { success: false, message: ".env file not found" };
+      }
+
+      const envContent = fs.readFileSync(envPath, "utf8");
+
+      return {
+        success: true,
+        content: envContent
+      };
+    } catch (error) {
+      console.error("Error reading .env file:", error);
+      return {
+        success: false,
+        message: error.message || "Failed to read .env file"
+      };
+    }
+  });
+
+  ipcMain.handle("save-env-file", async (_, projectPath, content) => {
+    try {
+      const envPath = path.join(projectPath, ".env");
+
+      if (fs.existsSync(envPath)) {
+        const backupPath = path.join(projectPath, ".env.backup");
+        fs.copyFileSync(envPath, backupPath);
+      }
+
+      fs.writeFileSync(envPath, content, "utf8");
+
+      return {
+        success: true,
+        message: ".env file saved successfully"
+      };
+    } catch (error) {
+      console.error("Error saving .env file:", error);
+      return {
+        success: false,
+        message: error.message || "Failed to save .env file"
+      };
+    }
+  });
+
+  ipcMain.handle("validate-laravel-project", async (_, projectPath) => {
     try {
       const hasEnv = fs.existsSync(path.join(projectPath, ".env"));
       const hasArtisan = fs.existsSync(path.join(projectPath, "artisan"));
@@ -345,7 +393,7 @@ function registerProjectHandlers() {
     }
   });
 
-  ipcMain.handle("compare-project-database", async (event, { projectPath, connectionDatabase }) => {
+  ipcMain.handle("compare-project-database", async (_, { projectPath, connectionDatabase }) => {
     try {
       if (!projectPath || !connectionDatabase) {
         return {
@@ -404,10 +452,8 @@ function registerProjectHandlers() {
 
       const commands = [];
 
-      // Check for the main commands directories in different Laravel versions
       const commandDirs = [path.join(projectPath, "app", "Console", "Commands"), path.join(projectPath, "app", "Commands")];
 
-      // Recursively process command files
       const processCommandFiles = (dir) => {
         if (!fs.existsSync(dir)) return;
 
@@ -417,19 +463,16 @@ function registerProjectHandlers() {
           const fullPath = path.join(dir, entry.name);
 
           if (entry.isDirectory()) {
-            // Recursively process subdirectories
             processCommandFiles(fullPath);
           } else if (entry.isFile() && entry.name.endsWith(".php")) {
             try {
               const content = fs.readFileSync(fullPath, "utf8");
 
-              // Look for common command patterns
               const extendsCommand = /extends\s+Command|extends\s+BaseCommand/i.test(content);
               const implementsConsole = /implements\s+ConsoleCommand/i.test(content);
 
               if (!extendsCommand && !implementsConsole) continue;
 
-              // Extract command information
               const classMatch = content.match(/class\s+(\w+)/);
               if (!classMatch) continue;
 
@@ -459,12 +502,10 @@ function registerProjectHandlers() {
         }
       };
 
-      // Process all command directories
       for (const dir of commandDirs) {
         processCommandFiles(dir);
       }
 
-      // Additionally, try to discover artisan commands using artisan list
       try {
         const useSail = fs.existsSync(path.join(projectPath, "docker-compose.yml")) && fs.existsSync(path.join(projectPath, "vendor", "laravel", "sail"));
 
@@ -483,11 +524,9 @@ function registerProjectHandlers() {
               const parsed = JSON.parse(jsonStr);
 
               if (parsed.commands) {
-                // Add built-in commands that don't have PHP files
                 for (const cmdName in parsed.commands) {
                   const cmd = parsed.commands[cmdName];
 
-                  // Skip already found custom commands
                   if (!commands.some((c) => c.name === cmdName)) {
                     commands.push({
                       name: cmdName,
@@ -510,7 +549,6 @@ function registerProjectHandlers() {
         console.error("Error running artisan list command:", artisanErr);
       }
 
-      // Sort commands by name
       commands.sort((a, b) => a.name.localeCompare(b.name));
 
       return {
@@ -527,7 +565,7 @@ function registerProjectHandlers() {
     }
   });
 
-  ipcMain.handle("clear-all-project-logs", async (event, config) => {
+  ipcMain.handle("clear-all-project-logs", async (_, config) => {
     try {
       if (!config || !config.projectPath) {
         return { success: false, message: "No project path provided" };
@@ -569,7 +607,7 @@ function registerProjectHandlers() {
     }
   });
 
-  ipcMain.handle("open-file", async (event, filePath) => {
+  ipcMain.handle("open-file", async (_, filePath) => {
     try {
       const editors = [
         {
@@ -629,7 +667,7 @@ function registerProjectHandlers() {
     }
   });
 
-  ipcMain.handle("get-project-logs", async (event, config) => {
+  ipcMain.handle("get-project-logs", async (_, config) => {
     try {
       if (!config || !config.projectPath) {
         return [];
@@ -757,7 +795,7 @@ function registerProjectHandlers() {
     }
   });
 
-  ipcMain.handle("get-migration-status", async (event, config) => {
+  ipcMain.handle("get-migration-status", async (_, config) => {
     try {
       if (!config.projectPath) {
         return {
@@ -1034,7 +1072,7 @@ function registerProjectHandlers() {
     }
   });
 
-  ipcMain.handle("list-files", async (event, dirPath) => {
+  ipcMain.handle("list-files", async (_, dirPath) => {
     try {
       if (!dirPath) {
         return {
@@ -1072,7 +1110,7 @@ function registerProjectHandlers() {
     }
   });
 
-  ipcMain.handle("run-artisan-command", async (event, config) => {
+  ipcMain.handle("run-artisan-command", async (_, config) => {
     try {
       if (!config.projectPath) {
         return {
@@ -1188,7 +1226,7 @@ function registerProjectHandlers() {
     }
   });
 
-  ipcMain.handle("get-singular-form", (event, word) => {
+  ipcMain.handle("get-singular-form", (_, word) => {
     return pluralize.singular(word);
   });
 }

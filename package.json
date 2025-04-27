@@ -1,6 +1,6 @@
 {
   "name": "larabase",
-  "version": "0.9.0",
+  "version": "0.9.1",
   "description": "An Opined Database GUI for Laravel Developers",
   "main": "dist/main.cjs",
   "type": "commonjs",
@@ -21,6 +21,7 @@
   "license": "ISC",
   "dependencies": {
     "@tailwindcss/postcss": "^4.1.4",
+    "dayjs": "^1.11.13",
     "dockerode": "^4.0.6",
     "electron-dl": "^4.0.0",
     "electron-store": "^8.1.0",
@@ -35,7 +36,8 @@
     "tailwindcss": "^4.1.4",
     "uuid": "^11.1.0",
     "vue": "^3.3.4",
-    "vue-router": "^4.2.4"
+    "vue-router": "^4.2.4",
+    "monaco-editor": "^0.52.2"
   },
   "devDependencies": {
     "@types/node": "^22.14.1",
@@ -83,7 +85,7 @@
       "main": "dist/main.cjs"
     },
     "asar": true,
-    "compression": "store",
+    "compression": "maximum",
     "artifactName": "${productName}-${version}-${os}-${arch}.${ext}",
     "publish": {
       "provider": "github",

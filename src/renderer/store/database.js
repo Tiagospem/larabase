@@ -174,7 +174,7 @@ export const useDatabaseStore = defineStore("database", () => {
     return JSON.stringify(result, null, 2);
   }
 
-  async function getTableRecordCount(id, tableName, useCache = true, cacheTimeoutMs = 60000) {
+  async function getTableRecordCount(id, tableName, useCache = true, cacheTimeoutMs = 5000) {
     const key = `${id}:${tableName}`;
 
     if (useCache && tableRecords.value[key]?.count != null && tableRecords.value[key]?.timestamp && Date.now() - tableRecords.value[key].timestamp < cacheTimeoutMs) {

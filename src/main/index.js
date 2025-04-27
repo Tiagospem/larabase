@@ -22,10 +22,6 @@ app.whenReady().then(async () => {
   registerConnectionHandlers(store);
   registerTableHandlers(store, dbMonitoringConnections);
 
-  await createWindow();
-
-  mainWindow = getMainWindow();
-
   registerMonitoringHandlers(store, dbMonitoringConnections);
 
   registerRestoreDumpHandlers(store);
@@ -33,6 +29,11 @@ app.whenReady().then(async () => {
   registerSettingsHandlers(store);
   registerProjectHandlers();
   registerRedisHandlers();
+
+  await createWindow();
+
+  mainWindow = getMainWindow();
+
   registerUpdaterHandlers(mainWindow);
 
   app.on("activate", () => {
