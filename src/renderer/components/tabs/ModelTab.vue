@@ -201,15 +201,99 @@
             <div class="divider" />
 
             <div
+              v-if="relationships.length > 0"
+              class="mb-4"
+            >
+              <h4 class="text-sm font-medium mb-2">Relationships</h4>
+              <div class="overflow-x-auto">
+                <table class="table table-compact w-full">
+                  <thead>
+                    <tr>
+                      <th>Type</th>
+                      <th>Related Model</th>
+                      <th>Method</th>
+                      <th>Details</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr
+                      v-for="(rel, index) in relationships"
+                      :key="index"
+                      class="hover"
+                    >
+                      <td>
+                        <span
+                          class="badge-sm"
+                          :class="getRelationshipBadgeClass(rel.type)"
+                        >
+                          {{ rel.type }}
+                        </span>
+                      </td>
+                      <td class="font-mono text-xs">{{ rel.relatedModel }}</td>
+                      <td>{{ rel.methodName }}</td>
+                      <td class="text-xs">{{ rel.details }}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div
               v-if="modelContent"
               class="mb-4"
             >
-              <h4 class="text-sm font-medium mb-2">Model Code</h4>
-              <PhpViewer
-                :code="modelContent"
-                language="php"
-                height="500px"
-              />
+              <div class="flex justify-between items-center mb-2">
+                <h4 class="text-sm font-medium">Model Code</h4>
+                <button
+                  class="btn btn-sm btn-ghost"
+                  @click="toggleCodeVisibility"
+                >
+                  <svg
+                    v-if="!showCode"
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke-width="1.5"
+                    stroke="currentColor"
+                    class="w-5 h-5"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      d="M3.75 3.75v4.5m0-4.5h4.5m-4.5 0L9 9M3.75 20.25v-4.5m0 4.5h4.5m-4.5 0L9 15M20.25 3.75h-4.5m4.5 0v4.5m0-4.5L15 9m5.25 11.25h-4.5m4.5 0v-4.5m0 4.5L15 15"
+                    />
+                  </svg>
+                  <svg
+                    v-else
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke-width="1.5"
+                    stroke="currentColor"
+                    class="w-5 h-5"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      d="M9 9V4.5M9 9H4.5M9 9 3.75 3.75M9 15v4.5M9 15H4.5M9 15l-5.25 5.25M15 9h4.5M15 9V4.5M15 9l5.25-5.25M15 15h4.5M15 15v4.5m0-4.5 5.25 5.25"
+                    />
+                  </svg>
+                  <span class="ml-1">{{ showCode ? "Collapse" : "Expand" }} Code</span>
+                </button>
+              </div>
+              <div v-if="showCode">
+                <PhpViewer
+                  :code="modelContent"
+                  language="php"
+                  height="500px"
+                />
+              </div>
+              <div
+                v-else
+                class="bg-base-100 p-3 rounded border border-base-300 text-center"
+              >
+                <p class="text-sm opacity-70">Code is hidden. Click Expand Code to view.</p>
+              </div>
             </div>
           </div>
         </div>
@@ -254,6 +338,8 @@ const model = ref(null);
 const modelJson = ref("");
 const modelContent = ref("");
 const showJsonModal = ref(false);
+const relationships = ref([]);
+const showCode = ref(false);
 
 const databaseStore = useDatabaseStore();
 const connectionsStore = useConnectionsStore();
@@ -266,7 +352,6 @@ const modelFound = computed(() => {
   return model.value !== null;
 });
 
-// Adicionar variável computada para o JSON formatado
 const formattedJson = computed(() => {
   try {
     if (!modelJson.value) return "";
@@ -295,6 +380,7 @@ async function loadModel() {
 
     if (model.value && model.value.path) {
       await loadModelContent(model.value.path);
+      extractRelationships();
     }
 
     props.onLoad({
@@ -323,6 +409,116 @@ async function loadModelContent(filePath) {
     console.error("Error reading model file:", error);
     modelContent.value = "// Unable to load model content";
   }
+}
+
+function extractRelationships() {
+  if (!modelContent.value) {
+    relationships.value = [];
+    return;
+  }
+
+  const content = modelContent.value;
+  const foundRelationships = [];
+
+  try {
+    const relationshipMethods = ["hasOne", "hasMany", "belongsTo", "belongsToMany", "morphTo", "morphOne", "morphMany", "morphToMany", "morphedByMany", "hasManyThrough", "hasOneThrough"];
+
+    relationshipMethods.forEach((relType) => {
+      console.log(`Searching for ${relType} relationships`);
+      const pattern = new RegExp(`function\\s+(\\w+)[^{]*{[^}]*\\$this->\\s*${relType}\\s*\\(`, "gi");
+      let match;
+
+      while ((match = pattern.exec(content)) !== null) {
+        const methodName = match[1];
+
+        const startPos = match.index;
+        const relTypePos = content.indexOf(`$this->${relType}`, startPos);
+        const paramStart = content.indexOf("(", relTypePos) + 1;
+        let paramEnd = paramStart;
+
+        for (let i = paramStart; i < content.length; i++) {
+          if (content[i] === "," || content[i] === ")") {
+            paramEnd = i;
+            break;
+          }
+        }
+
+        let relatedModel = content.substring(paramStart, paramEnd).trim();
+        relatedModel = relatedModel.replace(/['"]/g, "").replace(/::class/g, "");
+
+        foundRelationships.push({
+          type: relType,
+          methodName,
+          relatedModel,
+          details: "Method-based relationship"
+        });
+      }
+    });
+
+    relationshipMethods.forEach((relType) => {
+      const propPattern = new RegExp(`\\$(${relType})\\s*=\\s*\\[([^\\]]+)\\]`, "i");
+      const propMatch = content.match(propPattern);
+
+      if (propMatch) {
+        const modelNames = propMatch[2].match(/['"]([^'"]+)['"]/g);
+
+        if (modelNames) {
+          modelNames.forEach((modelNameQuoted) => {
+            const modelName = modelNameQuoted.replace(/['"]/g, "");
+            foundRelationships.push({
+              type: relType,
+              methodName: modelName.toLowerCase(),
+              relatedModel: modelName,
+              details: `Property-based relationship ($${relType})`
+            });
+          });
+        }
+      }
+    });
+
+    const stringPattern = /->(hasOne|hasMany|belongsTo|belongsToMany|morphTo|morphOne|morphMany|morphToMany|morphedByMany|hasManyThrough|hasOneThrough)\s*\(\s*['"]([^'"]+)['"]/gi;
+    let stringMatch;
+
+    while ((stringMatch = stringPattern.exec(content)) !== null) {
+      const relType = stringMatch[1];
+      const relatedModel = stringMatch[2];
+
+      const beforeMatch = content.substring(0, stringMatch.index);
+      const methodMatch = beforeMatch.match(/function\s+(\w+)[^{]*\{[^{]*$/);
+
+      if (methodMatch) {
+        const methodName = methodMatch[1];
+
+        foundRelationships.push({
+          type: relType,
+          methodName,
+          relatedModel,
+          details: "String-based relationship"
+        });
+      }
+    }
+
+    relationships.value = [...foundRelationships];
+  } catch (error) {
+    console.error("Error extracting relationships:", error);
+    relationships.value = [];
+  }
+}
+
+function getRelationshipBadgeClass(type) {
+  const classes = {
+    hasOne: "badge badge-primary",
+    hasMany: "badge badge-secondary",
+    belongsTo: "badge badge-accent",
+    belongsToMany: "badge badge-info",
+    morphTo: "badge badge-warning",
+    morphOne: "badge badge-warning",
+    morphMany: "badge badge-warning",
+    hasManyThrough: "badge badge-error",
+    hasOneThrough: "badge badge-error"
+  };
+
+  return classes[type] || "badge";
 }
 
 async function selectProjectPath() {
@@ -381,6 +577,10 @@ async function copyJsonToClipboard() {
     console.error("Error copying to clipboard:", error);
     showAlert("Failed to copy to clipboard", "error");
   }
+}
+
+function toggleCodeVisibility() {
+  showCode.value = !showCode.value;
 }
 
 onMounted(() => {
