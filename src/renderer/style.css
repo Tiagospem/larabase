@@ -11,6 +11,14 @@
   ::file-selector-button {
     border-color: var(--color-gray-200, currentcolor);
   }
+
+  *,
+  *::before,
+  *::after {
+    transition: none !important;
+    animation: none !important;
+    --tw-ring-shadow: none !important;
+  }
 }
 
 :root {
