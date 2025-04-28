@@ -5,7 +5,7 @@
 
       <fieldset class="fieldset mb-4">
         <label class="label">
-          <span class="label-text text-info">Describe the query you want to generate (e.g., "Show all users with their orders")</span>
+          <span class="label-text text-base-content">Describe the query you want to generate (e.g., "Show all users with their orders")</span>
         </label>
         <textarea
           v-model="userQuery"

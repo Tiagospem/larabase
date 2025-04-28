@@ -207,7 +207,7 @@ export default {
       if (!projectPath.value || !envContent.value || !hasChanges.value || isSaving) return;
 
       isSaving = true;
-      fileStatus.value = { text: "Saving...", class: "text-info" };
+      fileStatus.value = { text: "Saving...", class: "text-base-content" };
 
       try {
         const result = await window.api.saveEnvFile(projectPath.value, envContent.value);

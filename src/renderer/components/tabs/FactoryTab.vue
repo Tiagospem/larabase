@@ -133,7 +133,7 @@
             />
           </svg>
           <p class="text-sm">No Laravel factory found for {{ tableName }} table</p>
-          <p class="text-xs mt-2 text-info">Factories are typically named using singular form and located in database/factories directory</p>
+          <p class="text-xs mt-2 text-base-content">Factories are typically named using singular form and located in database/factories directory</p>
           <button
             v-if="connection?.projectPath"
             class="btn btn-sm mt-4"

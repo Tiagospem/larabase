@@ -38,12 +38,12 @@
         >
           <span class="label-text-alt text-error">{{ restoreFileError }}</span>
         </label>
-        <p class="text-xs text-info mt-1">Select a .sql or .sql.gz file to restore</p>
+        <p class="text-xs text-base-content mt-1">Select a .sql or .sql.gz file to restore</p>
       </fieldset>
 
       <div
         v-if="isProcessingSql"
-        class="my-4 flex items-center gap-2 text-info bg-base-300 p-3 rounded-md"
+        class="my-4 flex items-center gap-2 text-base-content bg-base-300 p-3 rounded-md"
       >
         <span class="loading loading-spinner loading-sm" />
         <div>
@@ -56,7 +56,7 @@
 
       <div
         v-else-if="restoreStatus && !isRestoring"
-        class="my-4 text-sm text-info"
+        class="my-4 text-sm text-base-content"
       >
         <p>{{ restoreStatus }}</p>
       </div>
@@ -84,7 +84,7 @@
           />
           <span class="label-text">Restore to current database ({{ restoreConfig.connection?.database }})</span>
         </label>
-        <p class="text-xs text-info mt-1">The backup will overwrite your current database</p>
+        <p class="text-xs text-base-content mt-1">The backup will overwrite your current database</p>
       </fieldset>
 
       <fieldset
@@ -178,13 +178,13 @@
           </div>
           <div
             v-if="filteredTables.length === 0"
-            class="text-sm text-info"
+            class="text-sm text-base-content"
           >
             No tables match your search
           </div>
         </div>
         <label class="label">
-          <span class="label-text-alt text-info">Select tables to ignore during restore</span>
+          <span class="label-text-alt text-base-content">Select tables to ignore during restore</span>
         </label>
       </fieldset>
     </div>

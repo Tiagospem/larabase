@@ -334,7 +334,7 @@
 
       <div
         v-if="projectPath"
-        class="text-xs text-info"
+        class="text-xs text-base-content"
       >
         <span>Project: {{ projectPath }}</span>
       </div>

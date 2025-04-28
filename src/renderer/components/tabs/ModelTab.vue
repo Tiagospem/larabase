@@ -111,7 +111,7 @@
             />
           </svg>
           <p class="text-sm">No Laravel model found for {{ tableName }} table</p>
-          <p class="text-xs mt-2 text-info">Models are typically named using singular form or with different naming conventions</p>
+          <p class="text-xs mt-2 text-base-content">Models are typically named using singular form or with different naming conventions</p>
           <button
             v-if="connection?.projectPath"
             class="btn btn-sm mt-4"

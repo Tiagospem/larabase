@@ -30,7 +30,7 @@
         >
           <span class="label-text-alt text-error">{{ projectPathError }}</span>
         </label>
-        <p class="text-xs text-info mt-1">Path to your Laravel project (.env file will be read from this location)</p>
+        <p class="text-xs text-base-content mt-1">Path to your Laravel project (.env file will be read from this location)</p>
       </fieldset>
 
       <fieldset class="fieldset w-full mb-4">
@@ -42,7 +42,7 @@
             class="toggle toggle-primary"
           />
         </label>
-        <p class="text-xs text-info mt-1">Enable if your project uses Laravel Sail (Docker)</p>
+        <p class="text-xs text-base-content mt-1">Enable if your project uses Laravel Sail (Docker)</p>
       </fieldset>
 
       <div

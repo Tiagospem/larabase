@@ -211,7 +211,7 @@
 
       <div
         v-if="projectPath"
-        class="text-xs text-info"
+        class="text-xs text-base-content"
       >
         <span>Project: {{ projectPath }}</span>
       </div>
@@ -264,7 +264,7 @@
           class="input input-bordered w-full font-mono"
         />
         <label class="label">
-          <span class="label-text-alt text-info">Add any additional flags for this command</span>
+          <span class="label-text-alt text-base-content">Add any additional flags for this command</span>
         </label>
       </fieldset>
     </div>
