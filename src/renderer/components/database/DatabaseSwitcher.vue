@@ -43,7 +43,7 @@
           </div>
         </div>
 
-        <div class="max-h-60 overflow-y-auto mb-4">
+        <div class="max-h-80 overflow-y-auto overflow-x-hidden mb-4">
           <div class="grid gap-2">
             <div
               v-for="db in availableDatabases"
@@ -75,71 +75,82 @@
                   >
                 </div>
 
-                <!-- Action buttons -->
                 <div class="flex gap-3">
-                  <button
+                  <div
                     v-if="db !== connection?.database"
-                    v-tooltip.top="'Switch to this database'"
-                    class="btn btn-circle btn-ghost btn-xs text-primary"
-                    @click="switchDatabase(db, false)"
+                    class="tooltip tooltip-left"
+                    data-tip="Switch to this database"
                   >
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke-width="1.5"
-                      stroke="currentColor"
-                      class="w-4 h-4"
+                    <button
+                      class="btn btn-circle btn-ghost btn-xs text-primary"
+                      @click="switchDatabase(db, false)"
                     >
-                      <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        d="M3 8.689c0-.864.933-1.406 1.683-.977l7.108 4.061a1.125 1.125 0 0 1 0 1.954l-7.108 4.061A1.125 1.125 0 0 1 3 16.811V8.69ZM12.75 8.689c0-.864.933-1.406 1.683-.977l7.108 4.061a1.125 1.125 0 0 1 0 1.954l-7.108 4.061a1.125 1.125 0 0 1-1.683-.977V8.69Z"
-                      />
-                    </svg>
-                  </button>
-                  <button
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke-width="1.5"
+                        stroke="currentColor"
+                        class="w-4 h-4"
+                      >
+                        <path
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          d="M3 8.689c0-.864.933-1.406 1.683-.977l7.108 4.061a1.125 1.125 0 0 1 0 1.954l-7.108 4.061A1.125 1.125 0 0 1 3 16.811V8.69ZM12.75 8.689c0-.864.933-1.406 1.683-.977l7.108 4.061a1.125 1.125 0 0 1 0 1.954l-7.108 4.061a1.125 1.125 0 0 1-1.683-.977V8.69Z"
+                        />
+                      </svg>
+                    </button>
+                  </div>
+                  <div
                     v-if="connection?.projectPath && (db !== projectDatabase || db !== connection?.database)"
-                    v-tooltip.top="'Switch and update .env file'"
-                    class="btn btn-circle btn-ghost btn-xs text-accent"
-                    @click="switchDatabase(db, true)"
+                    class="tooltip tooltip-left"
+                    data-tip="Switch and update .env file"
                   >
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke-width="1.5"
-                      stroke="currentColor"
-                      class="w-4 h-4"
+                    <button
+                      class="btn btn-circle btn-ghost btn-xs text-accent"
+                      @click="switchDatabase(db, true)"
                     >
-                      <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        d="M9 3.75H6.912a2.25 2.25 0 0 0-2.15 1.588L2.35 13.177a2.25 2.25 0 0 0-.1.661V18a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18v-4.162c0-.224-.034-.447-.1-.661L19.24 5.338a2.25 2.25 0 0 0-2.15-1.588H15M2.25 13.5h3.86a2.25 2.25 0 0 1 2.012 1.244l.256.512a2.25 2.25 0 0 0 2.013 1.244h3.218a2.25 2.25 0 0 0 2.013-1.244l.256-.512a2.25 2.25 0 0 1 2.013-1.244h3.859M12 3v8.25m0 0-3-3m3 3 3-3"
-                      />
-                    </svg>
-                  </button>
-                  <button
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke-width="1.5"
+                        stroke="currentColor"
+                        class="w-4 h-4"
+                      >
+                        <path
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          d="M9 3.75H6.912a2.25 2.25 0 0 0-2.15 1.588L2.35 13.177a2.25 2.25 0 0 0-.1.661V18a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18v-4.162c0-.224-.034-.447-.1-.661L19.24 5.338a2.25 2.25 0 0 0-2.15-1.588H15M2.25 13.5h3.86a2.25 2.25 0 0 1 2.012 1.244l.256.512a2.25 2.25 0 0 0 2.013 1.244h3.218a2.25 2.25 0 0 0 2.013-1.244l.256-.512a2.25 2.25 0 0 1 2.013-1.244h3.859M12 3v8.25m0 0-3-3m3 3 3-3"
+                        />
+                      </svg>
+                    </button>
+                  </div>
+                  <div
                     v-if="db !== connection?.database"
-                    v-tooltip.top="'Delete database'"
-                    class="btn btn-circle btn-ghost btn-xs text-error"
-                    @click.stop="confirmDelete(db)"
+                    class="tooltip tooltip-left"
+                    data-tip="Delete database"
                   >
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke-width="1.5"
-                      stroke="currentColor"
-                      class="w-4 h-4"
+                    <button
+                      class="btn btn-circle btn-ghost btn-xs text-error"
+                      @click.stop="confirmDelete(db)"
                     >
-                      <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0"
-                      />
-                    </svg>
-                  </button>
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke-width="1.5"
+                        stroke="currentColor"
+                        class="w-4 h-4"
+                      >
+                        <path
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0"
+                        />
+                      </svg>
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -198,7 +209,6 @@ async function switchDatabase(databaseName, shouldUpdateEnv) {
   }
 
   try {
-    // Update connection database if different
     if (databaseName !== connection.value.database) {
       await connectionsStore.updateConnection(props.connectionId, {
         database: databaseName
@@ -209,7 +219,6 @@ async function switchDatabase(databaseName, shouldUpdateEnv) {
       databaseStore.clearTableRecordCounts();
     }
 
-    // Update .env file if requested
     if (shouldUpdateEnv && connection.value.projectPath && databaseName !== projectDatabase.value) {
       const result = await window.api.updateEnvDatabase(connection.value.projectPath, databaseName);
 
@@ -351,8 +360,16 @@ watch(
 );
 
 async function openDatabaseSwitcher() {
-  showDatabaseSwitcher.value = true;
-  await loadAvailableDatabases();
+  if (showDatabaseSwitcher.value) {
+    showDatabaseSwitcher.value = false;
+    setTimeout(() => {
+      showDatabaseSwitcher.value = true;
+      loadAvailableDatabases();
+    }, 50);
+  } else {
+    showDatabaseSwitcher.value = true;
+    await loadAvailableDatabases();
+  }
 }
 
 defineExpose({ openDatabaseSwitcher });
