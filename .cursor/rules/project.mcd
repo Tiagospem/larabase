@@ -1,0 +1,40 @@
+# Project Guidelines for AI Code Generation
+
+**Context:**  
+This project is an advanced desktop tool built with Electron and Vue, tailored specifically for Laravel developers. Its main purpose is to optimize productivity by providing deep integration with Laravel’s project structure, database, and workflow. The tool includes features such as: database visualization, migrations management, dump and restore utilities, .env editor, code statistics, relationship mapping, log and error visualization, and best-practices checks.  
+All code and communications must be in English.
+
+## Coding and Response Rules
+
+1. **Always create only what is explicitly requested.**
+   - Do not modify or create files that are not in the current context or request.
+   - Do not alter code or structure outside the current scope unless strictly necessary and justified.
+
+2. **Avoid code duplication.**
+   - If a similar feature or logic already exists, reuse or reference existing code instead of reimplementing it.
+
+3. **Minimize code comments.**
+   - Only add comments where absolutely essential for understanding or context.
+   - Avoid unnecessary or repetitive comments to keep the codebase clean.
+
+4. **Do not add unnecessary `console.log` or debugging statements.**
+   - Use logging only for critical errors or where explicitly requested.
+   - Ensure the code is production-ready and clean by default.
+
+5. **Always use English.**
+   - All code (variables, classes, functions, etc.), responses, and documentation must be written in English.
+   - Never use Portuguese or any other language.
+
+6. **Project focus is for Laravel developers.**
+   - All features, user flows, and integrations must consider typical Laravel project structures (Models, Controllers, Migrations, .env, Eloquent, etc.).
+   - Prioritize developer productivity, maintainability, and clear UI/UX for Laravel-related workflows.
+
+7. **Context-aware generation.**
+   - Use only the files, components, or modules currently in the editing context.
+   - Do not assume or alter anything outside the visible scope.
+
+8. **Efficient and professional structure.**
+   - Follow best practices for Electron, Vue, and modern JavaScript/TypeScript code.
+   - Code should be ready for integration into a desktop application environment.
+
+> **This project is a productivity and analysis tool built for Laravel developers. All AI code responses must follow these guidelines strictly.**

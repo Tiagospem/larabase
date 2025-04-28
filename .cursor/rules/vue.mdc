@@ -1,0 +1,41 @@
+# Electron + Vue 3 + DaisyUI v5 + Tailwind (JavaScript, No TypeScript) – Project Guidelines
+
+## 1. Code Style and Structure
+- Write concise, readable, and technically correct JavaScript code.
+- Use functional and declarative programming patterns; avoid classic OOP and classes.
+- Favor pure, reusable helper functions. Adhere to DRY (Don’t Repeat Yourself) principles.
+- Use descriptive variable names, especially with auxiliary verbs (`isLoading`, `hasError`).
+- Organize files modularly: each file should contain only related logic or components.
+- Prefer **named exports** for utilities and composables.
+- Keep subcomponents in the same folder as the main component when relevant.
+
+## 2. Naming Conventions
+- Use **kebab-case** for folders and component files (e.g., `components/user-list/`).
+- Name helpers and composables descriptively (e.g., `use-theme.js`, `use-modal.js`).
+
+## 3. Vue 3 & Script Setup
+- Always use the Vue 3 `<script setup>` Composition API style in components.
+- Avoid the Options API.
+- Use `ref`, `reactive`, and **VueUse** composables for reactivity and composition.
+- Favor custom composables over mixins.
+
+## 4. UI and Styling
+- Use **DaisyUI** classes for all UI components (e.g., `btn`, `card`, `modal`, `input`).
+- Combine DaisyUI with Tailwind utility classes for custom layout and spacing.
+- Stick to mobile-first, responsive design principles with Tailwind.
+- Never use inline styles or separate CSS files; use only Tailwind and DaisyUI classes.
+- For asynchronous/dynamic components, use `<Suspense>` and a DaisyUI spinner or skeleton as fallback UI.
+- Use DaisyUI’s built-in themes for dark/light mode, instead of custom theme logic.
+- Always follow DaisyUI accessibility patterns for buttons, forms, modals, etc.
+
+## 5. Performance and Best Practices
+- Use **dynamic imports** (`defineAsyncComponent`) to lazy-load non-critical components.
+- Implement code-splitting with Vite for smaller bundle sizes and faster startup.
+- Always optimize images (prefer WebP, use `loading="lazy"`, set explicit width/height).
+- Use Lighthouse or similar tools to optimize Web Vitals (LCP, CLS, FID).
+- In Electron, keep all file system or Node.js logic in the **main process**—never in Vue components.
+- Use IPC (inter-process communication) for all communication between renderer (Vue) and main process.
+
+## 6. Project Structure and Vite
+- Separate Electron main process, Vue renderer, and preload scripts:
+
