@@ -373,6 +373,8 @@ async function _buildDockerRestoreCommand(config) {
 
   getFileSizeOrThrow(sqlFilePath);
 
+  console.log(`Docker restore: Will restore to database "${database}", overwrite=${overwriteCurrentDb}, ignoring CREATE DATABASE statements`);
+
   return {
     container,
     connection,
@@ -381,7 +383,7 @@ async function _buildDockerRestoreCommand(config) {
     ignoredTables: ignoredTables || [],
     overwriteCurrentDb: overwriteCurrentDb === true,
     useDockerApi: true,
-    ignoreCreateDatabase: overwriteCurrentDb === true
+    ignoreCreateDatabase: true // Always ignore CREATE DATABASE statements from the dump
   };
 }
 
@@ -392,15 +394,20 @@ function _buildLocalRestoreCommand(config) {
 
   getFileSizeOrThrow(sqlFilePath);
 
+  console.log(`Local restore: Will restore to database "${database}", overwrite=${overwriteCurrentDb}, ignoring CREATE DATABASE statements`);
+
   const sedFilters = buildSedFilters(ignoredTables);
   const useGunzip = sqlFilePath.toLowerCase().endsWith(".gz");
 
-  let command = buildBaseCommand(sqlFilePath, sedFilters, useGunzip, overwriteCurrentDb);
+  let command = buildBaseCommand(sqlFilePath, sedFilters, useGunzip, true); // Always ignore CREATE DATABASE statements from the dump
 
   command += " | mysql";
   command += buildCredentialFlags(connection);
   command += " --binary-mode=1 --force";
   command += buildInitCommand(database, overwriteCurrentDb);
+
+  // Double check that we're forcing the correct database in all cases
+  command += ` --database=\`${database}\``;
 
   return {
     command,
@@ -841,34 +848,40 @@ function registerRestoreDumpHandlers(store) {
       const isNewDatabase = targetDatabase !== connection.database;
       const isOverwritingCurrentDb = config.overwriteCurrentDb === true;
 
-      if (isNewDatabase && !isOverwritingCurrentDb) {
+      // Always prepare the database before restoring, whether it's a new database or existing one
+      try {
+        const tempConn = await mysql.createConnection({
+          host: connection.host,
+          port: connection.port,
+          user: connection.username,
+          password: connection.password || "",
+          connectTimeout: 10000
+        });
+
         try {
-          const tempConn = await mysql.createConnection({
-            host: connection.host,
-            port: connection.port,
-            user: connection.username,
-            password: connection.password || "",
-            connectTimeout: 10000
-          });
+          const [existingDbs] = await tempConn.query("SHOW DATABASES");
+          const dbExists = existingDbs.some((db) => db.Database === targetDatabase || db.database === targetDatabase);
 
-          try {
-            const [existingDbs] = await tempConn.query("SHOW DATABASES");
-            const dbExists = existingDbs.some((db) => db.Database === targetDatabase || db.database === targetDatabase);
-
-            if (!dbExists) {
-              await tempConn.query(`CREATE DATABASE \`${targetDatabase}\``);
-            }
-          } finally {
-            await tempConn.end();
+          if (isOverwritingCurrentDb && dbExists) {
+            // Drop and recreate the database if we're overwriting
+            await tempConn.query(`DROP DATABASE IF EXISTS \`${targetDatabase}\``);
+            await tempConn.query(`CREATE DATABASE \`${targetDatabase}\``);
+            console.log(`Dropped and recreated database ${targetDatabase}`);
+          } else if (!dbExists) {
+            // Create the database if it doesn't exist
+            await tempConn.query(`CREATE DATABASE \`${targetDatabase}\``);
+            console.log(`Created new database ${targetDatabase}`);
           }
-        } catch (dbError) {
-          console.error(`Error checking/creating database ${targetDatabase}:`, dbError);
-
-          return {
-            success: false,
-            message: `Failed to create target database: ${dbError.message}`
-          };
+        } finally {
+          await tempConn.end();
         }
+      } catch (dbError) {
+        console.error(`Error preparing database ${targetDatabase}:`, dbError);
+
+        return {
+          success: false,
+          message: `Failed to prepare target database: ${dbError.message}`
+        };
       }
 
       const restoreConfig = {

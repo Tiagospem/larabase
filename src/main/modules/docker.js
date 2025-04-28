@@ -235,6 +235,8 @@ async function executeMysqlFileInContainer(containerName, credentials, database,
     const exec = await container.exec(options);
     const execStream = await exec.start({ hijack: true, stdin: true });
 
+    execStream.write(`USE \`${database}\`;\n`);
+
     execStream.dockerExecId = exec.id;
     execStream.dockerContainer = containerName;
 
@@ -331,7 +333,7 @@ async function executeMysqlFileInContainer(containerName, credentials, database,
           const maxBatchSize = 512 * 1024; // 512KB por lote
 
           const ignoredTablePatterns = ignoredTables.map((table) => new RegExp(`INSERT\\s+INTO\\s+\`?${table}\`?`, "i"));
-          const createDatabasePattern = ignoreCreateDatabase ? new RegExp(`CREATE\\s+DATABASE|USE\\s+\``, "i") : null;
+          const createDatabasePattern = new RegExp(`CREATE\\s+DATABASE|USE\\s+\``, "i");
 
           const processBatch = () => {
             if (buffer.length > 0) {
@@ -346,7 +348,7 @@ async function executeMysqlFileInContainer(containerName, credentials, database,
 
                 if (!inIgnoredInsert) {
                   const shouldIgnoreTable = ignoredTablePatterns.some((pattern) => pattern.test(line));
-                  const shouldIgnoreDbCommand = ignoreCreateDatabase && createDatabasePattern && createDatabasePattern.test(line);
+                  const shouldIgnoreDbCommand = createDatabasePattern && createDatabasePattern.test(line);
 
                   if (shouldIgnoreTable) {
                     inIgnoredInsert = true;
