@@ -47,7 +47,7 @@ function registerProjectHandlers() {
     }
   });
 
-  ipcMain.handle("find-table-migrations", async (event, config) => {
+  ipcMain.handle("find-table-migrations", async (_, config) => {
     try {
       if (!config.projectPath || !config.tableName) {
         return {
@@ -177,7 +177,7 @@ function registerProjectHandlers() {
     }
   });
 
-  ipcMain.handle("find-models-for-tables", async (_event, config = {}) => {
+  ipcMain.handle("find-models-for-tables", async (_, config = {}) => {
     try {
       const { projectPath } = config;
       if (!projectPath) {
@@ -291,7 +291,7 @@ function registerProjectHandlers() {
     }
   });
 
-  ipcMain.handle("read-env-file", async (event, projectPath) => {
+  ipcMain.handle("read-env-file", async (_, projectPath) => {
     try {
       const envPath = path.join(projectPath, ".env");
 
@@ -440,7 +440,7 @@ function registerProjectHandlers() {
     }
   });
 
-  ipcMain.handle("find-laravel-commands", async (event, projectPath) => {
+  ipcMain.handle("find-laravel-commands", async (_, projectPath) => {
     try {
       if (!projectPath) {
         return {
@@ -1110,7 +1110,7 @@ function registerProjectHandlers() {
     }
   });
 
-  ipcMain.handle("run-artisan-command", async (_, config) => {
+  ipcMain.handle("run-artisan-command", async (event, config) => {
     try {
       if (!config.projectPath) {
         return {

@@ -1,7 +1,7 @@
 <template>
   <div
     v-if="showCommandOutput"
-    class="bg-neutral text-white fixed bottom-0 left-0 right-0"
+    class="bg-neutral text-white fixed bottom-0 left-0 right-0 z-20"
   >
     <div class="command-output-header">
       <div class="flex items-center">
