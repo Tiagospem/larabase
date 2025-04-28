@@ -467,36 +467,37 @@ function registerProjectHandlers() {
           } else if (entry.isFile() && entry.name.endsWith(".php")) {
             try {
               const content = fs.readFileSync(fullPath, "utf8");
+              const classNameMatch = content.match(/class\s+(\w+)/);
+              const namespaceMatch = content.match(/namespace\s+([\w\\]+)/);
+              const signatureMatch = content.match(/protected\s+\$signature\s*=\s*['"](.+?)['"]/);
+              const descriptionMatch = content.match(/protected\s+\$description\s*=\s*['"](.+?)['"]/);
 
-              const extendsCommand = /extends\s+Command|extends\s+BaseCommand/i.test(content);
-              const implementsConsole = /implements\s+ConsoleCommand/i.test(content);
+              if (classNameMatch && signatureMatch) {
+                const className = classNameMatch[1];
+                const signature = signatureMatch[1];
+                const description = descriptionMatch ? descriptionMatch[1] : "";
 
-              if (!extendsCommand && !implementsConsole) continue;
+                const namespace = namespaceMatch ? namespaceMatch[1] : "";
 
-              const classMatch = content.match(/class\s+(\w+)/);
-              if (!classMatch) continue;
+                const relativePath = fullPath.replace(projectPath, "").replace(/^[\/\\]/, "");
 
-              const className = classMatch[1];
-              const nameMatch = content.match(/protected\s+\$name\s*=\s*['"](.*?)['"]/);
-              const signatureMatch = content.match(/protected\s+\$signature\s*=\s*['"](.*?)['"]/);
-              const descriptionMatch = content.match(/protected\s+\$description\s*=\s*['"](.*?)['"]/);
+                const commandName = signature.split(" ")[0];
 
-              const commandName = nameMatch ? nameMatch[1] : signatureMatch ? signatureMatch[1].split(" ")[0] : null;
-              const signature = signatureMatch ? signatureMatch[1] : nameMatch ? nameMatch[1] : null;
-              const description = descriptionMatch ? descriptionMatch[1] : "";
-
-              if (commandName || signature) {
-                commands.push({
-                  name: commandName || signature.split(" ")[0],
-                  signature: signature,
-                  description: description,
-                  className: className,
-                  path: fullPath,
-                  relativePath: path.relative(projectPath, fullPath)
-                });
+                if (!commands.some((cmd) => cmd.name === commandName)) {
+                  commands.push({
+                    name: commandName,
+                    signature: signature,
+                    description: description,
+                    className: className,
+                    namespace: namespace,
+                    path: fullPath,
+                    relativePath: relativePath,
+                    isBuiltIn: false
+                  });
+                }
               }
             } catch (err) {
-              console.error(`Error parsing command file ${fullPath}:`, err);
+              console.error(`Error processing command file ${fullPath}:`, err);
             }
           }
         }
@@ -504,6 +505,69 @@ function registerProjectHandlers() {
 
       for (const dir of commandDirs) {
         processCommandFiles(dir);
+      }
+
+      const possibleCommandLocations = [path.join(projectPath, "app"), path.join(projectPath, "packages")];
+
+      for (const location of possibleCommandLocations) {
+        if (fs.existsSync(location)) {
+          const findCommandsInDir = (dir, depth = 0) => {
+            if (depth > 5) return;
+
+            try {
+              const entries = fs.readdirSync(dir, { withFileTypes: true });
+
+              for (const entry of entries) {
+                if (entry.isDirectory() && entry.name !== "Commands" && entry.name !== "Console") {
+                  if (!commandDirs.includes(path.join(dir, entry.name))) {
+                    findCommandsInDir(path.join(dir, entry.name), depth + 1);
+                  }
+                } else if (entry.isFile() && entry.name.endsWith(".php")) {
+                  const fullPath = path.join(dir, entry.name);
+
+                  try {
+                    const content = fs.readFileSync(fullPath, "utf8");
+
+                    if (content.includes("$signature") && (content.includes("extends Command") || content.includes("Illuminate\\Console\\Command"))) {
+                      const classNameMatch = content.match(/class\s+(\w+)/);
+                      const namespaceMatch = content.match(/namespace\s+([\w\\]+)/);
+                      const signatureMatch = content.match(/protected\s+\$signature\s*=\s*['"](.+?)['"]/);
+                      const descriptionMatch = content.match(/protected\s+\$description\s*=\s*['"](.+?)['"]/);
+
+                      if (classNameMatch && signatureMatch) {
+                        const className = classNameMatch[1];
+                        const signature = signatureMatch[1];
+                        const description = descriptionMatch ? descriptionMatch[1] : "";
+                        const namespace = namespaceMatch ? namespaceMatch[1] : "";
+                        const relativePath = fullPath.replace(projectPath, "").replace(/^[\/\\]/, "");
+                        const commandName = signature.split(" ")[0];
+
+                        if (!commands.some((cmd) => cmd.name === commandName)) {
+                          commands.push({
+                            name: commandName,
+                            signature: signature,
+                            description: description,
+                            className: className,
+                            namespace: namespace,
+                            path: fullPath,
+                            relativePath: relativePath,
+                            isBuiltIn: false
+                          });
+                        }
+                      }
+                    }
+                  } catch (err) {
+                    console.error(`Error checking file ${fullPath}:`, err);
+                  }
+                }
+              }
+            } catch (err) {
+              console.error(`Error reading directory ${dir}:`, err);
+            }
+          };
+
+          findCommandsInDir(location);
+        }
       }
 
       try {
@@ -559,7 +623,7 @@ function registerProjectHandlers() {
       console.error("Error finding Laravel commands:", error);
       return {
         success: false,
-        message: error.message || "Failed to find Laravel commands",
+        message: error.message || "Error finding Laravel commands",
         commands: []
       };
     }
