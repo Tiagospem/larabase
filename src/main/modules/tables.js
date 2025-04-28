@@ -145,35 +145,37 @@ function registerTableHandlers(store, dbMonitoringConnections) {
         return { success: true, tables: [] };
       }
 
-      const tableCountQueries = tables
-        .map((table) => {
-          const escapedTable = connection.escapeId(table.name);
-          return `SELECT '${table.name}' AS tableName, COUNT(*) AS rowCount FROM ${escapedTable}`;
-        })
-        .join(" UNION ALL ");
-
+      // Use information_schema.tables for approximate row counts - much faster than counting individually
       try {
-        const [countResults] = await connection.query(tableCountQueries);
+        const [infoSchemaTables] = await connection.query(
+          `
+          SELECT 
+            TABLE_NAME AS name, 
+            TABLE_ROWS AS rowCount 
+          FROM 
+            information_schema.tables 
+          WHERE 
+            TABLE_SCHEMA = ? 
+            AND TABLE_TYPE = 'BASE TABLE'
+        `,
+          [config.database]
+        );
 
         const countsMap = {};
 
-        countResults.forEach((row) => {
-          countsMap[row.tableName] = row.rowCount;
+        infoSchemaTables.forEach((row) => {
+          countsMap[row.name] = parseInt(row.rowCount, 10) || 0;
         });
 
         tables.forEach((table) => {
           table.rowCount = countsMap[table.name] || 0;
         });
-      } catch (countError) {
-        for (const table of tables) {
-          try {
-            const escapedTable = connection.escapeId(table.name);
-            const [rows] = await connection.query(`SELECT COUNT(*) AS rowCount FROM ${escapedTable}`);
-            table.rowCount = rows[0]?.rowCount || 0;
-          } catch (err) {
-            table.rowCount = 0;
-          }
-        }
+      } catch (err) {
+        console.error("Error getting approximate row counts:", err);
+
+        tables.forEach((table) => {
+          table.rowCount = 0;
+        });
       }
 
       return { success: true, tables: tables };
