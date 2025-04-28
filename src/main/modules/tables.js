@@ -602,6 +602,57 @@ function registerTableHandlers(store, dbMonitoringConnections) {
     }
   });
 
+  ipcMain.handle("create-database", async (_e, config = {}) => {
+    if (!config.host || !config.port || !config.username || !config.database) {
+      return {
+        success: false,
+        message: "Missing connection parameters"
+      };
+    }
+
+    let conn;
+    try {
+      conn = await mysql.createConnection({
+        host: config.host,
+        port: config.port,
+        user: config.username,
+        password: config.password || "",
+        connectTimeout: 10000
+      });
+
+      const dbName = conn.escapeId(config.database);
+
+      await conn.query(`CREATE DATABASE IF NOT EXISTS ${dbName} CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`);
+
+      return {
+        success: true,
+        message: `Database ${config.database} created successfully`
+      };
+    } catch (err) {
+      console.error("Error creating database:", err);
+      let msg = err.message;
+      if (err.code === "ER_ACCESS_DENIED_ERROR") {
+        msg = "Access denied with the provided credentials";
+      } else if (err.code === "ECONNREFUSED") {
+        msg = "Connection refused - check host and port";
+      } else if (err.code === "ER_DB_CREATE_EXISTS") {
+        msg = `Database ${config.database} already exists`;
+      }
+      return {
+        success: false,
+        message: msg
+      };
+    } finally {
+      if (conn) {
+        try {
+          await conn.end();
+        } catch (e) {
+          console.error("Error closing connection:", e);
+        }
+      }
+    }
+  });
+
   ipcMain.handle("drop-tables", async (_e, config = {}) => {
     try {
       config = JSON.parse(

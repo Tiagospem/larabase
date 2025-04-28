@@ -99,6 +99,7 @@ try {
     truncateTable: (config) => safeIpcRenderer.invoke("truncate-table", config),
     listDatabases: (config) => safeIpcRenderer.invoke("list-databases", config),
     dropDatabase: (config) => safeIpcRenderer.invoke("drop-database", config),
+    createDatabase: (config) => safeIpcRenderer.invoke("create-database", config),
     dropTables: (config) => safeIpcRenderer.invoke("drop-tables", config),
     getTableData: (config) => safeIpcRenderer.invoke("get-table-data", config),
     getFilteredTableData: (config) => safeIpcRenderer.invoke("get-filtered-table-data", config),

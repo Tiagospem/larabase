@@ -17,11 +17,11 @@
     </Modal>
 
     <Modal
-      width="w-lg"
+      width="max-w-4xl"
       :show="showDatabaseSwitcher"
       title="Switch Database"
       @close="showDatabaseSwitcher = false"
-      :show-cancel-button="false"
+      :show-cancel-button="true"
     >
       <div
         v-if="loadingDatabases"
@@ -41,6 +41,70 @@
             <div><span class="badge badge-sm badge-primary mr-1">Active</span> Current connection</div>
             <div v-if="connection?.projectPath"><span class="badge badge-sm badge-accent mr-1">ENV</span> Project .env file</div>
           </div>
+          <button
+            class="btn btn-xs btn-neutral"
+            @click="showCreateDatabaseForm = true"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke-width="1.5"
+              stroke="currentColor"
+              class="w-4 h-4 mr-1"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                d="M12 4.5v15m7.5-7.5h-15"
+              />
+            </svg>
+            New Database
+          </button>
+        </div>
+
+        <div
+          v-if="showCreateDatabaseForm"
+          class="bg-base-200 p-3 rounded-md mb-4"
+        >
+          <fieldset class="fieldset w-full">
+            <label class="label">
+              <span class="label-text">New Database Name</span>
+            </label>
+            <div class="flex gap-2">
+              <input
+                v-model="newDatabaseName"
+                type="text"
+                placeholder="Enter database name"
+                class="input input-sm input-bordered w-full"
+                :class="{ 'input-error': databaseNameError }"
+                @keyup.enter="createDatabase"
+              />
+              <button
+                class="btn btn-sm btn-primary"
+                :disabled="!newDatabaseName || isCreatingDatabase"
+                @click="createDatabase"
+              >
+                <span
+                  v-if="isCreatingDatabase"
+                  class="loading loading-spinner loading-xs"
+                ></span>
+                <span v-else>Create</span>
+              </button>
+              <button
+                class="btn btn-sm btn-ghost"
+                @click="showCreateDatabaseForm = false"
+              >
+                Cancel
+              </button>
+            </div>
+            <label
+              v-if="databaseNameError"
+              class="label"
+            >
+              <span class="label-text-alt text-error">{{ databaseNameError }}</span>
+            </label>
+          </fieldset>
         </div>
 
         <div class="max-h-80 overflow-y-auto overflow-x-hidden mb-4">
@@ -157,15 +221,6 @@
           </div>
         </div>
       </div>
-
-      <div class="modal-action">
-        <button
-          class="btn btn-neutral"
-          @click="showDatabaseSwitcher = false"
-        >
-          Close
-        </button>
-      </div>
     </Modal>
   </div>
 </template>
@@ -202,6 +257,10 @@ const showConfirmation = ref(false);
 const databaseToDelete = ref("");
 const deletingDatabase = ref(false);
 const projectDatabase = ref(null);
+const showCreateDatabaseForm = ref(false);
+const newDatabaseName = ref("");
+const databaseNameError = ref("");
+const isCreatingDatabase = ref(false);
 
 async function switchDatabase(databaseName, shouldUpdateEnv) {
   if (!connection.value || (databaseName === connection.value.database && (!shouldUpdateEnv || databaseName === projectDatabase.value))) {
@@ -283,7 +342,10 @@ async function loadAvailableDatabases() {
     return;
   }
 
-  loadingDatabases.value = true;
+  const hasExistingData = availableDatabases.value.length > 0;
+  if (!hasExistingData) {
+    loadingDatabases.value = true;
+  }
 
   try {
     const result = await window.api.listDatabases({
@@ -301,11 +363,15 @@ async function loadAvailableDatabases() {
       }
     } else {
       showAlert(`Failed to load databases: ${result.message}`, "error");
-      availableDatabases.value = [];
+      if (!hasExistingData) {
+        availableDatabases.value = [];
+      }
     }
   } catch (error) {
     showAlert(`Error loading databases: ${error.message}`, "error");
-    availableDatabases.value = [];
+    if (!hasExistingData) {
+      availableDatabases.value = [];
+    }
   } finally {
     loadingDatabases.value = false;
   }
@@ -338,6 +404,12 @@ function handleGlobalKeydown(event) {
     event.preventDefault();
     openDatabaseSwitcher();
   }
+
+  if (event.key === "Escape" && showCreateDatabaseForm.value) {
+    showCreateDatabaseForm.value = false;
+    newDatabaseName.value = "";
+    databaseNameError.value = "";
+  }
 }
 
 onMounted(() => {
@@ -359,16 +431,73 @@ watch(
   }
 );
 
+watch(showDatabaseSwitcher, (isOpen) => {
+  if (!isOpen) {
+    showCreateDatabaseForm.value = false;
+    newDatabaseName.value = "";
+    databaseNameError.value = "";
+  }
+});
+
 async function openDatabaseSwitcher() {
   if (showDatabaseSwitcher.value) {
-    showDatabaseSwitcher.value = false;
-    setTimeout(() => {
-      showDatabaseSwitcher.value = true;
-      loadAvailableDatabases();
-    }, 50);
+    if (connection.value) {
+      await loadAvailableDatabases();
+    }
   } else {
     showDatabaseSwitcher.value = true;
-    await loadAvailableDatabases();
+    if (connection.value) {
+      await loadAvailableDatabases();
+    }
+  }
+}
+
+async function createDatabase() {
+  if (!connection.value) return;
+
+  if (!newDatabaseName.value.trim()) {
+    databaseNameError.value = "Database name is required";
+    return;
+  }
+
+  const nameRegex = /^[a-zA-Z0-9_]+$/;
+  if (!nameRegex.test(newDatabaseName.value)) {
+    databaseNameError.value = "Database name can only contain letters, numbers, and underscores";
+    return;
+  }
+
+  if (availableDatabases.value.includes(newDatabaseName.value)) {
+    databaseNameError.value = "Database already exists";
+    return;
+  }
+
+  isCreatingDatabase.value = true;
+  databaseNameError.value = "";
+
+  try {
+    const result = await window.api.createDatabase({
+      host: connection.value.host,
+      port: connection.value.port,
+      username: connection.value.username,
+      password: connection.value.password,
+      database: newDatabaseName.value
+    });
+
+    if (result.success) {
+      await loadAvailableDatabases();
+      showAlert(`Database ${newDatabaseName.value} created successfully`, "success");
+
+      newDatabaseName.value = "";
+      showCreateDatabaseForm.value = false;
+    } else {
+      databaseNameError.value = result.message || "Failed to create database";
+    }
+  } catch (error) {
+    if (!databaseNameError.value) {
+      databaseNameError.value = error.message || "An error occurred while creating the database";
+    }
+  } finally {
+    isCreatingDatabase.value = false;
   }
 }
 
