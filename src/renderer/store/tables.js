@@ -39,13 +39,6 @@ export const useTablesStore = defineStore("tables", () => {
     localStorage.setItem(`tableSearch_${connectionId}`, term);
   }
 
-  function clearSearch() {
-    searchTerm.value = "";
-    if (lastLoadedConnection.value) {
-      localStorage.setItem(`tableSearch_${lastLoadedConnection.value}`, "");
-    }
-  }
-
   function setSortBy(value) {
     if (sortBy.value === value) {
       toggleSortOrder();
