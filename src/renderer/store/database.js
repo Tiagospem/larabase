@@ -174,10 +174,16 @@ export const useDatabaseStore = defineStore("database", () => {
     return JSON.stringify(result, null, 2);
   }
 
-  async function getTableRecordCount(id, tableName, useCache = true, cacheTimeoutMs = 5000) {
+  async function getTableRecordCount(id, tableName, useCache = true, cacheTimeoutMs = 3600000) {
     const key = `${id}:${tableName}`;
 
-    if (useCache && tableRecords.value[key]?.count != null && tableRecords.value[key]?.timestamp && Date.now() - tableRecords.value[key].timestamp < cacheTimeoutMs) {
+    if (
+      useCache &&
+      tableRecords.value[key]?.count != null &&
+      tableRecords.value[key]?.timestamp &&
+      tableRecords.value[key]?.verified &&
+      Date.now() - tableRecords.value[key].timestamp < cacheTimeoutMs
+    ) {
       return tableRecords.value[key].count;
     }
 
@@ -192,8 +198,20 @@ export const useDatabaseStore = defineStore("database", () => {
       if (success) {
         tableRecords.value[key] = {
           count: parseInt(count, 10),
-          timestamp: Date.now()
+          timestamp: Date.now(),
+          verified: true
         };
+
+        window.dispatchEvent(
+          new CustomEvent("table-count-loaded", {
+            detail: {
+              tableName,
+              connectionId: id,
+              count: parseInt(count, 10)
+            }
+          })
+        );
+
         return tableRecords.value[key].count;
       }
     } catch (error) {
@@ -201,6 +219,67 @@ export const useDatabaseStore = defineStore("database", () => {
     }
 
     return tableRecords.value[key]?.count || 0;
+  }
+
+  async function loadTableRecordCounts(id, tableNames, batchSize = 20) {
+    if (!id || !tableNames || !tableNames.length) return;
+
+    const conn = _getConnection(id);
+    if (!conn) return;
+
+    try {
+      const result = await window.api.getMultipleTableCounts({
+        ..._buildPayload(conn),
+        tableNames
+      });
+
+      if (result.success && result.counts) {
+        Object.entries(result.counts).forEach(([tableName, count]) => {
+          const key = `${id}:${tableName}`;
+          tableRecords.value[key] = {
+            count: parseInt(count, 10),
+            timestamp: Date.now(),
+            verified: true
+          };
+
+          window.dispatchEvent(
+            new CustomEvent("table-count-loaded", {
+              detail: {
+                tableName,
+                connectionId: id,
+                count: parseInt(count, 10)
+              }
+            })
+          );
+        });
+      }
+    } catch (error) {
+      console.error("Error loading multiple table counts:", error);
+
+      const processBatch = async (tables) => {
+        const batch = tables.slice(0, batchSize);
+        const remaining = tables.slice(batchSize);
+
+        for (const tableName of batch) {
+          try {
+            await getTableRecordCount(id, tableName, false);
+          } catch (err) {
+            console.error(`Error loading count for ${tableName}:`, err);
+          }
+        }
+
+        if (remaining.length) {
+          return new Promise((resolve) => {
+            setTimeout(async () => {
+              await processBatch(remaining);
+              resolve();
+            }, 100);
+          });
+        }
+      };
+
+      return processBatch(tableNames);
+    }
   }
 
   async function getTableStructure(id, name, force = false) {
@@ -310,6 +389,23 @@ export const useDatabaseStore = defineStore("database", () => {
 
     clearTableCache(`${id}:${tableName}`);
 
+    invalidateTableCache(id, tableName);
+
+    setTimeout(() => {
+      getTableRecordCount(id, tableName, false);
+    }, 100);
+
+    window.dispatchEvent(
+      new CustomEvent("table-operation-complete", {
+        detail: {
+          tableName,
+          operation: "delete",
+          connectionId: id,
+          count: ids.length
+        }
+      })
+    );
+
     return result;
   }
 
@@ -320,7 +416,24 @@ export const useDatabaseStore = defineStore("database", () => {
       tableName
     });
     if (!result.success) throw new Error(result.message);
+
+    invalidateTableCache(id, tableName);
     clearTableCache(`${id}:${tableName}`);
+
+    setTimeout(() => {
+      getTableRecordCount(id, tableName, false);
+    }, 100);
+
+    window.dispatchEvent(
+      new CustomEvent("table-operation-complete", {
+        detail: {
+          tableName,
+          operation: "truncate",
+          connectionId: id
+        }
+      })
+    );
+
     return result;
   }
 
@@ -417,6 +530,22 @@ export const useDatabaseStore = defineStore("database", () => {
     limitCacheSize(tableIndexes.value);
     limitCacheSize(tableForeignKeys.value);
     limitCacheSize(tableMigrations.value);
+  }
+
+  function invalidateTableCache(id, tableName) {
+    if (id && tableName) {
+      const key = `${id}:${tableName}`;
+      delete tableRecords.value[key];
+
+      window.dispatchEvent(
+        new CustomEvent("table-count-invalidated", {
+          detail: {
+            tableName,
+            connectionId: id
+          }
+        })
+      );
+    }
   }
 
   return {

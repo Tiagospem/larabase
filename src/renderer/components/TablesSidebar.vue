@@ -348,7 +348,7 @@
 </template>
 
 <script setup>
-import { computed, inject, onActivated, ref, watch } from "vue";
+import { computed, inject, ref, watch } from "vue";
 import { useDatabaseStore } from "@/store/database";
 import { useTablesStore } from "@/store/tables";
 import Modal from "@/components/Modal.vue";
@@ -373,10 +373,8 @@ const showAlert = inject("showAlert");
 
 const databaseStore = useDatabaseStore();
 const tablesStore = useTablesStore();
-const loadingCounts = ref({});
 const lastConnectionId = ref(null);
 
-// Table deletion state
 const isDeleteMode = ref(false);
 const selectedTables = ref([]);
 const showDeleteConfirmation = ref(false);
@@ -392,7 +390,6 @@ watch(
       tablesStore.setSearchTerm(newConnectionId, savedSearchTerm);
       await tablesStore.initializeTables(newConnectionId);
       lastConnectionId.value = newConnectionId;
-      await loadTableCounts();
     }
   },
   { immediate: true }
@@ -407,82 +404,11 @@ watch(
   }
 );
 
-// Fetch row counts for visible tables
-async function loadTableCounts() {
-  if (!props.connectionId) return;
-
-  const visibleTables = tablesStore.filteredTables.slice(0, 10);
-
-  for (const table of visibleTables) {
-    await fetchTableCount(table.name);
-  }
-
-  setTimeout(() => {
-    const remainingTables = tablesStore.filteredTables.slice(10);
-    loadRemainingCounts(remainingTables);
-  }, 500);
-}
-
-// Load remaining tables in batches to avoid blocking UI
-async function loadRemainingCounts(tables, batchSize = 5) {
-  if (!tables.length) return;
-
-  const batch = tables.slice(0, batchSize);
-  const remaining = tables.slice(batchSize);
-
-  for (const table of batch) {
-    await fetchTableCount(table.name);
-  }
-
-  if (remaining.length) {
-    setTimeout(() => {
-      loadRemainingCounts(remaining, batchSize);
-    }, 100);
-  }
-}
-
-async function fetchTableCount(tableName) {
-  if (loadingCounts.value[tableName] || !props.connectionId) return;
-
-  try {
-    loadingCounts.value[tableName] = true;
-
-    const config = {
-      connectionId: props.connectionId,
-      tableName: tableName
-    };
-
-    const result = await window.api.getTableRecordCount(config);
-
-    if (result && result.success) {
-      const table = tablesStore.localTables.find((t) => t.name === tableName);
-      if (table) {
-        table.rowCount = parseInt(result.count, 10);
-        table.isEstimate = false;
-      }
-    }
-  } catch (error) {
-    console.error(`Error fetching count for ${tableName}:`, error);
-  } finally {
-    loadingCounts.value[tableName] = false;
-  }
-}
-
-onActivated(() => {
-  if (props.connectionId) {
-    loadTableCounts();
-  }
-});
-
 function isTableActive(tableName) {
   return props.activeTabName === tableName;
 }
 
 function openTable(table) {
-  if ((table && typeof table.rowCount !== "number") || table.rowCount === 0) {
-    fetchTableCount(table.name);
-  }
-
   emit("table-open", table);
 }
 

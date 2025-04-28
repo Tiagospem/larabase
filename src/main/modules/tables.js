@@ -145,7 +145,6 @@ function registerTableHandlers(store, dbMonitoringConnections) {
         return { success: true, tables: [] };
       }
 
-      // Use information_schema.tables for approximate row counts - much faster than counting individually
       try {
         const [infoSchemaTables] = await connection.query(
           `
@@ -190,9 +189,11 @@ function registerTableHandlers(store, dbMonitoringConnections) {
     const { error, connection, isMonitored } = await _getDbConnection({ store }, config);
     if (error) return _error("count", error);
     try {
-      const escaped = connection.escapeId(config.tableName);
+      const tableName = config.tableName;
+      const escaped = connection.escapeId(tableName);
+
       const [rows] = await connection.query(`SELECT COUNT(*) AS count FROM ${escaped}`);
-      return rows.length ? { success: true, count: rows[0].count || 0 } : _error("count", "Failed to count records");
+      return rows.length ? { success: true, count: rows[0].count || 0, isApproximate: false } : _error("count", "Failed to count records");
     } catch (err) {
       return _error("count", err.message || "Failed to count records");
     } finally {
