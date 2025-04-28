@@ -1,7 +1,7 @@
 <template>
   <div
     v-if="tableDataStore.tableData.length > 0"
-    class="bg-base-300 px-4 py-3 border-t border-black/10 flex flex-col sm:flex-row justify-between items-center text-xs sticky bottom-0 left-0 right-0 min-h-[56px] z-20"
+    class="bg-base-300 px-4 py-3 border-t border-black/10 flex flex-col sm:flex-row justify-between items-center text-xs sticky bottom-0 left-0 right-0 min-h-[56px] z-10"
   >
     <div class="flex items-center mb-2 sm:mb-0">
       <span>
@@ -9,27 +9,31 @@
         <span>{{ tableDataStore.columns.length }} columns</span>
       </span>
       <div class="ml-4 flex space-x-2">
-        <button
-          v-tooltip.top="'Export'"
-          v-if="tableDataStore.tableData.length > 0"
-          class="btn btn-ghost btn-xs"
-          @click="showExportModal = true"
+        <div
+          class="tooltip tooltip-top"
+          data-tip="Export"
         >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke-width="1.5"
-            stroke="currentColor"
-            class="w-4 h-4"
+          <button
+            v-if="tableDataStore.tableData.length > 0"
+            class="btn btn-ghost btn-xs"
+            @click="showExportModal = true"
           >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3"
-            />
-          </svg>
-        </button>
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke-width="1.5"
+              stroke="currentColor"
+              class="w-4 h-4"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3"
+              />
+            </svg>
+          </button>
+        </div>
       </div>
     </div>
 

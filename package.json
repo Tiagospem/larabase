@@ -1,6 +1,6 @@
 {
   "name": "larabase",
-  "version": "0.9.1",
+  "version": "0.9.3",
   "description": "An Opined Database GUI for Laravel Developers",
   "main": "dist/main.cjs",
   "type": "commonjs",

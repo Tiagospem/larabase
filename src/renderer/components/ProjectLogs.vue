@@ -129,7 +129,7 @@
       </div>
 
       <!-- Logs table -->
-      <div class="overflow-x-auto max-h-[60vh]">
+      <div class="overflow-x-auto max-h-[50vh]">
         <table class="table table-xs w-full">
           <thead>
             <tr>
