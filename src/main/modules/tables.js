@@ -168,12 +168,14 @@ function registerTableHandlers(store, dbMonitoringConnections) {
 
         tables.forEach((table) => {
           table.rowCount = countsMap[table.name] || 0;
+          table.isApproximate = true;
         });
       } catch (err) {
         console.error("Error getting approximate row counts:", err);
 
         tables.forEach((table) => {
           table.rowCount = 0;
+          table.isApproximate = true;
         });
       }
 
@@ -938,7 +940,7 @@ function registerTableHandlers(store, dbMonitoringConnections) {
     }
   });
 
-  ipcMain.handle("execute-sql-query", async (event, config) => {
+  ipcMain.handle("execute-sql-query", async (_, config) => {
     let connection;
     let monitoredConnection = null;
 

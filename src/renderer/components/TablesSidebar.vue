@@ -277,9 +277,13 @@
               </div>
               <span
                 class="badge badge-xs"
-                :class="{ 'badge-accent': table.rowCount > 0 }"
+                :class="{
+                  'badge-accent': table.rowCount > 0,
+                  'animate-pulse': table.isApproximate
+                }"
+                :key="`count-${table.name}-${table.isApproximate}-${table.rowCount}`"
               >
-                {{ tablesStore.formatRecordCount(table.rowCount) }}
+                {{ table.isApproximate ? "--" : tablesStore.formatRecordCount(table.rowCount) }}
               </span>
             </a>
           </li>
@@ -348,7 +352,7 @@
 </template>
 
 <script setup>
-import { computed, inject, ref, watch } from "vue";
+import { computed, inject, ref, watch, onMounted } from "vue";
 import { useDatabaseStore } from "@/store/database";
 import { useTablesStore } from "@/store/tables";
 import Modal from "@/components/Modal.vue";
@@ -386,13 +390,128 @@ watch(
   () => props.connectionId,
   async (newConnectionId) => {
     if (newConnectionId) {
-      const savedSearchTerm = localStorage.getItem(`tableSearch_${newConnectionId}`) || "";
-      tablesStore.setSearchTerm(newConnectionId, savedSearchTerm);
-      await tablesStore.initializeTables(newConnectionId);
-      lastConnectionId.value = newConnectionId;
+      try {
+        const savedSearchTerm = localStorage.getItem(`tableSearch_${newConnectionId}`) || "";
+        tablesStore.setSearchTerm(newConnectionId, savedSearchTerm);
+        await tablesStore.initializeTables(newConnectionId);
+
+        let connection = null;
+        try {
+          connection = databaseStore.getConnection(newConnectionId);
+          if (connection && connection.projectPath) {
+            await databaseStore.loadModelsForTables(newConnectionId, connection.projectPath);
+          }
+        } catch (connError) {
+          console.debug("Connection not available yet for models", connError);
+        }
+
+        lastConnectionId.value = newConnectionId;
+        updateApproximateTableCounts();
+      } catch (error) {
+        console.error("Error initializing tables:", error);
+      }
     }
   },
   { immediate: true }
+);
+
+onMounted(() => {
+  if (props.connectionId) {
+    updateApproximateTableCounts();
+  }
+});
+
+async function updateApproximateTableCounts() {
+  if (!props.connectionId || tablesStore.isLoading) return;
+
+  const approximateTables = tablesStore.sortedTables.filter((table) => table.isApproximate);
+
+  if (approximateTables.length === 0) return;
+
+  const tablesToProcess = getTableUpdatePriority(approximateTables);
+
+  const batchSize = 3;
+  for (let i = 0; i < tablesToProcess.length; i += batchSize) {
+    const batch = tablesToProcess.slice(i, i + batchSize);
+
+    await Promise.all(batch.map((table) => updateTableCount(table)));
+
+    if (i + batchSize < tablesToProcess.length) {
+      await new Promise((resolve) => setTimeout(resolve, 300));
+    }
+  }
+}
+
+async function updateTableCount(table) {
+  try {
+    const conn = databaseStore.getConnection(props.connectionId);
+    const countResult = await window.api.getTableRecordCount({
+      host: conn.host,
+      port: conn.port,
+      username: conn.username,
+      password: conn.password,
+      database: conn.database,
+      tableName: table.name
+    });
+
+    if (countResult && countResult.success) {
+      const exactCount = parseInt(countResult.count, 10);
+
+      table.rowCount = exactCount;
+      table.isApproximate = false;
+
+      databaseStore.updateLocalStorageTables(props.connectionId, table.name, exactCount, false);
+    } else {
+      table.isApproximate = false;
+      databaseStore.updateLocalStorageTables(props.connectionId, table.name, table.rowCount, false);
+    }
+
+    return true;
+  } catch (error) {
+    console.error(`Error updating count for table ${table.name}:`, error);
+
+    table.isApproximate = false;
+    databaseStore.updateLocalStorageTables(props.connectionId, table.name, table.rowCount, false);
+
+    return false;
+  }
+}
+
+function getTableUpdatePriority(tables) {
+  const maxTablesToProcess = 20;
+
+  if (tables.length <= maxTablesToProcess) {
+    return tables;
+  }
+
+  return tables.slice(0, maxTablesToProcess);
+}
+
+watch(
+  () => tablesStore.sortedTables,
+  (newTables) => {
+    if (newTables.length > 0 && props.connectionId) {
+      const approximateTables = newTables.filter((table) => table.isApproximate);
+
+      if (approximateTables.length > 0) {
+        const tablesToUpdate = getTableUpdatePriority(approximateTables);
+
+        const skippedTables = approximateTables.filter((t) => !tablesToUpdate.includes(t));
+
+        if (skippedTables.length > 0) {
+          skippedTables.forEach((table) => {
+            databaseStore.updateLocalStorageTables(props.connectionId, table.name, table.rowCount, false);
+            table.isApproximate = false;
+          });
+        }
+
+        if (tablesToUpdate.length > 0) {
+          setTimeout(() => updateApproximateTableCounts(), 500);
+        }
+      }
+    }
+  },
+  { deep: true }
 );
 
 watch(

@@ -91,11 +91,85 @@ export const useDatabaseStore = defineStore("database", () => {
         lastConnectionId.value = id;
       }
 
-      const conn = _getConnection(id);
+      const storageKey = `tables-${id}`;
+      let tablesData = null;
+
+      try {
+        const storedData = localStorage.getItem(storageKey);
+        if (storedData) {
+          const parsedData = JSON.parse(storedData);
+          if (parsedData && parsedData.tables) {
+            const cacheExpired = !parsedData.timestamp || Date.now() - parsedData.timestamp > 3000;
+
+            if (!cacheExpired) {
+              tablesData = parsedData;
+              tables.value = tablesData;
+
+              if (tablesData.models) {
+                tableModels.value[id] = tablesData.models;
+              }
+
+              let conn = null;
+              try {
+                conn = _getConnection(id);
+              } catch (connError) {
+                isLoading.value = false;
+                return;
+              }
+
+              if (conn && conn.projectPath) {
+                try {
+                  await loadModelsForTables(id, conn.projectPath);
+                } catch (modelError) {
+                  console.error("Error refreshing models:", modelError);
+                }
+              }
+
+              isLoading.value = false;
+              return;
+            } else {
+              console.log("Cache expired, fetching fresh data");
+            }
+          }
+        }
+      } catch (storageError) {
+        console.error("Error reading tables from localStorage:", storageError);
+      }
+
+      let conn;
+      try {
+        conn = _getConnection(id);
+      } catch (connError) {
+        console.error("Connection not found:", connError);
+        tables.value = { tables: [] };
+        isLoading.value = false;
+        return;
+      }
+
       const result = await window.api.listTables(_buildPayload(conn));
       tables.value = result.success && result.tables ? { tables: result.tables } : { tables: [] };
-      if (result.success && conn.projectPath) await loadModelsForTables(id, conn.projectPath);
-    } catch {
+
+      if (tableModels.value[id]) {
+        tables.value.models = tableModels.value[id];
+      }
+
+      tables.value.timestamp = Date.now();
+
+      try {
+        localStorage.setItem(storageKey, JSON.stringify(tables.value));
+      } catch (saveError) {
+        console.error("Error saving tables to localStorage:", saveError);
+      }
+
+      if (result.success && conn.projectPath) {
+        try {
+          await loadModelsForTables(id, conn.projectPath);
+        } catch (modelError) {
+          console.error("Error loading models for tables:", modelError);
+        }
+      }
+    } catch (error) {
+      console.error("Error in loadTables:", error);
       tables.value = { tables: [] };
     } finally {
       isLoading.value = false;
@@ -103,17 +177,52 @@ export const useDatabaseStore = defineStore("database", () => {
   }
 
   async function loadModelsForTables(id, path) {
-    if (!path) return;
+    if (!id || !path) return;
+
     try {
       const { success, models } = await window.api.findModelsForTables({
         projectPath: path
       });
-      if (success) tableModels.value[id] = models;
-    } catch {}
+
+      if (success && models && typeof models === "object") {
+        if (!tableModels.value[id]) {
+          tableModels.value[id] = {};
+        }
+        tableModels.value[id] = models;
+
+        if (!tables.value) {
+          tables.value = { tables: [], models: {}, timestamp: Date.now() };
+        }
+
+        if (!tables.value.models) {
+          tables.value.models = {};
+        }
+
+        tables.value.models = { ...tables.value.models, ...models };
+
+        tables.value.timestamp = Date.now();
+
+        try {
+          const storageKey = `tables-${id}`;
+          localStorage.setItem(storageKey, JSON.stringify(tables.value));
+        } catch (saveError) {
+          console.error("Error saving tables with models to localStorage:", saveError);
+        }
+      }
+    } catch (err) {
+      console.error("Error loading models for tables:", err);
+      throw err;
+    }
   }
 
   function getModelForTable(id, name) {
-    return tableModels.value[id]?.[name] || null;
+    const modelFromRef = tableModels.value[id]?.[name];
+    if (modelFromRef) return modelFromRef;
+
+    const modelFromTables = tables.value.models?.[name];
+    if (modelFromTables) return modelFromTables;
+
+    return null;
   }
 
   function getTableModelJson(id, name) {
@@ -172,114 +281,6 @@ export const useDatabaseStore = defineStore("database", () => {
       }
     }
     return JSON.stringify(result, null, 2);
-  }
-
-  async function getTableRecordCount(id, tableName, useCache = true, cacheTimeoutMs = 3600000) {
-    const key = `${id}:${tableName}`;
-
-    if (
-      useCache &&
-      tableRecords.value[key]?.count != null &&
-      tableRecords.value[key]?.timestamp &&
-      tableRecords.value[key]?.verified &&
-      Date.now() - tableRecords.value[key].timestamp < cacheTimeoutMs
-    ) {
-      return tableRecords.value[key].count;
-    }
-
-    try {
-      const conn = connectionStore.getConnection(id);
-
-      const { success, count } = await window.api.getTableRecordCount({
-        ..._buildPayload(conn),
-        tableName
-      });
-
-      if (success) {
-        tableRecords.value[key] = {
-          count: parseInt(count, 10),
-          timestamp: Date.now(),
-          verified: true
-        };
-
-        window.dispatchEvent(
-          new CustomEvent("table-count-loaded", {
-            detail: {
-              tableName,
-              connectionId: id,
-              count: parseInt(count, 10)
-            }
-          })
-        );
-
-        return tableRecords.value[key].count;
-      }
-    } catch (error) {
-      console.error(`Error getting record count for ${tableName}:`, error);
-    }
-
-    return tableRecords.value[key]?.count || 0;
-  }
-
-  async function loadTableRecordCounts(id, tableNames, batchSize = 20) {
-    if (!id || !tableNames || !tableNames.length) return;
-
-    const conn = _getConnection(id);
-    if (!conn) return;
-
-    try {
-      const result = await window.api.getMultipleTableCounts({
-        ..._buildPayload(conn),
-        tableNames
-      });
-
-      if (result.success && result.counts) {
-        Object.entries(result.counts).forEach(([tableName, count]) => {
-          const key = `${id}:${tableName}`;
-          tableRecords.value[key] = {
-            count: parseInt(count, 10),
-            timestamp: Date.now(),
-            verified: true
-          };
-
-          window.dispatchEvent(
-            new CustomEvent("table-count-loaded", {
-              detail: {
-                tableName,
-                connectionId: id,
-                count: parseInt(count, 10)
-              }
-            })
-          );
-        });
-      }
-    } catch (error) {
-      console.error("Error loading multiple table counts:", error);
-
-      const processBatch = async (tables) => {
-        const batch = tables.slice(0, batchSize);
-        const remaining = tables.slice(batchSize);
-
-        for (const tableName of batch) {
-          try {
-            await getTableRecordCount(id, tableName, false);
-          } catch (err) {
-            console.error(`Error loading count for ${tableName}:`, err);
-          }
-        }
-
-        if (remaining.length) {
-          return new Promise((resolve) => {
-            setTimeout(async () => {
-              await processBatch(remaining);
-              resolve();
-            }, 100);
-          });
-        }
-      };
-
-      return processBatch(tableNames);
-    }
   }
 
   async function getTableStructure(id, name, force = false) {
@@ -357,6 +358,14 @@ export const useDatabaseStore = defineStore("database", () => {
     delete tableMigrations.value[key];
   }
 
+  function clearCaches() {
+    tableRecords.value = {};
+    tableStructures.value = {};
+    tableIndexes.value = {};
+    tableForeignKeys.value = {};
+    tableMigrations.value = {};
+  }
+
   function clearTableRecordCounts() {
     tableRecords.value = {};
   }
@@ -388,12 +397,9 @@ export const useDatabaseStore = defineStore("database", () => {
     const result = await window.api.deleteRecords(deleteConfig);
 
     clearTableCache(`${id}:${tableName}`);
-
     invalidateTableCache(id, tableName);
 
-    setTimeout(() => {
-      getTableRecordCount(id, tableName, false);
-    }, 100);
+    await updateTableExactCount(id, tableName);
 
     window.dispatchEvent(
       new CustomEvent("table-operation-complete", {
@@ -420,9 +426,7 @@ export const useDatabaseStore = defineStore("database", () => {
     invalidateTableCache(id, tableName);
     clearTableCache(`${id}:${tableName}`);
 
-    setTimeout(() => {
-      getTableRecordCount(id, tableName, false);
-    }, 100);
+    updateTableWithExactCount(id, tableName, 0);
 
     window.dispatchEvent(
       new CustomEvent("table-operation-complete", {
@@ -435,6 +439,80 @@ export const useDatabaseStore = defineStore("database", () => {
     );
 
     return result;
+  }
+
+  async function updateTableExactCount(id, tableName) {
+    const conn = _getConnection(id);
+
+    try {
+      const countResult = await window.api.getTableRecordCount({
+        ..._buildPayload(conn),
+        tableName
+      });
+
+      if (countResult.success) {
+        const exactCount = parseInt(countResult.count, 10);
+
+        updateTableWithExactCount(id, tableName, exactCount);
+        return exactCount;
+      }
+    } catch (error) {
+      console.error(`Error getting exact count for ${tableName}:`, error);
+      updateLocalStorageTables(id, tableName);
+    }
+
+    return null;
+  }
+
+  function updateTableWithExactCount(id, tableName, exactCount) {
+    const table = tables.value.tables?.find((t) => t.name === tableName);
+    if (table) {
+      table.rowCount = exactCount;
+      table.isApproximate = false;
+    }
+
+    updateLocalStorageTables(id, tableName, exactCount, false);
+  }
+
+  function updateLocalStorageTables(id, tableName, newCount = null, isApproximate = true) {
+    try {
+      const storageKey = `tables-${id}`;
+      const storedData = localStorage.getItem(storageKey);
+
+      if (storedData) {
+        const parsedData = JSON.parse(storedData);
+
+        if (parsedData && parsedData.tables && Array.isArray(parsedData.tables)) {
+          if (tableName) {
+            const tableIndex = parsedData.tables.findIndex((t) => t.name === tableName);
+
+            if (tableIndex !== -1) {
+              if (newCount !== null) {
+                parsedData.tables[tableIndex].rowCount = newCount;
+              }
+              parsedData.tables[tableIndex].isApproximate = isApproximate;
+            }
+          } else {
+            parsedData.tables.forEach((table) => {
+              table.isApproximate = isApproximate;
+            });
+          }
+
+          if (tables.value.models && !parsedData.models) {
+            parsedData.models = tables.value.models;
+          } else if (tables.value.models && parsedData.models) {
+            parsedData.models = { ...parsedData.models, ...tables.value.models };
+          }
+
+          // Update timestamp to indicate fresh data
+          parsedData.timestamp = Date.now();
+
+          localStorage.setItem(storageKey, JSON.stringify(parsedData));
+        }
+      }
+    } catch (error) {
+      console.error("Error updating localStorage table data:", error);
+    }
   }
 
   async function truncateTables(connectionId, tableNames, ignoreForeignKeys = false) {
@@ -506,14 +584,6 @@ export const useDatabaseStore = defineStore("database", () => {
 
   const tablesList = computed(() => tables.value.tables || []);
 
-  function clearCaches() {
-    tableRecords.value = {};
-    tableStructures.value = {};
-    tableIndexes.value = {};
-    tableForeignKeys.value = {};
-    tableMigrations.value = {};
-  }
-
   function limitCacheSize(cacheObject, maxItems = 50) {
     const keys = Object.keys(cacheObject);
     if (keys.length > maxItems) {
@@ -553,7 +623,6 @@ export const useDatabaseStore = defineStore("database", () => {
     isLoading,
     loadTables,
     loadTableData,
-    getTableRecordCount,
     getTableStructure,
     getTableIndexes,
     getTableForeignKeys,
@@ -569,6 +638,9 @@ export const useDatabaseStore = defineStore("database", () => {
     truncateTable,
     truncateTables,
     tablesList,
+    updateTableExactCount,
+    updateTableWithExactCount,
+    updateLocalStorageTables,
     getConnection: _getConnection,
     manageCaches
   };
