@@ -101,56 +101,78 @@ function openEditModal(row) {
 
   // Wait for the next tick to ensure the modal is fully closed
   nextTick(() => {
-    // Store a copy of the original record for comparison
-    originalRecord.value = JSON.parse(JSON.stringify(row));
-
-    // Create a deep copy to work with
-    const processedRecord = JSON.parse(JSON.stringify(row));
-
-    // Process all fields systematically
-    for (const key in processedRecord) {
-      const value = processedRecord[key];
-
-      // 1. Handle null values first
-      if (value === null) {
-        continue;
-      }
-
-      // 2. Handle object values (convert to JSON string)
-      if (typeof value === "object") {
-        try {
-          processedRecord[key] = JSON.stringify(value, null, 2);
-        } catch (e) {
-          console.warn(`Failed to stringify object for ${key}:`, e);
-          processedRecord[key] = String(value);
-        }
-        continue;
-      }
-
-      // 3. Handle date fields
-      if (Helpers.isDateField(key) && typeof value === "string") {
-        try {
-          let dateStr = value;
-
-          // Standardize format replacing space with T if needed
-          if (dateStr.includes(" ")) {
-            dateStr = dateStr.replace(" ", "T");
-          }
-
-          const date = new Date(dateStr);
-          if (!isNaN(date.getTime())) {
-            processedRecord[key] = date.toISOString().slice(0, 16);
-          }
-        } catch (e) {
-          console.warn(`Failed to process date for ${key}:`, e);
-        }
+    // Make sure we have column structure data before proceeding
+    if (Helpers.columnStructure.length === 0) {
+      // Try to recover the column structure from localStorage
+      if (!Helpers.recoverColumnStructure()) {
+        // If recovery failed, try to load table structure
+        loadTableStructure().then(() => {
+          processEditRecord(row);
+        });
+        return;
       }
     }
 
-    // Set the processed record and open the modal
-    editingRecord.value = processedRecord;
-    tableDataStore.showEditModal = true;
+    processEditRecord(row);
   });
+}
+
+async function loadTableStructure() {
+  try {
+    const structure = await databaseStore.getTableStructure(tableDataStore.connectionId, tableDataStore.tableName, true);
+
+    if (structure && Array.isArray(structure) && structure.length > 0) {
+      Helpers.setColumnStructure(structure);
+
+      localStorage.setItem(`table_structure:${tableDataStore.connectionId}:${tableDataStore.tableName}`, JSON.stringify(structure));
+    }
+  } catch (error) {
+    console.error("Error loading table structure:", error);
+  }
+}
+
+function processEditRecord(row) {
+  originalRecord.value = JSON.parse(JSON.stringify(row));
+
+  const processedRecord = JSON.parse(JSON.stringify(row));
+
+  for (const key in processedRecord) {
+    const value = processedRecord[key];
+
+    if (value === null) {
+      continue;
+    }
+
+    if (typeof value === "object") {
+      try {
+        processedRecord[key] = JSON.stringify(value, null, 2);
+      } catch (e) {
+        console.warn(`Failed to stringify object for ${key}:`, e);
+        processedRecord[key] = String(value);
+      }
+      continue;
+    }
+
+    if (Helpers.isDateField(key) && typeof value === "string") {
+      try {
+        let dateStr = value;
+
+        if (dateStr.includes(" ")) {
+          dateStr = dateStr.replace(" ", "T");
+        }
+
+        const date = new Date(dateStr);
+        if (!isNaN(date.getTime())) {
+          processedRecord[key] = date.toISOString().slice(0, 16);
+        }
+      } catch (e) {
+        console.warn(`Failed to process date for ${key}:`, e);
+      }
+    }
+  }
+
+  editingRecord.value = processedRecord;
+  tableDataStore.showEditModal = true;
 }
 
 function closeEditModal() {
@@ -190,26 +212,19 @@ async function saveRecord() {
         }
       }
 
-      // Process JSON fields using the _json_ prefixed version
       if (typeof value === "object" && value !== null) {
         try {
           value = JSON.parse(editingRecord.value["_json_" + key]);
-        } catch (e) {
-          // Not using _json_ prefixes anymore, keep object as is
-        }
+        } catch (e) {}
       } else if (typeof value === "string") {
-        // Try to parse JSON strings back to objects
         try {
-          // Check if this is a stringified JSON object/array
           if ((value.trim().startsWith("{") && value.trim().endsWith("}")) || (value.trim().startsWith("[") && value.trim().endsWith("]"))) {
             const parsed = JSON.parse(value);
             if (typeof parsed === "object") {
               value = parsed;
             }
           }
-        } catch (e) {
-          // Not valid JSON, keep as string
-        }
+        } catch (e) {}
       }
 
       recordToSave[key] = value;
@@ -256,5 +271,3 @@ function getEditableColumns() {
 
 defineExpose({ openEditModal });
 </script>
-
-<style scoped></style>

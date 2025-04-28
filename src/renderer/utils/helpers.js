@@ -2,11 +2,45 @@ export class Helpers {
   static columnStructure = [];
 
   static setColumnStructure(columnStructure) {
-    this.columnStructure = columnStructure;
+    if (Array.isArray(columnStructure) && columnStructure.length > 0) {
+      this.columnStructure = columnStructure;
+    }
   }
 
   static getColumnInfo(column) {
+    // If the column structure is empty, try to recover from localStorage
+    if (this.columnStructure.length === 0) {
+      this.recoverColumnStructure();
+    }
+
     return this.columnStructure.find((col) => col.name === column) || null;
+  }
+
+  static recoverColumnStructure() {
+    try {
+      // Find any saved structure in localStorage
+      const keys = Object.keys(localStorage);
+      const structureKeys = keys.filter((key) => key.startsWith("table_structure:"));
+
+      // Use the most recently used structure if available
+      if (structureKeys.length > 0) {
+        // Sort by last accessed time if available
+        const mostRecentKey = structureKeys[structureKeys.length - 1];
+        const savedStructure = localStorage.getItem(mostRecentKey);
+
+        if (savedStructure) {
+          const parsedStructure = JSON.parse(savedStructure);
+          if (Array.isArray(parsedStructure) && parsedStructure.length > 0) {
+            this.columnStructure = parsedStructure;
+            console.log("Recovered column structure from localStorage");
+            return true;
+          }
+        }
+      }
+    } catch (e) {
+      console.error("Error recovering column structure:", e);
+    }
+    return false;
   }
 
   static isDateField(column) {

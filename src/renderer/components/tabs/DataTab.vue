@@ -353,14 +353,42 @@ async function loadTableStructure() {
   try {
     const structure = await databaseStore.getTableStructure(props.connectionId, props.tableName, true);
 
-    Helpers.setColumnStructure(structure);
-
     if (structure && Array.isArray(structure) && structure.length > 0) {
+      Helpers.setColumnStructure(structure);
+
       tableDataStore.lastKnownColumns = structure.map((col) => col.name);
+
+      localStorage.setItem(`table_structure:${props.connectionId}:${props.tableName}`, JSON.stringify(structure));
+    } else {
+      const savedStructure = localStorage.getItem(`table_structure:${props.connectionId}:${props.tableName}`);
+      if (savedStructure) {
+        try {
+          const parsedStructure = JSON.parse(savedStructure);
+          if (Array.isArray(parsedStructure) && parsedStructure.length > 0) {
+            Helpers.setColumnStructure(parsedStructure);
+            console.log("Recovered table structure from localStorage");
+          }
+        } catch (e) {
+          console.error("Error parsing saved structure:", e);
+        }
+      }
     }
   } catch (error) {
     console.error("Error loading table structure:", error);
     showAlert(`Error loading table structure: ${error.message}`, "error");
+
+    const savedStructure = localStorage.getItem(`table_structure:${props.connectionId}:${props.tableName}`);
+    if (savedStructure) {
+      try {
+        const parsedStructure = JSON.parse(savedStructure);
+        if (Array.isArray(parsedStructure) && parsedStructure.length > 0) {
+          Helpers.setColumnStructure(parsedStructure);
+          console.log("Recovered table structure from localStorage after error");
+        }
+      } catch (e) {
+        console.error("Error parsing saved structure:", e);
+      }
+    }
   }
 }
 
@@ -376,7 +404,6 @@ onActivated(() => {
 
   refreshLiveTableState();
 
-  // If the table is active but has no data, try to reload
   if (!hasData.value && !isLoading.value) {
     checkAndReloadIfNeeded();
   }
@@ -398,7 +425,6 @@ onDeactivated(() => {
 });
 
 onMounted(() => {
-  // reset states
   wasEmptyChecked.value = false;
 
   window.addEventListener("tab-activated", handleTabActivation);
@@ -446,7 +472,6 @@ onMounted(() => {
 
     safeLoadTableData();
 
-    // Check again after a short period if we have data
     setTimeout(checkAndReloadIfNeeded, 1000);
   });
 
