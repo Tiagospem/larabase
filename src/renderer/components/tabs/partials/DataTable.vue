@@ -134,6 +134,27 @@
               @dblclick.stop="editRecordRef.openEditModal(row)"
             >
               <div class="flex items-center justify-between w-full">
+                <button
+                  v-if="tableDataStore.tableName === 'users' && column === 'password' && row[column]"
+                  class="mr-1 text-white hover:text-primary-focus transition-colors cursor-pointer shrink-0"
+                  @click.stop="openPasswordModal(row)"
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke-width="1.5"
+                    stroke="currentColor"
+                    class="w-4 h-4"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z"
+                    />
+                  </svg>
+                </button>
+
                 <span
                   :class="{
                     'text-gray-500 italic': row[column] === null && tableDataStore.isForeignKeyColumn(column)
@@ -202,6 +223,15 @@
     :columns="tableDataStore.columns"
     @close="closePreviewModal"
   />
+
+  <UpdatePasswordModal
+    v-if="tableDataStore.showPasswordModal"
+    :show="tableDataStore.showPasswordModal"
+    :user="tableDataStore.selectedUserForPasswordUpdate"
+    :connection-id="tableDataStore.connectionId"
+    :table-name="tableDataStore.tableName"
+    @close="closePasswordModal"
+  />
 </template>
 
 <script setup>
@@ -210,6 +240,7 @@ import { Helpers } from "@/utils/helpers";
 import { onMounted, onUnmounted, ref, onActivated, onDeactivated } from "vue";
 import EditRecord from "@/components/tabs/partials/EditRecord.vue";
 import DataPreviewModal from "@/components/tabs/partials/DataPreviewModal.vue";
+import UpdatePasswordModal from "@/components/tabs/partials/UpdatePasswordModal.vue";
 
 const props = defineProps({
   storeId: {
@@ -469,6 +500,16 @@ function closePreviewModal() {
 function openPreviewModal(row) {
   tableDataStore.previewingRecord = JSON.parse(JSON.stringify(row));
   tableDataStore.showPreviewModal = true;
+}
+
+function openPasswordModal(row) {
+  tableDataStore.selectedUserForPasswordUpdate = row;
+  tableDataStore.showPasswordModal = true;
+}
+
+function closePasswordModal() {
+  tableDataStore.showPasswordModal = false;
+  tableDataStore.selectedUserForPasswordUpdate = null;
 }
 
 onActivated(() => {

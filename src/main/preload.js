@@ -241,7 +241,9 @@ try {
           }
         }
       };
-    }
+    },
+    hashPassword: (password) => ipcRenderer.invoke("hashPassword", password),
+    updatePassword: (config) => safeIpcRenderer.invoke("update-password", config)
   });
 
   window.addEventListener("beforeunload", () => {

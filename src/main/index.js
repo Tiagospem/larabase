@@ -12,6 +12,8 @@ const { registerSettingsHandlers } = require("./modules/settings");
 const { registerTabsHandlers } = require("./modules/tabs");
 const { registerMonitoringHandlers, clearMonitoringConnections } = require("./modules/monitoring");
 
+require("./handlers");
+
 const store = new Store();
 const dbMonitoringConnections = new Map();
 const dbActivityConnections = new Map();

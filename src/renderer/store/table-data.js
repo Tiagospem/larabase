@@ -43,6 +43,8 @@ export const useTableDataStore = (id) => {
     const showEditModal = ref(false);
     const advancedFilterTerm = ref("");
     const lastKnownColumns = ref([]);
+    const showPasswordModal = ref(false);
+    const selectedUserForPasswordUpdate = ref(null);
 
     const databaseStore = useDatabaseStore();
 
@@ -624,7 +626,9 @@ export const useTableDataStore = (id) => {
       connectionPort,
       connectionUsername,
       connectionPassword,
-      connectionDatabase
+      connectionDatabase,
+      showPasswordModal,
+      selectedUserForPasswordUpdate
     };
   })();
 };

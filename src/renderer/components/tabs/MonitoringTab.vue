@@ -78,11 +78,9 @@
         <div class="bg-base-100 p-4 shadow rounded-lg overflow-hidden">
           <div class="flex justify-between items-center mb-3">
             <h3 class="text-lg font-semibold">Active Batches</h3>
-            <div class="text-xs">
-              Showing {{ visibleActiveBatches.length }} of {{ allActiveBatches.length }}
-            </div>
+            <div class="text-xs">Showing {{ visibleActiveBatches.length }} of {{ allActiveBatches.length }}</div>
           </div>
-          
+
           <div
             v-if="allActiveBatches.length === 0"
             class="text-center p-4 text-opacity-60"
@@ -109,17 +107,16 @@
                   <div class="mt-1 flex items-center">
                     <span class="font-semibold mr-2">Progress:</span>
                     <div class="w-56 relative overflow-hidden bg-base-200 rounded-full h-2">
-                      <div
-                        class="bg-primary h-2 rounded-full transition-all indeterminate-progress"></div>
+                      <div class="bg-primary h-2 rounded-full transition-all indeterminate-progress"></div>
                     </div>
                     <span class="ml-2">{{ Number(batch.processed_jobs || 0) }}/{{ Number(batch.total_jobs || 1) }}</span>
                   </div>
                 </div>
               </div>
             </div>
-            
-            <button 
-              v-if="allActiveBatches.length > visibleActiveBatches.length" 
+
+            <button
+              v-if="allActiveBatches.length > visibleActiveBatches.length"
               class="btn btn-sm btn-outline w-full"
               @click="showMoreActiveBatches"
             >
@@ -131,11 +128,9 @@
         <div class="bg-base-100 p-4 shadow rounded-lg overflow-hidden">
           <div class="flex justify-between items-center mb-3">
             <h3 class="text-lg font-semibold">Recent Batches</h3>
-            <div class="text-xs">
-              Showing {{ visibleRecentBatches.length }} of {{ allRecentBatches.length }}
-            </div>
+            <div class="text-xs">Showing {{ visibleRecentBatches.length }} of {{ allRecentBatches.length }}</div>
           </div>
-          
+
           <div
             v-if="allRecentBatches.length === 0"
             class="text-center p-4 text-opacity-60"
@@ -180,9 +175,9 @@
                 </div>
               </div>
             </div>
-            
-            <button 
-              v-if="allRecentBatches.length > visibleRecentBatches.length" 
+
+            <button
+              v-if="allRecentBatches.length > visibleRecentBatches.length"
               class="btn btn-sm btn-outline w-full"
               @click="showMoreRecentBatches"
             >
@@ -303,11 +298,9 @@ async function loadData() {
     // Reset page sizes on data refresh
     activePageSize.value = 5;
     recentPageSize.value = 5;
-    
+
     allActiveBatches.value = allBatches.filter((b) => !b.finished_at);
-    allRecentBatches.value = allBatches
-      .filter((b) => b.finished_at)
-      .sort((a, b) => new Date(b.finished_at) - new Date(a.finished_at));
+    allRecentBatches.value = allBatches.filter((b) => b.finished_at).sort((a, b) => new Date(b.finished_at) - new Date(a.finished_at));
 
     stats.value = {
       totalBatches: allBatches.length,
@@ -421,8 +414,14 @@ onBeforeUnmount(() => {
 }
 
 @keyframes progress-indeterminate {
-  0% { transform: translateX(-100%); }
-  50% { transform: translateX(100%); }
-  100% { transform: translateX(300%); }
+  0% {
+    transform: translateX(-100%);
+  }
+  50% {
+    transform: translateX(100%);
+  }
+  100% {
+    transform: translateX(300%);
+  }
 }
 </style>
