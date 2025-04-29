@@ -341,10 +341,22 @@
           {{ connection?.type.toUpperCase() }} |
           {{ connection?.host || connection?.path }}
         </div>
+        <div
+          v-if="showPerformanceMonitor"
+          class="flex items-center"
+        >
+          <MiniPerformanceMonitor :on-click-monitor="toggleFullPerformanceMonitor" />
+        </div>
         <div>Total tables: {{ databaseStore.tablesList.length }}</div>
       </div>
     </footer>
   </div>
+
+  <PerformanceMonitor
+    v-if="showFullPerformanceMonitor"
+    :is-modal="true"
+    @close="showFullPerformanceMonitor = false"
+  />
 
   <ProjectLogs
     :is-open="showProjectLogs"
@@ -495,6 +507,8 @@ import DatabaseSwitcher from "@/components/database/DatabaseSwitcher.vue";
 import RedisManager from "@/components/RedisManager.vue";
 import LaravelCommands from "../components/LaravelCommands.vue";
 import EnvEditor from "@/components/EnvEditor.vue";
+import MiniPerformanceMonitor from "../components/MiniPerformanceMonitor.vue";
+import PerformanceMonitor from "../components/PerformanceMonitor.vue";
 
 defineOptions({
   name: "DatabaseView"
@@ -531,6 +545,8 @@ const showLaravelCommands = ref(false);
 const showEnvEditor = ref(false);
 const isRedisAvailable = ref(false);
 const hasRedisConnection = computed(() => isRedisAvailable.value);
+const showPerformanceMonitor = ref(false);
+const showFullPerformanceMonitor = ref(false);
 
 const connection = computed(() => {
   return connectionsStore.getConnection(connectionId.value);
@@ -694,6 +710,7 @@ async function initializeConnection(skipReload = false) {
 
 onMounted(async () => {
   await initializeConnection(false);
+  loadPerformanceMonitorSetting();
 });
 
 onActivated(async () => {
@@ -854,5 +871,18 @@ function handleUpdateProjectPath(newProjectPath) {
       console.error("Error updating project path:", error);
       showAlert(`Failed to update project path: ${error.message}`, "error");
     });
+}
+
+function toggleFullPerformanceMonitor() {
+  showFullPerformanceMonitor.value = !showFullPerformanceMonitor.value;
+}
+
+async function loadPerformanceMonitorSetting() {
+  try {
+    const settings = await window.api.getSettings();
+    showPerformanceMonitor.value = settings?.performanceMonitor && settings?.devMode;
+  } catch (error) {
+    console.error("Error loading performance monitor setting:", error);
+  }
 }
 </script>

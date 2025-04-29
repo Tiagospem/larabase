@@ -10,6 +10,98 @@ const safeIpcRenderer = {
   }
 };
 
+const listenerManager = {
+  listeners: new Map(),
+  dynamicChannels: new Set(),
+  activeMonitoringConnections: new Set(),
+
+  addListener: (channel, listener, isDynamic = false) => {
+    if (!listenerManager.listeners.has(channel)) {
+      listenerManager.listeners.set(channel, []);
+    }
+
+    listenerManager.listeners.get(channel).push(listener);
+
+    if (isDynamic) {
+      listenerManager.dynamicChannels.add(channel);
+    }
+
+    return listener;
+  },
+
+  removeListener: (channel, listener) => {
+    if (!listenerManager.listeners.has(channel)) return;
+
+    const listeners = listenerManager.listeners.get(channel);
+    const idx = listeners.indexOf(listener);
+
+    if (idx > -1) {
+      listeners.splice(idx, 1);
+
+      if (listeners.length === 0) {
+        listenerManager.listeners.delete(channel);
+        listenerManager.dynamicChannels.delete(channel);
+      }
+    }
+  },
+
+  removeAllListeners: (channel) => {
+    if (!channel) {
+      for (const [ch, listeners] of listenerManager.listeners.entries()) {
+        for (const listener of listeners) {
+          ipcRenderer.removeListener(ch, listener);
+        }
+      }
+      listenerManager.listeners.clear();
+      listenerManager.dynamicChannels.clear();
+      listenerManager.activeMonitoringConnections.clear();
+      return;
+    }
+
+    if (listenerManager.listeners.has(channel)) {
+      const listeners = listenerManager.listeners.get(channel);
+      for (const listener of listeners) {
+        ipcRenderer.removeListener(channel, listener);
+      }
+      listenerManager.listeners.delete(channel);
+      listenerManager.dynamicChannels.delete(channel);
+
+      if (channel.startsWith("db-operation-")) {
+        const connectionId = channel.replace("db-operation-", "");
+        listenerManager.activeMonitoringConnections.delete(connectionId);
+      }
+    }
+  },
+
+  addMonitoringConnection: (connectionId) => {
+    listenerManager.activeMonitoringConnections.add(connectionId);
+  },
+
+  removeMonitoringConnection: (connectionId) => {
+    listenerManager.activeMonitoringConnections.delete(connectionId);
+  },
+
+  getStats: () => {
+    return {
+      totalChannels: listenerManager.listeners.size,
+      totalListeners: Array.from(listenerManager.listeners.values()).reduce((acc, val) => acc + val.length, 0),
+      dynamicChannels: Array.from(listenerManager.dynamicChannels),
+      activeMonitoringConnections: Array.from(listenerManager.activeMonitoringConnections)
+    };
+  },
+
+  cleanup: () => {
+    for (const [channel, listeners] of listenerManager.listeners.entries()) {
+      for (const listener of listeners) {
+        ipcRenderer.removeListener(channel, listener);
+      }
+    }
+    listenerManager.listeners.clear();
+    listenerManager.dynamicChannels.clear();
+    listenerManager.activeMonitoringConnections.clear();
+  }
+};
+
 function relayEventToDom(channel, data) {
   try {
     const event = new CustomEvent(channel, {
@@ -28,12 +120,12 @@ function relayEventToDom(channel, data) {
 const validChannels = ["update-status", "update-available", "update-info", "autoUpdater:update-info", "autoUpdater:download-progress", "autoUpdater:download-complete", "restoration-progress"];
 
 validChannels.forEach((channel) => {
-  ipcRenderer.on(channel, (event, data) => {
+  const relayer = (_, data) => {
     relayEventToDom(channel, data);
-  });
+  };
+  ipcRenderer.on(channel, relayer);
+  listenerManager.addListener(channel, relayer);
 });
-
-const eventListeners = new Map();
 
 try {
   contextBridge.exposeInMainWorld("electron", {
@@ -43,25 +135,13 @@ try {
           const wrappedFunc = (event, ...args) => func(event, ...args);
           ipcRenderer.on(channel, wrappedFunc);
 
-          if (!eventListeners.has(channel)) {
-            eventListeners.set(channel, []);
-          }
-          eventListeners.get(channel).push(wrappedFunc);
-
-          return wrappedFunc;
+          return listenerManager.addListener(channel, wrappedFunc);
         }
       },
       removeListener: (channel, func) => {
         if (validChannels.includes(channel)) {
           ipcRenderer.removeListener(channel, func);
-
-          if (eventListeners.has(channel)) {
-            const listeners = eventListeners.get(channel);
-            const idx = listeners.indexOf(func);
-            if (idx > -1) {
-              listeners.splice(idx, 1);
-            }
-          }
+          listenerManager.removeListener(channel, func);
         }
       },
       send: (channel, data) => {
@@ -119,9 +199,13 @@ try {
     getOpenTabs: () => safeIpcRenderer.invoke("get-open-tabs"),
     saveOpenTabs: (tabs) => safeIpcRenderer.invoke("save-open-tabs", tabs),
     stopMonitoringDatabaseOperations: (channel, clearDataOnStop = false) => {
+      listenerManager.removeAllListeners(channel);
+
       ipcRenderer.removeAllListeners(channel);
 
       const connectionId = channel.replace("db-operation-", "");
+
+      listenerManager.removeMonitoringConnection(connectionId);
 
       return ipcRenderer
         .invoke("stop-db-monitoring", connectionId, clearDataOnStop)
@@ -148,8 +232,12 @@ try {
     onUpdateStatus: (callback) => {
       const updateStatusListener = (_, data) => callback(data);
       ipcRenderer.on("update-status", updateStatusListener);
+
+      listenerManager.addListener("update-status", updateStatusListener);
+
       return () => {
         ipcRenderer.removeListener("update-status", updateStatusListener);
+        listenerManager.removeListener("update-status", updateStatusListener);
       };
     },
     getDatabaseRelationships: (connectionId) =>
@@ -159,13 +247,19 @@ try {
     executeSQLQuery: (config) => safeIpcRenderer.invoke("execute-sql-query", config),
     runArtisanCommand: (config) => safeIpcRenderer.invoke("run-artisan-command", config),
     getSingularForm: (word) => safeIpcRenderer.invoke("get-singular-form", word),
+    triggerGarbageCollection: () => safeIpcRenderer.invoke("trigger-garbage-collection"),
 
     listenCommandOutput: (commandId, callback) => {
       const channel = `command-output-${commandId}`;
-      ipcRenderer.on(channel, (_, data) => callback(data));
+      const listener = (_, data) => callback(data);
+
+      ipcRenderer.on(channel, listener);
+      listenerManager.addListener(channel, listener, true);
+
       return channel;
     },
     stopCommandListener: (channel) => {
+      listenerManager.removeAllListeners(channel);
       ipcRenderer.removeAllListeners(channel);
     },
     getSettings: () => safeIpcRenderer.invoke("get-settings"),
@@ -174,11 +268,14 @@ try {
       try {
         const channel = `db-operation-${connectionId}`;
 
+        listenerManager.removeAllListeners(channel);
         ipcRenderer.removeAllListeners(channel);
 
-        ipcRenderer.on(channel, (_, data) => {
-          callback(data);
-        });
+        const listener = (_, data) => callback(data);
+        ipcRenderer.on(channel, listener);
+        listenerManager.addListener(channel, listener, true);
+
+        listenerManager.addMonitoringConnection(connectionId);
 
         return ipcRenderer.invoke("start-db-monitoring", connectionId, clearHistory).then((result) => {
           return channel;
@@ -203,21 +300,11 @@ try {
         const listener = (_, data) => callback(data);
         ipcRenderer.on(channel, listener);
 
-        if (!eventListeners.has(channel)) {
-          eventListeners.set(channel, []);
-        }
-        eventListeners.get(channel).push(listener);
+        listenerManager.addListener(channel, listener);
 
         return () => {
           ipcRenderer.removeListener(channel, listener);
-
-          if (eventListeners.has(channel)) {
-            const listeners = eventListeners.get(channel);
-            const idx = listeners.indexOf(listener);
-            if (idx > -1) {
-              listeners.splice(idx, 1);
-            }
-          }
+          listenerManager.removeListener(channel, listener);
         };
       }
     },
@@ -225,35 +312,30 @@ try {
       const listener = (_, data) => callback(data);
       ipcRenderer.on("restoration-progress", listener);
 
-      if (!eventListeners.has("restoration-progress")) {
-        eventListeners.set("restoration-progress", []);
-      }
-      eventListeners.get("restoration-progress").push(listener);
+      listenerManager.addListener("restoration-progress", listener);
 
       return () => {
         ipcRenderer.removeListener("restoration-progress", listener);
-
-        if (eventListeners.has("restoration-progress")) {
-          const listeners = eventListeners.get("restoration-progress");
-          const idx = listeners.indexOf(listener);
-          if (idx > -1) {
-            listeners.splice(idx, 1);
-          }
-        }
+        listenerManager.removeListener("restoration-progress", listener);
       };
+    },
+    getListenerStats: () => {
+      return listenerManager.getStats();
     },
     hashPassword: (password) => ipcRenderer.invoke("hashPassword", password),
     updatePassword: (config) => safeIpcRenderer.invoke("update-password", config)
   });
 
   window.addEventListener("beforeunload", () => {
-    for (const [channel, listeners] of eventListeners.entries()) {
-      for (const listener of listeners) {
-        ipcRenderer.removeListener(channel, listener);
-      }
-    }
-    eventListeners.clear();
+    listenerManager.cleanup();
   });
+
+  if (process.env.NODE_ENV === "development") {
+    window.__cleanupListeners = () => {
+      listenerManager.cleanup();
+      return "Listeners cleaned up";
+    };
+  }
 } catch (error) {
   console.error(error);
 }

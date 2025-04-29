@@ -11,6 +11,7 @@ const { registerUpdaterHandlers, cleanup } = require("./modules/updater");
 const { registerSettingsHandlers } = require("./modules/settings");
 const { registerTabsHandlers } = require("./modules/tabs");
 const { registerMonitoringHandlers, clearMonitoringConnections } = require("./modules/monitoring");
+const { initializeMemoryOptimizer, cleanupMemoryOptimizer, attemptGarbageCollection } = require("./modules/memory-optimizer");
 
 require("./handlers");
 
@@ -19,6 +20,18 @@ const dbMonitoringConnections = new Map();
 const dbActivityConnections = new Map();
 
 let mainWindow;
+
+const enableGarbageCollection = () => {
+  try {
+    if (!global.gc) {
+      console.log("Garbage collection not exposed. For optimal performance, run with --expose-gc flag");
+    } else {
+      console.log("Garbage collection available - memory optimization enabled");
+    }
+  } catch (e) {
+    console.error("Failed to check garbage collection status:", e);
+  }
+};
 
 function enhancePath() {
   const platform = process.platform;
@@ -66,6 +79,7 @@ function enhancePath() {
 
 app.whenReady().then(async () => {
   enhancePath();
+  enableGarbageCollection();
 
   registerConnectionHandlers(store);
   registerTableHandlers(store, dbMonitoringConnections);
@@ -84,6 +98,9 @@ app.whenReady().then(async () => {
 
   registerUpdaterHandlers(mainWindow);
 
+  // Initialize memory optimization after everything is set up
+  initializeMemoryOptimizer();
+
   app.on("activate", () => {
     if (BrowserWindow.getAllWindows().length === 0) {
       createWindow();
@@ -93,6 +110,7 @@ app.whenReady().then(async () => {
 
 app.on("will-quit", async () => {
   cleanup();
+  cleanupMemoryOptimizer();
 
   await clearMonitoringConnections(dbMonitoringConnections, dbActivityConnections);
 });
@@ -104,7 +122,30 @@ app.on("window-all-closed", () => {
 });
 
 app.on("before-quit", async () => {
+  if (global.gc) {
+    try {
+      attemptGarbageCollection(true);
+    } catch (e) {
+      console.error("Error running garbage collection before quit:", e);
+    }
+  }
+
+  cleanupMemoryOptimizer();
   await clearMonitoringConnections(dbMonitoringConnections, dbActivityConnections);
+});
+
+ipcMain.handle("trigger-garbage-collection", async () => {
+  if (global.gc) {
+    try {
+      attemptGarbageCollection(true);
+      return { success: true };
+    } catch (error) {
+      console.error("Error triggering garbage collection:", error);
+      return { success: false, error: error.message };
+    }
+  } else {
+    return { success: false, error: "Garbage collection not available" };
+  }
 });
 
 ipcMain.handle("set-app-badge", async (_, count) => {

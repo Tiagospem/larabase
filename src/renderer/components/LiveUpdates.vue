@@ -414,16 +414,12 @@ function close() {
   if (connected.value) {
     stopMonitoring();
   } else {
+    // Even if not connected, ensure any lingering listeners are properly cleaned up
     try {
-      if (window.api && window.api.monitorDatabaseOperations) {
-        window.api
-          .monitorDatabaseOperations(props.connectionId, () => {}, true)
-          .then(() => {
-            if (window.api.stopMonitoringDatabaseOperations) {
-              window.api.stopMonitoringDatabaseOperations(`db-operation-${props.connectionId}`, true);
-            }
-          })
-          .catch((err) => console.error("Error clearing history:", err));
+      const channelToClean = `db-operation-${props.connectionId}`;
+
+      if (window.api && window.api.stopMonitoringDatabaseOperations) {
+        window.api.stopMonitoringDatabaseOperations(channelToClean, true).catch((err) => console.error("Error stopping monitoring on close:", err));
       }
     } catch (e) {
       console.error("Error on cleanup:", e);

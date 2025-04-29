@@ -192,6 +192,21 @@
             </label>
           </fieldset>
 
+          <fieldset
+            v-if="settingsData.devMode"
+            class="fieldset"
+          >
+            <label class="label cursor-pointer">
+              <span class="label-text">Performance Monitor</span>
+              <input
+                v-model="settingsData.performanceMonitor"
+                type="checkbox"
+                class="toggle toggle-warning"
+              />
+            </label>
+            <p class="text-xs text-opacity-70 mt-1">Display memory and event listeners statistics in the database view footer</p>
+          </fieldset>
+
           <div
             v-if="settingsData.devMode"
             class="mt-4"
@@ -249,6 +264,7 @@ const settingsData = ref({
   },
   language: "en",
   devMode: false,
+  performanceMonitor: false,
   theme: "dim"
 });
 
