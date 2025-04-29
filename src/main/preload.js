@@ -15,6 +15,9 @@ const listenerManager = {
   dynamicChannels: new Set(),
   activeMonitoringConnections: new Set(),
 
+  historicalCounts: [],
+  maxHistoryLength: 10,
+
   addListener: (channel, listener, isDynamic = false) => {
     if (!listenerManager.listeners.has(channel)) {
       listenerManager.listeners.set(channel, []);
@@ -82,11 +85,85 @@ const listenerManager = {
   },
 
   getStats: () => {
+    const channelBreakdown = {};
+    for (const [channel, listeners] of listenerManager.listeners.entries()) {
+      channelBreakdown[channel] = listeners.length;
+    }
+
+    const eventEmitterStats = [];
+
+    try {
+      if (ipcRenderer && ipcRenderer.eventNames) {
+        const events = ipcRenderer.eventNames();
+        events.forEach((eventName) => {
+          const count = ipcRenderer.listenerCount(eventName);
+          eventEmitterStats.push({
+            name: `ipcRenderer:${eventName}`,
+            count
+          });
+        });
+      }
+
+      if (process && process.eventNames) {
+        const events = process.eventNames();
+        events.forEach((eventName) => {
+          const count = process.listenerCount(eventName);
+          if (count > 0) {
+            eventEmitterStats.push({
+              name: `process:${eventName}`,
+              count
+            });
+          }
+        });
+      }
+    } catch (error) {
+      console.error("Error getting EventEmitter stats:", error);
+    }
+
+    const totalListeners = Array.from(listenerManager.listeners.values()).reduce((acc, val) => acc + val.length, 0);
+
+    const timestamp = Date.now();
+    listenerManager.historicalCounts.push({
+      timestamp,
+      count: totalListeners,
+      channelCount: listenerManager.listeners.size
+    });
+
+    if (listenerManager.historicalCounts.length > listenerManager.maxHistoryLength) {
+      listenerManager.historicalCounts.shift();
+    }
+
+    let potentialLeaks = [];
+    if (listenerManager.historicalCounts.length >= 3) {
+      const current = listenerManager.historicalCounts[listenerManager.historicalCounts.length - 1];
+      const previous = listenerManager.historicalCounts[listenerManager.historicalCounts.length - 3];
+
+      current.channelBreakdown = { ...channelBreakdown };
+
+      for (const [channel, listeners] of listenerManager.listeners.entries()) {
+        const currentCount = current.channelBreakdown[channel] || listeners.length;
+        const previousCount = previous.channelBreakdown?.[channel] || 0;
+
+        if (previous && currentCount > 3 && listeners.length > 0) {
+          potentialLeaks.push({
+            channel,
+            currentCount,
+            previousCount,
+            increased: currentCount > previousCount
+          });
+        }
+      }
+    }
+
     return {
       totalChannels: listenerManager.listeners.size,
-      totalListeners: Array.from(listenerManager.listeners.values()).reduce((acc, val) => acc + val.length, 0),
+      totalListeners,
       dynamicChannels: Array.from(listenerManager.dynamicChannels),
-      activeMonitoringConnections: Array.from(listenerManager.activeMonitoringConnections)
+      activeMonitoringConnections: Array.from(listenerManager.activeMonitoringConnections),
+      channelBreakdown,
+      eventEmitterStats,
+      history: listenerManager.historicalCounts,
+      potentialLeaks
     };
   },
 
@@ -99,6 +176,25 @@ const listenerManager = {
     listenerManager.listeners.clear();
     listenerManager.dynamicChannels.clear();
     listenerManager.activeMonitoringConnections.clear();
+  },
+
+  fixMaxListenersWarning: () => {
+    try {
+      if (process && process.setMaxListeners) {
+        process.setMaxListeners(50);
+        console.log("Process max listeners increased to 50");
+      }
+
+      if (ipcRenderer && ipcRenderer.setMaxListeners) {
+        ipcRenderer.setMaxListeners(50);
+        console.log("IpcRenderer max listeners increased to 50");
+      }
+
+      return true;
+    } catch (error) {
+      console.error("Error fixing max listeners warning:", error);
+      return false;
+    }
   }
 };
 
@@ -247,7 +343,20 @@ try {
     executeSQLQuery: (config) => safeIpcRenderer.invoke("execute-sql-query", config),
     runArtisanCommand: (config) => safeIpcRenderer.invoke("run-artisan-command", config),
     getSingularForm: (word) => safeIpcRenderer.invoke("get-singular-form", word),
-    triggerGarbageCollection: () => safeIpcRenderer.invoke("trigger-garbage-collection"),
+    triggerGarbageCollection: () => {
+      try {
+        // See if we can directly access the GC
+        if (global.gc) {
+          global.gc();
+          return Promise.resolve({ success: true });
+        }
+        // If not, try to use the main process GC
+        return safeIpcRenderer.invoke("trigger-garbage-collection");
+      } catch (error) {
+        console.error("Error in triggering garbage collection:", error);
+        return Promise.resolve({ success: false, error: error.message });
+      }
+    },
 
     listenCommandOutput: (commandId, callback) => {
       const channel = `command-output-${commandId}`;
@@ -322,6 +431,15 @@ try {
     getListenerStats: () => {
       return listenerManager.getStats();
     },
+    fixMaxListenersWarning: () => {
+      try {
+        const result = listenerManager.fixMaxListenersWarning();
+        return Promise.resolve(result);
+      } catch (error) {
+        console.error("Error in fixMaxListenersWarning:", error);
+        return Promise.resolve(false);
+      }
+    },
     hashPassword: (password) => ipcRenderer.invoke("hashPassword", password),
     updatePassword: (config) => safeIpcRenderer.invoke("update-password", config)
   });
@@ -332,8 +450,31 @@ try {
 
   if (process.env.NODE_ENV === "development") {
     window.__cleanupListeners = () => {
-      listenerManager.cleanup();
-      return "Listeners cleaned up";
+      try {
+        // First cleanup managed listeners
+        listenerManager.cleanup();
+
+        // Try to clean up any database monitoring connections
+        const dbConnectionPattern = /^db-operation-/;
+        const channels = ipcRenderer.eventNames ? ipcRenderer.eventNames() : [];
+
+        for (const channel of channels) {
+          if (typeof channel === "string" && dbConnectionPattern.test(channel)) {
+            console.log(`Cleaning up untracked channel: ${channel}`);
+            ipcRenderer.removeAllListeners(channel);
+          }
+        }
+
+        // Force garbage collection if available
+        if (global.gc) {
+          global.gc();
+        }
+
+        return "Listeners cleaned up successfully";
+      } catch (err) {
+        console.error("Error in cleanup:", err);
+        return "Error cleaning up listeners: " + err.message;
+      }
     };
   }
 } catch (error) {
