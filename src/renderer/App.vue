@@ -15,10 +15,11 @@
 </template>
 
 <script setup>
-import { ref, provide, onMounted } from "vue";
+import { ref, provide, onMounted, defineAsyncComponent } from "vue";
 import AppAlert from "./components/AppAlert.vue";
-import UpdateNotifier from "./components/UpdateNotifier.vue";
 import { useSettingsStore } from "@/store/settings";
+
+const UpdateNotifier = defineAsyncComponent(() => import("./components/UpdateNotifier.vue"));
 
 const alertMessage = ref("");
 const alertType = ref("info");

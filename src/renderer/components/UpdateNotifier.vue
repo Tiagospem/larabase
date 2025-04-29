@@ -149,64 +149,55 @@ const downloadStatusMessage = computed(() => {
 
 onMounted(async () => {
   try {
-    setTimeout(async () => {
-      try {
-        if (window.api && window.api.getCurrentVersion) {
-          currentVersion.value = await window.api.getCurrentVersion();
+    if (window.api && window.api.getCurrentVersion) {
+      currentVersion.value = await window.api.getCurrentVersion();
+    }
+
+    if (window.api && window.api.onUpdateStatus) {
+      removeUpdateListener = window.api.onUpdateStatus((data) => {
+        updateStatus.value = data.status;
+
+        if (data.data) {
+          if (data.status === "update-error" && data.data.message && data.data.message.includes("code signature") && data.data.message.includes("did not pass validation")) {
+            data.data.message = "Code signature validation failed. The update cannot be installed automatically. " + "Please download the latest version manually from GitHub.";
+          }
+
+          updateInfo.value = data.data;
+
+          if (data.status === "update-error") {
+            updateError.value = data.data.message || "Unknown error occurred";
+            downloading.value = false;
+          }
+
+          if (data.status === "download-progress" && data.data && typeof data.data.percent !== "undefined") {
+            const newProgress = Number(data.data.percent);
+            if (!isNaN(newProgress)) {
+              progress.value = newProgress;
+            }
+          }
         }
 
-        if (window.api && window.api.onUpdateStatus) {
-          removeUpdateListener = window.api.onUpdateStatus((data) => {
-            updateStatus.value = data.status;
-
-            if (data.data) {
-              if (data.status === "update-error" && data.data.message && data.data.message.includes("code signature") && data.data.message.includes("did not pass validation")) {
-                data.data.message = "Code signature validation failed. The update cannot be installed automatically. " + "Please download the latest version manually from GitHub.";
-              }
-
-              updateInfo.value = data.data;
-
-              if (data.status === "update-error") {
-                updateError.value = data.data.message || "Unknown error occurred";
-                downloading.value = false;
-              }
-
-              if (data.status === "download-progress" && data.data && typeof data.data.percent !== "undefined") {
-                const newProgress = Number(data.data.percent);
-                if (!isNaN(newProgress)) {
-                  progress.value = newProgress;
-                }
-              }
-            }
-
-            if (data.status === "update-available") {
-              updateAvailable.value = true;
-              updateError.value = "";
-              if (modal.value) {
-                modal.value.showModal();
-              }
-            } else if (data.status === "update-not-available") {
-              updateAvailable.value = false;
-            } else if (data.status === "update-downloaded") {
-              updateAvailable.value = true;
-              updateComplete.value = true;
-              downloading.value = false;
-            } else if (data.status === "update-error") {
-              updateAvailable.value = true;
-              updateError.value = data.data?.message || "Error updating application";
-              downloading.value = false;
-            }
-          });
-
-          setupListeners();
-
-          await checkForUpdates();
+        if (data.status === "update-available") {
+          updateAvailable.value = true;
+          updateError.value = "";
+          if (modal.value) {
+            modal.value.showModal();
+          }
+        } else if (data.status === "update-not-available") {
+          updateAvailable.value = false;
+        } else if (data.status === "update-downloaded") {
+          updateAvailable.value = true;
+          updateComplete.value = true;
+          downloading.value = false;
+        } else if (data.status === "update-error") {
+          updateAvailable.value = true;
+          updateError.value = data.data?.message || "Error updating application";
+          downloading.value = false;
         }
-      } catch (innerError) {
-        console.error("Error initializing update checker:", innerError);
-        updateError.value = "Failed to initialize update checker: " + innerError.message;
-      }
-    }, 2000);
+      });
+
+      setupListeners();
+    }
   } catch (error) {
     console.error("Error setting up update checker:", error);
     updateError.value = "Failed to setup update checker: " + error.message;

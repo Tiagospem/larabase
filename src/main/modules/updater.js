@@ -4,7 +4,6 @@ const fs = require("fs");
 const { download } = require("electron-dl");
 
 const CONFIG = {
-  updateCheckIntervalMs: 3600000,
   initialCheckDelayMs: 30000,
   quitDelayMs: 1000,
   debugMode: false
@@ -13,7 +12,6 @@ const CONFIG = {
 const isDev = process.env.NODE_ENV === "development";
 
 let mainWindow;
-let updateCheckInterval;
 let globalUpdateInfo;
 
 function setupAutoUpdater() {
@@ -28,50 +26,15 @@ function setupAutoUpdater() {
   autoUpdater.requestHeaders = { "Cache-Control": "no-cache" };
 }
 
-function setupAutoUpdaterEvents() {
-  if (isDev) return;
+// Setup event handlers only when needed to reduce idle listeners
+function setupUpdateAvailableHandler(info) {
+  globalUpdateInfo = info;
 
-  autoUpdater.on("checking-for-update", () => {
-    sendStatusToWindow("checking-for-update");
-  });
-
-  autoUpdater.on("update-available", (info) => {
-    handleUpdateAvailable(info);
-  });
-
-  autoUpdater.on("update-not-available", () => {
-    sendStatusToWindow("update-not-available");
-  });
-
-  autoUpdater.on("error", (err) => {
-    console.error("Update error:", err);
-    sendStatusToWindow("update-error", err);
-  });
-
-  autoUpdater.on("download-progress", (progressObj) => {
-    const percent = progressObj.percent || 0;
-
-    const normalizedPercent = normalizePercentage(percent);
-    sendStatusToWindow("download-progress", { percent: normalizedPercent });
-
-    if (mainWindow) {
-      mainWindow.webContents.send("autoUpdater:download-progress", { percent: normalizedPercent });
-    }
-  });
-
-  autoUpdater.on("update-downloaded", (info) => {
-    handleUpdateDownloaded(info);
-  });
-}
-
-function handleUpdateAvailable(updateInfo) {
   setTimeout(async () => {
-    globalUpdateInfo = updateInfo;
-
     if (process.platform === "darwin") {
-      sendStatusToWindow("update-available", updateInfo);
+      sendStatusToWindow("update-available", info);
       if (mainWindow) {
-        mainWindow.webContents.send("update-available", updateInfo);
+        mainWindow.webContents.send("update-available", info);
       }
     } else {
       const result = await dialog.showMessageBox({
@@ -83,7 +46,7 @@ function handleUpdateAvailable(updateInfo) {
 
       if (result.response === 0) {
         if (mainWindow) {
-          mainWindow.webContents.send("update-info", updateInfo);
+          mainWindow.webContents.send("update-info", info);
         }
         await autoUpdater.downloadUpdate();
       }
@@ -93,6 +56,8 @@ function handleUpdateAvailable(updateInfo) {
 
 function handleUpdateDownloaded() {
   setTimeout(async () => {
+    if (!mainWindow) return;
+
     mainWindow.show();
 
     await dialog.showMessageBox(
@@ -184,23 +149,54 @@ function sendStatusToWindow(status, data = null) {
 }
 
 function setupAutoUpdateCheck() {
-  const { updateCheckIntervalMs, initialCheckDelayMs } = CONFIG;
+  if (isDev) return;
 
+  const { initialCheckDelayMs } = CONFIG;
+
+  // Set up one-time event handlers
+  autoUpdater.once("update-available", setupUpdateAvailableHandler);
+  autoUpdater.once("update-downloaded", handleUpdateDownloaded);
+
+  // Set up other event handlers only for the initial check
+  autoUpdater.once("checking-for-update", () => {
+    sendStatusToWindow("checking-for-update");
+  });
+
+  autoUpdater.once("update-not-available", () => {
+    sendStatusToWindow("update-not-available");
+  });
+
+  autoUpdater.once("error", (err) => {
+    console.error("Update error:", err);
+    sendStatusToWindow("update-error", err);
+  });
+
+  // Setup handler for download progress only if needed
+  const progressHandler = (progressObj) => {
+    const percent = progressObj.percent || 0;
+    const normalizedPercent = normalizePercentage(percent);
+
+    sendStatusToWindow("download-progress", { percent: normalizedPercent });
+
+    if (mainWindow) {
+      mainWindow.webContents.send("autoUpdater:download-progress", { percent: normalizedPercent });
+    }
+  };
+
+  autoUpdater.on("download-progress", progressHandler);
+
+  // Initial check
   setTimeout(() => {
     autoUpdater.checkForUpdates().catch(() => {});
   }, initialCheckDelayMs);
-
-  updateCheckInterval = setInterval(() => {
-    autoUpdater.checkForUpdates().catch(() => {});
-  }, updateCheckIntervalMs);
 }
 
 function registerUpdaterHandlers(window) {
   mainWindow = window;
 
   setupAutoUpdater();
-  setupAutoUpdaterEvents();
 
+  // Only register IPC handlers, don't set up event handlers yet to reduce listeners
   ipcMain.on("main:download-update", () => {
     handleDownloadUpdate();
   });
@@ -265,6 +261,9 @@ function registerUpdaterHandlers(window) {
       if (isDev) {
         return { updateAvailable: false };
       }
+
+      // Set up event handlers for manual check
+      setupAutoUpdateCheck();
       return await autoUpdater.checkForUpdates();
     } catch (error) {
       return { error: error.message };
@@ -304,9 +303,9 @@ function registerUpdaterHandlers(window) {
 }
 
 function cleanup() {
-  if (updateCheckInterval) {
-    clearInterval(updateCheckInterval);
-    updateCheckInterval = null;
+  // Clear any remaining event listeners
+  if (!isDev) {
+    autoUpdater.removeAllListeners();
   }
 }
 

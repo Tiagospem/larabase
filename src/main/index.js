@@ -12,6 +12,7 @@ const { registerSettingsHandlers } = require("./modules/settings");
 const { registerTabsHandlers } = require("./modules/tabs");
 const { registerMonitoringHandlers, clearMonitoringConnections } = require("./modules/monitoring");
 const { initializeMemoryOptimizer, cleanupMemoryOptimizer } = require("./modules/memory-optimizer");
+const { setupAppMenu } = require("./modules/menu");
 
 require("./handlers");
 
@@ -67,6 +68,8 @@ function enhancePath() {
 
 app.whenReady().then(async () => {
   enhancePath();
+  
+  setupAppMenu();
 
   registerConnectionHandlers(store);
   registerTableHandlers(store, dbMonitoringConnections);
