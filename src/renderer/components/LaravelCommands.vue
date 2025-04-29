@@ -4,7 +4,7 @@
     title="Laravel Commands"
     @close="close"
   >
-    <div class="space-y-4 flex-1 overflow-hidden flex flex-col">
+    <div class="space-y-4 flex-1 flex flex-col">
       <div class="flex gap-2 items-center">
         <fieldset class="fieldset flex-1">
           <div class="relative">
@@ -40,96 +40,132 @@
         </button>
       </div>
 
-      <div class="card bg-base-100 shadow-md flex-1 flex flex-col overflow-hidden">
-        <div class="card-body flex-1 flex flex-col overflow-hidden">
-          <h3 class="card-title text-sm">Available Commands</h3>
-          <div
-            v-if="isLoading"
-            class="flex justify-center py-4"
-          >
-            <span class="loading loading-spinner loading-md" />
-          </div>
+      <div class="flex-1 flex flex-col">
+        <div class="text-sm font-medium mb-2">Available Commands</div>
 
-          <div
-            v-else-if="filteredCommands.length === 0"
-            class="text-center py-6 flex-1 flex flex-col justify-center"
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke-width="1.5"
-              stroke="currentColor"
-              class="w-10 h-10 mx-auto mb-2"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                d="M6.75 7.5l3 2.25-3 2.25m4.5 0h3m-9 8.25h13.5A2.25 2.25 0 0021 18V6a2.25 2.25 0 00-2.25-2.25H5.25A2.25 2.25 0 003 6v12a2.25 2.25 0 002.25 2.25z"
-              />
-            </svg>
-            <p v-if="searchQuery">No commands match your search: "{{ searchQuery }}"</p>
-            <p v-else>No Laravel commands found</p>
-            <button
-              v-if="!projectPath"
-              class="btn btn-sm btn-primary mt-4 mx-auto"
-              @click="selectProjectPath"
-            >
-              Select Laravel Project
-            </button>
-          </div>
+        <div
+          v-if="isLoading"
+          class="flex justify-center py-4 items-center flex-1"
+        >
+          <span class="loading loading-spinner loading-md" />
+        </div>
 
-          <div
-            v-else
-            class="overflow-auto max-h-[300px] flex-1"
+        <div
+          v-else-if="filteredCommands.length === 0"
+          class="text-center py-6 flex-1 flex flex-col justify-center"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke-width="1.5"
+            stroke="currentColor"
+            class="w-10 h-10 mx-auto mb-2"
           >
-            <table class="table table-compact w-full">
-              <tbody>
-                <tr
-                  v-for="command in filteredCommands"
-                  :key="command.name"
-                >
-                  <td class="font-mono text-xs">
-                    <div class="text-xs text-primary font-semibold flex items-center gap-1">
-                      <span>{{ getFilename(command.relativePath) }}</span>
-                      <button
-                        class="btn btn-xs btn-ghost btn-square p-0"
-                        title="Open in editor"
-                        @click.stop="openFileInEditor(command.path)"
-                      >
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          stroke-width="1.5"
-                          stroke="currentColor"
-                          class="size-3"
-                        >
-                          <path
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            d="M13.5 6H5.25A2.25 2.25 0 0 0 3 8.25v10.5A2.25 2.25 0 0 0 5.25 21h10.5A2.25 2.25 0 0 0 18 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25"
-                          />
-                        </svg>
-                      </button>
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              d="M6.75 7.5l3 2.25-3 2.25m4.5 0h3m-9 8.25h13.5A2.25 2.25 0 0021 18V6a2.25 2.25 0 00-2.25-2.25H5.25A2.25 2.25 0 003 6v12a2.25 2.25 0 002.25 2.25z"
+            />
+          </svg>
+          <p v-if="searchQuery">No commands match your search: "{{ searchQuery }}"</p>
+          <p v-else>No Laravel commands found</p>
+          <button
+            v-if="!projectPath"
+            class="btn btn-sm btn-primary mt-4 mx-auto"
+            @click="selectProjectPath"
+          >
+            Select Laravel Project
+          </button>
+        </div>
+
+        <div
+          v-else
+          class="bg-base-100 rounded-md flex-1 mb-2"
+        >
+          <ul>
+            <li
+              v-for="command in filteredCommands"
+              :key="command.name"
+              class="border-b border-base-200 last:border-0"
+            >
+              <div class="p-3 hover:bg-base-200">
+                <div class="flex gap-2">
+                  <div class="flex-1 min-w-0">
+                    <div class="flex flex-col gap-1 mb-1">
+                      <div class="text-primary font-semibold text-sm truncate">
+                        {{ command.name }}
+                      </div>
+                      <div class="text-xs rounded-sm whitespace-nowrap">
+                        {{ getFilename(command.relativePath) || "Built-in" }}
+                      </div>
                     </div>
+
+                    <div class="font-mono text-xs my-1 truncate">
+                      {{ command.signature }}
+                    </div>
+
                     <div
                       v-if="command.description"
-                      class="text-xs"
+                      class="text-xs text-base-content mt-1"
                     >
                       {{ command.description }}
                     </div>
-                  </td>
-                  <td class="font-mono text-xs">
-                    {{ command.signature }}
-                  </td>
-                  <td class="text-right">
-                    <div class="flex gap-1 justify-end">
+                  </div>
+
+                  <div class="flex gap-1 shrink-0">
+                    <button
+                      v-if="command.path"
+                      class="btn btn-xs btn-ghost"
+                      title="Open in editor"
+                      @click.stop="openFileInEditor(command.path)"
+                    >
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke-width="1.5"
+                        stroke="currentColor"
+                        class="w-4 h-4"
+                      >
+                        <path
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          d="M13.5 6H5.25A2.25 2.25 0 0 0 3 8.25v10.5A2.25 2.25 0 0 0 5.25 21h10.5A2.25 2.25 0 0 0 18 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25"
+                        />
+                      </svg>
+                    </button>
+
+                    <button
+                      class="btn btn-xs btn-ghost"
+                      title="View command details"
+                      @click="previewCommand(command)"
+                    >
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke-width="1.5"
+                        stroke="currentColor"
+                        class="w-4 h-4"
+                      >
+                        <path
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z"
+                        />
+                        <path
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"
+                        />
+                      </svg>
+                    </button>
+
+                    <div class="dropdown dropdown-end">
                       <button
-                        class="btn btn-xs"
-                        :disabled="isLoading"
-                        @click="previewCommand(command)"
-                        title="View command details"
+                        tabindex="0"
+                        class="btn btn-xs btn-primary"
                       >
                         <svg
                           xmlns="http://www.w3.org/2000/svg"
@@ -142,70 +178,46 @@
                           <path
                             stroke-linecap="round"
                             stroke-linejoin="round"
-                            d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z"
-                          />
-                          <path
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"
+                            d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.347a1.125 1.125 0 0 1 0 1.972l-11.54 6.347a1.125 1.125 0 0 1-1.667-.986V5.653Z"
                           />
                         </svg>
                       </button>
-                      <div class="dropdown dropdown-end">
-                        <label
-                          tabindex="0"
-                          class="btn btn-xs btn-primary"
-                        >
-                          <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            stroke-width="1.5"
-                            stroke="currentColor"
-                            class="w-4 h-4"
+                      <ul
+                        tabindex="0"
+                        class="dropdown-content z-[100] menu shadow-sm bg-base-300 rounded-box w-48 mt-1"
+                      >
+                        <li>
+                          <button
+                            @click="!isLoading && executeCommand(command)"
+                            :disabled="isLoading"
+                            class="text-sm"
                           >
-                            <path
-                              stroke-linecap="round"
-                              stroke-linejoin="round"
-                              d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.347a1.125 1.125 0 0 1 0 1.972l-11.54 6.347a1.125 1.125 0 0 1-1.667-.986V5.653Z"
-                            />
-                          </svg>
-                        </label>
-                        <ul
-                          tabindex="0"
-                          class="dropdown-content z-1 menu p-2 shadow-sm bg-base-300 rounded-box w-52 mt-1"
-                        >
-                          <li>
-                            <a
-                              @click="!isLoading && executeCommand(command)"
-                              :class="{ 'opacity-50 cursor-not-allowed': isLoading }"
-                            >
-                              Run Now
-                            </a>
-                          </li>
-                          <li>
-                            <a
-                              @click="!isLoading && showRunWithFlagsModal(command)"
-                              :class="{ 'opacity-50 cursor-not-allowed': isLoading }"
-                            >
-                              Run with Flags
-                            </a>
-                          </li>
-                        </ul>
-                      </div>
+                            Run Now
+                          </button>
+                        </li>
+                        <li>
+                          <button
+                            @click="!isLoading && showRunWithFlagsModal(command)"
+                            :disabled="isLoading"
+                            class="text-sm"
+                          >
+                            Run with Flags
+                          </button>
+                        </li>
+                      </ul>
                     </div>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
+                  </div>
+                </div>
+              </div>
+            </li>
+          </ul>
+        </div>
 
-          <div
-            v-if="!isLoading && filteredCommands.length > 0"
-            class="text-xs mt-2"
-          >
-            Showing {{ filteredCommands.length }} of {{ commands.length }} commands
-          </div>
+        <div
+          v-if="!isLoading && filteredCommands.length > 0"
+          class="text-xs text-base-content"
+        >
+          Showing {{ filteredCommands.length }} of {{ commands.length }} commands
         </div>
       </div>
 

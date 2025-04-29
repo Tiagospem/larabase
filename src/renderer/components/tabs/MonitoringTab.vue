@@ -26,50 +26,6 @@
             <option value="12">Last 12 hours</option>
             <option value="24">Last 24 hours</option>
           </select>
-
-          <button
-            class="btn btn-sm btn-primary"
-            @click="loadData"
-            :disabled="loading"
-          >
-            <svg
-              v-if="loading"
-              class="animate-spin -ml-1 mr-2 h-4 w-4 text-white"
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 24 24"
-            >
-              <circle
-                class="opacity-25"
-                cx="12"
-                cy="12"
-                r="10"
-                stroke="currentColor"
-                stroke-width="4"
-              ></circle>
-              <path
-                class="opacity-75"
-                fill="currentColor"
-                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-              ></path>
-            </svg>
-            <svg
-              v-else
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke-width="1.5"
-              stroke="currentColor"
-              class="w-4 h-4 mr-1"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99"
-              />
-            </svg>
-            Refresh
-          </button>
         </div>
       </div>
       <div
@@ -119,20 +75,26 @@
       </div>
 
       <div class="flex-1 grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div class="bg-base-100 p-4 shadow rounded-lg overflow-auto">
-          <h3 class="text-lg font-semibold mb-3">Active Batches</h3>
+        <div class="bg-base-100 p-4 shadow rounded-lg overflow-hidden">
+          <div class="flex justify-between items-center mb-3">
+            <h3 class="text-lg font-semibold">Active Batches</h3>
+            <div class="text-xs">
+              Showing {{ visibleActiveBatches.length }} of {{ allActiveBatches.length }}
+            </div>
+          </div>
+          
           <div
-            v-if="activeBatches.length === 0"
+            v-if="allActiveBatches.length === 0"
             class="text-center p-4 text-opacity-60"
           >
             No active batches found
           </div>
           <div
             v-else
-            class="space-y-3"
+            class="space-y-3 overflow-auto max-h-[400px]"
           >
             <div
-              v-for="batch in activeBatches"
+              v-for="batch in visibleActiveBatches"
               :key="batch.id"
               class="card bg-base-200"
             >
@@ -146,39 +108,53 @@
                   <div class="mt-1"><span class="font-semibold">Started:</span> {{ formatDate(batch.created_at) }}</div>
                   <div class="mt-1 flex items-center">
                     <span class="font-semibold mr-2">Progress:</span>
-                    <div class="w-56">
-                      <progress
+                    <div class="w-56 relative overflow-hidden bg-base-200 rounded-full h-2">
+                      <div
                         v-if="Number(batch.total_jobs) !== 1"
-                        class="progress progress-primary w-56"
-                        :value="Number(batch.processed_jobs || 0)"
-                        :max="Number(batch.total_jobs || 1)"
-                      ></progress>
-                      <div v-else>
-                        <progress class="progress w-full"></progress>
-                      </div>
+                        class="bg-primary h-2 rounded-full"
+                        :style="{width: `${(Number(batch.processed_jobs || 0) / Number(batch.total_jobs || 1)) * 100}%`}"
+                      ></div>
+                      <div 
+                        v-else 
+                        class="bg-primary h-2 rounded-full w-1/3 indeterminate-progress"
+                      ></div>
                     </div>
                     <span class="ml-2">{{ Number(batch.processed_jobs || 0) }}/{{ Number(batch.total_jobs || 1) }}</span>
                   </div>
                 </div>
               </div>
             </div>
+            
+            <button 
+              v-if="allActiveBatches.length > visibleActiveBatches.length" 
+              class="btn btn-sm btn-outline w-full"
+              @click="showMoreActiveBatches"
+            >
+              Show More ({{ allActiveBatches.length - visibleActiveBatches.length }} remaining)
+            </button>
           </div>
         </div>
 
-        <div class="bg-base-100 p-4 shadow rounded-lg overflow-auto">
-          <h3 class="text-lg font-semibold mb-3">Recent Batches</h3>
+        <div class="bg-base-100 p-4 shadow rounded-lg overflow-hidden">
+          <div class="flex justify-between items-center mb-3">
+            <h3 class="text-lg font-semibold">Recent Batches</h3>
+            <div class="text-xs">
+              Showing {{ visibleRecentBatches.length }} of {{ allRecentBatches.length }}
+            </div>
+          </div>
+          
           <div
-            v-if="recentBatches.length === 0"
+            v-if="allRecentBatches.length === 0"
             class="text-center p-4 text-opacity-60"
           >
             No recent batches found
           </div>
           <div
             v-else
-            class="space-y-3"
+            class="space-y-3 overflow-auto max-h-[400px]"
           >
             <div
-              v-for="batch in recentBatches"
+              v-for="batch in visibleRecentBatches"
               :key="batch.id"
               class="card"
               :class="{ 'bg-base-200': !batch.failed_jobs, 'bg-error bg-opacity-10': batch.failed_jobs > 0 }"
@@ -204,11 +180,21 @@
                     class="mt-2"
                   >
                     <div class="font-semibold text-error">Failure Information:</div>
-                    <div class="mt-1 whitespace-pre-wrap font-mono text-xs bg-base-300 p-2 rounded">{{ formatExceptions(batch.failures) }}</div>
+                    <div class="mt-1 whitespace-pre-wrap font-mono text-xs bg-base-300 p-2 rounded max-h-24 overflow-auto">
+                      {{ formatExceptions(batch.failures) }}
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
+            
+            <button 
+              v-if="allRecentBatches.length > visibleRecentBatches.length" 
+              class="btn btn-sm btn-outline w-full"
+              @click="showMoreRecentBatches"
+            >
+              Show More ({{ allRecentBatches.length - visibleRecentBatches.length }} remaining)
+            </button>
           </div>
         </div>
       </div>
@@ -217,7 +203,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onBeforeUnmount, watch } from "vue";
+import { ref, onMounted, onBeforeUnmount, watch, computed } from "vue";
 import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
 import duration from "dayjs/plugin/duration";
@@ -239,8 +225,10 @@ const props = defineProps({
 const emit = defineEmits(["load"]);
 
 const loading = ref(false);
-const activeBatches = ref([]);
-const recentBatches = ref([]);
+const allActiveBatches = ref([]);
+const allRecentBatches = ref([]);
+const activePageSize = ref(5);
+const recentPageSize = ref(5);
 const apiError = ref(false);
 const apiErrorMessage = ref("");
 const stats = ref({
@@ -254,6 +242,22 @@ const autoRefresh = ref(true);
 const refreshInterval = ref(null);
 const isInitialLoad = ref(true);
 const lastLoadTime = ref(0);
+
+const visibleActiveBatches = computed(() => {
+  return allActiveBatches.value.slice(0, activePageSize.value);
+});
+
+const visibleRecentBatches = computed(() => {
+  return allRecentBatches.value.slice(0, recentPageSize.value);
+});
+
+function showMoreActiveBatches() {
+  activePageSize.value += 5;
+}
+
+function showMoreRecentBatches() {
+  recentPageSize.value += 5;
+}
 
 async function loadData() {
   const now = Date.now();
@@ -303,15 +307,18 @@ async function loadData() {
 
     const allBatches = result.results || [];
 
-    activeBatches.value = allBatches.filter((b) => !b.finished_at);
-    recentBatches.value = allBatches
+    // Reset page sizes on data refresh
+    activePageSize.value = 5;
+    recentPageSize.value = 5;
+    
+    allActiveBatches.value = allBatches.filter((b) => !b.finished_at);
+    allRecentBatches.value = allBatches
       .filter((b) => b.finished_at)
-      .sort((a, b) => new Date(b.finished_at) - new Date(a.finished_at))
-      .slice(0, 10);
+      .sort((a, b) => new Date(b.finished_at) - new Date(a.finished_at));
 
     stats.value = {
       totalBatches: allBatches.length,
-      runningBatches: activeBatches.value.length,
+      runningBatches: allActiveBatches.value.length,
       completedBatches: allBatches.filter((b) => b.finished_at && b.failed_jobs === 0).length,
       failedBatches: allBatches.filter((b) => b.failed_jobs > 0).length
     };
@@ -321,8 +328,8 @@ async function loadData() {
     console.error("Error loading batch data:", error);
     emit("load", { success: false, error: error.message });
 
-    activeBatches.value = [];
-    recentBatches.value = [];
+    allActiveBatches.value = [];
+    allRecentBatches.value = [];
     stats.value = {
       totalBatches: 0,
       runningBatches: 0,
@@ -413,3 +420,16 @@ onBeforeUnmount(() => {
   loading.value = false;
 });
 </script>
+
+<style>
+.indeterminate-progress {
+  animation: progress-indeterminate 1.5s ease-in-out infinite;
+  transform-origin: 0% 50%;
+}
+
+@keyframes progress-indeterminate {
+  0% { transform: translateX(-100%); }
+  50% { transform: translateX(100%); }
+  100% { transform: translateX(300%); }
+}
+</style>
