@@ -110,14 +110,7 @@
                     <span class="font-semibold mr-2">Progress:</span>
                     <div class="w-56 relative overflow-hidden bg-base-200 rounded-full h-2">
                       <div
-                        v-if="Number(batch.total_jobs) !== 1"
-                        class="bg-primary h-2 rounded-full"
-                        :style="{width: `${(Number(batch.processed_jobs || 0) / Number(batch.total_jobs || 1)) * 100}%`}"
-                      ></div>
-                      <div 
-                        v-else 
-                        class="bg-primary h-2 rounded-full w-1/3 indeterminate-progress"
-                      ></div>
+                        class="bg-primary h-2 rounded-full transition-all indeterminate-progress"></div>
                     </div>
                     <span class="ml-2">{{ Number(batch.processed_jobs || 0) }}/{{ Number(batch.total_jobs || 1) }}</span>
                   </div>
