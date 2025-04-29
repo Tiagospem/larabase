@@ -3,9 +3,11 @@ const bcrypt = require("bcryptjs");
 const mysql = require("mysql2/promise");
 
 function setupHandlers() {
-  ipcMain.handle("hashPassword", async (_, password) => {
+  ipcMain.handle("hashPassword", async (_, password, rounds = 10) => {
     try {
-      const salt = await bcrypt.genSalt(10);
+      rounds = Math.max(4, Math.min(15, rounds));
+      
+      const salt = await bcrypt.genSalt(rounds);
       const hash = await bcrypt.hash(password, salt);
 
       return {

@@ -440,7 +440,7 @@ try {
         return Promise.resolve(false);
       }
     },
-    hashPassword: (password) => ipcRenderer.invoke("hashPassword", password),
+    hashPassword: (password, rounds = 10) => ipcRenderer.invoke("hashPassword", password, rounds),
     updatePassword: (config) => safeIpcRenderer.invoke("update-password", config)
   });
 

@@ -50,6 +50,25 @@
           <span class="label-text">Show password</span>
         </label>
       </fieldset>
+
+      <fieldset class="fieldset w-full">
+        <label class="label">
+          <span class="label-text">Encryption Rounds</span>
+        </label>
+        <div class="flex">
+          <input
+            v-model.number="rounds"
+            type="number"
+            min="4"
+            max="15"
+            class="input input-bordered w-full"
+            :disabled="isLoading"
+          />
+        </div>
+        <label class="label">
+          <span class="label-text-alt">Higher rounds (10-12) are more secure but slower. Lower rounds (4-8) are faster but less secure.</span>
+        </label>
+      </fieldset>
     </div>
   </Modal>
 </template>
@@ -86,6 +105,7 @@ const newPassword = ref("");
 const passwordError = ref("");
 const showPassword = ref(false);
 const isLoading = ref(false);
+const rounds = ref(10);
 
 watch(newPassword, () => {
   passwordError.value = "";
@@ -123,7 +143,7 @@ async function updatePassword() {
   try {
     isLoading.value = true;
 
-    const result = await window.api.hashPassword(newPassword.value);
+    const result = await window.api.hashPassword(newPassword.value, rounds.value);
 
     if (!result.success) {
       throw new Error(result.message || "Failed to hash password");
