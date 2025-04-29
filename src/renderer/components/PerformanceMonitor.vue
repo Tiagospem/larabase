@@ -236,12 +236,6 @@
           Cleanup
         </button>
         <button
-          @click="forceGc"
-          class="btn btn-xs btn-secondary flex-1"
-        >
-          Force GC
-        </button>
-        <button
           @click="fixListenerLimits"
           class="btn btn-xs btn-error flex-1"
           title="Fix MaxListenersExceededWarning by increasing the listener limit"
@@ -467,12 +461,6 @@
         Cleanup
       </button>
       <button
-        @click="forceGc"
-        class="btn btn-xs btn-secondary flex-1"
-      >
-        Force GC
-      </button>
-      <button
         @click="fixListenerLimits"
         class="btn btn-xs btn-error flex-1"
         title="Fix MaxListenersExceededWarning by increasing the listener limit"
@@ -564,46 +552,6 @@ function cleanupListeners() {
       });
     }
     refresh();
-  }
-}
-
-function forceGc() {
-  if (window.api && window.api.triggerGarbageCollection) {
-    try {
-      const result = window.api.triggerGarbageCollection();
-      if (result && typeof result.then === "function") {
-        // It's a Promise
-        result
-          .then((response) => {
-            if (response && response.success) {
-              console.log("Garbage collection triggered successfully");
-            } else {
-              console.warn("Garbage collection failed:", response ? response.error : "Unknown error");
-            }
-            setTimeout(refresh, 500);
-          })
-          .catch((error) => {
-            console.error("Failed to trigger garbage collection:", error);
-          });
-      } else {
-        console.log("Garbage collection request sent");
-        setTimeout(refresh, 500);
-      }
-    } catch (error) {
-      console.error("Failed to force garbage collection:", error);
-    }
-  } else if (window.gc) {
-    try {
-      window.gc();
-      console.log("Garbage collection requested");
-
-      setTimeout(refresh, 500);
-    } catch (error) {
-      console.error("Failed to force garbage collection:", error);
-    }
-  } else {
-    console.warn("Garbage collection not available");
-    alert("Garbage collection is not available. Try restarting the app with the --expose-gc flag.");
   }
 }
 

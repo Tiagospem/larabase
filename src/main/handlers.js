@@ -6,7 +6,7 @@ function setupHandlers() {
   ipcMain.handle("hashPassword", async (_, password, rounds = 10) => {
     try {
       rounds = Math.max(4, Math.min(15, rounds));
-      
+
       const salt = await bcrypt.genSalt(rounds);
       const hash = await bcrypt.hash(password, salt);
 
