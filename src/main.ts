@@ -9,22 +9,22 @@ import SQLEditorView from '@/views/SQLEditorView.vue';
 import './style.css';
 
 const routes = [
-  { path: '/', component: Home },
-  { path: '/database/:id', component: DatabaseView },
-  { path: '/sql-editor/:id', component: SQLEditorView },
+	{ path: '/', component: Home },
+	{ path: '/database/:id', component: DatabaseView },
+	{ path: '/sql-editor/:id', component: SQLEditorView }
 ];
 
 const router = createRouter({
-  history: createWebHashHistory(),
-  routes,
+	history: createWebHashHistory(),
+	routes
 });
 
 const pinia = createPinia();
 
 createApp(App)
-  .use(router)
-  .use(pinia)
-  .mount('#app')
-  .$nextTick(() => {
-    postMessage({ payload: 'removeLoading' }, '*');
-  });
+	.use(router)
+	.use(pinia)
+	.mount('#app')
+	.$nextTick(() => {
+		postMessage({ payload: 'removeLoading' }, '*');
+	});

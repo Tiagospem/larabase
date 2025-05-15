@@ -1,174 +1,179 @@
 <script setup lang="ts">
-  import { ref, watch, onMounted, computed } from 'vue';
-  import hls from 'highlight.js/lib/core';
-  import php from 'highlight.js/lib/languages/php';
-  import json from 'highlight.js/lib/languages/json';
-  import 'highlight.js/styles/atom-one-dark.css';
+import { ref, watch, onMounted, computed } from 'vue';
+import hls from 'highlight.js/lib/core';
+import php from 'highlight.js/lib/languages/php';
+import json from 'highlight.js/lib/languages/json';
+import 'highlight.js/styles/atom-one-dark.css';
 
-  hls.registerLanguage('php', php);
-  hls.registerLanguage('json', json);
+hls.registerLanguage('php', php);
+hls.registerLanguage('json', json);
 
-  const props = defineProps({
-    code: {
-      type: String,
-      required: true,
-    },
-    language: {
-      type: String,
-      default: 'php',
-      validator: (value: string) => ['php', 'json'].includes(value),
-    },
-    height: {
-      type: String,
-      default: '64',
-    },
-  });
+const props = defineProps({
+	code: {
+		type: String,
+		required: true
+	},
+	language: {
+		type: String,
+		default: 'php',
+		validator: (value: string) => ['php', 'json'].includes(value)
+	},
+	height: {
+		type: String,
+		default: '64'
+	}
+});
 
-  const highlightedCode = ref('');
+const highlightedCode = ref('');
 
-  const heightStyle = computed(() => {
-    if (
-      props.height.endsWith('rem') ||
-      props.height.endsWith('px') ||
-      props.height.endsWith('%') ||
-      props.height.endsWith('vh')
-    ) {
-      return props.height;
-    }
-    return props.height + 'rem';
-  });
+const heightStyle = computed(() => {
+	if (
+		props.height.endsWith('rem') ||
+		props.height.endsWith('px') ||
+		props.height.endsWith('%') ||
+		props.height.endsWith('vh')
+	) {
+		return props.height;
+	}
+	return props.height + 'rem';
+});
 
-  function highlightCode() {
-    try {
-      if (props.code) {
-        const highlighted = hls.highlight(props.code, {
-          language: props.language,
-          ignoreIllegals: true,
-        }).value;
+function highlightCode() {
+	try {
+		if (props.code) {
+			const highlighted = hls.highlight(props.code, {
+				language: props.language,
+				ignoreIllegals: true
+			}).value;
 
-        const lines = highlighted.split('\n');
-        let processedCode = '';
+			const lines = highlighted.split('\n');
+			let processedCode = '';
 
-        lines.forEach((line, index) => {
-          const lineNumber = index + 1;
-          const lineNumberPadded = String(lineNumber).padStart(3, ' ');
-          processedCode += `<span class="line-number">${lineNumberPadded}</span>${line}\n`;
-        });
+			lines.forEach((line, index) => {
+				const lineNumber = index + 1;
+				const lineNumberPadded = String(lineNumber).padStart(3, ' ');
+				processedCode += `<span class="line-number">${lineNumberPadded}</span>${line}\n`;
+			});
 
-        highlightedCode.value = processedCode;
-      } else {
-        highlightedCode.value = '';
-      }
-    } catch (error) {
-      console.error('Error highlighting code:', error);
+			highlightedCode.value = processedCode;
+		} else {
+			highlightedCode.value = '';
+		}
+	} catch (error) {
+		console.error('Error highlighting code:', error);
 
-      if (props.code) {
-        const lines = props.code.split('\n');
-        let processedCode = '';
+		if (props.code) {
+			const lines = props.code.split('\n');
+			let processedCode = '';
 
-        lines.forEach((line, index) => {
-          const lineNumber = index + 1;
-          const lineNumberPadded = String(lineNumber).padStart(3, ' ');
+			lines.forEach((line, index) => {
+				const lineNumber = index + 1;
+				const lineNumberPadded = String(lineNumber).padStart(3, ' ');
 
-          const escapedLine = line
-            .replace(/&/g, '&amp;')
-            .replace(/</g, '&lt;')
-            .replace(/>/g, '&gt;');
-          processedCode += `<span class="line-number">${lineNumberPadded}</span>${escapedLine}\n`;
-        });
+				const escapedLine = line
+					.replace(/&/g, '&amp;')
+					.replace(/</g, '&lt;')
+					.replace(/>/g, '&gt;');
+				processedCode += `<span class="line-number">${lineNumberPadded}</span>${escapedLine}\n`;
+			});
 
-        highlightedCode.value = processedCode;
-      } else {
-        highlightedCode.value = '';
-      }
-    }
-  }
+			highlightedCode.value = processedCode;
+		} else {
+			highlightedCode.value = '';
+		}
+	}
+}
 
-  onMounted(() => {
-    highlightCode();
-  });
+onMounted(() => {
+	highlightCode();
+});
 
-  watch(() => props.code, highlightCode, { immediate: true });
+watch(() => props.code, highlightCode, { immediate: true });
 </script>
 
 <template>
-  <div class="code-viewer" :style="{ height: heightStyle }">
-    <div class="mockup-code h-full w-full overflow-auto bg-black/90 text-xs">
-      <pre class="w-full"><code v-html="highlightedCode"/></pre>
-    </div>
-  </div>
+	<div
+		class="code-viewer"
+		:style="{ height: heightStyle }"
+	>
+		<div
+			class="mockup-code h-full w-full overflow-auto bg-black/90 text-xs"
+		>
+			<pre class="w-full"><code v-html="highlightedCode"/></pre>
+		</div>
+	</div>
 </template>
 
 <style scoped>
-  .code-viewer {
-    width: 100%;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-  }
+.code-viewer {
+	width: 100%;
+	display: flex;
+	flex-direction: column;
+	overflow: hidden;
+}
 
-  .mockup-code {
-    flex: 1;
-    display: block;
-    min-height: 100%;
-  }
+.mockup-code {
+	flex: 1;
+	display: block;
+	min-height: 100%;
+}
 
-  :deep(.hljs) {
-    background: transparent;
-    padding: 0;
-    display: block;
-    width: auto;
-  }
+:deep(.hljs) {
+	background: transparent;
+	padding: 0;
+	display: block;
+	width: auto;
+}
 
-  :deep(.hljs-keyword) {
-    color: #c678dd;
-  }
+:deep(.hljs-keyword) {
+	color: #c678dd;
+}
 
-  :deep(.hljs-string) {
-    color: #98c379;
-  }
+:deep(.hljs-string) {
+	color: #98c379;
+}
 
-  :deep(.hljs-function) {
-    color: #61afef;
-  }
+:deep(.hljs-function) {
+	color: #61afef;
+}
 
-  :deep(.hljs-comment) {
-    color: #5c6370;
-    font-style: italic;
-  }
+:deep(.hljs-comment) {
+	color: #5c6370;
+	font-style: italic;
+}
 
-  :deep(.hljs-variable) {
-    color: #e06c75;
-  }
+:deep(.hljs-variable) {
+	color: #e06c75;
+}
 
-  :deep(.hljs-title) {
-    color: #61aeee;
-  }
+:deep(.hljs-title) {
+	color: #61aeee;
+}
 
-  :deep(.line-number) {
-    display: inline-block;
-    width: 2.5em;
-    color: #606366;
-    font-family: Consolas, Monaco, 'Andale Mono', monospace;
-    text-align: right;
-    padding-right: 0.5em;
-    margin-right: 0.5em;
-    user-select: none;
-    border-right: 1px solid #444;
-    position: sticky;
-    left: 0;
-  }
+:deep(.line-number) {
+	display: inline-block;
+	width: 2.5em;
+	color: #606366;
+	font-family: Consolas, Monaco, 'Andale Mono', monospace;
+	text-align: right;
+	padding-right: 0.5em;
+	margin-right: 0.5em;
+	user-select: none;
+	border-right: 1px solid #444;
+	position: sticky;
+	left: 0;
+}
 
-  :deep(pre) {
-    margin: 0;
-    font-family: Consolas, Monaco, 'Andale Mono', monospace;
-    line-height: 1.5;
-  }
+:deep(pre) {
+	margin: 0;
+	font-family: Consolas, Monaco, 'Andale Mono', monospace;
+	line-height: 1.5;
+}
 
-  :deep(code) {
-    font-family: Consolas, Monaco, 'Andale Mono', monospace;
-    white-space: pre;
-    display: inline-block;
-    min-width: 100%;
-  }
+:deep(code) {
+	font-family: Consolas, Monaco, 'Andale Mono', monospace;
+	white-space: pre;
+	display: inline-block;
+	min-width: 100%;
+}
 </style>

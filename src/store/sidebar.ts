@@ -7,252 +7,288 @@ import { Table } from '@/types/table';
 import { useConnectionsStore } from '@/store/connections';
 
 export const useSidebarStore = defineStore('sidebar', () => {
-  const databaseStore = useDatabaseStore();
-  const projectStore = useProjectStore();
-  const connectionsStore = useConnectionsStore();
-  const lastLoadedConnection = ref('');
-  const projectModels = ref<ModelInfo[]>([]);
+	const databaseStore = useDatabaseStore();
+	const projectStore = useProjectStore();
+	const connectionsStore = useConnectionsStore();
+	const lastLoadedConnection = ref('');
+	const projectModels = ref<ModelInfo[]>([]);
 
-  const searchTerm = ref('');
-  const sortBy = ref(localStorage.getItem(`tableSort-${connectionsStore.projectId}`) || 'records');
-  const sortOrder = ref(
-    localStorage.getItem(`tableSortOrder-${connectionsStore.projectId}`) || 'desc'
-  );
+	const searchTerm = ref('');
+	const sortBy = ref(
+		localStorage.getItem(`tableSort-${connectionsStore.projectId}`) ||
+			'records'
+	);
+	const sortOrder = ref(
+		localStorage.getItem(`tableSortOrder-${connectionsStore.projectId}`) ||
+			'desc'
+	);
 
-  const localTables = computed(() => databaseStore.tablesList || []);
-  const isLoading = computed(() => {
-    return databaseStore.isLoading;
-  });
-  const allTablesLoaded = computed(() => !isLoading.value);
-  const filteredTables = computed(() => {
-    if (!searchTerm.value) return localTables.value;
-    const term = searchTerm.value.toLowerCase();
+	const localTables = computed(() => databaseStore.tablesList || []);
+	const isLoading = computed(() => {
+		return databaseStore.isLoading;
+	});
+	const allTablesLoaded = computed(() => !isLoading.value);
+	const filteredTables = computed(() => {
+		if (!searchTerm.value) return localTables.value;
+		const term = searchTerm.value.toLowerCase();
 
-    return localTables.value.filter((table: { name: string }) =>
-      table.name.toLowerCase().includes(term)
-    );
-  });
-  const sortedTables = computed(() => {
-    const tablesCopy = [...filteredTables.value];
+		return localTables.value.filter((table: { name: string }) =>
+			table.name.toLowerCase().includes(term)
+		);
+	});
+	const sortedTables = computed(() => {
+		const tablesCopy = [...filteredTables.value];
 
-    return tablesCopy.sort((a, b) => {
-      if (sortBy.value === 'name') {
-        return sortOrder.value === 'asc'
-          ? a.name.localeCompare(b.name)
-          : b.name.localeCompare(a.name);
-      } else {
-        const aCount = a.rowCount || 0;
-        const bCount = b.rowCount || 0;
-        return sortOrder.value === 'asc' ? aCount - bCount : bCount - aCount;
-      }
-    });
-  });
+		return tablesCopy.sort((a, b) => {
+			if (sortBy.value === 'name') {
+				return sortOrder.value === 'asc'
+					? a.name.localeCompare(b.name)
+					: b.name.localeCompare(a.name);
+			} else {
+				const aCount = a.rowCount || 0;
+				const bCount = b.rowCount || 0;
+				return sortOrder.value === 'asc'
+					? aCount - bCount
+					: bCount - aCount;
+			}
+		});
+	});
 
-  function setSearchTerm(term: string) {
-    searchTerm.value = term;
-  }
+	function setSearchTerm(term: string) {
+		searchTerm.value = term;
+	}
 
-  function setSortBy(value: string) {
-    if (sortBy.value === value) {
-      toggleSortOrder();
-    } else {
-      sortBy.value = value;
-      localStorage.setItem(`tableSort-${connectionsStore.projectId}`, value);
-    }
-  }
+	function setSortBy(value: string) {
+		if (sortBy.value === value) {
+			toggleSortOrder();
+		} else {
+			sortBy.value = value;
+			localStorage.setItem(
+				`tableSort-${connectionsStore.projectId}`,
+				value
+			);
+		}
+	}
 
-  function toggleSortOrder() {
-    sortOrder.value = sortOrder.value === 'asc' ? 'desc' : 'asc';
-    localStorage.setItem(`tableSortOrder-${connectionsStore.projectId}`, sortOrder.value);
-  }
+	function toggleSortOrder() {
+		sortOrder.value = sortOrder.value === 'asc' ? 'desc' : 'asc';
+		localStorage.setItem(
+			`tableSortOrder-${connectionsStore.projectId}`,
+			sortOrder.value
+		);
+	}
 
-  function formatRecordCount(count: number) {
-    if (count === null || count === undefined) return '0';
+	function formatRecordCount(count: number) {
+		if (count === null || count === undefined) return '0';
 
-    if (count >= 1000000) {
-      return (count / 1000000).toFixed(1).replace(/\.0$/, '') + 'M';
-    }
-    if (count >= 1000) {
-      return (count / 1000).toFixed(1).replace(/\.0$/, '') + 'K';
-    }
-    return count.toString();
-  }
+		if (count >= 1000000) {
+			return (count / 1000000).toFixed(1).replace(/\.0$/, '') + 'M';
+		}
+		if (count >= 1000) {
+			return (count / 1000).toFixed(1).replace(/\.0$/, '') + 'K';
+		}
+		return count.toString();
+	}
 
-  function resetLastLoadedConnection() {
-    lastLoadedConnection.value = '';
-  }
+	function resetLastLoadedConnection() {
+		lastLoadedConnection.value = '';
+	}
 
-  async function initializeTables(project: ProjectConnection) {
-    if (project.id === lastLoadedConnection.value && !isLoading.value) {
-      return;
-    }
+	async function initializeTables(project: ProjectConnection) {
+		if (project.id === lastLoadedConnection.value && !isLoading.value) {
+			return;
+		}
 
-    lastLoadedConnection.value = project.id as string;
+		lastLoadedConnection.value = project.id as string;
 
-    try {
-      const { success, models } = (await projectStore.getModelsForTables(project)) as Models;
+		try {
+			const { success, models } = (await projectStore.getModelsForTables(
+				project
+			)) as Models;
 
-      if (success && models && typeof models === 'object') {
-        projectModels.value = models;
-      }
-    } catch (err) {
-      console.error('Error loading models for tables:', err);
-    }
+			if (success && models && typeof models === 'object') {
+				projectModels.value = models;
+			}
+		} catch (err) {
+			console.error('Error loading models for tables:', err);
+		}
 
-    await databaseStore.loadTables(project);
-  }
+		await databaseStore.loadTables(project);
+	}
 
-  async function forceReloadDatabase(project: ProjectConnection) {
-    if (!project) return;
+	async function forceReloadDatabase(project: ProjectConnection) {
+		if (!project) return;
 
-    const storageKey = `tables-${project.id}`;
+		const storageKey = `tables-${project.id}`;
 
-    localStorage.removeItem(storageKey);
+		localStorage.removeItem(storageKey);
 
-    resetLastLoadedConnection();
+		resetLastLoadedConnection();
 
-    await databaseStore.loadTables(project);
+		await databaseStore.loadTables(project);
 
-    await initializeTables(project);
+		await initializeTables(project);
 
-    return true;
-  }
+		return true;
+	}
 
-  async function updateApproximateTableCounts(project: ProjectConnection) {
-    const approximateTables = sortedTables.value.filter(table => table.isApproximate);
+	async function updateApproximateTableCounts(project: ProjectConnection) {
+		const approximateTables = sortedTables.value.filter(
+			(table) => table.isApproximate
+		);
 
-    if (approximateTables.length === 0) return;
+		if (approximateTables.length === 0) return;
 
-    const batchSize = 5;
-    let tablesProcessed = 0;
+		const batchSize = 5;
+		let tablesProcessed = 0;
 
-    for (let i = 0; i < approximateTables.length; i += batchSize) {
-      const batch = approximateTables.slice(i, i + batchSize);
+		for (let i = 0; i < approximateTables.length; i += batchSize) {
+			const batch = approximateTables.slice(i, i + batchSize);
 
-      try {
-        await Promise.all(batch.map(table => getTableRecordCount(table, project)));
-        tablesProcessed += batch.length;
+			try {
+				await Promise.all(
+					batch.map((table) => getTableRecordCount(table, project))
+				);
+				tablesProcessed += batch.length;
 
-        if (i + batchSize < approximateTables.length) {
-          await new Promise(resolve => setTimeout(resolve, 100));
-        }
-      } catch (error) {
-        console.error(`Error processing batch ${i}:`, error);
-      }
-    }
+				if (i + batchSize < approximateTables.length) {
+					await new Promise((resolve) => setTimeout(resolve, 100));
+				}
+			} catch (error) {
+				console.error(`Error processing batch ${i}:`, error);
+			}
+		}
 
-    return tablesProcessed;
-  }
+		return tablesProcessed;
+	}
 
-  async function getTableRecordCount(table: Table, project: ProjectConnection) {
-    try {
-      const countResult = await window.ipcRenderer.getTableRecordCount(
-        toRaw(project.db_config),
-        toRaw(table)
-      );
+	async function getTableRecordCount(
+		table: Table,
+		project: ProjectConnection
+	) {
+		try {
+			const countResult = await window.ipcRenderer.getTableRecordCount(
+				toRaw(project.db_config),
+				toRaw(table)
+			);
 
-      if (countResult && countResult.success) {
-        const exactCount = parseInt(countResult.count, 10);
+			if (countResult && countResult.success) {
+				const exactCount = parseInt(countResult.count, 10);
 
-        table.rowCount = exactCount;
-        table.isApproximate = false;
+				table.rowCount = exactCount;
+				table.isApproximate = false;
 
-        databaseStore.updateLocalStorageTables(project.id as string, table.name, exactCount, false);
-      } else {
-        table.isApproximate = false;
+				databaseStore.updateLocalStorageTables(
+					project.id as string,
+					table.name,
+					exactCount,
+					false
+				);
+			} else {
+				table.isApproximate = false;
 
-        databaseStore.updateLocalStorageTables(
-          project.id as string,
-          table.name,
-          table.rowCount,
-          false
-        );
-      }
+				databaseStore.updateLocalStorageTables(
+					project.id as string,
+					table.name,
+					table.rowCount,
+					false
+				);
+			}
 
-      return true;
-    } catch (error) {
-      console.error(`Error updating count for table ${table.name}:`, error);
+			return true;
+		} catch (error) {
+			console.error(
+				`Error updating count for table ${table.name}:`,
+				error
+			);
 
-      table.isApproximate = false;
-      databaseStore.updateLocalStorageTables(
-        project.id as string,
-        table.name,
-        table.rowCount,
-        false
-      );
+			table.isApproximate = false;
+			databaseStore.updateLocalStorageTables(
+				project.id as string,
+				table.name,
+				table.rowCount,
+				false
+			);
 
-      return false;
-    }
-  }
+			return false;
+		}
+	}
 
-  function removeDroppedTables(droppedTables: Table[]) {
-    const storageKey = `tables-${connectionsStore.projectId}`;
+	function removeDroppedTables(droppedTables: Table[]) {
+		const storageKey = `tables-${connectionsStore.projectId}`;
 
-    const storedData = localStorage.getItem(storageKey);
+		const storedData = localStorage.getItem(storageKey);
 
-    if (storedData) {
-      const parsedData = JSON.parse(storedData);
+		if (storedData) {
+			const parsedData = JSON.parse(storedData);
 
-      if (parsedData && parsedData.tables) {
-        droppedTables.forEach((table: Table) => {
-          const index = parsedData.tables.findIndex((t: Table) => t.name === table.name);
-          if (index !== -1) {
-            parsedData.tables.splice(index, 1);
-          }
-        });
+			if (parsedData && parsedData.tables) {
+				droppedTables.forEach((table: Table) => {
+					const index = parsedData.tables.findIndex(
+						(t: Table) => t.name === table.name
+					);
+					if (index !== -1) {
+						parsedData.tables.splice(index, 1);
+					}
+				});
 
-        localStorage.setItem(storageKey, JSON.stringify(parsedData));
-      }
-    }
+				localStorage.setItem(storageKey, JSON.stringify(parsedData));
+			}
+		}
 
-    databaseStore.tables.tables = databaseStore.tablesList.filter(
-      (t: Table) => !droppedTables.some((droppedTable: Table) => droppedTable.name === t.name)
-    );
-  }
+		databaseStore.tables.tables = databaseStore.tablesList.filter(
+			(t: Table) =>
+				!droppedTables.some(
+					(droppedTable: Table) => droppedTable.name === t.name
+				)
+		);
+	}
 
-  function updateTableRecordCount(tableName: string, count: number) {
-    if (!tableName) return;
+	function updateTableRecordCount(tableName: string, count: number) {
+		if (!tableName) return;
 
-    const table = databaseStore.tablesList.find((t: { name: string }) => t.name === tableName);
+		const table = databaseStore.tablesList.find(
+			(t: { name: string }) => t.name === tableName
+		);
 
-    if (table) {
-      table.rowCount = count;
-    }
+		if (table) {
+			table.rowCount = count;
+		}
 
-    const storageKey = `tables-${connectionsStore.projectId}`;
+		const storageKey = `tables-${connectionsStore.projectId}`;
 
-    try {
-      localStorage.removeItem(storageKey);
-    } catch (error) {
-      console.error('Error removing localStorage item:', error);
-    }
-  }
+		try {
+			localStorage.removeItem(storageKey);
+		} catch (error) {
+			console.error('Error removing localStorage item:', error);
+		}
+	}
 
-  return {
-    projectModels,
-    localTables,
-    lastLoadedConnection: computed({
-      get: () => lastLoadedConnection.value,
-      set: value => {
-        lastLoadedConnection.value = value;
-      },
-    }),
-    searchTerm,
-    sortBy,
-    sortOrder,
-    isLoading,
-    allTablesLoaded,
-    filteredTables,
-    sortedTables,
-    setSearchTerm,
-    setSortBy,
-    toggleSortOrder,
-    formatRecordCount,
-    initializeTables,
-    getTableRecordCount,
-    updateApproximateTableCounts,
-    removeDroppedTables,
-    updateTableRecordCount,
-    forceReloadDatabase,
-  };
+	return {
+		projectModels,
+		localTables,
+		lastLoadedConnection: computed({
+			get: () => lastLoadedConnection.value,
+			set: (value) => {
+				lastLoadedConnection.value = value;
+			}
+		}),
+		searchTerm,
+		sortBy,
+		sortOrder,
+		isLoading,
+		allTablesLoaded,
+		filteredTables,
+		sortedTables,
+		setSearchTerm,
+		setSortBy,
+		toggleSortOrder,
+		formatRecordCount,
+		initializeTables,
+		getTableRecordCount,
+		updateApproximateTableCounts,
+		removeDroppedTables,
+		updateTableRecordCount,
+		forceReloadDatabase
+	};
 });
