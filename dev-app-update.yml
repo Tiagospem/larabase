@@ -1,0 +1,4 @@
+provider: github
+owner: Tiagospem
+repo: larabase
+updaterCacheDirName: larabase-updater
