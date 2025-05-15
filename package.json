@@ -103,7 +103,7 @@
       "!**/node_modules/**/*.{md,markdown,MD,ts,test,tests,spec}"
     ],
     "asar": true,
-    "compression": "normal",
+    "compression": "maximum",
     "artifactName": "${productName}-${version}-${os}-${arch}.${ext}",
     "publish": {
       "provider": "github",

@@ -54,9 +54,7 @@ onMounted(async () => {
 					try {
 						currentVersion.value =
 							await window.ipcRenderer.getCurrentVersion();
-					} catch (error) {
-						// Continue without version info
-					}
+					} catch (error) {}
 
 					try {
 						removeUpdateListener =
@@ -133,9 +131,7 @@ onMounted(async () => {
 									}
 								}
 							);
-					} catch (error) {
-						// Continue without update listener
-					}
+					} catch (error) {}
 
 					setupListeners();
 
@@ -215,23 +211,18 @@ function setupListeners() {
 		downloading.value = false;
 		updateComplete.value = true;
 		progress.value = 100;
-
+		
 		updateInfo.value.downloadedPath = event.detail?.path || '';
-
+		
 		if (event.detail && event.detail.path) {
-			originalUpdateInfo.value = {
-				...originalUpdateInfo.value,
-				downloadedPath: event.detail.path
+			originalUpdateInfo.value = { 
+				...originalUpdateInfo.value, 
+				downloadedPath: event.detail.path 
 			};
-
-			showModal.value = true;
-
-			if (window.ipcRenderer && window.ipcRenderer.send) {
-				window.ipcRenderer.send(
-					'main:download-complete',
-					event.detail.path
-				);
-			}
+			
+			updateStatus.value = 'Installing update...';
+			
+			installUpdate();
 		}
 	}) as EventListener);
 
@@ -253,9 +244,7 @@ function setupListeners() {
 					directEventHandler('autoUpdater:download-progress')
 				);
 			}
-		} catch (e) {
-			// Continue without direct event handler
-		}
+		} catch (e) {}
 	}
 }
 
@@ -325,10 +314,11 @@ async function checkForUpdates() {
 async function downloadUpdate() {
 	try {
 		originalUpdateInfo.value = { ...updateInfo.value };
-
+		
 		updateError.value = '';
 		downloading.value = true;
 		progress.value = 0;
+		updateStatus.value = 'Downloading update...';
 
 		await new Promise((resolve) => setTimeout(resolve, 200));
 
@@ -364,36 +354,58 @@ function installUpdate() {
 	const downloadedPath =
 		originalUpdateInfo.value.downloadedPath ||
 		updateInfo.value.downloadedPath;
+	
+	updateError.value = '';
 
 	if (
 		downloadedPath &&
 		window.ipcRenderer &&
 		window.ipcRenderer.openExternal
 	) {
-		window.ipcRenderer.openExternal(`file://${downloadedPath}`);
-		return;
+		try {
+			window.ipcRenderer.openExternal(`file://${downloadedPath}`);
+			setTimeout(() => {
+				if (window.ipcRenderer) {
+					window.ipcRenderer
+						.invoke('quit-and-install')
+						.catch((err) => {
+							updateError.value = `Failed to quit application: ${err.message || 'Unknown error'}`;
+						});
+				}
+			}, 500);
+			return;
+		} catch (error) {
+			updateError.value = `Failed to open installer: ${(error as Error).message}`;
+		}
 	}
-
+	
 	if (window.ipcRenderer) {
+		loading.value = true;
 		if (window.ipcRenderer.invoke) {
 			window.ipcRenderer
 				.invoke('quit-and-install')
 				.then((result) => {
-					if (result?.dev && !result?.opened) {
+					loading.value = false;
+					if (result?.error) {
+						updateError.value = `Installation failed: ${result.error}`;
+					} else if (result?.dev && !result?.opened) {
 						updateError.value =
 							'No installation file found. You may need to download manually.';
 					}
 				})
 				.catch((err) => {
+					loading.value = false;
 					updateError.value = `Installation failed: ${err.message || 'Unknown error'}`;
 				});
 		} else if (window.ipcRenderer.quitAndInstall) {
 			try {
 				window.ipcRenderer.quitAndInstall();
 			} catch (error) {
+				loading.value = false;
 				updateError.value = `Installation failed: ${(error as Error).message || 'Unknown error'}`;
 			}
 		} else {
+			loading.value = false;
 			updateError.value =
 				'Update installation not available on this platform';
 		}

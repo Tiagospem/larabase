@@ -3,11 +3,12 @@ import pkg from 'electron-updater';
 const { autoUpdater } = pkg;
 import fs from 'fs';
 import { download } from 'electron-dl';
+import path from 'path';
 
 const CONFIG = {
 	updateCheckIntervalMs: 3600000,
 	initialCheckDelayMs: 30000,
-	quitDelayMs: 1000,
+	quitDelayMs: 300,
 	debugMode: false
 };
 
@@ -16,6 +17,7 @@ const isDev = process.env.NODE_ENV === 'development';
 let mainWindow: BrowserWindow;
 let updateCheckInterval: NodeJS.Timeout | null = null;
 let globalUpdateInfo: any;
+let downloadedUpdateFilePath: string | null = null;
 
 function setupAutoUpdater() {
 	if (isDev && !CONFIG.debugMode) return;
@@ -78,20 +80,12 @@ function handleUpdateAvailable(updateInfo: any) {
 }
 
 function handleUpdateDownloaded(info: any) {
-	setTimeout(async () => {
-		mainWindow?.show();
-		sendStatusToWindow('update-downloaded', info);
+	mainWindow?.show();
+	sendStatusToWindow('update-downloaded', info);
 
-		await dialog.showMessageBox(
-			new BrowserWindow({ show: false, alwaysOnTop: true }),
-			{
-				title: 'Install Updates',
-				message: 'Update completed! Restarting...'
-			}
-		);
-
-		autoUpdater.quitAndInstall();
-	}, 1000);
+	setTimeout(() => {
+		autoUpdater.quitAndInstall(true, true);
+	}, 300);
 }
 
 function normalizePercentage(value: number): number {
@@ -106,7 +100,7 @@ function handleDownloadUpdate() {
 				message: 'No update info available'
 			});
 		}
-
+		
 		if (process.platform === 'darwin') {
 			const downloadPath = app.getPath('downloads');
 			const files = globalUpdateInfo.files || [];
@@ -122,8 +116,17 @@ function handleDownloadUpdate() {
 			const fullPath = `${downloadPath}/${fileName}`;
 
 			if (fs.existsSync(fullPath)) {
+				downloadedUpdateFilePath = fullPath;
+				sendStatusToWindow('update-downloaded', {
+					...globalUpdateInfo,
+					downloadedPath: fullPath
+				});
+				mainWindow?.webContents.send('autoUpdater:download-complete', {
+					path: fullPath
+				});
+
 				await shell.openPath(fullPath);
-				app.quit();
+				setTimeout(() => app.quit(), 300);
 			} else {
 				let downloadUrl;
 				if (dmg.url.startsWith('http')) {
@@ -151,7 +154,8 @@ function handleDownloadUpdate() {
 							});
 						}
 					},
-					onCompleted: (item) => {
+					onCompleted: async (item) => {
+						downloadedUpdateFilePath = item.path;
 						mainWindow?.webContents.send(
 							'autoUpdater:download-progress',
 							{ percent: 100 }
@@ -160,10 +164,13 @@ function handleDownloadUpdate() {
 							'autoUpdater:download-complete',
 							item
 						);
-						sendStatusToWindow(
-							'update-downloaded',
-							globalUpdateInfo
-						);
+						sendStatusToWindow('update-downloaded', {
+							...globalUpdateInfo,
+							downloadedPath: item.path
+						});
+						
+						await shell.openPath(item.path);
+						setTimeout(() => app.quit(), 300);
 					},
 					showBadge: true,
 					directory: downloadPath
@@ -228,7 +235,8 @@ export function registerUpdaterHandlers(window: BrowserWindow) {
 					);
 				}
 			},
-			onCompleted: (item) => {
+			onCompleted: async (item) => {
+				downloadedUpdateFilePath = item.path;
 				mainWindow?.webContents.send('autoUpdater:download-progress', {
 					percent: 100
 				});
@@ -236,6 +244,9 @@ export function registerUpdaterHandlers(window: BrowserWindow) {
 					'autoUpdater:download-complete',
 					item
 				);
+				
+				await shell.openPath(item.path);
+				setTimeout(() => app.quit(), 300);
 			},
 			showBadge: true,
 			directory: app.getPath('downloads')
@@ -244,21 +255,19 @@ export function registerUpdaterHandlers(window: BrowserWindow) {
 		try {
 			await download(mainWindow, url, props);
 		} catch (err: any) {
-			sendStatusToWindow('update-error', { message: err.message });
+			sendStatusToWindow('update-error', {
+				message: err.message
+			});
 		}
 	});
 
 	ipcMain.on('main:download-complete', async (event, filePath) => {
-		const { response } = await dialog.showMessageBox({
-			type: 'info',
-			title: 'Update Completed',
-			message: 'Download finished. Install now?',
-			buttons: ['Yes', 'No']
-		});
-		if (response === 0) {
+		downloadedUpdateFilePath = filePath;
+
+		setTimeout(async () => {
 			await shell.openPath(filePath);
 			setTimeout(() => app.quit(), CONFIG.quitDelayMs);
-		}
+		}, 300);
 	});
 
 	ipcMain.handle('check-for-updates', async () => {
@@ -279,43 +288,68 @@ export function registerUpdaterHandlers(window: BrowserWindow) {
 
 	ipcMain.handle('quit-and-install', async () => {
 		try {
-			if (isDev) {
-				if (globalUpdateInfo && globalUpdateInfo.files) {
-					const files = globalUpdateInfo.files || [];
-					const dmg = files.find((f: any) => f.url.includes('dmg'));
-
-					if (dmg) {
-						const downloadPath = app.getPath('downloads');
-						const fileName = dmg.url.split('/').pop();
-						const fullPath = `${downloadPath}/${fileName}`;
-
-						if (fs.existsSync(fullPath)) {
-							await shell.openPath(fullPath);
-							setTimeout(() => app.exit(0), 1000);
-							return { success: true, dev: true, opened: true };
-						}
-					}
-				}
-
-				const { response } = await dialog.showMessageBox({
-					type: 'info',
-					title: 'Development Mode',
-					message:
-						'No installation file found. In production, the app would now install the update.',
-					buttons: ['OK']
-				});
-
-				return { success: true, dev: true, opened: false };
-			} else {
-				autoUpdater.quitAndInstall(false, true);
+			if (!process.platform.includes('darwin') && !isDev) {
+				autoUpdater.quitAndInstall(true, true);
 				return { success: true };
 			}
+
+			if (
+				downloadedUpdateFilePath &&
+				fs.existsSync(downloadedUpdateFilePath)
+			) {
+				await shell.openPath(downloadedUpdateFilePath);
+
+				setTimeout(() => app.quit(), 300);
+				return { success: true, opened: true };
+			}
+
+			if (globalUpdateInfo?.files) {
+				const files = globalUpdateInfo.files || [];
+				const dmg = files.find((f: any) => f.url.includes('dmg'));
+
+				if (dmg) {
+					const downloadPath = app.getPath('downloads');
+					const fileName = dmg.url.split('/').pop();
+					if (!fileName) {
+						return {
+							success: false,
+							error: 'Could not determine file name'
+						};
+					}
+
+					const fullPath = path.join(downloadPath, fileName);
+
+					if (fs.existsSync(fullPath)) {
+						downloadedUpdateFilePath = fullPath;
+						await shell.openPath(fullPath);
+						setTimeout(() => app.quit(), 300);
+						return { success: true, opened: true };
+					}
+				}
+			}
+
+			await dialog.showMessageBox({
+				type: 'warning',
+				title: 'Update Installation',
+				message:
+					'Could not find the downloaded update. Please try downloading again.',
+				buttons: ['OK']
+			});
+
+			return { success: false, error: 'Update file not found' };
 		} catch (error) {
+			await dialog.showMessageBox({
+				type: 'error',
+				title: 'Update Error',
+				message: `Error installing update: ${(error as Error).message}`,
+				buttons: ['OK']
+			});
 			return { success: false, error: (error as Error).message };
 		}
 	});
 
 	ipcMain.handle('get-current-version', () => app.getVersion());
+
 	ipcMain.handle('open-external', (evt, url: string) =>
 		shell.openExternal(url)
 	);
