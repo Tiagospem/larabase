@@ -3,7 +3,7 @@
   import AppAlert from '@/components/Alert.vue';
   import { useSettingsStore } from '@/store/settings';
 
-  //const UpdateNotifier = defineAsyncComponent(() => import("./components/UpdateNotifier.vue"));
+  //const UpdateNotifier = defineAsyncComponent(() => import("@/components/UpdaterNotifier.vue"));
 
   const alertMessage = ref('');
   const alertType = ref('info');
@@ -44,6 +44,6 @@
       </keep-alive>
     </router-view>
     <app-alert :type="alertType" :message="alertMessage" @close="clearAlert" />
-    <!--    <update-notifier />-->
+<!--    <update-notifier />-->
   </div>
 </template>

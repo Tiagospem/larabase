@@ -22,12 +22,14 @@
   "scripts": {
     "dev": "vite",
     "build": "vue-tsc --noEmit && vite build && electron-builder",
-    "build:mac": "npm run build && electron-builder --mac --universal",
-    "build:win": "npm run build && electron-builder --win",
-    "build:linux": "npm run build && electron-builder --linux",
-    "publish:mac": "npm run build && electron-builder --publish always --mac --universal",
-    "publish:win": "npm run build && electron-builder --publish always --win",
-    "publish:linux": "npm run build && electron-builder --publish always --linux",
+    "build:win": "vue-tsc --noEmit && vite build && electron-builder --win",
+    "build:linux": "vue-tsc --noEmit && vite build && electron-builder --linux",
+    "build:mac-intel": "vue-tsc --noEmit && vite build && electron-builder --mac --x64",
+    "build:mac-apple": "vue-tsc --noEmit && vite build && electron-builder --mac --arm64",
+    "publish:win": "vue-tsc --noEmit && vite build && electron-builder --publish always --win",
+    "publish:linux": "vue-tsc --noEmit && vite build && electron-builder --publish always --linux",
+    "publish:mac-intel": "vue-tsc --noEmit && vite build && electron-builder --publish always --mac --x64",
+    "publish:mac-apple": "vue-tsc --noEmit && vite build && electron-builder --publish always --mac --arm64",
     "postinstall": "electron-builder install-app-deps",
     "lint": "eslint . --ext .vue,.js,.ts,.jsx,.tsx --fix",
     "format": "prettier --write \"**/*.{js,ts,vue,jsx,tsx,css,md}\""
@@ -71,7 +73,6 @@
     "daisyui": "^5.0.28",
     "electron": "^35.2.2",
     "electron-builder": "^26.0.14",
-    "electron-rebuild": "^3.2.9",
     "eslint": "^9.25.1",
     "eslint-config-prettier": "^10.1.2",
     "eslint-plugin-vue": "^9.33.0",
@@ -95,26 +96,32 @@
   "build": {
     "appId": "com.larabase.app",
     "productName": "Larabase",
-    "artifactName": "${productName}-${version}-${os}-${arch}.${ext}",
-    "asar": true,
-    "compression": "normal",
-    "directories": {
-      "output": "release/${version}"
-    },
     "files": [
       "dist/**/*",
       "dist-electron/**/*",
       "!**/*.map",
       "!**/node_modules/**/*.{md,markdown,MD,ts,test,tests,spec}"
     ],
+    "asar": true,
+    "compression": "normal",
+    "artifactName": "${productName}-${version}-${os}-${arch}.${ext}",
+    "publish": {
+      "provider": "github",
+      "owner": "Tiagospem",
+      "repo": "larabase",
+      "private": false
+    },
+    "directories": {
+      "output": "release/${version}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "installerIcon": "dist/icons/win/icon.ico"
+    },
     "mac": {
+      "darkModeSupport": true,
       "icon": "dist/icons/mac/icon.icns",
-      "target": [
-        { "target": "dmg", "arch": ["x64","arm64"] },
-        { "target": "zip", "arch": ["x64","arm64"] }
-      ],
-      "mergeASARs": true,
-      "x64ArchFiles": "node_modules/@tailwindcss/oxide-darwin-x64/**/*",
       "hardenedRuntime": false,
       "gatekeeperAssess": false,
       "notarize": false
@@ -135,23 +142,12 @@
       ],
       "icon": "dist/icons/win/icon.ico"
     },
-    "nsis": {
-      "oneClick": false,
-      "allowToChangeInstallationDirectory": true,
-      "installerIcon": "dist/icons/win/icon.ico"
-    },
     "linux": {
       "target": [
         "AppImage"
       ],
       "category": "Development",
       "icon": "dist/icons/png/512x512.png"
-    },
-    "publish": {
-      "provider": "github",
-      "owner": "Tiagospem",
-      "repo": "larabase",
-      "private": false
     },
     "asarUnpack": [
       "node_modules/electron-store/**/*"
