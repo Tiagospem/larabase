@@ -24,10 +24,10 @@
     "build": "vue-tsc --noEmit && vite build && electron-builder",
     "build:mac": "npm run build && electron-builder --mac --x64 --arm64",
     "build:win": "npm run build && electron-builder --win --x64 --ia32",
-    "build:linux": "npm run build && electron-builder --linux --x64 --arm64",
+    "build:linux": "npm run build && electron-builder --linux AppImage",
     "publish:mac": "npm run build && electron-builder --publish always --mac --x64 --arm64",
     "publish:win": "npm run build && electron-builder --publish always --win",
-    "publish:linux": "npm run build && electron-builder --publish always --linux",
+    "publish:linux": "npm run build && electron-builder --publish always --linux AppImage",
     "postinstall": "electron-builder install-app-deps",
     "lint": "eslint . --ext .vue,.js,.ts,.jsx,.tsx --fix",
     "format": "prettier --write \"**/*.{js,ts,vue,jsx,tsx,css,md}\""
