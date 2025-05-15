@@ -24,12 +24,12 @@ mac:
         arch:
           - x64
           - arm64
-        artifactName: "${productName}-${version}-${os}-${arch}.${ext}"
+        artifactName: "${productName}-${version}-Mac-${arch}.${ext}"
     - zip:
         arch:
           - x64
           - arm64
-        artifactName: "${productName}-${version}-${os}-${arch}.${ext}"
+        artifactName: "${productName}-${version}-Mac-${arch}.${ext}"
   icon: "dist/icons/mac/icon.icns"
   hardenedRuntime: false
   gatekeeperAssess: false
@@ -41,7 +41,7 @@ win:
         arch:
           - x64
           - ia32
-        artifactName: "${productName}-${version}-${os}-${arch}.${ext}"
+        artifactName: "${productName}-${version}-Win-${arch}.${ext}"
 nsis:
   oneClick: false
   perMachine: false
@@ -52,10 +52,10 @@ nsis:
 linux:
   target:
     - AppImage:
-        artifactName: "${productName}-${version}-${os}-${arch}.${ext}"
+        artifactName: "${productName}-${version}-Linux-${arch}.${ext}"
     - snap:
         publish: false
-        artifactName: "${productName}-${version}-${os}-${arch}.${ext}"
+        artifactName: "${productName}-${version}-Linux-${arch}.${ext}"
   icon: "dist/icons/png/512x512.png"
 
 publish:
