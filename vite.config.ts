@@ -32,6 +32,13 @@ export default defineConfig(({ command }) => {
               outDir: 'dist-electron/main',
               rollupOptions: {
                 external: Object.keys('dependencies' in pkg ? pkg.dependencies : {}),
+                output: {
+                  manualChunks: {
+                    vendor: ['vue', 'pinia', 'vue-router'],
+                    monaco: ['monaco-editor'],
+                    ui: ['highlight.js']
+                  }
+                }
               },
             },
           },
@@ -68,6 +75,9 @@ export default defineConfig(({ command }) => {
         '@/store': path.resolve(__dirname, 'src/store'),
         '@/types': path.resolve(__dirname, 'src/types'),
       },
+    },
+    build: {
+      chunkSizeWarningLimit: 1000
     },
   };
 });
