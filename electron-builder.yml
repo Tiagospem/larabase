@@ -44,6 +44,8 @@ nsis:
 linux:
   target:
     - "AppImage"
+    - snap:
+        publish: false
   icon: "dist/icons/png/512x512.png"
 publish:
   provider: "github"
