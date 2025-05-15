@@ -7,9 +7,8 @@ asarUnpack:
   - "node_modules/bcrypt/**/*"
   - "node_modules/cpu-features/**/*"
   - "node_modules/**/*.node"
-artifactName: "${productName}-${version}-${os}-${arch}.${ext}"
 productName: "Larabase"
-compression: "store"
+compression: "normal"
 directories:
   output: "release/${version}"
 files:
@@ -17,36 +16,48 @@ files:
   - "dist-electron/**/*"
   - "!**/*.map"
   - "!**/node_modules/**/*.{md,markdown,MD,ts,test,tests,spec}"
+
 mac:
   darkModeSupport: true
   target:
-    - target: "dmg"
-      arch:
-        - "x64"
-        - "arm64"
-  x64ArchFiles: "*"
+    - dmg:
+        arch:
+          - x64
+          - arm64
+        artifactName: "${productName}-${version}-${os}-${arch}.${ext}"
+    - zip:
+        arch:
+          - x64
+          - arm64
+        artifactName: "${productName}-${version}-${os}-${arch}.${ext}"
   icon: "dist/icons/mac/icon.icns"
   hardenedRuntime: false
   gatekeeperAssess: false
   notarize: false
+
 win:
   target:
-    - target: "nsis"
-      arch:
-        - "x64"
-        - "ia32"
+    - nsis:
+        arch:
+          - x64
+          - ia32
+        artifactName: "${productName}-${version}-${os}-${arch}.${ext}"
 nsis:
   oneClick: false
   perMachine: false
   allowToChangeInstallationDirectory: true
   deleteAppDataOnUninstall: false
   installerIcon: "dist/icons/win/icon.ico"
+
 linux:
   target:
-    - "AppImage"
+    - AppImage:
+        artifactName: "${productName}-${version}-${os}-${arch}.${ext}"
     - snap:
         publish: false
+        artifactName: "${productName}-${version}-${os}-${arch}.${ext}"
   icon: "dist/icons/png/512x512.png"
+
 publish:
   provider: "github"
   owner: "Tiagospem"
