@@ -22,9 +22,9 @@
   "scripts": {
     "dev": "vite",
     "build": "vue-tsc --noEmit && vite build && electron-builder",
-    "build:mac": "npm run build && electron-builder --mac --x64 --arm64",
-    "build:win": "npm run build && electron-builder --win --x64 --ia32",
-    "build:linux": "npm run build && electron-builder --linux AppImage",
+    "build:mac": "npm run build && electron-builder --mac --universal",
+    "build:win": "npm run build && electron-builder --win",
+    "build:linux": "npm run build && electron-builder --linux",
     "publish:mac": "npm run build && electron-builder --publish always --mac --universal",
     "publish:win": "npm run build && electron-builder --publish always --win",
     "publish:linux": "npm run build && electron-builder --publish always --linux",
@@ -88,6 +88,10 @@
     "vue-eslint-parser": "^9.4.3",
     "vue-tsc": "^2.2.10"
   },
+  "optionalDependencies": {
+    "@tailwindcss/oxide-darwin-x64": "^4.1.7",
+    "@tailwindcss/oxide-darwin-arm64": "^4.1.7"
+  },
   "build": {
     "appId": "com.larabase.app",
     "productName": "Larabase",
@@ -104,8 +108,13 @@
       "!**/node_modules/**/*.{md,markdown,MD,ts,test,tests,spec}"
     ],
     "mac": {
-      "darkModeSupport": true,
-      "icon": "dist/icon.icns",
+      "icon": "dist/icons/mac/icon.icns",
+      "target": [
+        { "target": "dmg", "arch": ["x64","arm64"] },
+        { "target": "zip", "arch": ["x64","arm64"] }
+      ],
+      "mergeASARs": true,
+      "x64ArchFiles": "node_modules/@tailwindcss/oxide-darwin-x64/**/*",
       "hardenedRuntime": false,
       "gatekeeperAssess": false,
       "notarize": false

@@ -12,7 +12,6 @@ const routes = [
   { path: '/', component: Home },
   { path: '/database/:id', component: DatabaseView },
   { path: '/sql-editor/:id', component: SQLEditorView },
-  // { path: "/explain/:id", component: ExplainView }
 ];
 
 const router = createRouter({
