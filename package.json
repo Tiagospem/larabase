@@ -22,12 +22,12 @@
   "scripts": {
     "dev": "vite",
     "build": "vue-tsc --noEmit && vite build && electron-builder",
-    "build:win": "vue-tsc --noEmit && vite build && electron-builder --win --x64",
-    "build:linux": "vue-tsc --noEmit && vite build && electron-builder --linux --x64",
+    "build:win": "vue-tsc --noEmit && vite build && electron-builder --win",
+    "build:linux": "vue-tsc --noEmit && vite build && electron-builder --linux",
     "build:mac-intel": "vue-tsc --noEmit && vite build && electron-builder --mac --x64",
     "build:mac-apple": "vue-tsc --noEmit && vite build && electron-builder --mac --arm64",
-    "publish:win": "vue-tsc --noEmit && vite build && electron-builder --publish always --win --x64",
-    "publish:linux": "vue-tsc --noEmit && vite build && electron-builder --publish always --linux --x64",
+    "publish:win": "vue-tsc --noEmit && vite build && electron-builder --publish always --win",
+    "publish:linux": "vue-tsc --noEmit && vite build && electron-builder --publish always --linux",
     "publish:mac-intel": "vue-tsc --noEmit && vite build && electron-builder --publish always --mac --x64",
     "publish:mac-apple": "vue-tsc --noEmit && vite build && electron-builder --publish always --mac --arm64",
     "postinstall": "electron-builder install-app-deps",
@@ -103,20 +103,23 @@
       "!**/node_modules/**/*.{md,markdown,MD,ts,test,tests,spec}"
     ],
     "asar": true,
-    "compression": "maximum",
+    "compression": "normal",
     "artifactName": "${productName}-${version}-${os}-${arch}.${ext}",
     "publish": {
       "provider": "github",
       "owner": "Tiagospem",
       "repo": "larabase",
-      "private": false,
-      "releaseType": "release"
+      "private": false
     },
     "directories": {
       "output": "release/${version}"
     },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "installerIcon": "dist/icons/win/icon.ico"
+    },
     "mac": {
-      "category": "public.app-category.developer-tools",
       "darkModeSupport": true,
       "icon": "dist/icons/mac/icon.icns",
       "hardenedRuntime": false,
@@ -125,11 +128,7 @@
     },
     "dmg": {
       "title": "${productName} ${version}",
-      "icon": "dist/icons/mac/icon.icns",
-      "window": {
-        "width": 540,
-        "height": 380
-      }
+      "icon": "dist/icons/mac/icon.icns"
     },
     "win": {
       "target": [
@@ -140,38 +139,15 @@
       ],
       "icon": "dist/icons/win/icon.ico"
     },
-    "nsis": {
-      "oneClick": false,
-      "allowToChangeInstallationDirectory": true,
-      "installerIcon": "dist/icons/win/icon.ico",
-      "uninstallerIcon": "dist/icons/win/icon.ico",
-      "createDesktopShortcut": true,
-      "createStartMenuShortcut": true
-    },
     "linux": {
       "target": [
-        {
-          "target": "AppImage",
-          "arch": ["x64"]
-        }
+        "AppImage"
       ],
       "category": "Development",
-      "icon": "dist/icons/png/512x512.png",
-      "desktop": {
-        "Name": "Larabase",
-        "Comment": "An Opined Database GUI for Laravel Developers",
-        "Categories": "Development;Utility;"
-      }
+      "icon": "dist/icons/png/512x512.png"
     },
     "asarUnpack": [
       "node_modules/electron-store/**/*"
-    ],
-    "extraResources": [
-      {
-        "from": "dist/icons/${os}",
-        "to": "icons",
-        "filter": ["**/*"]
-      }
     ]
   }
 }
