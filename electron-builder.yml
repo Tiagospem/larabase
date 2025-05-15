@@ -1,16 +1,15 @@
 $schema: "https://raw.githubusercontent.com/electron-userland/electron-builder/master/packages/app-builder-lib/scheme.json"
 appId: "com.larabase.app"
-asar: true
-asarUnpack:
-  - "node_modules/@tailwindcss/oxide-darwin-*/**/*"
-  - "node_modules/lightningcss-darwin-*/**/*"
-  - "node_modules/bcrypt/**/*"
-  - "node_modules/cpu-features/**/*"
-  - "node_modules/**/*.node"
 productName: "Larabase"
+
+artifactName: "${productName}-${version}-${os}-${arch}.${ext}"
+
+asar: true
 compression: "normal"
+
 directories:
   output: "release/${version}"
+
 files:
   - "dist/**/*"
   - "dist-electron/**/*"
@@ -20,16 +19,12 @@ files:
 mac:
   darkModeSupport: true
   target:
-    - dmg:
-        arch:
-          - x64
-          - arm64
-        artifactName: "${productName}-${version}-Mac-${arch}.${ext}"
-    - zip:
-        arch:
-          - x64
-          - arm64
-        artifactName: "${productName}-${version}-Mac-${arch}.${ext}"
+    - dmg
+    - zip
+  dmg:
+    artifactName: "${productName}-${version}-mac-${arch}.${ext}"
+  zip:
+    artifactName: "${productName}-${version}-mac-${arch}.${ext}"
   icon: "dist/icons/mac/icon.icns"
   hardenedRuntime: false
   gatekeeperAssess: false
@@ -37,25 +32,16 @@ mac:
 
 win:
   target:
-    - nsis:
-        arch:
-          - x64
-          - ia32
-        artifactName: "${productName}-${version}-Win-${arch}.${ext}"
-nsis:
-  oneClick: false
-  perMachine: false
-  allowToChangeInstallationDirectory: true
-  deleteAppDataOnUninstall: false
-  installerIcon: "dist/icons/win/icon.ico"
+    - nsis
+  nsis:
+    artifactName: "${productName}-${version}-win-${arch}.${ext}"
+  icon: "dist/icons/win/icon.ico"
 
 linux:
   target:
-    - AppImage:
-        artifactName: "${productName}-${version}-Linux-${arch}.${ext}"
-    - snap:
-        publish: false
-        artifactName: "${productName}-${version}-Linux-${arch}.${ext}"
+    - AppImage
+  appImage:
+    artifactName: "${productName}-${version}-linux-${arch}.${ext}"
   icon: "dist/icons/png/512x512.png"
 
 publish:
