@@ -1,4 +1,5 @@
 export interface SshConnection {
+	name?: string; // Connection name
 	host: string;
 	port: number;
 	username: string;
@@ -6,13 +7,12 @@ export interface SshConnection {
 	privateKey?: string;
 	passphrase?: string;
 	remotePath: string;
-	remoteDbType: 'mysql' | 'postgresql';
+	remoteDbType: 'mysql'; // Only MySQL is supported
 	remoteDbConfig: {
 		host: string;
 		port: number;
 		database: string;
 		username: string;
 		password?: string;
-		schema?: string;
 	};
 }

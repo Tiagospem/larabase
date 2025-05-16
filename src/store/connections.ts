@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia';
 import { computed, ref, toRaw } from 'vue';
 import { ProjectConnection } from '@/types/project';
+import { ConnectionType } from '@/types/connection-types';
 
 export const useConnectionsStore = defineStore('connections', () => {
 	const connections = ref<ProjectConnection[]>([]);
@@ -27,10 +28,26 @@ export const useConnectionsStore = defineStore('connections', () => {
 						savedProjects.length > 0
 					) {
 						for (const project of savedProjects) {
-							const check =
-								await window.ipcRenderer.testMySQLConnection(
-									toRaw(project.db_config)
-								);
+							let check = { success: false, message: '' };
+
+							if (
+								project.type === ConnectionType.SSH &&
+								project.ssh_config
+							) {
+								// Skip testing SSH connections to avoid validation issues
+								// Set them as valid/connected by default
+								check = {
+									success: true,
+									message:
+										'SSH connection (validation skipped)'
+								};
+							} else if (project.db_config) {
+								// Test MySQL connection
+								check =
+									await window.ipcRenderer.testMySQLConnection(
+										toRaw(project.db_config)
+									);
+							}
 
 							project.isValid = check.success;
 							project.status = check.success

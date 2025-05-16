@@ -5,6 +5,16 @@ import electron from 'vite-plugin-electron/simple';
 import pkg from './package.json';
 import path from 'path';
 
+// Ensure these native modules are properly excluded
+const nativeNodeModules = [
+	'ssh2',
+	'ssh2-streams',
+	'bcrypt',
+	'ioredis',
+	'mysql2',
+	'dockerode'
+];
+
 export default defineConfig(({ command }) => {
 	fs.rmSync('dist-electron', { recursive: true, force: true });
 
@@ -33,12 +43,19 @@ export default defineConfig(({ command }) => {
 							minify: isBuild,
 							outDir: 'dist-electron/main',
 							rollupOptions: {
-								external: Object.keys(
-									'dependencies' in pkg
-										? pkg.dependencies
-										: {}
-								)
+								external: [
+									...Object.keys(
+										'dependencies' in pkg
+											? pkg.dependencies
+											: {}
+									),
+									...nativeNodeModules,
+									/^node:.*/
+								]
 							}
+						},
+						optimizeDeps: {
+							exclude: nativeNodeModules
 						}
 					}
 				},
@@ -50,12 +67,19 @@ export default defineConfig(({ command }) => {
 							minify: isBuild,
 							outDir: 'dist-electron/preload',
 							rollupOptions: {
-								external: Object.keys(
-									'dependencies' in pkg
-										? pkg.dependencies
-										: {}
-								)
+								external: [
+									...Object.keys(
+										'dependencies' in pkg
+											? pkg.dependencies
+											: {}
+									),
+									...nativeNodeModules,
+									/^node:.*/
+								]
 							}
+						},
+						optimizeDeps: {
+							exclude: nativeNodeModules
 						}
 					}
 				},
@@ -78,6 +102,14 @@ export default defineConfig(({ command }) => {
 				'@/store': path.resolve(__dirname, 'src/store'),
 				'@/types': path.resolve(__dirname, 'src/types')
 			}
+		},
+		build: {
+			rollupOptions: {
+				external: [...nativeNodeModules, /^node:.*/]
+			}
+		},
+		optimizeDeps: {
+			exclude: nativeNodeModules
 		}
 	};
 });

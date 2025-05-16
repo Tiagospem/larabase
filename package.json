@@ -31,6 +31,7 @@
     "publish:mac-intel": "vue-tsc --noEmit && vite build && electron-builder --publish always --mac --x64",
     "publish:mac-apple": "vue-tsc --noEmit && vite build && electron-builder --publish always --mac --arm64",
     "postinstall": "electron-builder install-app-deps",
+    "rebuild": "electron-builder install-app-deps",
     "lint": "eslint . --ext .vue,.js,.ts,.jsx,.tsx --fix",
     "format": "prettier --write \"**/*.{js,ts,vue,jsx,tsx,css,md}\""
   },
@@ -56,6 +57,7 @@
     "pinia": "^3.0.2",
     "pluralize": "^8.0.0",
     "redis": "^5.0.0",
+    "ssh2": "^1.16.0",
     "sql-formatter": "^15.6.1",
     "tailwindcss": "^4.1.4",
     "uuid": "^11.1.0",
@@ -67,6 +69,7 @@
     "@types/dockerode": "^3.3.38",
     "@types/lodash": "^4.17.16",
     "@types/pluralize": "^0.0.33",
+    "@types/ssh2": "^1.15.0",
     "@typescript-eslint/eslint-plugin": "^8.31.1",
     "@typescript-eslint/parser": "^8.31.1",
     "@vitejs/plugin-vue": "^5.0.4",
@@ -147,7 +150,13 @@
       "icon": "dist/icons/png/512x512.png"
     },
     "asarUnpack": [
-      "node_modules/electron-store/**/*"
+      "node_modules/electron-store/**/*",
+      "node_modules/ssh2/**/*",
+      "node_modules/bcrypt/**/*",
+      "node_modules/mysql2/**/*",
+      "node_modules/dockerode/**/*",
+      "node_modules/ioredis/**/*",
+      "node_modules/**/build/Release/*.node"
     ]
   }
 }

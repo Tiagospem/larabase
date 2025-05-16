@@ -155,6 +155,7 @@ contextBridge.exposeInMainWorld('ipcRenderer', {
 	findModelsForTables: (projectPath: string) =>
 		ipcRenderer.invoke('find-models-for-tables', projectPath),
 	selectDirectory: () => ipcRenderer.invoke('select-directory'),
+	selectFile: (options: any) => ipcRenderer.invoke('select-file', options),
 	validateLaravelProject: (projectPath: string) =>
 		ipcRenderer.invoke('validate-laravel-project', projectPath),
 	readEnvFile: (projectPath: string) =>

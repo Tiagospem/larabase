@@ -78,7 +78,7 @@ Use this section to track your progress through the implementation steps:
 - [ ] Set Up SSH Helper Module
 - [ ] Create IPC Handlers for SSH
 - [ ] Implement SSH Tunneling
-- [ ] Update UI Components for SSH
+- [x] Update UI Components for SSH
 - [ ] Add Remote Indication Badges
 - [ ] Handle Remote File Operations
 - [ ] Execute Remote Commands

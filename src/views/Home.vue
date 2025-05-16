@@ -7,6 +7,7 @@ import RestoreDatabase from '@/components/home/RestoreDatabase.vue';
 import { ProjectConnection } from '@/types/project';
 import ManageConnection from '@/components/home/ManageConnection.vue';
 import Settings from '@/components/Settings.vue';
+import { ConnectionType } from '@/types/connection-types';
 
 const router = useRouter();
 const connectionsStore = useConnectionsStore();
@@ -54,10 +55,12 @@ function openConnection(connectionId: string) {
 
 function getConnectionColor(type: string) {
 	switch (type) {
-		case 'mysql':
+		case ConnectionType.MySQL:
 			return 'bg-orange-500';
-		case 'postgresql':
+		case ConnectionType.PostgreSQL:
 			return 'bg-blue-600';
+		case ConnectionType.SSH:
+			return 'bg-purple-600';
 		default:
 			return 'bg-gray-600';
 	}
@@ -191,17 +194,39 @@ function getConnectionColor(type: string) {
 										class="card-title overflow-hidden text-ellipsis whitespace-nowrap"
 									>
 										<span>{{ connection.name }}</span>
+										<span
+											v-if="connection.isRemote"
+											class="badge badge-accent badge-sm"
+											>Remote</span
+										>
 									</h2>
 									<p
 										class="overflow-hidden text-xs text-ellipsis whitespace-nowrap"
 									>
-										{{ connection.db_config.host }}
+										{{
+											connection.type ===
+												ConnectionType.SSH &&
+											connection.ssh_config
+												? connection.ssh_config.host
+												: connection.db_config?.host
+										}}
 									</p>
 									<p
 										class="mt-1 overflow-hidden text-xs font-medium text-ellipsis whitespace-nowrap"
 									>
-										{{ connection.db_config.database }}
+										{{
+											connection.type ===
+												ConnectionType.SSH &&
+											connection.ssh_config
+												? connection.ssh_config
+														.remoteDbConfig.database
+												: connection.db_config?.database
+										}}
 										<span
+											v-if="
+												connection.type !==
+												ConnectionType.SSH
+											"
 											class="ml-1 text-xs"
 											:class="{
 												'text-success':

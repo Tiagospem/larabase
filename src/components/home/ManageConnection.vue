@@ -1,11 +1,17 @@
 <script setup lang="ts">
-import { inject, ref } from 'vue';
+import { inject, ref, watch, toRaw } from 'vue';
 import { v4 as uuid } from 'uuid';
 import { useConnectionsStore } from '@/store/connections';
 import Modal from '@/components/Modal.vue';
 import { ProjectConnection } from '@/types/project';
 import { Env } from '@/types/env';
 import { DockerInfo } from '@/types/docker-info';
+import {
+	ConnectionType,
+	getConnectionTypeIcon
+} from '@/types/connection-types';
+import SshConnectionForm from '@/components/home/SshConnectionForm.vue';
+import { SshConnection } from '@/types/ssh-connection';
 
 const connectionsStore = useConnectionsStore();
 
@@ -19,8 +25,8 @@ const defaultValues = {
 	id: '',
 	projectPath: '',
 	name: '',
-	type: 'mysql',
-	icon: '',
+	type: ConnectionType.MySQL,
+	icon: getConnectionTypeIcon(ConnectionType.MySQL),
 	db_config: {
 		database: '',
 		host: 'localhost',
@@ -37,10 +43,26 @@ const defaultValues = {
 	usingSail: false,
 	status: 'ready',
 	isValid: true,
+	isRemote: false,
 	dockerInfo: null
 };
 
 const newConnection = ref<ProjectConnection>(defaultValues);
+const sshConfig = ref<SshConnection>({
+	name: '',
+	host: '',
+	port: 22,
+	username: '',
+	remotePath: '',
+	remoteDbType: 'mysql',
+	remoteDbConfig: {
+		host: 'localhost',
+		port: 3306,
+		database: '',
+		username: '',
+		password: ''
+	}
+});
 
 const editConnectionId = ref();
 const projectPathError = ref('');
@@ -48,19 +70,52 @@ const dockerInfo = ref<DockerInfo | null>(null);
 
 async function saveNewConnection() {
 	try {
-		if (!newConnection.value.projectPath) {
+		if (
+			!newConnection.value.projectPath &&
+			newConnection.value.type !== ConnectionType.SSH
+		) {
 			projectPathError.value = 'Project path is required';
 			return;
 		}
 
-		if (
-			!newConnection.value.name ||
-			!newConnection ||
-			!newConnection.value.db_config.database ||
-			!newConnection.value.db_config.user
-		) {
-			showAlert('Please fill all required fields', 'error');
+		// Check for a name in either the main form or the SSH form
+		const hasName =
+			newConnection.value.type === ConnectionType.SSH
+				? !!sshConfig.value.name
+				: !!newConnection.value.name;
+
+		if (!hasName) {
+			showAlert('Connection name is required', 'error');
 			return;
+		}
+
+		if (newConnection.value.type === ConnectionType.SSH) {
+			// Validate SSH connection fields
+			if (
+				!sshConfig.value.host ||
+				!sshConfig.value.username ||
+				!sshConfig.value.remotePath
+			) {
+				showAlert('Please fill all required SSH fields', 'error');
+				return;
+			}
+
+			if (
+				!sshConfig.value.remoteDbConfig.database ||
+				!sshConfig.value.remoteDbConfig.username
+			) {
+				showAlert('Please fill all required database fields', 'error');
+				return;
+			}
+		} else {
+			// Validate local connection fields
+			if (
+				!newConnection.value.db_config?.database ||
+				!newConnection.value.db_config?.user
+			) {
+				showAlert('Please fill all required fields', 'error');
+				return;
+			}
 		}
 
 		const exists = connectionsStore.connections.some(
@@ -80,15 +135,54 @@ async function saveNewConnection() {
 
 		isSaving.value = true;
 
-		showAlert('Testing database connection...', 'info');
+		let testResult = { success: true, message: '' };
 
-		const testResult = await window.ipcRenderer.testMySQLConnection({
-			host: newConnection.value.db_config.host,
-			port: newConnection.value.db_config.port,
-			user: newConnection.value.db_config.user,
-			password: newConnection.value.db_config.password,
-			database: newConnection.value.db_config.database
-		});
+		if (newConnection.value.type === ConnectionType.SSH) {
+			// Test SSH connection
+			showAlert('Testing SSH connection...', 'info');
+			
+			// Create a plain JavaScript object from the reactive SSH config
+			const plainSshConfig = {
+				name: sshConfig.value.name || '',
+				host: sshConfig.value.host,
+				port: sshConfig.value.port,
+				username: sshConfig.value.username,
+				remotePath: sshConfig.value.remotePath,
+				remoteDbType: 'mysql',
+				remoteDbConfig: {
+					host: sshConfig.value.remoteDbConfig.host,
+					port: sshConfig.value.remoteDbConfig.port,
+					database: sshConfig.value.remoteDbConfig.database,
+					username: sshConfig.value.remoteDbConfig.username,
+					password: sshConfig.value.remoteDbConfig.password || ''
+				}
+			} as any;
+			
+			// Add authentication details
+			if (sshConfig.value.password) {
+				plainSshConfig.password = sshConfig.value.password;
+			}
+			if (sshConfig.value.privateKey) {
+				plainSshConfig.privateKey = sshConfig.value.privateKey;
+				if (sshConfig.value.passphrase) {
+					plainSshConfig.passphrase = sshConfig.value.passphrase;
+				}
+			}
+			
+			testResult = await window.ipcRenderer.ssh.testConnection(toRaw(plainSshConfig));
+		} else if (newConnection.value.type === ConnectionType.MySQL) {
+			// Test MySQL connection
+			showAlert('Testing database connection...', 'info');
+			if (newConnection.value.db_config) {
+				testResult = await window.ipcRenderer.testMySQLConnection({
+					host: newConnection.value.db_config.host,
+					port: newConnection.value.db_config.port,
+					user: newConnection.value.db_config.user,
+					password: newConnection.value.db_config.password,
+					database: newConnection.value.db_config.database
+				});
+			}
+		}
 
 		if (!testResult.success) {
 			showAlert(`Connection failed: ${testResult.message}`, 'error');
@@ -98,30 +192,77 @@ async function saveNewConnection() {
 
 		showAlert('Connection successful! Saving configuration...', 'success');
 
-		const connectionData = {
+		const connectionData: ProjectConnection = {
 			id: isEditMode.value ? editConnectionId.value : uuid(),
-			projectPath: newConnection.value.projectPath,
-			name: newConnection.value.name,
+			projectPath:
+				newConnection.value.type === ConnectionType.SSH
+					? ''
+					: newConnection.value.projectPath,
+			name:
+				newConnection.value.type === ConnectionType.SSH
+					? sshConfig.value.name || ''
+					: newConnection.value.name,
 			type: newConnection.value.type,
-			icon: newConnection.value.type.charAt(0).toUpperCase(),
-			db_config: {
+			icon: getConnectionTypeIcon(newConnection.value.type),
+			isRemote: newConnection.value.type === ConnectionType.SSH,
+			status: 'ready',
+			isValid: true,
+			usingSail:
+				newConnection.value.type !== ConnectionType.SSH
+					? newConnection.value.usingSail
+					: false,
+			dockerInfo:
+				newConnection.value.type !== ConnectionType.SSH
+					? dockerInfo.value || null
+					: null,
+			redis_config: {
+				port: newConnection.value.redis_config.port,
+				host: newConnection.value.redis_config.host,
+				password: newConnection.value.redis_config.password
+			}
+		};
+
+		// Add the appropriate configuration based on connection type
+		if (newConnection.value.type === ConnectionType.SSH) {
+			// Create a clean, serializable object for SSH config
+			const plainSshConfig = {
+				name: sshConfig.value.name || '',
+				host: sshConfig.value.host,
+				port: sshConfig.value.port,
+				username: sshConfig.value.username,
+				remotePath: sshConfig.value.remotePath,
+				remoteDbType: 'mysql',
+				remoteDbConfig: {
+					host: sshConfig.value.remoteDbConfig.host,
+					port: sshConfig.value.remoteDbConfig.port,
+					database: sshConfig.value.remoteDbConfig.database,
+					username: sshConfig.value.remoteDbConfig.username,
+					password: sshConfig.value.remoteDbConfig.password || ''
+				}
+			} as any;
+			
+			// Add authentication details
+			if (sshConfig.value.password) {
+				plainSshConfig.password = sshConfig.value.password;
+			}
+			if (sshConfig.value.privateKey) {
+				plainSshConfig.privateKey = sshConfig.value.privateKey;
+				if (sshConfig.value.passphrase) {
+					plainSshConfig.passphrase = sshConfig.value.passphrase;
+				}
+			}
+			
+			connectionData.ssh_config = toRaw(plainSshConfig);
+		} else if (newConnection.value.db_config) {
+			connectionData.db_config = {
 				database: newConnection.value.db_config.database,
 				host: newConnection.value.db_config.host,
 				port: newConnection.value.db_config.port,
 				user: newConnection.value.db_config.user,
 				password: newConnection.value.db_config.password,
 				connectTimeout: 10000
-			},
-			redis_config: {
-				port: newConnection.value.redis_config.port,
-				host: newConnection.value.redis_config.host,
-				password: newConnection.value.redis_config.password
-			},
-			usingSail: newConnection.value.usingSail,
-			status: 'ready',
-			isValid: true,
-			dockerInfo: dockerInfo.value || null
-		};
+			};
+		}
 
 		if (isEditMode.value) {
 			await connectionsStore.updateConnection(
@@ -154,15 +295,8 @@ function editConnection(project: ProjectConnection) {
 		projectPath: project.projectPath,
 		name: project.name,
 		type: project.type,
-		icon: project.type.charAt(0).toUpperCase(),
-		db_config: {
-			database: project.db_config.database,
-			host: project.db_config.host,
-			port: project.db_config.port,
-			user: project.db_config.user,
-			password: project.db_config.password,
-			connectTimeout: 10000
-		},
+		icon: project.icon,
+		isRemote: project.isRemote || false,
 		redis_config: {
 			port: project.redis_config.port,
 			host: project.redis_config.host,
@@ -173,6 +307,14 @@ function editConnection(project: ProjectConnection) {
 		isValid: true,
 		dockerInfo: project.dockerInfo
 	};
+
+	if (project.db_config) {
+		newConnection.value.db_config = { ...project.db_config };
+	}
+
+	if (project.ssh_config) {
+		sshConfig.value = { ...project.ssh_config };
+	}
 
 	projectPathError.value = '';
 	dockerInfo.value = project.dockerInfo as DockerInfo;
@@ -321,6 +463,50 @@ function openCreateConnectionModal() {
 	isCreateModalOpen.value = true;
 }
 
+// Watch for connection type changes
+watch(
+	() => newConnection.value.type,
+	(newType) => {
+		// Reset validation errors
+		projectPathError.value = '';
+
+		if (newType === ConnectionType.SSH) {
+			// When switching to SSH, copy the name from the main form if it has one
+			if (newConnection.value.name) {
+				sshConfig.value.name = newConnection.value.name;
+			}
+		} else if (sshConfig.value.name) {
+			// When switching from SSH, copy the name back to the main form
+			newConnection.value.name = sshConfig.value.name;
+		}
+
+		// Set appropriate icon
+		newConnection.value.icon = getConnectionTypeIcon(newType);
+
+		// Set isRemote flag based on connection type
+		newConnection.value.isRemote = newType === ConnectionType.SSH;
+	}
+);
+
+// Additional watch to keep names in sync when either changes
+watch(
+	() => newConnection.value.name,
+	(newName) => {
+		if (newConnection.value.type === ConnectionType.SSH && newName) {
+			sshConfig.value.name = newName;
+		}
+	}
+);
+
+watch(
+	() => sshConfig.value.name,
+	(newName) => {
+		if (newConnection.value.type === ConnectionType.SSH && newName) {
+			newConnection.value.name = newName;
+		}
+	}
+);
+
 defineExpose({ editConnection, removeConnection, openCreateConnectionModal });
 </script>
 
@@ -336,273 +522,310 @@ defineExpose({ editConnection, removeConnection, openCreateConnectionModal });
 			<div class="overflow-y-auto pr-2 flex-1">
 				<fieldset class="fieldset mb-4 w-full">
 					<label class="label">
-						<span class="label-text">Laravel Project Path</span>
+						<span class="label-text">Connection Type</span>
 					</label>
-					<div class="flex gap-2">
-						<input
-							v-model="newConnection.projectPath"
-							type="text"
-							placeholder="Select Laravel project directory"
-							class="input w-full"
-							:readonly="true"
-						/>
-						<button
-							class="btn btn-primary"
-							@click="selectProjectDirectory"
-						>
-							Browse
-						</button>
-					</div>
-					<label
-						v-if="projectPathError"
-						class="label"
+					<select
+						v-model="newConnection.type"
+						class="select select-bordered w-full"
 					>
-						<span class="label-text-alt text-error">{{
-							projectPathError
-						}}</span>
-					</label>
+						<option :value="ConnectionType.MySQL">
+							MySQL (Local)
+						</option>
+						<option :value="ConnectionType.SSH">
+							SSH (Remote)
+						</option>
+					</select>
 					<p class="text-base-content mt-1 text-xs">
-						Path to your Laravel project (.env file will be read
-						from this location)
+						{{
+							newConnection.type === ConnectionType.SSH
+								? 'Connect to a remote server via SSH'
+								: 'Connect to a local database'
+						}}
 					</p>
 				</fieldset>
 
-				<fieldset class="fieldset mb-4 w-full">
-					<label class="label cursor-pointer">
-						<span class="label-text">Using Laravel Sail?</span>
-						<input
-							v-model="newConnection.usingSail"
-							type="checkbox"
-							class="toggle toggle-primary"
-						/>
-					</label>
-					<p class="text-base-content mt-1 text-xs">
-						Enable if your project uses Laravel Sail (Docker)
-					</p>
-				</fieldset>
+				<!-- SSH Connection Form -->
+				<div v-if="newConnection.type === ConnectionType.SSH">
+					<SshConnectionForm v-model="sshConfig" />
+				</div>
 
-				<div
-					v-if="dockerInfo && !isEditMode"
-					:class="[
-						'alert mb-4',
-						dockerInfo.isDocker
-							? 'alert-success'
-							: !dockerInfo.isDocker && dockerInfo.dockerAvailable
-								? 'alert-warning'
-								: 'alert-info'
-					]"
-				>
-					<div>
-						<svg
-							v-if="dockerInfo.isDocker"
-							xmlns="http://www.w3.org/2000/svg"
-							class="h-6 w-6 shrink-0 stroke-current"
-							fill="none"
-							viewBox="0 0 24 24"
-						>
-							<path
-								stroke-linecap="round"
-								stroke-linejoin="round"
-								stroke-width="2"
-								d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+				<!-- Local Connection Form -->
+				<div v-else>
+					<fieldset class="fieldset mb-4 w-full">
+						<label class="label">
+							<span class="label-text">Laravel Project Path</span>
+						</label>
+						<div class="flex gap-2">
+							<input
+								v-model="newConnection.projectPath"
+								type="text"
+								placeholder="Select Laravel project directory"
+								class="input w-full"
+								:readonly="true"
 							/>
-						</svg>
-						<svg
-							v-else-if="dockerInfo.dockerAvailable"
-							xmlns="http://www.w3.org/2000/svg"
-							class="h-6 w-6 shrink-0 stroke-current"
-							fill="none"
-							viewBox="0 0 24 24"
-						>
-							<path
-								stroke-linecap="round"
-								stroke-linejoin="round"
-								stroke-width="2"
-								d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
-							/>
-						</svg>
-						<svg
-							v-else
-							xmlns="http://www.w3.org/2000/svg"
-							fill="none"
-							viewBox="0 0 24 24"
-							class="h-6 w-6 shrink-0 stroke-current"
-						>
-							<path
-								stroke-linecap="round"
-								stroke-linejoin="round"
-								stroke-width="2"
-								d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-							/>
-						</svg>
-						<div>
-							<span class="font-medium">Docker Detection:</span>
-							<p>{{ dockerInfo.message }}</p>
-							<p
-								v-if="dockerInfo.isDocker"
-								class="mt-1 text-sm"
+							<button
+								class="btn btn-primary"
+								@click="selectProjectDirectory"
 							>
-								<span class="font-medium">Container: </span
-								>{{ dockerInfo.dockerContainerName }}
-							</p>
-							<p class="mt-1 text-sm">
-								<span v-if="dockerInfo.isDocker">
-									The system detected a MySQL Docker
-									container. Configuration has been
-									automatically adjusted.
-								</span>
-								<span v-else-if="dockerInfo.dockerAvailable">
-									Docker is available, but no MySQL container
-									was found running on port
-									{{ newConnection.db_config.port }}. A local
-									connection will be used.
-								</span>
-								<span v-else>
-									Docker was not detected. A local connection
-									will be used.
-								</span>
-							</p>
+								Browse
+							</button>
+						</div>
+						<label
+							v-if="projectPathError"
+							class="label"
+						>
+							<span class="label-text-alt text-error">{{
+								projectPathError
+							}}</span>
+						</label>
+						<p class="text-base-content mt-1 text-xs">
+							Path to your Laravel project (.env file will be read
+							from this location)
+						</p>
+					</fieldset>
+
+					<fieldset class="fieldset mb-4 w-full">
+						<label class="label cursor-pointer">
+							<span class="label-text">Using Laravel Sail?</span>
+							<input
+								v-model="newConnection.usingSail"
+								type="checkbox"
+								class="toggle toggle-primary"
+							/>
+						</label>
+						<p class="text-base-content mt-1 text-xs">
+							Enable if your project uses Laravel Sail (Docker)
+						</p>
+					</fieldset>
+
+					<div
+						v-if="dockerInfo && !isEditMode"
+						:class="[
+							'alert mb-4',
+							dockerInfo.isDocker
+								? 'alert-success'
+								: !dockerInfo.isDocker &&
+									  dockerInfo.dockerAvailable
+									? 'alert-warning'
+									: 'alert-info'
+						]"
+					>
+						<div>
+							<svg
+								v-if="dockerInfo.isDocker"
+								xmlns="http://www.w3.org/2000/svg"
+								class="h-6 w-6 shrink-0 stroke-current"
+								fill="none"
+								viewBox="0 0 24 24"
+							>
+								<path
+									stroke-linecap="round"
+									stroke-linejoin="round"
+									stroke-width="2"
+									d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+								/>
+							</svg>
+							<svg
+								v-else-if="dockerInfo.dockerAvailable"
+								xmlns="http://www.w3.org/2000/svg"
+								class="h-6 w-6 shrink-0 stroke-current"
+								fill="none"
+								viewBox="0 0 24 24"
+							>
+								<path
+									stroke-linecap="round"
+									stroke-linejoin="round"
+									stroke-width="2"
+									d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+								/>
+							</svg>
+							<svg
+								v-else
+								xmlns="http://www.w3.org/2000/svg"
+								fill="none"
+								viewBox="0 0 24 24"
+								class="h-6 w-6 shrink-0 stroke-current"
+							>
+								<path
+									stroke-linecap="round"
+									stroke-linejoin="round"
+									stroke-width="2"
+									d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+								/>
+							</svg>
+							<div>
+								<span class="font-medium"
+									>Docker Detection:</span
+								>
+								<p>{{ dockerInfo.message }}</p>
+								<p
+									v-if="dockerInfo.isDocker"
+									class="mt-1 text-sm"
+								>
+									<span class="font-medium">Container: </span
+									>{{ dockerInfo.dockerContainerName }}
+								</p>
+								<p class="mt-1 text-sm">
+									<span v-if="dockerInfo.isDocker">
+										The system detected a MySQL Docker
+										container. Configuration has been
+										automatically adjusted.
+									</span>
+									<span
+										v-else-if="dockerInfo.dockerAvailable"
+									>
+										Docker is available, but no MySQL
+										container was found running on port
+										{{ newConnection.db_config.port }}. A
+										local connection will be used.
+									</span>
+									<span v-else>
+										Docker was not detected. A local
+										connection will be used.
+									</span>
+								</p>
+							</div>
 						</div>
 					</div>
-				</div>
 
-				<div class="divider">Database Connection</div>
+					<div class="divider">Database Connection</div>
 
-				<div class="grid grid-cols-2 gap-4">
-					<fieldset class="fieldset w-full">
-						<label class="label">
-							<span class="label-text">Connection Name</span>
-						</label>
-						<input
-							v-model="newConnection.name"
-							type="text"
-							placeholder="My Project"
-							class="input w-full"
-							required
-						/>
-					</fieldset>
+					<div class="grid grid-cols-2 gap-4">
+						<fieldset class="fieldset w-full">
+							<label class="label">
+								<span class="label-text">Connection Name</span>
+							</label>
+							<input
+								v-model="newConnection.name"
+								type="text"
+								placeholder="My Project"
+								class="input w-full"
+								required
+							/>
+						</fieldset>
 
-					<fieldset class="fieldset w-full">
-						<label class="label">
-							<span class="label-text">Database Type</span>
-						</label>
-						<select
-							v-model="newConnection.type"
-							class="select select-bordered w-full"
-							disabled
-						>
-							<option value="mysql">MySQL</option>
-						</select>
-						<label class="label">
-							<span class="label-text-alt"
-								>Only MySQL is supported at the moment</span
+						<fieldset class="fieldset w-full">
+							<label class="label">
+								<span class="label-text">Database Type</span>
+							</label>
+							<select
+								v-model="newConnection.type"
+								class="select select-bordered w-full"
+								disabled
 							>
-						</label>
-					</fieldset>
+								<option value="mysql">MySQL</option>
+							</select>
+							<label class="label">
+								<span class="label-text-alt"
+									>Only MySQL is supported at the moment</span
+								>
+							</label>
+						</fieldset>
 
-					<fieldset class="fieldset w-full">
-						<label class="label">
-							<span class="label-text">Host</span>
-						</label>
-						<input
-							v-model="newConnection.db_config.host"
-							type="text"
-							placeholder="localhost"
-							class="input w-full"
-							required
-						/>
-					</fieldset>
+						<fieldset class="fieldset w-full">
+							<label class="label">
+								<span class="label-text">Host</span>
+							</label>
+							<input
+								v-model="newConnection.db_config.host"
+								type="text"
+								placeholder="localhost"
+								class="input w-full"
+								required
+							/>
+						</fieldset>
 
-					<fieldset class="fieldset w-full">
-						<label class="label">
-							<span class="label-text">Port</span>
-						</label>
-						<input
-							v-model="newConnection.db_config.port"
-							type="text"
-							placeholder="3306"
-							class="input w-full"
-							required
-						/>
-					</fieldset>
+						<fieldset class="fieldset w-full">
+							<label class="label">
+								<span class="label-text">Port</span>
+							</label>
+							<input
+								v-model="newConnection.db_config.port"
+								type="text"
+								placeholder="3306"
+								class="input w-full"
+								required
+							/>
+						</fieldset>
 
-					<fieldset class="fieldset w-full">
-						<label class="label">
-							<span class="label-text">Database</span>
-						</label>
-						<input
-							v-model="newConnection.db_config.database"
-							type="text"
-							placeholder="database"
-							class="input w-full"
-							required
-						/>
-					</fieldset>
+						<fieldset class="fieldset w-full">
+							<label class="label">
+								<span class="label-text">Database</span>
+							</label>
+							<input
+								v-model="newConnection.db_config.database"
+								type="text"
+								placeholder="database"
+								class="input w-full"
+								required
+							/>
+						</fieldset>
 
-					<fieldset class="fieldset w-full">
-						<label class="label">
-							<span class="label-text">Username</span>
-						</label>
-						<input
-							v-model="newConnection.db_config.user"
-							type="text"
-							placeholder="root"
-							class="input w-full"
-							required
-						/>
-					</fieldset>
+						<fieldset class="fieldset w-full">
+							<label class="label">
+								<span class="label-text">Username</span>
+							</label>
+							<input
+								v-model="newConnection.db_config.user"
+								type="text"
+								placeholder="root"
+								class="input w-full"
+								required
+							/>
+						</fieldset>
 
-					<fieldset class="fieldset w-full">
-						<label class="label">
-							<span class="label-text">Password</span>
-						</label>
-						<input
-							v-model="newConnection.db_config.password"
-							type="text"
-							placeholder="password"
-							class="input w-full"
-						/>
-					</fieldset>
-				</div>
+						<fieldset class="fieldset w-full">
+							<label class="label">
+								<span class="label-text">Password</span>
+							</label>
+							<input
+								v-model="newConnection.db_config.password"
+								type="text"
+								placeholder="password"
+								class="input w-full"
+							/>
+						</fieldset>
+					</div>
 
-				<div class="divider">Redis Connection (Optional)</div>
+					<div class="divider">Redis Connection (Optional)</div>
 
-				<div class="grid grid-cols-2 gap-4">
-					<fieldset class="fieldset w-full">
-						<label class="label">
-							<span class="label-text">Redis Host</span>
-						</label>
-						<input
-							v-model="newConnection.redis_config.host"
-							type="text"
-							placeholder="127.0.0.1"
-							class="input w-full"
-						/>
-					</fieldset>
+					<div class="grid grid-cols-2 gap-4">
+						<fieldset class="fieldset w-full">
+							<label class="label">
+								<span class="label-text">Redis Host</span>
+							</label>
+							<input
+								v-model="newConnection.redis_config.host"
+								type="text"
+								placeholder="127.0.0.1"
+								class="input w-full"
+							/>
+						</fieldset>
 
-					<fieldset class="fieldset w-full">
-						<label class="label">
-							<span class="label-text">Redis Port</span>
-						</label>
-						<input
-							v-model="newConnection.redis_config.port"
-							type="text"
-							placeholder="6379"
-							class="input w-full"
-						/>
-					</fieldset>
+						<fieldset class="fieldset w-full">
+							<label class="label">
+								<span class="label-text">Redis Port</span>
+							</label>
+							<input
+								v-model="newConnection.redis_config.port"
+								type="text"
+								placeholder="6379"
+								class="input w-full"
+							/>
+						</fieldset>
 
-					<fieldset class="fieldset w-full">
-						<label class="label">
-							<span class="label-text">Redis Password</span>
-						</label>
-						<input
-							v-model="newConnection.redis_config.password"
-							type="text"
-							placeholder="Leave empty if none"
-							class="input w-full"
-						/>
-					</fieldset>
+						<fieldset class="fieldset w-full">
+							<label class="label">
+								<span class="label-text">Redis Password</span>
+							</label>
+							<input
+								v-model="newConnection.redis_config.password"
+								type="text"
+								placeholder="Leave empty if none"
+								class="input w-full"
+							/>
+						</fieldset>
+					</div>
 				</div>
 			</div>
 
@@ -617,7 +840,11 @@ defineExpose({ editConnection, removeConnection, openCreateConnectionModal });
 				</button>
 				<button
 					class="btn btn-primary"
-					:disabled="isSaving || !newConnection.projectPath"
+					:disabled="
+						isSaving ||
+						(newConnection.type !== ConnectionType.SSH &&
+							!newConnection.projectPath)
+					"
 					@click="saveNewConnection"
 				>
 					<span

@@ -20,6 +20,23 @@ const activeTunnels = new Map<
 	}
 >();
 
+// Flag to determine if native modules are working
+let nativeModulesWorking = true;
+
+// In ESM context, we already have the Client class imported
+// We'll just check if we can instantiate it properly
+try {
+	// Try to instantiate the Client class
+	const testClient = new Client();
+	// If we get here without error, native modules are working
+} catch (error) {
+	console.error(
+		'SSH native modules not working, using fallback mode:',
+		error
+	);
+	nativeModulesWorking = false;
+}
+
 // Get a unique key for a connection
 function getConnectionKey(config: SshConnection): string {
 	return `${config.username}@${config.host}:${config.port}:${config.remotePath}`;
@@ -39,21 +56,48 @@ async function createConnection(config: SshConnection): Promise<Client> {
 		const connectConfig: any = {
 			host: config.host,
 			port: config.port,
-			username: config.username
+			username: config.username,
+			debug: true, // Enable debug logs
+			readyTimeout: 10000 // 10 second timeout
 		};
 
 		// Use private key or password for authentication
 		if (config.privateKey) {
-			connectConfig.privateKey = fs.readFileSync(config.privateKey);
-			if (config.passphrase) {
-				connectConfig.passphrase = config.passphrase;
+			try {
+				console.log(`Reading private key from: ${config.privateKey}`);
+				const keyData = fs.readFileSync(config.privateKey, 'utf8');
+
+				// Check if the key starts with BEGIN - typical of PEM format
+				if (keyData.includes('BEGIN')) {
+					console.log('Key appears to be in PEM format');
+					connectConfig.privateKey = keyData;
+				} else {
+					console.log('Key appears to be in binary format');
+					connectConfig.privateKey = fs.readFileSync(
+						config.privateKey
+					);
+				}
+
+				if (config.passphrase) {
+					connectConfig.passphrase = config.passphrase;
+				}
+			} catch (error) {
+				console.error('Error reading private key:', error);
+				reject(
+					new Error(`Failed to read private key: ${error.message}`)
+				);
+				return;
 			}
 		} else if (config.password) {
 			connectConfig.password = config.password;
+		} else {
+			reject(new Error('No authentication method provided'));
+			return;
 		}
 
 		// Set up connection events
 		conn.on('ready', () => {
+			console.log(`SSH connection established to ${config.host}`);
 			// Store connection in the pool
 			const key = getConnectionKey(config);
 			sshConnections.set(key, conn);
@@ -61,10 +105,14 @@ async function createConnection(config: SshConnection): Promise<Client> {
 		});
 
 		conn.on('error', (err) => {
+			console.error(`SSH connection error to ${config.host}:`, err);
 			reject(err);
 		});
 
 		// Connect to SSH server
+		console.log(
+			`Connecting to SSH server ${config.host}:${config.port} as ${config.username}`
+		);
 		conn.connect(connectConfig);
 	});
 }
@@ -225,50 +273,151 @@ async function testConnection(
 	let client: Client | null = null;
 
 	try {
-		client = await createConnection(config);
+		console.log('Testing SSH connection to:', config.host);
 
-		// Verify we can access the remote path
-		const testResult = await executeCommand(
-			config,
-			`cd ${config.remotePath} && ls -la`
-		);
+		// Configure SSH connection
+		const connectConfig: any = {
+			host: config.host,
+			port: config.port,
+			username: config.username,
+			// Enable debug logs for connection issues
+			debug: true,
+			readyTimeout: 10000,
+			// Try all authentication methods
+			tryKeyboard: true
+		};
 
-		if (testResult.code !== 0) {
-			return {
-				success: false,
-				message: `Error accessing remote path: ${testResult.stderr}`
-			};
-		}
+		// Use private key or password for authentication
+		if (config.privateKey) {
+			try {
+				console.log(
+					'Using private key authentication:',
+					config.privateKey
+				);
+				connectConfig.privateKey = fs.readFileSync(config.privateKey);
 
-		// Check if it's a Laravel project
-		const laravelCheckResult = await executeCommand(
-			config,
-			`cd ${config.remotePath} && [ -f artisan ] && echo "Laravel" || echo "Not Laravel"`
-		);
-
-		if (laravelCheckResult.stdout.trim() !== 'Laravel') {
+				if (config.passphrase) {
+					connectConfig.passphrase = config.passphrase;
+				}
+			} catch (error) {
+				return {
+					success: false,
+					message: `Error reading private key file: ${error.message}`
+				};
+			}
+		} else if (config.password) {
+			console.log('Using password authentication');
+			connectConfig.password = config.password;
+		} else {
 			return {
 				success: false,
 				message:
-					'The remote path does not appear to be a Laravel project (no artisan file found)'
+					'No authentication method provided. Please provide either a password or a private key.'
 			};
 		}
 
-		return {
-			success: true,
-			message: 'Successfully connected to remote Laravel project'
-		};
+		client = new Client();
+
+		return new Promise((resolve) => {
+			// Handle connection errors
+			client.on('error', (err) => {
+				console.error('SSH connection error:', err);
+				resolve({
+					success: false,
+					message: `Connection error: ${err.message}`
+				});
+			});
+
+			// Handle keyboard interactive authentication
+			client.on(
+				'keyboard-interactive',
+				(name, instructions, lang, prompts, finish) => {
+					console.log('Keyboard interactive auth requested');
+					if (config.password && prompts.length > 0) {
+						finish([config.password]);
+					} else {
+						finish([]);
+					}
+				}
+			);
+
+			// Handle ready event
+			client.on('ready', async () => {
+				console.log(
+					'SSH connection established, testing remote path access'
+				);
+				try {
+					// Verify we can access the remote path
+					const testResult = await executeCommand(
+						config,
+						`cd ${config.remotePath} && ls -la`
+					);
+
+					if (testResult.code !== 0) {
+						resolve({
+							success: false,
+							message: `Error accessing remote path: ${testResult.stderr || testResult.stdout}`
+						});
+						return;
+					}
+
+					// Check if it's a Laravel project
+					const laravelCheckResult = await executeCommand(
+						config,
+						`cd ${config.remotePath} && [ -f artisan ] && echo "Laravel" || echo "Not Laravel"`
+					);
+
+					if (laravelCheckResult.stdout.trim() !== 'Laravel') {
+						resolve({
+							success: false,
+							message:
+								'The remote path does not appear to be a Laravel project (no artisan file found)'
+						});
+						return;
+					}
+
+					resolve({
+						success: true,
+						message:
+							'Successfully connected to remote Laravel project'
+					});
+				} catch (innerError) {
+					resolve({
+						success: false,
+						message: `Connected to SSH server but failed to verify Laravel project: ${innerError.message}`
+					});
+				} finally {
+					client.end();
+				}
+			});
+
+			// Handle timeout
+			setTimeout(() => {
+				if (client) {
+					client.end();
+					resolve({
+						success: false,
+						message: 'Connection timed out'
+					});
+				}
+			}, 15000);
+
+			// Connect to SSH server
+			console.log('Attempting to connect to SSH server');
+			client.connect(connectConfig);
+		});
 	} catch (error) {
+		console.error('SSH test connection error:', error);
 		return {
 			success: false,
 			message:
 				error instanceof Error
-					? error.message
+					? `SSH connection error: ${error.message}`
 					: 'Unknown error connecting to SSH server'
 		};
 	} finally {
-		if (client) {
-			closeConnection(config);
+		if (client && (client as any).state === 'authenticated') {
+			client.end();
 		}
 	}
 }
@@ -364,6 +513,19 @@ function closeAllTunnels(): void {
 	}
 
 	activeTunnels.clear();
+}
+
+/**
+ * Test an SSH connection
+ */
+export async function testSshConnection(
+	config: SshConnection
+): Promise<{ success: boolean; message: string }> {
+	return new Promise((resolve) => {
+		testConnection(config).then((result) => {
+			resolve(result);
+		});
+	});
 }
 
 export {
