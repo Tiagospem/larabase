@@ -211,17 +211,17 @@ function setupListeners() {
 		downloading.value = false;
 		updateComplete.value = true;
 		progress.value = 100;
-		
+
 		updateInfo.value.downloadedPath = event.detail?.path || '';
-		
+
 		if (event.detail && event.detail.path) {
-			originalUpdateInfo.value = { 
-				...originalUpdateInfo.value, 
-				downloadedPath: event.detail.path 
+			originalUpdateInfo.value = {
+				...originalUpdateInfo.value,
+				downloadedPath: event.detail.path
 			};
-			
+
 			updateStatus.value = 'Installing update...';
-			
+
 			installUpdate();
 		}
 	}) as EventListener);
@@ -314,7 +314,7 @@ async function checkForUpdates() {
 async function downloadUpdate() {
 	try {
 		originalUpdateInfo.value = { ...updateInfo.value };
-		
+
 		updateError.value = '';
 		downloading.value = true;
 		progress.value = 0;
@@ -354,7 +354,7 @@ function installUpdate() {
 	const downloadedPath =
 		originalUpdateInfo.value.downloadedPath ||
 		updateInfo.value.downloadedPath;
-	
+
 	updateError.value = '';
 
 	if (
@@ -378,7 +378,7 @@ function installUpdate() {
 			updateError.value = `Failed to open installer: ${(error as Error).message}`;
 		}
 	}
-	
+
 	if (window.ipcRenderer) {
 		loading.value = true;
 		if (window.ipcRenderer.invoke) {

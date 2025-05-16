@@ -12,19 +12,10 @@ import { useSqlResultsStore } from '@/store/sqlResults';
 import { SqlScratchService } from '@/services/sqlScratchService';
 import { ProjectConnection } from '@/types/project';
 import { useDatabaseSchema } from '@/services/databaseSchema';
-import { useSettingsStore } from '@/store/settings';
 import { AIService } from '@/services/aiService';
 import SQLAIModal from '@/components/SQLAIModal.vue';
 import SQLExplainModal from '@/components/SQLExplainModal.vue';
 import type { ExplainResult } from '@/composables/useSQLEditor';
-
-declare global {
-	interface Window {
-		sqlEditorContent?: {
-			value: string;
-		};
-	}
-}
 
 const route = useRoute();
 const router = useRouter();
@@ -61,7 +52,7 @@ const {
 	initializeSchema,
 	getCompactSchema
 } = useDatabaseSchema();
-const settingsStore = useSettingsStore();
+
 const aiService = AIService.getInstance();
 
 const sqlScratchService = SqlScratchService.getInstance();
@@ -202,8 +193,7 @@ async function showDatabaseSchema() {
 			databaseSchema.value.tables &&
 			databaseSchema.value.tables.length > 0
 		) {
-			const compactSchema = getCompactSchema();
-
+			getCompactSchema();
 			showSchemaModal.value = true;
 		} else {
 			alert('No database schema data available. Please try again.');
@@ -590,6 +580,7 @@ onBeforeUnmount(() => {
 								title="Save as Scratch"
 							>
 								<svg
+									fill="currentColor"
 									class="h-4 w-4"
 									xmlns="http://www.w3.org/2000/svg"
 									viewBox="0 0 448 512"

@@ -26,13 +26,15 @@ export const useConnectionsStore = defineStore('connections', () => {
 						Array.isArray(savedProjects) &&
 						savedProjects.length > 0
 					) {
-						for (const project of savedProjects) {
-							const check =
-								await window.ipcRenderer.testMySQLConnection(
-									project.db_config
-								);
+						if (id !== null) {
+							for (const project of savedProjects) {
+								const check =
+									await window.ipcRenderer.testMySQLConnection(
+										project.db_config
+									);
 
-							project.isValid = check.success;
+								project.isValid = check.success;
+							}
 						}
 
 						connections.value = savedProjects;
@@ -125,6 +127,11 @@ export const useConnectionsStore = defineStore('connections', () => {
 		return connections.value.find((c) => c.id === id) || null;
 	}
 
+	function resetState() {
+		currentProjectId.value = null;
+		isLoading.value = false;
+	}
+
 	return {
 		connections,
 		isLoading,
@@ -134,6 +141,7 @@ export const useConnectionsStore = defineStore('connections', () => {
 		removeConnection,
 		updateConnection,
 		getProjectById,
-		getSelectedProject
+		getSelectedProject,
+		resetState
 	};
 });

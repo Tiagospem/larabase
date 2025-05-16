@@ -100,7 +100,7 @@ function handleDownloadUpdate() {
 				message: 'No update info available'
 			});
 		}
-		
+
 		if (process.platform === 'darwin') {
 			const downloadPath = app.getPath('downloads');
 			const files = globalUpdateInfo.files || [];
@@ -168,7 +168,7 @@ function handleDownloadUpdate() {
 							...globalUpdateInfo,
 							downloadedPath: item.path
 						});
-						
+
 						await shell.openPath(item.path);
 						setTimeout(() => app.quit(), 300);
 					},
@@ -244,7 +244,7 @@ export function registerUpdaterHandlers(window: BrowserWindow) {
 					'autoUpdater:download-complete',
 					item
 				);
-				
+
 				await shell.openPath(item.path);
 				setTimeout(() => app.quit(), 300);
 			},

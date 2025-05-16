@@ -7,7 +7,8 @@ import {
 	reactive,
 	ref,
 	provide,
-	toRaw
+	toRaw,
+	watch
 } from 'vue';
 import { useRoute } from 'vue-router';
 
@@ -26,6 +27,7 @@ import EnvEditor from '@/components/EnvEditor.vue';
 import { useConnectionsStore } from '@/store/connections';
 import { useTabsStore } from '@/store/tabs';
 import { useSplitPane } from '@/composables/useSplitPane';
+import { useNavigation } from '@/composables/useNavigation';
 
 const ui = reactive({
 	showSettings: false,
@@ -86,6 +88,7 @@ const TableContentComponent = markRaw(TableContent);
 const route = useRoute();
 const connectionsStore = useConnectionsStore();
 const tabsStore = useTabsStore();
+const { goToMainPage } = useNavigation();
 
 const projectId = computed(() => route.params.id as string);
 
@@ -114,12 +117,34 @@ function handleMigrationsClose() {
 	checkPendingMigrations();
 }
 
+function handleGoBack() {
+	stopMigrationChecking();
+	goToMainPage();
+}
+
+async function initializeData() {
+	stopMigrationChecking();
+
+	if (projectId.value) {
+		await connectionsStore.loadConnections(projectId.value);
+		startMigrationChecking();
+	}
+}
+
 onMounted(async () => {
 	window.addEventListener('keydown', handleGlobalKeydown);
-
-	await connectionsStore.loadConnections(projectId.value);
-	startMigrationChecking();
+	await initializeData();
 });
+
+watch(
+	() => route.params.id,
+	async (newId) => {
+		if (newId) {
+			await initializeData();
+		}
+	},
+	{ immediate: false }
+);
 
 onUnmounted(() => {
 	window.removeEventListener('keydown', handleGlobalKeydown);
@@ -145,6 +170,7 @@ onUnmounted(() => {
 			@open-migrations="ui.showMigrations = true"
 			@open-env-editor="ui.showEnvEditor = true"
 			:pending-migrations="pendingMigrationsCount"
+			@goBack="handleGoBack"
 		/>
 
 		<MainTabs />

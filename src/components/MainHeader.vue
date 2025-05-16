@@ -33,7 +33,8 @@ const emit = defineEmits([
 	'open-live-updates',
 	'open-project-logs',
 	'open-migrations',
-	'open-env-editor'
+	'open-env-editor',
+	'goBack'
 ]);
 
 const selectedProject = computed(() => connectionsStore.getSelectedProject);
@@ -66,10 +67,6 @@ function getConnectionColor(type: string) {
 
 function openSqlEditor() {
 	router.push(`/sql-editor/${selectedProject.value?.id}`);
-}
-
-function openExplainTool() {
-	router.push(`/explain/${selectedProject.value?.id}`);
 }
 
 async function getDatabaseSchema() {
@@ -109,6 +106,25 @@ ui.showRedisManager = false;
 		class="bg-base-300 z-20 mt-8 flex items-center justify-between border-b border-black/10 px-4 pt-2 pb-2"
 	>
 		<div class="flex items-center">
+			<button
+				class="btn btn-ghost btn-sm mr-2"
+				@click="emit('goBack')"
+			>
+				<svg
+					xmlns="http://www.w3.org/2000/svg"
+					fill="none"
+					viewBox="0 0 24 24"
+					stroke-width="1.5"
+					stroke="currentColor"
+					class="h-5 w-5"
+				>
+					<path
+						stroke-linecap="round"
+						stroke-linejoin="round"
+						d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18"
+					/>
+				</svg>
+			</button>
 			<div
 				class="mr-2 flex h-8 w-8 items-center justify-center rounded-full"
 				:class="getConnectionColor(selectedProject?.type as string)"
