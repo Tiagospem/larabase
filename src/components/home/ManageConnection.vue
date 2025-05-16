@@ -329,297 +329,301 @@ defineExpose({ editConnection, removeConnection, openCreateConnectionModal });
 		:show="isCreateModalOpen"
 		:title="isEditMode ? 'Edit Connection' : 'Create New Connection'"
 		@close="isCreateModalOpen = false"
+		:width="'max-w-4xl'"
+		:show-cancel-button="false"
 	>
-		<div>
-			<fieldset class="fieldset mb-4 w-full">
-				<label class="label">
-					<span class="label-text">Laravel Project Path</span>
-				</label>
-				<div class="flex gap-2">
-					<input
-						v-model="newConnection.projectPath"
-						type="text"
-						placeholder="Select Laravel project directory"
-						class="input w-full"
-						:readonly="true"
-					/>
-					<button
-						class="btn btn-primary"
-						@click="selectProjectDirectory"
-					>
-						Browse
-					</button>
-				</div>
-				<label
-					v-if="projectPathError"
-					class="label"
-				>
-					<span class="label-text-alt text-error">{{
-						projectPathError
-					}}</span>
-				</label>
-				<p class="text-base-content mt-1 text-xs">
-					Path to your Laravel project (.env file will be read from
-					this location)
-				</p>
-			</fieldset>
-
-			<fieldset class="fieldset mb-4 w-full">
-				<label class="label cursor-pointer">
-					<span class="label-text">Using Laravel Sail?</span>
-					<input
-						v-model="newConnection.usingSail"
-						type="checkbox"
-						class="toggle toggle-primary"
-					/>
-				</label>
-				<p class="text-base-content mt-1 text-xs">
-					Enable if your project uses Laravel Sail (Docker)
-				</p>
-			</fieldset>
-
-			<div
-				v-if="dockerInfo && !isEditMode"
-				:class="[
-					'alert mb-4',
-					dockerInfo.isDocker
-						? 'alert-success'
-						: !dockerInfo.isDocker && dockerInfo.dockerAvailable
-							? 'alert-warning'
-							: 'alert-info'
-				]"
-			>
-				<div>
-					<svg
-						v-if="dockerInfo.isDocker"
-						xmlns="http://www.w3.org/2000/svg"
-						class="h-6 w-6 shrink-0 stroke-current"
-						fill="none"
-						viewBox="0 0 24 24"
-					>
-						<path
-							stroke-linecap="round"
-							stroke-linejoin="round"
-							stroke-width="2"
-							d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+		<div class="max-h-[70vh] overflow-hidden flex flex-col">
+			<div class="overflow-y-auto pr-2 flex-1">
+				<fieldset class="fieldset mb-4 w-full">
+					<label class="label">
+						<span class="label-text">Laravel Project Path</span>
+					</label>
+					<div class="flex gap-2">
+						<input
+							v-model="newConnection.projectPath"
+							type="text"
+							placeholder="Select Laravel project directory"
+							class="input w-full"
+							:readonly="true"
 						/>
-					</svg>
-					<svg
-						v-else-if="dockerInfo.dockerAvailable"
-						xmlns="http://www.w3.org/2000/svg"
-						class="h-6 w-6 shrink-0 stroke-current"
-						fill="none"
-						viewBox="0 0 24 24"
-					>
-						<path
-							stroke-linecap="round"
-							stroke-linejoin="round"
-							stroke-width="2"
-							d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
-						/>
-					</svg>
-					<svg
-						v-else
-						xmlns="http://www.w3.org/2000/svg"
-						fill="none"
-						viewBox="0 0 24 24"
-						class="h-6 w-6 shrink-0 stroke-current"
-					>
-						<path
-							stroke-linecap="round"
-							stroke-linejoin="round"
-							stroke-width="2"
-							d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-						/>
-					</svg>
-					<div>
-						<span class="font-medium">Docker Detection:</span>
-						<p>{{ dockerInfo.message }}</p>
-						<p
-							v-if="dockerInfo.isDocker"
-							class="mt-1 text-sm"
+						<button
+							class="btn btn-primary"
+							@click="selectProjectDirectory"
 						>
-							<span class="font-medium">Container: </span
-							>{{ dockerInfo.dockerContainerName }}
-						</p>
-						<p class="mt-1 text-sm">
-							<span v-if="dockerInfo.isDocker">
-								The system detected a MySQL Docker container.
-								Configuration has been automatically adjusted.
-							</span>
-							<span v-else-if="dockerInfo.dockerAvailable">
-								Docker is available, but no MySQL container was
-								found running on port
-								{{ newConnection.db_config.port }}. A local
-								connection will be used.
-							</span>
-							<span v-else>
-								Docker was not detected. A local connection will
-								be used.
-							</span>
-						</p>
+							Browse
+						</button>
+					</div>
+					<label
+						v-if="projectPathError"
+						class="label"
+					>
+						<span class="label-text-alt text-error">{{
+							projectPathError
+						}}</span>
+					</label>
+					<p class="text-base-content mt-1 text-xs">
+						Path to your Laravel project (.env file will be read from
+						this location)
+					</p>
+				</fieldset>
+
+				<fieldset class="fieldset mb-4 w-full">
+					<label class="label cursor-pointer">
+						<span class="label-text">Using Laravel Sail?</span>
+						<input
+							v-model="newConnection.usingSail"
+							type="checkbox"
+							class="toggle toggle-primary"
+						/>
+					</label>
+					<p class="text-base-content mt-1 text-xs">
+						Enable if your project uses Laravel Sail (Docker)
+					</p>
+				</fieldset>
+
+				<div
+					v-if="dockerInfo && !isEditMode"
+					:class="[
+						'alert mb-4',
+						dockerInfo.isDocker
+							? 'alert-success'
+							: !dockerInfo.isDocker && dockerInfo.dockerAvailable
+								? 'alert-warning'
+								: 'alert-info'
+					]"
+				>
+					<div>
+						<svg
+							v-if="dockerInfo.isDocker"
+							xmlns="http://www.w3.org/2000/svg"
+							class="h-6 w-6 shrink-0 stroke-current"
+							fill="none"
+							viewBox="0 0 24 24"
+						>
+							<path
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								stroke-width="2"
+								d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+							/>
+						</svg>
+						<svg
+							v-else-if="dockerInfo.dockerAvailable"
+							xmlns="http://www.w3.org/2000/svg"
+							class="h-6 w-6 shrink-0 stroke-current"
+							fill="none"
+							viewBox="0 0 24 24"
+						>
+							<path
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								stroke-width="2"
+								d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+							/>
+						</svg>
+						<svg
+							v-else
+							xmlns="http://www.w3.org/2000/svg"
+							fill="none"
+							viewBox="0 0 24 24"
+							class="h-6 w-6 shrink-0 stroke-current"
+						>
+							<path
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								stroke-width="2"
+								d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+							/>
+						</svg>
+						<div>
+							<span class="font-medium">Docker Detection:</span>
+							<p>{{ dockerInfo.message }}</p>
+							<p
+								v-if="dockerInfo.isDocker"
+								class="mt-1 text-sm"
+							>
+								<span class="font-medium">Container: </span
+								>{{ dockerInfo.dockerContainerName }}
+							</p>
+							<p class="mt-1 text-sm">
+								<span v-if="dockerInfo.isDocker">
+									The system detected a MySQL Docker container.
+									Configuration has been automatically adjusted.
+								</span>
+								<span v-else-if="dockerInfo.dockerAvailable">
+									Docker is available, but no MySQL container was
+									found running on port
+									{{ newConnection.db_config.port }}. A local
+									connection will be used.
+								</span>
+								<span v-else>
+									Docker was not detected. A local connection will
+									be used.
+								</span>
+							</p>
+						</div>
 					</div>
 				</div>
-			</div>
 
-			<div class="divider">Database Connection</div>
+				<div class="divider">Database Connection</div>
 
-			<div class="grid grid-cols-2 gap-4">
-				<fieldset class="fieldset w-full">
-					<label class="label">
-						<span class="label-text">Connection Name</span>
-					</label>
-					<input
-						v-model="newConnection.name"
-						type="text"
-						placeholder="My Project"
-						class="input w-full"
-						required
-					/>
-				</fieldset>
+				<div class="grid grid-cols-2 gap-4">
+					<fieldset class="fieldset w-full">
+						<label class="label">
+							<span class="label-text">Connection Name</span>
+						</label>
+						<input
+							v-model="newConnection.name"
+							type="text"
+							placeholder="My Project"
+							class="input w-full"
+							required
+						/>
+					</fieldset>
 
-				<fieldset class="fieldset w-full">
-					<label class="label">
-						<span class="label-text">Database Type</span>
-					</label>
-					<select
-						v-model="newConnection.type"
-						class="select select-bordered w-full"
-						disabled
-					>
-						<option value="mysql">MySQL</option>
-					</select>
-					<label class="label">
-						<span class="label-text-alt"
-							>Only MySQL is supported at the moment</span
+					<fieldset class="fieldset w-full">
+						<label class="label">
+							<span class="label-text">Database Type</span>
+						</label>
+						<select
+							v-model="newConnection.type"
+							class="select select-bordered w-full"
+							disabled
 						>
-					</label>
-				</fieldset>
+							<option value="mysql">MySQL</option>
+						</select>
+						<label class="label">
+							<span class="label-text-alt"
+								>Only MySQL is supported at the moment</span
+							>
+						</label>
+					</fieldset>
 
-				<fieldset class="fieldset w-full">
-					<label class="label">
-						<span class="label-text">Host</span>
-					</label>
-					<input
-						v-model="newConnection.db_config.host"
-						type="text"
-						placeholder="localhost"
-						class="input w-full"
-						required
-					/>
-				</fieldset>
+					<fieldset class="fieldset w-full">
+						<label class="label">
+							<span class="label-text">Host</span>
+						</label>
+						<input
+							v-model="newConnection.db_config.host"
+							type="text"
+							placeholder="localhost"
+							class="input w-full"
+							required
+						/>
+					</fieldset>
 
-				<fieldset class="fieldset w-full">
-					<label class="label">
-						<span class="label-text">Port</span>
-					</label>
-					<input
-						v-model="newConnection.db_config.port"
-						type="text"
-						placeholder="3306"
-						class="input w-full"
-						required
-					/>
-				</fieldset>
+					<fieldset class="fieldset w-full">
+						<label class="label">
+							<span class="label-text">Port</span>
+						</label>
+						<input
+							v-model="newConnection.db_config.port"
+							type="text"
+							placeholder="3306"
+							class="input w-full"
+							required
+						/>
+					</fieldset>
 
-				<fieldset class="fieldset w-full">
-					<label class="label">
-						<span class="label-text">Database</span>
-					</label>
-					<input
-						v-model="newConnection.db_config.database"
-						type="text"
-						placeholder="database"
-						class="input w-full"
-						required
-					/>
-				</fieldset>
+					<fieldset class="fieldset w-full">
+						<label class="label">
+							<span class="label-text">Database</span>
+						</label>
+						<input
+							v-model="newConnection.db_config.database"
+							type="text"
+							placeholder="database"
+							class="input w-full"
+							required
+						/>
+					</fieldset>
 
-				<fieldset class="fieldset w-full">
-					<label class="label">
-						<span class="label-text">Username</span>
-					</label>
-					<input
-						v-model="newConnection.db_config.user"
-						type="text"
-						placeholder="root"
-						class="input w-full"
-						required
-					/>
-				</fieldset>
+					<fieldset class="fieldset w-full">
+						<label class="label">
+							<span class="label-text">Username</span>
+						</label>
+						<input
+							v-model="newConnection.db_config.user"
+							type="text"
+							placeholder="root"
+							class="input w-full"
+							required
+						/>
+					</fieldset>
 
-				<fieldset class="fieldset w-full">
-					<label class="label">
-						<span class="label-text">Password</span>
-					</label>
-					<input
-						v-model="newConnection.db_config.password"
-						type="text"
-						placeholder="password"
-						class="input w-full"
-					/>
-				</fieldset>
+					<fieldset class="fieldset w-full">
+						<label class="label">
+							<span class="label-text">Password</span>
+						</label>
+						<input
+							v-model="newConnection.db_config.password"
+							type="text"
+							placeholder="password"
+							class="input w-full"
+						/>
+					</fieldset>
+				</div>
+
+				<div class="divider">Redis Connection (Optional)</div>
+
+				<div class="grid grid-cols-2 gap-4">
+					<fieldset class="fieldset w-full">
+						<label class="label">
+							<span class="label-text">Redis Host</span>
+						</label>
+						<input
+							v-model="newConnection.redis_config.host"
+							type="text"
+							placeholder="127.0.0.1"
+							class="input w-full"
+						/>
+					</fieldset>
+
+					<fieldset class="fieldset w-full">
+						<label class="label">
+							<span class="label-text">Redis Port</span>
+						</label>
+						<input
+							v-model="newConnection.redis_config.port"
+							type="text"
+							placeholder="6379"
+							class="input w-full"
+						/>
+					</fieldset>
+
+					<fieldset class="fieldset w-full">
+						<label class="label">
+							<span class="label-text">Redis Password</span>
+						</label>
+						<input
+							v-model="newConnection.redis_config.password"
+							type="text"
+							placeholder="Leave empty if none"
+							class="input w-full"
+						/>
+					</fieldset>
+				</div>
 			</div>
 
-			<div class="divider">Redis Connection (Optional)</div>
-
-			<div class="grid grid-cols-2 gap-4">
-				<fieldset class="fieldset w-full">
-					<label class="label">
-						<span class="label-text">Redis Host</span>
-					</label>
-					<input
-						v-model="newConnection.redis_config.host"
-						type="text"
-						placeholder="127.0.0.1"
-						class="input w-full"
+			<div class="modal-action mt-4 border-t border-base-200 pt-3 bg-base-300">
+				<button
+					class="btn"
+					@click="isCreateModalOpen = false"
+				>
+					Cancel
+				</button>
+				<button
+					class="btn btn-primary"
+					:disabled="isSaving || !newConnection.projectPath"
+					@click="saveNewConnection"
+				>
+					<span
+						v-if="isSaving"
+						class="loading loading-spinner loading-xs mr-2"
 					/>
-				</fieldset>
-
-				<fieldset class="fieldset w-full">
-					<label class="label">
-						<span class="label-text">Redis Port</span>
-					</label>
-					<input
-						v-model="newConnection.redis_config.port"
-						type="text"
-						placeholder="6379"
-						class="input w-full"
-					/>
-				</fieldset>
-
-				<fieldset class="fieldset w-full">
-					<label class="label">
-						<span class="label-text">Redis Password</span>
-					</label>
-					<input
-						v-model="newConnection.redis_config.password"
-						type="text"
-						placeholder="Leave empty if none"
-						class="input w-full"
-					/>
-				</fieldset>
+					{{ isEditMode ? 'Update Connection' : 'Save Connection' }}
+				</button>
 			</div>
 		</div>
-
-		<template #footer>
-			<button
-				class="btn"
-				@click="isCreateModalOpen = false"
-			>
-				Cancel
-			</button>
-			<button
-				class="btn btn-primary"
-				:disabled="isSaving || !newConnection.projectPath"
-				@click="saveNewConnection"
-			>
-				<span
-					v-if="isSaving"
-					class="loading loading-spinner loading-xs mr-2"
-				/>
-				{{ isEditMode ? 'Update Connection' : 'Save Connection' }}
-			</button>
-		</template>
 	</Modal>
 </template>
