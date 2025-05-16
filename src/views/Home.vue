@@ -191,16 +191,6 @@ function getConnectionColor(type: string) {
 										class="card-title overflow-hidden text-ellipsis whitespace-nowrap"
 									>
 										<span>{{ connection.name }}</span>
-										<span
-											v-if="connection.isValid"
-											class="text-success ml-1 text-xs"
-											>{{ connection.status }}</span
-										>
-										<span
-											v-else
-											class="text-error ml-1 text-xs"
-											>Invalid</span
-										>
 									</h2>
 									<p
 										class="overflow-hidden text-xs text-ellipsis whitespace-nowrap"
@@ -211,6 +201,16 @@ function getConnectionColor(type: string) {
 										class="mt-1 overflow-hidden text-xs font-medium text-ellipsis whitespace-nowrap"
 									>
 										{{ connection.db_config.database }}
+										<span
+											class="ml-1 text-xs"
+											:class="{
+												'text-success':
+													connection.isValid,
+												'text-error':
+													!connection.isValid
+											}"
+											>{{ connection.status }}</span
+										>
 									</p>
 								</div>
 								<div

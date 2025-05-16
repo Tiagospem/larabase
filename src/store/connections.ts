@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia';
-import { computed, ref } from 'vue';
+import { computed, ref, toRaw } from 'vue';
 import { ProjectConnection } from '@/types/project';
 
 export const useConnectionsStore = defineStore('connections', () => {
@@ -26,15 +26,16 @@ export const useConnectionsStore = defineStore('connections', () => {
 						Array.isArray(savedProjects) &&
 						savedProjects.length > 0
 					) {
-						if (id !== null) {
-							for (const project of savedProjects) {
-								const check =
-									await window.ipcRenderer.testMySQLConnection(
-										project.db_config
-									);
+						for (const project of savedProjects) {
+							const check =
+								await window.ipcRenderer.testMySQLConnection(
+									toRaw(project.db_config)
+								);
 
-								project.isValid = check.success;
-							}
+							project.isValid = check.success;
+							project.status = check.success
+								? 'connected'
+								: 'disconnected';
 						}
 
 						connections.value = savedProjects;
