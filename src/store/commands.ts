@@ -7,6 +7,7 @@ export type LaravelCommand = {
     path: string;
     namespace: string;
     relativePath: string;
+    signature?: string;
 };
 
 export const useCommandsStore = defineStore('commands', () => {

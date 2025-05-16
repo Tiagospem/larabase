@@ -67,7 +67,8 @@ function updateFilteredCommands() {
 	const search = searchTerm.value.toLowerCase();
 	filteredCommands.value = commandsStore.commands.filter(command => 
 		command.name.toLowerCase().includes(search) || 
-		(command.namespace && command.namespace.toLowerCase().includes(search))
+		(command.signature && command.signature.toLowerCase().includes(search)) ||
+		command.relativePath.toLowerCase().includes(search)
 	);
 }
 
@@ -200,9 +201,8 @@ onMounted(async () => {
 							>
 								<tr>
 									<th class="w-12 text-center">#</th>
-									<th>Command</th>
-									<th>Namespace</th>
-									<th>Path</th>
+									<th>Class</th>
+									<th>Command Signature</th>
 									<th class="text-center">Actions</th>
 								</tr>
 							</thead>
@@ -214,17 +214,14 @@ onMounted(async () => {
 									:key="index"
 									class="hover:bg-base-200"
 								>
-									<td class="text-center">
+									<td class="text-center text-xs">
 										{{ index + 1 }}
 									</td>
-									<td class="font-mono">
+									<td class="font-mono text-xs">
 										{{ command.name }}
 									</td>
 									<td class="font-mono text-xs">
-										{{ command.namespace }}
-									</td>
-									<td class="font-mono text-xs">
-										{{ command.relativePath }}
+										{{ command.signature || "-" }}
 									</td>
 									<td class="text-center">
 										<div

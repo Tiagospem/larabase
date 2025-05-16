@@ -1284,9 +1284,24 @@ function registerProjectHandlers(mainWindow: Electron.BrowserWindow) {
 							const namespace = nsMatch?.[1] || null;
 							const relativePath = path.relative(projectPath, fullPath);
 
+							let signature = null;
+
+							const signatureMatch = content.match(/protected\s+\$signature\s*=\s*['"]([^'"]+)['"]/);
+							if (signatureMatch && signatureMatch[1]) {
+								signature = signatureMatch[1];
+							}
+
+							if (!signature) {
+								const nameMatch = content.match(/protected\s+\$name\s*=\s*['"]([^'"]+)['"]/);
+								if (nameMatch && nameMatch[1]) {
+									signature = nameMatch[1];
+								}
+							}
+
 							commandsMap.set(name, {
 								name,
 								namespace,
+								signature,
 								path: fullPath,
 								relativePath
 							});
