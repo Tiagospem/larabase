@@ -2,6 +2,7 @@
 import { computed, watch, inject } from 'vue';
 import Modal from '@/components/Modal.vue';
 import { useProjectStore } from '@/store/project';
+import RemoteBadge from '@/components/ui/RemoteBadge.vue';
 
 const showAlert = inject<(msg: string, type: string) => void>('showAlert')!;
 
@@ -50,8 +51,12 @@ watch(
 <template>
 	<div v-if="projectStore.selectedProject">
 		<div class="flex items-center justify-between">
-			<h1 class="text-lg font-semibold">
+			<h1 class="text-lg font-semibold flex items-center">
 				{{ projectStore.selectedProject.name }}
+				<RemoteBadge 
+					v-if="projectStore.selectedProject.isRemote" 
+					class="ml-2" 
+				/>
 			</h1>
 		</div>
 
@@ -124,8 +129,12 @@ watch(
 		action-button-text="Update .env"
 	>
 		<div class="space-y-2 py-4 text-sm">
-			<p>
+			<p class="flex items-center">
 				<strong>Name:</strong> {{ projectStore.selectedProject?.name }}
+				<RemoteBadge 
+					v-if="projectStore.selectedProject?.isRemote" 
+					class="ml-2" 
+				/>
 			</p>
 			<p>
 				<strong>Project Path:</strong>
@@ -136,6 +145,25 @@ watch(
 				<strong>Project Database:</strong>
 				{{ projectStore.state.projectDatabase || 'Not found' }}
 			</p>
+			<div v-if="projectStore.selectedProject?.isRemote && projectStore.selectedProject?.ssh_config">
+				<div class="divider">SSH Information</div>
+				<p>
+					<strong>SSH Host:</strong>
+					{{ projectStore.selectedProject.ssh_config.host }}:{{ projectStore.selectedProject.ssh_config.port }}
+				</p>
+				<p>
+					<strong>SSH User:</strong>
+					{{ projectStore.selectedProject.ssh_config.username }}
+				</p>
+				<p>
+					<strong>Remote Path:</strong>
+					{{ projectStore.selectedProject.ssh_config.remotePath }}
+				</p>
+				<p>
+					<strong>Remote DB Type:</strong>
+					{{ projectStore.selectedProject.ssh_config.remoteDbType }}
+				</p>
+			</div>
 		</div>
 	</Modal>
 </template>

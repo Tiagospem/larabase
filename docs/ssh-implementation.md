@@ -74,12 +74,12 @@ The SSH implementation is designed to work with:
 
 Use this section to track your progress through the implementation steps:
 
-- [ ] Create SSH Connection Types
-- [ ] Set Up SSH Helper Module
-- [ ] Create IPC Handlers for SSH
-- [ ] Implement SSH Tunneling
+- [x] Create SSH Connection Types
+- [x] Set Up SSH Helper Module
+- [x] Create IPC Handlers for SSH
+- [x] Implement SSH Tunneling
 - [x] Update UI Components for SSH
-- [ ] Add Remote Indication Badges
+- [x] Add Remote Indication Badges
 - [ ] Handle Remote File Operations
 - [ ] Execute Remote Commands
 - [ ] Install Dependencies

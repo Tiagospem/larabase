@@ -8,6 +8,7 @@ import { ProjectConnection } from '@/types/project';
 import ManageConnection from '@/components/home/ManageConnection.vue';
 import Settings from '@/components/Settings.vue';
 import { ConnectionType } from '@/types/connection-types';
+import RemoteBadge from '@/components/ui/RemoteBadge.vue';
 
 const router = useRouter();
 const connectionsStore = useConnectionsStore();
@@ -194,11 +195,7 @@ function getConnectionColor(type: string) {
 										class="card-title overflow-hidden text-ellipsis whitespace-nowrap"
 									>
 										<span>{{ connection.name }}</span>
-										<span
-											v-if="connection.isRemote"
-											class="badge badge-accent badge-sm"
-											>Remote</span
-										>
+										<RemoteBadge v-if="connection.isRemote" />
 									</h2>
 									<p
 										class="overflow-hidden text-xs text-ellipsis whitespace-nowrap"

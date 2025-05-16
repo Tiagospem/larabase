@@ -136,6 +136,8 @@ ui.showRedisManager = false;
 			</div>
 
 			<ShowConnectionInfo />
+			
+			<slot name="connection-indicator"></slot>
 		</div>
 
 		<div class="flex">

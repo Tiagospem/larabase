@@ -24,6 +24,7 @@ import ProjectLogs from '@/components/ProjectLogs.vue';
 import Migrations from '@/components/Migrations.vue';
 import EnvEditor from '@/components/EnvEditor.vue';
 import ConnectionGuard from '@/components/ConnectionGuard.vue';
+import RemoteBadge from '@/components/ui/RemoteBadge.vue';
 
 import { useConnectionsStore } from '@/store/connections';
 import { useTabsStore } from '@/store/tabs';
@@ -95,6 +96,10 @@ const { goToMainPage } = useNavigation();
 const projectId = computed(() => route.params.id as string);
 
 const { sidebarWidth, sidebarRef, startResize } = useSplitPane(180, 480);
+
+const isRemoteConnection = computed(() => {
+	return connectionsStore.getSelectedProject?.isRemote || false;
+});
 
 function showAlert(message: string, type: string) {
 	window.dispatchEvent(
@@ -184,7 +189,11 @@ onUnmounted(() => {
 				@open-env-editor="ui.showEnvEditor = true"
 				:pending-migrations="pendingMigrationsCount"
 				@goBack="handleGoBack"
-			/>
+			>
+				<template #connection-indicator v-if="isRemoteConnection">
+					<RemoteBadge size="lg" />
+				</template>
+			</MainHeader>
 
 			<MainTabs />
 
