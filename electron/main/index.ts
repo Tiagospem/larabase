@@ -17,6 +17,7 @@ import { registerMigrationHandlers } from '../modules/migrations';
 import { registerSqlExecutorHandlers } from '../modules/sql-executor';
 import { registerUpdaterHandlers, cleanup } from '../modules/updater';
 import { closeAllPools } from '../helpers/mysql';
+import { closeAllConnections } from '../helpers/ssh';
 
 let handlersRegistered = false;
 
@@ -108,6 +109,8 @@ app.on('window-all-closed', () => {
 			console.error('Error closing all pools:', err);
 		})
 		.finally(() => {
+			closeAllConnections();
+
 			if (process.platform === 'darwin') app.quit();
 		});
 });

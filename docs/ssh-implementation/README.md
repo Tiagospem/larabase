@@ -18,10 +18,11 @@ This directory contains step-by-step documentation for implementing SSH remote c
 ## Current Status
 
 - [x] Step 1: Create SSH Connection Types
+- [x] Step 2: Set Up SSH Helper Module
 
 ## Next Steps
 
-- [ ] Step 2: Set Up SSH Helper Module
+- [ ] Step 3: Create IPC Handlers for SSH
 
 ## Resources
 
