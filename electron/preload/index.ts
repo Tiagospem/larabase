@@ -10,6 +10,7 @@ import {
 	TableRecord,
 	UpdateTableRecord
 } from '../../src/types/table';
+import { SshConnection } from '../../src/types/ssh-connection';
 
 contextBridge.exposeInMainWorld('ipcRenderer', {
 	on(...args: Parameters<typeof ipcRenderer.on>) {
@@ -214,7 +215,29 @@ contextBridge.exposeInMainWorld('ipcRenderer', {
 	downloadUpdate: () => ipcRenderer.invoke('download-update'),
 	quitAndInstall: () => ipcRenderer.invoke('quit-and-install'),
 	getCurrentVersion: () => ipcRenderer.invoke('get-current-version'),
-	openExternal: (url: string) => ipcRenderer.invoke('open-external', url)
+	openExternal: (url: string) => ipcRenderer.invoke('open-external', url),
+
+	/**
+	 * SSH Operations
+	 */
+	ssh: {
+		testConnection: (config: SshConnection) =>
+			ipcRenderer.invoke('ssh:test-connection', config),
+		executeCommand: (config: SshConnection, command: string) =>
+			ipcRenderer.invoke('ssh:execute-command', config, command),
+		readFile: (config: SshConnection, filePath: string) =>
+			ipcRenderer.invoke('ssh:read-file', config, filePath),
+		writeFile: (config: SshConnection, filePath: string, content: string) =>
+			ipcRenderer.invoke('ssh:write-file', config, filePath, content),
+		listFiles: (config: SshConnection, dirPath: string) =>
+			ipcRenderer.invoke('ssh:list-files', config, dirPath),
+		getEnv: (config: SshConnection) =>
+			ipcRenderer.invoke('ssh:get-env', config),
+		updateEnv: (config: SshConnection, content: string) =>
+			ipcRenderer.invoke('ssh:update-env', config, content),
+		closeConnection: (config: SshConnection) =>
+			ipcRenderer.invoke('ssh:close-connection', config)
+	}
 });
 
 function domReady(

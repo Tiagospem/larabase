@@ -16,6 +16,7 @@ import { registerMonitoringHandlers } from '../modules/monitoring';
 import { registerMigrationHandlers } from '../modules/migrations';
 import { registerSqlExecutorHandlers } from '../modules/sql-executor';
 import { registerUpdaterHandlers, cleanup } from '../modules/updater';
+import { registerSshHandlers } from '../modules/ssh';
 import { closeAllPools } from '../helpers/mysql';
 import { closeAllConnections } from '../helpers/ssh';
 
@@ -146,6 +147,7 @@ function registerHandlers(win: BrowserWindow) {
 	registerMigrationHandlers();
 	registerSqlExecutorHandlers();
 	registerUpdaterHandlers(win);
+	registerSshHandlers();
 
 	handlersRegistered = true;
 }

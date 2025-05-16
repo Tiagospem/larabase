@@ -17,12 +17,12 @@ This document tracks the progress of the SSH implementation in Larabase.
     - [x] Implement command execution
     - [x] Implement file operations
 
-- [ ] Step 3: Create IPC Handlers for SSH
+- [x] Step 3: Create IPC Handlers for SSH
 
-    - [ ] Register SSH handlers
-    - [ ] Implement connection testing handler
-    - [ ] Implement command execution handler
-    - [ ] Implement file operation handlers
+    - [x] Register SSH handlers
+    - [x] Implement connection testing handler
+    - [x] Implement command execution handler
+    - [x] Implement file operation handlers
 
 - [ ] Step 4: Implement SSH Tunneling
 
@@ -66,7 +66,7 @@ This document tracks the progress of the SSH implementation in Larabase.
 
 ## Current Status
 
-Step 2 has been completed. The SSH helper module is now implemented with functions for connection management, command execution, and file operations. The next step is to create IPC handlers for SSH.
+Step 3 has been completed. SSH IPC handlers have been implemented and the SSH API has been exposed to the renderer process. The next step is to implement SSH tunneling.
 
 ## Notes
 
