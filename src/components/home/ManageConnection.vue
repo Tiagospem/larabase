@@ -362,8 +362,8 @@ defineExpose({ editConnection, removeConnection, openCreateConnectionModal });
 						}}</span>
 					</label>
 					<p class="text-base-content mt-1 text-xs">
-						Path to your Laravel project (.env file will be read from
-						this location)
+						Path to your Laravel project (.env file will be read
+						from this location)
 					</p>
 				</fieldset>
 
@@ -447,18 +447,19 @@ defineExpose({ editConnection, removeConnection, openCreateConnectionModal });
 							</p>
 							<p class="mt-1 text-sm">
 								<span v-if="dockerInfo.isDocker">
-									The system detected a MySQL Docker container.
-									Configuration has been automatically adjusted.
+									The system detected a MySQL Docker
+									container. Configuration has been
+									automatically adjusted.
 								</span>
 								<span v-else-if="dockerInfo.dockerAvailable">
-									Docker is available, but no MySQL container was
-									found running on port
+									Docker is available, but no MySQL container
+									was found running on port
 									{{ newConnection.db_config.port }}. A local
 									connection will be used.
 								</span>
 								<span v-else>
-									Docker was not detected. A local connection will
-									be used.
+									Docker was not detected. A local connection
+									will be used.
 								</span>
 							</p>
 						</div>
@@ -605,7 +606,9 @@ defineExpose({ editConnection, removeConnection, openCreateConnectionModal });
 				</div>
 			</div>
 
-			<div class="modal-action mt-4 border-t border-base-200 pt-3 bg-base-300">
+			<div
+				class="modal-action mt-4 border-t border-base-200 pt-3 bg-base-300"
+			>
 				<button
 					class="btn"
 					@click="isCreateModalOpen = false"

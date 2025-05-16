@@ -23,6 +23,7 @@ import LiveUpdates from '@/components/LiveUpdates.vue';
 import ProjectLogs from '@/components/ProjectLogs.vue';
 import Migrations from '@/components/Migrations.vue';
 import EnvEditor from '@/components/EnvEditor.vue';
+import ConnectionGuard from '@/components/ConnectionGuard.vue';
 
 import { useConnectionsStore } from '@/store/connections';
 import { useTabsStore } from '@/store/tabs';
@@ -38,6 +39,7 @@ const ui = reactive({
 	showEnvEditor: false
 });
 
+const isContentReady = ref(false);
 const pendingMigrationsCount = ref(0);
 let migrationCheckIntervalId = ref<number | null>(null);
 
@@ -122,6 +124,10 @@ function handleGoBack() {
 	goToMainPage();
 }
 
+function handleConnectionValid() {
+	isContentReady.value = true;
+}
+
 async function initializeData() {
 	stopMigrationChecking();
 
@@ -158,85 +164,96 @@ onUnmounted(() => {
 		class="relative flex h-full flex-col"
 		tabindex="0"
 	>
+		<ConnectionGuard
+			:projectId="projectId"
+			:key="projectId"
+			@connection-valid="handleConnectionValid"
+		/>
+
 		<div
 			class="bg-base-300 draggable absolute top-0 z-10 h-10 w-full"
 		></div>
 
-		<MainHeader
-			@open-settings="ui.showSettings = true"
-			@open-database-switcher="ui.showDatabaseSwitcher = true"
-			@open-live-updates="ui.showLiveUpdates = true"
-			@open-project-logs="ui.showProjectLogs = true"
-			@open-migrations="ui.showMigrations = true"
-			@open-env-editor="ui.showEnvEditor = true"
-			:pending-migrations="pendingMigrationsCount"
-			@goBack="handleGoBack"
-		/>
+		<template v-if="isContentReady">
+			<MainHeader
+				@open-settings="ui.showSettings = true"
+				@open-database-switcher="ui.showDatabaseSwitcher = true"
+				@open-live-updates="ui.showLiveUpdates = true"
+				@open-project-logs="ui.showProjectLogs = true"
+				@open-migrations="ui.showMigrations = true"
+				@open-env-editor="ui.showEnvEditor = true"
+				:pending-migrations="pendingMigrationsCount"
+				@goBack="handleGoBack"
+			/>
 
-		<MainTabs />
+			<MainTabs />
 
-		<div class="flex flex-1 overflow-hidden">
-			<div
-				ref="sidebarRef"
-				class="h-full shrink-0"
-				:style="{ width: `${sidebarWidth}px` }"
-			>
-				<Sidebar />
-			</div>
+			<div class="flex flex-1 overflow-hidden">
+				<div
+					ref="sidebarRef"
+					class="h-full shrink-0"
+					:style="{ width: `${sidebarWidth}px` }"
+				>
+					<Sidebar />
+				</div>
 
-			<div
-				class="bg-base-300 hover:bg-primary active:bg-primary w-0.5 shrink-0 cursor-col-resize transition-colors"
-				@mousedown="startResize"
-			></div>
+				<div
+					class="bg-base-300 hover:bg-primary active:bg-primary w-0.5 shrink-0 cursor-col-resize transition-colors"
+					@mousedown="startResize"
+				></div>
 
-			<div class="flex h-full flex-1 flex-col overflow-hidden">
-				<div class="h-full w-full flex-1 overflow-auto">
-					<div
-						v-if="!tabsStore.activeTableName"
-						class="flex h-full items-center justify-center"
-					>
-						<div class="text-center">
-							<svg
-								xmlns="http://www.w3.org/2000/svg"
-								fill="currentColor"
-								viewBox="0 0 24 24"
-								stroke-width="1.5"
-								stroke="currentColor"
-								class="mx-auto mb-4 h-12 w-12"
-							>
-								<path
-									stroke-linecap="round"
-									stroke-linejoin="round"
-									d="M3.375 19.5h17.25m-17.25 0a1.125 1.125 0 0 1-1.125-1.125M3.375 19.5h7.5c.621 0 1.125-.504 1.125-1.125m-9.75 0V5.625m0 12.75v-1.5c0-.621.504-1.125 1.125-1.125m18.375 2.625V5.625m0 12.75c0 .621-.504 1.125-1.125 1.125m1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125m0 3.75h-7.5A1.125 1.125 0 0 1 12 18.375m9.75-12.75c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125m19.5 0v1.5c0 .621-.504 1.125-1.125 1.125M2.25 5.625v1.5c0 .621.504 1.125 1.125 1.125m0 0h17.25m-17.25 0h7.5c.621 0 1.125.504 1.125 1.125M3.375 8.25c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125m17.25-3.75h-7.5c-.621 0-1.125.504-1.125 1.125m8.625-1.125c.621 0 1.125.504 1.125 1.125v1.5c0 .621-.504 1.125-1.125 1.125m-17.25 0h7.5m-7.5 0c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125M12 10.875v-1.5m0 1.5c0 .621-.504 1.125-1.125 1.125M12 10.875c0 .621.504 1.125 1.125 1.125m-2.25 0c.621 0 1.125.504 1.125 1.125M13.125 12h7.5m-7.5 0c-.621 0-1.125.504-1.125 1.125M20.625 12c.621 0 1.125.504 1.125 1.125v1.5c0 .621-.504 1.125-1.125 1.125m-17.25 0h7.5M12 14.625v-1.5m0 1.5c0 .621-.504 1.125-1.125 1.125M12 14.625c0 .621.504 1.125 1.125 1.125m-2.25 0c.621 0 1.125.504 1.125 1.125m0 1.5v-1.5m0 0c0-.621.504-1.125 1.125-1.125m0 0h7.5"
-								/>
-							</svg>
-							<p>No tables open.</p>
+				<div class="flex h-full flex-1 flex-col overflow-hidden">
+					<div class="h-full w-full flex-1 overflow-auto">
+						<div
+							v-if="!tabsStore.activeTableName"
+							class="flex h-full items-center justify-center"
+						>
+							<div class="text-center">
+								<svg
+									xmlns="http://www.w3.org/2000/svg"
+									fill="currentColor"
+									viewBox="0 0 24 24"
+									stroke-width="1.5"
+									stroke="currentColor"
+									class="mx-auto mb-4 h-12 w-12"
+								>
+									<path
+										stroke-linecap="round"
+										stroke-linejoin="round"
+										d="M3.375 19.5h17.25m-17.25 0a1.125 1.125 0 0 1-1.125-1.125M3.375 19.5h7.5c.621 0 1.125-.504 1.125-1.125m-9.75 0V5.625m0 12.75v-1.5c0-.621.504-1.125 1.125-1.125m18.375 2.625V5.625m0 12.75c0 .621-.504 1.125-1.125 1.125m1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125m0 3.75h-7.5A1.125 1.125 0 0 1 12 18.375m9.75-12.75c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125m19.5 0v1.5c0 .621-.504 1.125-1.125 1.125M2.25 5.625v1.5c0 .621.504 1.125 1.125 1.125m0 0h17.25m-17.25 0h7.5c.621 0 1.125.504 1.125 1.125M3.375 8.25c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125m17.25-3.75h-7.5c-.621 0-1.125.504-1.125 1.125m8.625-1.125c.621 0 1.125.504 1.125 1.125v1.5c0 .621-.504 1.125-1.125 1.125m-17.25 0h7.5m-7.5 0c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125M12 10.875v-1.5m0 1.5c0 .621-.504 1.125-1.125 1.125M12 10.875c0 .621.504 1.125 1.125 1.125m-2.25 0c.621 0 1.125.504 1.125 1.125M13.125 12h7.5m-7.5 0c-.621 0-1.125.504-1.125 1.125M20.625 12c.621 0 1.125.504 1.125 1.125v1.5c0 .621-.504 1.125-1.125 1.125m-17.25 0h7.5M12 14.625v-1.5m0 1.5c0 .621-.504 1.125-1.125 1.125M12 14.625c0 .621.504 1.125 1.125 1.125m-2.25 0c.621 0 1.125.504 1.125 1.125m0 1.5v-1.5m0 0c0-.621.504-1.125 1.125-1.125m0 0h7.5"
+									/>
+								</svg>
+								<p>No tables open.</p>
+							</div>
 						</div>
+
+						<keep-alive :include="'TableContent'">
+							<component
+								:is="TableContentComponent"
+								v-if="tabsStore.activeTableName"
+								:key="tabsStore.activeTableName"
+								:tableName="tabsStore.activeTableName"
+							/>
+						</keep-alive>
 					</div>
-
-					<keep-alive :include="'TableContent'">
-						<component
-							:is="TableContentComponent"
-							v-if="tabsStore.activeTableName"
-							:key="tabsStore.activeTableName"
-							:tableName="tabsStore.activeTableName"
-						/>
-					</keep-alive>
 				</div>
 			</div>
-		</div>
 
-		<footer class="bg-base-300 border-t border-black/10 px-4 py-1 text-xs">
-			<div class="flex justify-between">
-				<div>
-					Database:
-					{{
-						connectionsStore.getSelectedProject?.db_config.database
-					}}
+			<footer
+				class="bg-base-300 border-t border-black/10 px-4 py-1 text-xs"
+			>
+				<div class="flex justify-between">
+					<div>
+						Database:
+						{{
+							connectionsStore.getSelectedProject?.db_config
+								.database
+						}}
+					</div>
+					<Terminal />
 				</div>
-				<Terminal />
-			</div>
-		</footer>
+			</footer>
+		</template>
 
 		<Settings
 			v-if="ui.showSettings"

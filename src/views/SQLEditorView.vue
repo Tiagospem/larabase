@@ -16,10 +16,12 @@ import { AIService } from '@/services/aiService';
 import SQLAIModal from '@/components/SQLAIModal.vue';
 import SQLExplainModal from '@/components/SQLExplainModal.vue';
 import type { ExplainResult } from '@/composables/useSQLEditor';
+import ConnectionGuard from '@/components/ConnectionGuard.vue';
 
 const route = useRoute();
 const router = useRouter();
 const isLoading = ref(true);
+const isContentReady = ref(false);
 const isResizing = ref(false);
 const editorContainer = ref<HTMLElement | null>(null);
 const editorSection = ref<HTMLElement | null>(null);
@@ -347,6 +349,10 @@ function handleExplainSQL(data: ExplainResult) {
 	showExplainModal.value = true;
 }
 
+function handleConnectionValid() {
+	isContentReady.value = true;
+}
+
 onMounted(async () => {
 	isLoading.value = true;
 	await connectionsStore.loadConnections(projectId.value);
@@ -453,17 +459,23 @@ onBeforeUnmount(() => {
 
 <template>
 	<div class="relative flex h-full flex-col">
+		<ConnectionGuard
+			:projectId="projectId"
+			:key="projectId"
+			@connection-valid="handleConnectionValid"
+		/>
+
 		<div
 			class="bg-base-300 draggable absolute top-0 z-10 h-10 w-full"
 		></div>
 
 		<div
-			v-if="isLoading"
+			v-if="isLoading && isContentReady"
 			class="mt-8 flex h-full items-center justify-center"
 		>
 			<span class="loading loading-spinner loading-lg"></span>
 		</div>
-		<template v-else>
+		<template v-else-if="isContentReady">
 			<BaseHeader
 				@goBack="goBack"
 				:title="`SQL Editor - ${activeScratch?.isDefault ? 'Default' : activeScratch?.name}`"
