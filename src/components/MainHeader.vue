@@ -9,6 +9,7 @@ import DatabaseSchemaViewer from '@/components/schema/DatabaseSchemaViewer.vue';
 import ERDModal from '@/components/ERDModal.vue';
 import { useDatabaseSchema } from '@/services/databaseSchema';
 import RedisManager from '@/components/RedisManager.vue';
+import LaravelCommands from '@/components/LaravelCommands.vue';
 
 const connectionsStore = useConnectionsStore();
 const redisStore = useRedisStore();
@@ -351,7 +352,6 @@ ui.showRedisManager = false;
 					data-tip="Run Project Commands"
 				>
 					<button
-						disabled
 						class="btn btn-ghost btn-sm"
 						@click="ui.showLaravelCommands = true"
 					>
@@ -408,5 +408,10 @@ ui.showRedisManager = false;
 	<RedisManager
 		:show="ui.showRedisManager"
 		@close="ui.showRedisManager = false"
+	/>
+
+	<LaravelCommands
+		:show="ui.showLaravelCommands"
+		@close="ui.showLaravelCommands = false"
 	/>
 </template>

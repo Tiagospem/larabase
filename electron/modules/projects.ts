@@ -1234,6 +1234,84 @@ function registerProjectHandlers(mainWindow: Electron.BrowserWindow) {
 			};
 		}
 	});
+
+	ipcMain.handle('find-laravel-commands', async (_, projectPath) => {
+		try {
+			if (!projectPath) {
+				return {
+					success: false,
+					message: 'Missing project path',
+					commands: []
+				};
+			}
+
+			const commandPaths = [
+				path.join(projectPath, 'app', 'Console', 'Commands'),
+				path.join(projectPath, 'app', 'Console', 'commands'),
+			];
+
+			const commandsMap = new Map();
+
+			const findCommands = (dirPath) => {
+				if (!fs.existsSync(dirPath)) return;
+
+				const entries = fs.readdirSync(dirPath, { withFileTypes: true });
+
+				for (const entry of entries) {
+					const fullPath = path.join(dirPath, entry.name);
+
+					if (entry.isDirectory()) {
+						findCommands(fullPath);
+						continue;
+					}
+
+					if (entry.isFile() && entry.name.endsWith('.php')) {
+						try {
+							const content = fs.readFileSync(fullPath, 'utf8');
+							const isCommand = [
+								'extends Command',
+								'Illuminate\\Console\\Command'
+							].some(keyword => content.includes(keyword));
+
+							if (!isCommand) continue;
+
+							const nsMatch = content.match(/namespace\s+([^;]+);/);
+							const classMatch = content.match(/class\s+(\w+)/);
+							
+							if (!classMatch) continue;
+
+							const name = classMatch[1];
+							const namespace = nsMatch?.[1] || null;
+							const relativePath = path.relative(projectPath, fullPath);
+
+							commandsMap.set(name, {
+								name,
+								namespace,
+								path: fullPath,
+								relativePath
+							});
+						} catch (err) {
+							console.error(`Error parsing command file ${fullPath}:`, err);
+						}
+					}
+				}
+			};
+
+			commandPaths.forEach(dirPath => findCommands(dirPath));
+
+			return {
+				success: true,
+				commands: Array.from(commandsMap.values())
+			};
+		} catch (error) {
+			console.error('Error finding Laravel commands:', error);
+			return {
+				success: false,
+				message: error.message || 'Failed to find Laravel commands',
+				commands: []
+			};
+		}
+	});
 }
 
 export { registerProjectHandlers };

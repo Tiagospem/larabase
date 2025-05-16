@@ -307,7 +307,7 @@ onUnmounted(() => {
 			</div>
 
 			<div
-				class="bg-base-200 m-2 grid grid-cols-1 gap-4 rounded-md p-4 md:grid-cols-3"
+				class="bg-base-200 border-base-300 gap-2 grid grid-cols-1 md:grid-cols-3 border-b p-4 rounded-md mb-2"
 			>
 				<div class="flex flex-col gap-1">
 					<label class="label">

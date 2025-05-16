@@ -165,6 +165,8 @@ contextBridge.exposeInMainWorld('ipcRenderer', {
 		ipcRenderer.invoke('read-model-file', filePath),
 	findFactoryFiles: (projectPath: string, modelName: string) =>
 		ipcRenderer.invoke('find-factory-files', projectPath, modelName),
+	findLaravelCommands: (projectPath: string) =>
+		ipcRenderer.invoke('find-laravel-commands', projectPath),
 	/**
 	 * Database Restore
 	 */
