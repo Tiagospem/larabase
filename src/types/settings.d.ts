@@ -12,4 +12,5 @@ export interface Settings {
 	devMode: boolean;
 	performanceMonitor: boolean;
 	theme: string;
+	preferredEditor: string;
 }

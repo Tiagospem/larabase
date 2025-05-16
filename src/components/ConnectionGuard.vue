@@ -20,7 +20,9 @@ const connectionStore = useConnectionsStore();
 const { goToMainPage } = useNavigation();
 const showErrorModal = ref(false);
 const isRetrying = ref(false);
-const connectionResult = ref(null);
+const connectionResult = ref<{ success: boolean; message?: string } | null>(
+	null
+);
 
 async function testConnection() {
 	const selectedProject = connectionStore.getSelectedProject;

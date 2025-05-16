@@ -16,7 +16,8 @@ export const useSettingsStore = defineStore('settings', () => {
 		language: 'en',
 		devMode: false,
 		theme: 'dim',
-		performanceMonitor: false
+		performanceMonitor: false,
+		preferredEditor: 'default'
 	});
 
 	const languageOptions = computed(() => {

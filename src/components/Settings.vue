@@ -194,6 +194,35 @@ function close() {
 
 			<div class="card bg-base-100">
 				<div class="card-body space-y-4">
+					<h3 class="card-title text-md">Code Editor</h3>
+
+					<fieldset class="fieldset">
+						<label class="label">
+							<span class="label-text"
+								>Preferred Code Editor</span
+							>
+						</label>
+						<select
+							v-model="settingsStore.settings.preferredEditor"
+							class="select select-bordered w-full"
+						>
+							<option value="default">System Default</option>
+							<option value="phpstorm">PhpStorm</option>
+							<option value="vscode">VS Code</option>
+							<option value="cursor">Cursor</option>
+							<option value="sublime">Sublime Text</option>
+							<option value="atom">Atom</option>
+							<option value="vim">Vim</option>
+						</select>
+						<p class="label">
+							Choose your preferred editor for opening files
+						</p>
+					</fieldset>
+				</div>
+			</div>
+
+			<div class="card bg-base-100">
+				<div class="card-body space-y-4">
 					<h3 class="card-title text-md">Theme</h3>
 
 					<fieldset class="fieldset">

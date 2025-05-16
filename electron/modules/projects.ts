@@ -2,8 +2,10 @@ import { dialog, ipcMain, shell } from 'electron';
 import path from 'path';
 import fs from 'fs';
 import pluralize from 'pluralize';
+import Store from 'electron-store';
 
 import { Env } from '../../src/types/env';
+import { Settings } from '../../src/types/settings';
 
 import { detectDockerMysql } from '../helpers/docker';
 import { ModelInfo, ModelWithContent } from '../../src/types/project';
@@ -567,9 +569,15 @@ function registerProjectHandlers(mainWindow: Electron.BrowserWindow) {
 
 	ipcMain.handle('open-file', async (_, filePath) => {
 		try {
+			const store = new Store();
+			const settings = store.get('settings') || ({} as Settings);
+
+			const preferredEditor = settings.preferredEditor || 'default';
+
 			const editors = [
 				{
 					name: 'PHPStorm',
+					id: 'phpstorm',
 					paths: [
 						'/Applications/PhpStorm.app/Contents/MacOS/phpstorm',
 						'/usr/local/bin/phpstorm',
@@ -579,6 +587,7 @@ function registerProjectHandlers(mainWindow: Electron.BrowserWindow) {
 				},
 				{
 					name: 'VSCode',
+					id: 'vscode',
 					paths: [
 						'/Applications/Visual Studio Code.app/Contents/Resources/app/bin/code',
 						'/usr/bin/code',
@@ -590,41 +599,108 @@ function registerProjectHandlers(mainWindow: Electron.BrowserWindow) {
 				},
 				{
 					name: 'Sublime Text',
+					id: 'sublime',
 					paths: [
 						'/Applications/Sublime Text.app/Contents/SharedSupport/bin/subl',
 						'/usr/local/bin/subl',
 						'C:\\Program Files\\Sublime Text\\subl.exe',
 						'C:\\Program Files (x86)\\Sublime Text\\subl.exe'
 					]
+				},
+				{
+					name: 'Cursor',
+					id: 'cursor',
+					paths: [
+						'/Applications/Cursor.app/Contents/MacOS/Cursor',
+						'/usr/local/bin/cursor',
+						'C:\\Program Files\\Cursor\\Cursor.exe',
+						'C:\\Users\\%USERNAME%\\AppData\\Local\\Programs\\Cursor\\Cursor.exe'
+					]
+				},
+				{
+					name: 'Atom',
+					id: 'atom',
+					paths: [
+						'/Applications/Atom.app/Contents/MacOS/Atom',
+						'/usr/local/bin/atom',
+						'C:\\Program Files\\Atom\\atom.exe',
+						'C:\\Users\\%USERNAME%\\AppData\\Local\\atom\\atom.exe'
+					]
+				},
+				{
+					name: 'Vim',
+					id: 'vim',
+					paths: [
+						'/usr/bin/vim',
+						'/usr/local/bin/vim',
+						'C:\\Program Files\\Vim\\vim.exe'
+					]
 				}
 			];
 
-			for (const editor of editors) {
-				for (const editorPath of editor.paths) {
-					try {
-						if (fs.existsSync(editorPath)) {
-							const child = require('child_process').spawn(
-								editorPath,
-								[filePath],
-								{
-									detached: true,
-									stdio: 'ignore'
-								}
+			const childProcess = await import('child_process');
+
+			if (preferredEditor !== 'default') {
+				const selectedEditor = editors.find(
+					(editor) => editor.id === preferredEditor
+				);
+
+				if (selectedEditor) {
+					for (const editorPath of selectedEditor.paths) {
+						try {
+							if (fs.existsSync(editorPath)) {
+								const child = childProcess.spawn(
+									editorPath,
+									[filePath],
+									{
+										detached: true,
+										stdio: 'ignore'
+									}
+								);
+								child.unref();
+								return {
+									success: true,
+									editor: selectedEditor.name
+								};
+							}
+						} catch (e) {
+							console.error(
+								`Error using preferred editor ${editorPath}:`,
+								e
 							);
-							child.unref();
-							return { success: true, editor: editor.name };
 						}
-					} catch (e) {
-						console.error(
-							`Error checking editor path ${editorPath}:`,
-							e
-						);
+					}
+					console.warn(
+						`Preferred editor ${preferredEditor} not found, falling back to defaults`
+					);
+				}
+			} else {
+				for (const editor of editors) {
+					for (const editorPath of editor.paths) {
+						try {
+							if (fs.existsSync(editorPath)) {
+								const child = childProcess.spawn(
+									editorPath,
+									[filePath],
+									{
+										detached: true,
+										stdio: 'ignore'
+									}
+								);
+								child.unref();
+								return { success: true, editor: editor.name };
+							}
+						} catch (e) {
+							console.error(
+								`Error checking editor path ${editorPath}:`,
+								e
+							);
+						}
 					}
 				}
 			}
 
 			await shell.openPath(filePath);
-
 			return { success: true, editor: 'default' };
 		} catch (error) {
 			console.error('Failed to open file:', error);
