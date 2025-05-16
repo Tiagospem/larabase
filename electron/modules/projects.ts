@@ -1247,7 +1247,7 @@ function registerProjectHandlers(mainWindow: Electron.BrowserWindow) {
 
 			const commandPaths = [
 				path.join(projectPath, 'app', 'Console', 'Commands'),
-				path.join(projectPath, 'app', 'Console', 'commands'),
+				path.join(projectPath, 'app', 'Console', 'commands')
 			];
 
 			const commandsMap = new Map();
@@ -1255,7 +1255,9 @@ function registerProjectHandlers(mainWindow: Electron.BrowserWindow) {
 			const findCommands = (dirPath) => {
 				if (!fs.existsSync(dirPath)) return;
 
-				const entries = fs.readdirSync(dirPath, { withFileTypes: true });
+				const entries = fs.readdirSync(dirPath, {
+					withFileTypes: true
+				});
 
 				for (const entry of entries) {
 					const fullPath = path.join(dirPath, entry.name);
@@ -1271,28 +1273,36 @@ function registerProjectHandlers(mainWindow: Electron.BrowserWindow) {
 							const isCommand = [
 								'extends Command',
 								'Illuminate\\Console\\Command'
-							].some(keyword => content.includes(keyword));
+							].some((keyword) => content.includes(keyword));
 
 							if (!isCommand) continue;
 
-							const nsMatch = content.match(/namespace\s+([^;]+);/);
+							const nsMatch =
+								content.match(/namespace\s+([^;]+);/);
 							const classMatch = content.match(/class\s+(\w+)/);
-							
+
 							if (!classMatch) continue;
 
 							const name = classMatch[1];
 							const namespace = nsMatch?.[1] || null;
-							const relativePath = path.relative(projectPath, fullPath);
+							const relativePath = path.relative(
+								projectPath,
+								fullPath
+							);
 
 							let signature = null;
 
-							const signatureMatch = content.match(/protected\s+\$signature\s*=\s*['"]([^'"]+)['"]/);
+							const signatureMatch = content.match(
+								/protected\s+\$signature\s*=\s*['"]([^'"]+)['"]/
+							);
 							if (signatureMatch && signatureMatch[1]) {
 								signature = signatureMatch[1];
 							}
 
 							if (!signature) {
-								const nameMatch = content.match(/protected\s+\$name\s*=\s*['"]([^'"]+)['"]/);
+								const nameMatch = content.match(
+									/protected\s+\$name\s*=\s*['"]([^'"]+)['"]/
+								);
 								if (nameMatch && nameMatch[1]) {
 									signature = nameMatch[1];
 								}
@@ -1306,13 +1316,16 @@ function registerProjectHandlers(mainWindow: Electron.BrowserWindow) {
 								relativePath
 							});
 						} catch (err) {
-							console.error(`Error parsing command file ${fullPath}:`, err);
+							console.error(
+								`Error parsing command file ${fullPath}:`,
+								err
+							);
 						}
 					}
 				}
 			};
 
-			commandPaths.forEach(dirPath => findCommands(dirPath));
+			commandPaths.forEach((dirPath) => findCommands(dirPath));
 
 			return {
 				success: true,

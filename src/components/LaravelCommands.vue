@@ -3,6 +3,7 @@ import { ref, onMounted, inject, watch } from 'vue';
 import { useCommandsStore, LaravelCommand } from '@/store/commands';
 import { useConnectionsStore } from '@/store/connections';
 import Modal from '@/components/Modal.vue';
+import terminalService from '@/services/terminal';
 
 const props = defineProps({
 	show: {
@@ -19,6 +20,9 @@ const showAlert = inject<(message: string, type: string) => void>('showAlert')!;
 const searchTerm = ref('');
 const searchTimeout = ref<number | null>(null);
 const refreshing = ref(false);
+const showFlagsModal = ref(false);
+const selectedCommand = ref<LaravelCommand | null>(null);
+const commandFlags = ref('');
 
 function handleClose() {
 	emit('close');
@@ -45,6 +49,92 @@ function openFileInEditor(path: string) {
 	}
 }
 
+function runCommand(command: LaravelCommand) {
+	selectedCommand.value = command;
+
+	let signature = command.signature || '';
+	let fullSignature = signature;
+
+	const hasParameters =
+		signature.includes('{') ||
+		signature.includes('[') ||
+		signature.includes('--') ||
+		signature.includes('-');
+
+	if (hasParameters) {
+		selectedCommand.value = {
+			...command,
+			signature: fullSignature
+		};
+		showFlagsModal.value = true;
+	} else {
+		if (signature.includes(' ')) {
+			signature = signature.split(' ')[0];
+		}
+		executeCommand(signature);
+	}
+}
+
+async function executeCommand(commandSignature: string) {
+	const projectPath = connectionsStore.getSelectedProject?.projectPath;
+
+	if (!projectPath) {
+		showAlert('No project selected', 'error');
+		return;
+	}
+
+	let cleanSignature = commandSignature
+		.replace(/{[^}]+}/g, '')
+		.replace(/\[[^\]]+\]/g, '')
+		.trim();
+
+	const artisanCommand =
+		`php artisan ${cleanSignature} ${commandFlags.value}`.trim();
+
+	try {
+		const success = await terminalService.executeCommand(
+			artisanCommand,
+			projectPath
+		);
+
+		if (success) {
+			showAlert(`Command executed successfully`, 'success');
+		} else {
+			showAlert(`Command execution failed`, 'error');
+		}
+	} catch (error: any) {
+		showAlert(`Error executing command: ${error.message}`, 'error');
+	} finally {
+		closeFlagsModal();
+	}
+}
+
+function closeFlagsModal() {
+	showFlagsModal.value = false;
+	commandFlags.value = '';
+	selectedCommand.value = null;
+}
+
+function confirmRunWithFlags() {
+	if (selectedCommand.value && selectedCommand.value.signature) {
+		executeCommand(selectedCommand.value.signature);
+	}
+}
+
+function getCleanSignature(command: LaravelCommand | null): string {
+	if (!command || !command.signature) return '';
+
+	let baseCommand = command.signature;
+	if (baseCommand.includes(' ')) {
+		baseCommand = baseCommand.split(' ')[0];
+	}
+
+	return baseCommand
+		.replace(/{[^}]+}/g, '')
+		.replace(/\[[^\]]+]/g, '')
+		.trim();
+}
+
 function debounceSearch() {
 	if (searchTimeout.value) {
 		clearTimeout(searchTimeout.value);
@@ -65,22 +155,31 @@ function updateFilteredCommands() {
 	}
 
 	const search = searchTerm.value.toLowerCase();
-	filteredCommands.value = commandsStore.commands.filter(command => 
-		command.name.toLowerCase().includes(search) || 
-		(command.signature && command.signature.toLowerCase().includes(search)) ||
-		command.relativePath.toLowerCase().includes(search)
+	filteredCommands.value = commandsStore.commands.filter(
+		(command) =>
+			command.name.toLowerCase().includes(search) ||
+			(command.signature &&
+				command.signature.toLowerCase().includes(search)) ||
+			command.relativePath.toLowerCase().includes(search)
 	);
 }
 
-watch(() => commandsStore.commands, () => {
-	updateFilteredCommands();
-}, { deep: true });
+watch(
+	() => commandsStore.commands,
+	() => {
+		updateFilteredCommands();
+	},
+	{ deep: true }
+);
 
-watch(() => props.show, (newVal) => {
-	if (newVal && connectionsStore.getSelectedProject?.projectPath) {
-		refreshCommands();
+watch(
+	() => props.show,
+	(newVal) => {
+		if (newVal && connectionsStore.getSelectedProject?.projectPath) {
+			refreshCommands();
+		}
 	}
-});
+);
 
 onMounted(async () => {
 	if (props.show && connectionsStore.getSelectedProject?.projectPath) {
@@ -92,6 +191,22 @@ onMounted(async () => {
 		}
 	}
 });
+
+function getParameterList(
+	signature: string,
+	startChar: string,
+	endChar: string
+): string {
+	const regex = new RegExp(`\\${startChar}[^${endChar}]+\\${endChar}`, 'g');
+	const parameters = signature.match(regex) || [];
+	return parameters
+		.map((param) =>
+			param
+				.replace(new RegExp(`\\${startChar}|\\${endChar}`, 'g'), '')
+				.trim()
+		)
+		.join(', ');
+}
 </script>
 
 <template>
@@ -133,9 +248,7 @@ onMounted(async () => {
 				</button>
 			</div>
 
-			<div
-				class="bg-base-200 mb-2 rounded-md p-4"
-			>
+			<div class="bg-base-200 m-2 grid grid-cols-1 gap-4 rounded-md p-4">
 				<div class="flex flex-col gap-1">
 					<label class="label">
 						<span class="label-text text-xs">Search Commands</span>
@@ -183,7 +296,8 @@ onMounted(async () => {
 					<div class="text-center">
 						<h3 class="text-sm font-medium">No commands found</h3>
 						<p class="text-base-content/70 mt-2 text-xs">
-							Custom Laravel commands should be in app/Console/Commands directory
+							Custom Laravel commands should be in
+							app/Console/Commands directory
 						</p>
 					</div>
 				</div>
@@ -208,9 +322,7 @@ onMounted(async () => {
 							</thead>
 							<tbody>
 								<tr
-									v-for="(
-										command, index
-									) in filteredCommands"
+									v-for="(command, index) in filteredCommands"
 									:key="index"
 									class="hover:bg-base-200"
 								>
@@ -221,15 +333,40 @@ onMounted(async () => {
 										{{ command.name }}
 									</td>
 									<td class="font-mono text-xs">
-										{{ command.signature || "-" }}
+										{{ command.signature || '-' }}
 									</td>
 									<td class="text-center">
 										<div
 											class="flex justify-center space-x-2"
 										>
 											<button
+												v-if="command.signature"
+												class="btn btn-xs btn-success"
+												@click="runCommand(command)"
+												title="Run Command"
+											>
+												<svg
+													xmlns="http://www.w3.org/2000/svg"
+													fill="none"
+													viewBox="0 0 24 24"
+													stroke-width="1.5"
+													stroke="currentColor"
+													class="h-3 w-3"
+												>
+													<path
+														stroke-linecap="round"
+														stroke-linejoin="round"
+														d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.347a1.125 1.125 0 0 1 0 1.972l-11.54 6.347a1.125 1.125 0 0 1-1.667-.986V5.653Z"
+													/>
+												</svg>
+											</button>
+											<button
 												class="btn btn-xs btn-ghost"
-												@click="openFileInEditor(command.path)"
+												@click="
+													openFileInEditor(
+														command.path
+													)
+												"
 												title="Open File"
 											>
 												<svg
@@ -261,10 +398,74 @@ onMounted(async () => {
 			>
 				<div class="text-xs">
 					{{ commandsStore.commands.length }} Commands found
-					<span
-						v-if="searchTerm"
-						>(filtered)</span
-					>
+					<span v-if="searchTerm">(filtered)</span>
+				</div>
+			</div>
+		</div>
+	</Modal>
+
+	<Modal
+		v-if="showFlagsModal && selectedCommand"
+		title="Run Command With Options"
+		:show="showFlagsModal"
+		:allowCloseOnBackdrop="true"
+		:showFooter="true"
+		:show-cancel-button="true"
+		action-button-text="Run Command"
+		:show-action-button="true"
+		@close="closeFlagsModal"
+		@action="confirmRunWithFlags"
+	>
+		<div class="">
+			<div class="mb-4">
+				<p class="font-bold mb-2">Command:</p>
+				<div class="bg-base-200 p-2 rounded font-mono text-sm">
+					php artisan {{ getCleanSignature(selectedCommand) }}
+					<span class="text-primary">{{ commandFlags }}</span>
+				</div>
+			</div>
+
+			<div class="mb-4">
+				<label class="block mb-2 text-sm">
+					Command Flags/Options (optional):
+				</label>
+				<input
+					v-model="commandFlags"
+					type="text"
+					class="input input-bordered w-full"
+					placeholder="--option=value --flag"
+					@keydown.enter="confirmRunWithFlags"
+				/>
+			</div>
+
+			<div class="text-xs text-base-content/70 mt-4">
+				<p>
+					This command will be executed within your Laravel project
+					directory.
+				</p>
+
+				<div v-if="selectedCommand.signature">
+					<p class="font-semibold my-2">Command Information:</p>
+					<p v-if="selectedCommand.signature.includes('{')">
+						<span class="text-warning">Required parameters:</span>
+						{{
+							getParameterList(
+								selectedCommand.signature,
+								'{',
+								'}'
+							)
+						}}
+					</p>
+					<p v-if="selectedCommand.signature.includes('[')">
+						<span class="text-success">Optional parameters:</span>
+						{{
+							getParameterList(
+								selectedCommand.signature,
+								'[',
+								']'
+							)
+						}}
+					</p>
 				</div>
 			</div>
 		</div>
@@ -307,4 +508,4 @@ td {
 tbody {
 	overflow: hidden;
 }
-</style> 
+</style>
