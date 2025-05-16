@@ -1,0 +1,80 @@
+@import 'tailwindcss';
+@plugin "daisyui" {
+	themes: all;
+}
+
+@layer base {
+	*,
+	::after,
+	::before,
+	::backdrop,
+	::file-selector-button {
+		border-color: var(--color-gray-200, currentcolor);
+	}
+
+	*,
+	*::before,
+	*::after {
+		transition: none !important;
+	}
+}
+
+:root {
+	font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
+}
+
+body {
+	margin: 0;
+	display: flex;
+	min-width: 100vw;
+	min-height: 100vh;
+	padding: 0;
+	height: 100%;
+	width: 100%;
+	overflow: hidden;
+}
+
+html.resizing,
+html.resizing * {
+	user-select: none !important;
+	cursor: col-resize !important;
+}
+
+#app {
+	width: 100%;
+	height: 100vh;
+	display: flex;
+	flex-direction: column;
+}
+
+.table th,
+.table td {
+	@apply border-base-200 border border-[0.5px];
+}
+
+.draggable {
+	app-region: drag;
+	user-select: none;
+	-webkit-user-select: none;
+}
+
+/* Allow text selection by default */
+* {
+	user-select: text;
+	-webkit-user-select: text;
+}
+
+/* Disable selection for specific elements that shouldn't be selectable */
+button,
+.btn,
+.no-select,
+.draggable,
+header,
+nav,
+.menu,
+.tabs,
+.navbar,
+.sidebar {
+	user-select: none;
+	-webkit-user-select: none;
+}
