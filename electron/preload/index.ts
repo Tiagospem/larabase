@@ -236,7 +236,23 @@ contextBridge.exposeInMainWorld('ipcRenderer', {
 		updateEnv: (config: SshConnection, content: string) =>
 			ipcRenderer.invoke('ssh:update-env', config, content),
 		closeConnection: (config: SshConnection) =>
-			ipcRenderer.invoke('ssh:close-connection', config)
+			ipcRenderer.invoke('ssh:close-connection', config),
+		// Tunnel operations
+		createTunnel: (
+			config: SshConnection,
+			remoteHost: string,
+			remotePort: number,
+			localPort?: number
+		) =>
+			ipcRenderer.invoke(
+				'ssh:create-tunnel',
+				config,
+				remoteHost,
+				remotePort,
+				localPort
+			),
+		closeTunnel: (tunnelId: string) =>
+			ipcRenderer.invoke('ssh:close-tunnel', tunnelId)
 	}
 });
 

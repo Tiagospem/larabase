@@ -24,11 +24,11 @@ This document tracks the progress of the SSH implementation in Larabase.
     - [x] Implement command execution handler
     - [x] Implement file operation handlers
 
-- [ ] Step 4: Implement SSH Tunneling
+- [x] Step 4: Implement SSH Tunneling
 
-    - [ ] Create SSH tunnel manager
-    - [ ] Implement tunnel setup and teardown
-    - [ ] Integrate with database connections
+    - [x] Create SSH tunnel manager
+    - [x] Implement tunnel setup and teardown
+    - [x] Integrate with database connections
 
 - [ ] Step 5: Update UI Components for SSH
 
@@ -66,7 +66,7 @@ This document tracks the progress of the SSH implementation in Larabase.
 
 ## Current Status
 
-Step 3 has been completed. SSH IPC handlers have been implemented and the SSH API has been exposed to the renderer process. The next step is to implement SSH tunneling.
+Step 4 has been completed. SSH tunneling has been implemented to provide secure connections to remote database servers. The next step is to update the UI components for SSH connections.
 
 ## Notes
 

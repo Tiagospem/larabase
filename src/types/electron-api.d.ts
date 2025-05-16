@@ -61,6 +61,19 @@ interface IpcRendererAPI {
 		closeConnection: (
 			config: SshConnection
 		) => Promise<{ success: boolean }>;
+		// Tunnel operations
+		createTunnel: (
+			config: SshConnection,
+			remoteHost: string,
+			remotePort: number,
+			localPort?: number
+		) => Promise<{
+			success: boolean;
+			tunnelId?: string;
+			localPort?: number;
+			error?: string;
+		}>;
+		closeTunnel: (tunnelId: string) => Promise<{ success: boolean }>;
 	};
 }
 

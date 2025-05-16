@@ -7,7 +7,10 @@ import {
 	executeCommand,
 	readRemoteFile,
 	writeRemoteFile,
-	listRemoteFiles
+	listRemoteFiles,
+	// New tunnel functions
+	createTunnel,
+	closeTunnel
 } from '../helpers/ssh';
 import { SshConnection } from '../../src/types/ssh-connection';
 
@@ -125,6 +128,46 @@ function registerSshHandlers() {
 	ipcMain.handle('ssh:close-connection', (_, config: SshConnection) => {
 		closeConnection(config);
 		return { success: true };
+	});
+
+	// Create an SSH tunnel
+	ipcMain.handle(
+		'ssh:create-tunnel',
+		async (
+			_,
+			config: SshConnection,
+			remoteHost: string,
+			remotePort: number,
+			localPort?: number
+		) => {
+			try {
+				const result = await createTunnel(
+					config,
+					remoteHost,
+					remotePort,
+					localPort
+				);
+				return {
+					success: true,
+					tunnelId: result.tunnelId,
+					localPort: result.localPort
+				};
+			} catch (error) {
+				return {
+					success: false,
+					error:
+						error instanceof Error
+							? error.message
+							: 'Unknown error creating tunnel'
+				};
+			}
+		}
+	);
+
+	// Close an SSH tunnel
+	ipcMain.handle('ssh:close-tunnel', (_, tunnelId: string) => {
+		const success = closeTunnel(tunnelId);
+		return { success };
 	});
 }
 

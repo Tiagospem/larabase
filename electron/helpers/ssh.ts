@@ -1,14 +1,33 @@
 import { Client, SFTPWrapper, ClientChannel } from 'ssh2';
 import * as fs from 'fs';
 import * as path from 'path';
+import * as net from 'net';
+import * as crypto from 'crypto';
 import { SshConnection } from '../../src/types/ssh-connection';
 
 // Map to store active SSH connections
 const sshConnections = new Map<string, Client>();
 
+// Map to keep track of active tunnels
+const activeTunnels = new Map<
+	string,
+	{
+		server: net.Server;
+		localPort: number;
+		remoteHost: string;
+		remotePort: number;
+		sshClient: Client;
+	}
+>();
+
 // Get a unique key for a connection
 function getConnectionKey(config: SshConnection): string {
 	return `${config.username}@${config.host}:${config.port}:${config.remotePath}`;
+}
+
+// Generate a unique ID for each tunnel
+function generateTunnelId(): string {
+	return crypto.randomBytes(16).toString('hex');
 }
 
 // Create a new SSH connection
@@ -184,7 +203,10 @@ function closeConnection(config: SshConnection): void {
 
 // Close all SSH connections
 function closeAllConnections(): void {
-	// Convert the values iterator to an array before iterating
+	// Close all tunnels first
+	closeAllTunnels();
+
+	// Then close all SSH connections
 	for (const conn of Array.from(sshConnections.values())) {
 		try {
 			conn.end();
@@ -192,6 +214,7 @@ function closeAllConnections(): void {
 			/* ignore */
 		}
 	}
+
 	sshConnections.clear();
 }
 
@@ -250,6 +273,99 @@ async function testConnection(
 	}
 }
 
+// Create an SSH tunnel
+async function createTunnel(
+	config: SshConnection,
+	remoteHost: string,
+	remotePort: number,
+	localPort: number = 0 // 0 means use a random available port
+): Promise<{ tunnelId: string; localPort: number }> {
+	const sshClient = await getConnection(config);
+
+	return new Promise((resolve, reject) => {
+		// Create a local server
+		const server = net.createServer((socket) => {
+			// When a connection is made to the local server
+			sshClient.forwardOut(
+				'127.0.0.1', // srcIP
+				socket.localPort || 0, // srcPort
+				remoteHost, // dstIP
+				remotePort, // dstPort
+				(err, stream) => {
+					if (err) {
+						socket.end();
+						console.error('SSH tunnel error:', err);
+						return;
+					}
+
+					// Pipe the SSH stream to the local socket and vice versa
+					socket.pipe(stream);
+					stream.pipe(socket);
+
+					stream.on('close', () => {
+						socket.end();
+					});
+
+					socket.on('close', () => {
+						stream.end();
+					});
+				}
+			);
+		});
+
+		// Handle server errors
+		server.on('error', (err) => {
+			reject(err);
+		});
+
+		// Listen on the specified local port or a random available port
+		server.listen(localPort, '127.0.0.1', () => {
+			const serverAddress = server.address() as net.AddressInfo;
+			const tunnelId = generateTunnelId();
+
+			// Store the tunnel information
+			activeTunnels.set(tunnelId, {
+				server,
+				localPort: serverAddress.port,
+				remoteHost,
+				remotePort,
+				sshClient
+			});
+
+			// Resolve with the tunnel ID and local port
+			resolve({
+				tunnelId,
+				localPort: serverAddress.port
+			});
+		});
+	});
+}
+
+// Close an SSH tunnel
+function closeTunnel(tunnelId: string): boolean {
+	if (activeTunnels.has(tunnelId)) {
+		const tunnel = activeTunnels.get(tunnelId)!;
+
+		// Close the local server
+		tunnel.server.close();
+		activeTunnels.delete(tunnelId);
+
+		return true;
+	}
+
+	return false;
+}
+
+// Close all SSH tunnels
+function closeAllTunnels(): void {
+	// Convert the values iterator to an array before iterating
+	for (const tunnel of Array.from(activeTunnels.values())) {
+		tunnel.server.close();
+	}
+
+	activeTunnels.clear();
+}
+
 export {
 	createConnection,
 	getConnection,
@@ -260,5 +376,10 @@ export {
 	listRemoteFiles,
 	closeConnection,
 	closeAllConnections,
-	testConnection
+	testConnection,
+
+	// New tunnel functions
+	createTunnel,
+	closeTunnel,
+	closeAllTunnels
 };
