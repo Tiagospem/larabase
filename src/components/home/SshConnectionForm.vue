@@ -15,14 +15,14 @@ const sshConfig = ref<SshConnection>({
 	name: props.modelValue.name,
 	host: props.modelValue.host,
 	port: props.modelValue.port || 22,
-	username: props.modelValue.username,
+	user: props.modelValue.user,
 	remotePath: props.modelValue.remotePath,
 	remoteDbType: ConnectionType.MySQL,
 	remoteDbConfig: {
 		host: props.modelValue.remoteDbConfig?.host || 'localhost',
 		port: props.modelValue.remoteDbConfig?.port || 3306,
 		database: props.modelValue.remoteDbConfig?.database,
-		username: props.modelValue.remoteDbConfig?.username,
+		user: props.modelValue.remoteDbConfig?.user,
 		password: props.modelValue.remoteDbConfig?.password || ''
 	}
 });
@@ -102,7 +102,7 @@ watch(
 			sshConfig.value.name = newValue.name;
 			sshConfig.value.host = newValue.host;
 			sshConfig.value.port = newValue.port || 22;
-			sshConfig.value.username = newValue.username;
+			sshConfig.value.user = newValue.user;
 			sshConfig.value.remotePath = newValue.remotePath;
 			sshConfig.value.remoteDbType = ConnectionType.MySQL;
 			sshConfig.value.remoteDbConfig = {
