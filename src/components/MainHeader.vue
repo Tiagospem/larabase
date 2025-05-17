@@ -10,6 +10,7 @@ import ERDModal from '@/components/ERDModal.vue';
 import { useDatabaseSchema } from '@/services/databaseSchema';
 import RedisManager from '@/components/RedisManager.vue';
 import LaravelCommands from '@/components/LaravelCommands.vue';
+import { ConnectionType } from '@/types/connection-types';
 
 const connectionsStore = useConnectionsStore();
 const redisStore = useRedisStore();
@@ -25,6 +26,10 @@ const props = defineProps({
 	pendingMigrations: {
 		type: Number,
 		default: 0
+	},
+	isRemoteConnection: {
+		type: Boolean,
+		default: false
 	}
 });
 
@@ -41,7 +46,7 @@ const emit = defineEmits([
 const selectedProject = computed(() => connectionsStore.getSelectedProject);
 
 const isRedisAvailable = computed(() => {
-	return redisStore.isRedisAvailable;
+	return redisStore.isRedisAvailable && !props.isRemoteConnection;
 });
 
 const isLoading = computed(() => {
@@ -57,20 +62,26 @@ const ui = reactive({
 
 function getConnectionColor(type: string) {
 	switch (type) {
-		case 'mysql':
+		case ConnectionType.MySQL:
 			return 'bg-orange-500';
-		case 'postgresql':
-			return 'bg-blue-600';
+		case ConnectionType.SSH:
+			return 'bg-purple-600';
 		default:
 			return 'bg-gray-600';
 	}
 }
 
 function openSqlEditor() {
-	router.push(`/sql-editor/${selectedProject.value?.id}`);
+	router.push(
+		`/sql-editor/${selectedProject.value?.id}/${props.isRemoteConnection}`
+	);
 }
 
 async function getDatabaseSchema() {
+	if (props.isRemoteConnection) {
+		return;
+	}
+
 	try {
 		const result = await fetchDatabaseSchema(true);
 
@@ -87,11 +98,13 @@ async function getDatabaseSchema() {
 }
 
 onMounted(() => {
-	initializeSchema();
+	if (!props.isRemoteConnection) {
+		initializeSchema();
+	}
 });
 
 watchEffect(() => {
-	if (selectedProject.value?.id) {
+	if (selectedProject.value?.id && !props.isRemoteConnection) {
 		redisStore.checkRedisAvailability(
 			selectedProject.value as ProjectConnection
 		);
@@ -135,9 +148,11 @@ ui.showRedisManager = false;
 				}}</span>
 			</div>
 
-			<ShowConnectionInfo />
-			
-			<slot name="connection-indicator"></slot>
+			<ShowConnectionInfo
+				:is-remote-connection="props.isRemoteConnection"
+				:connection="selectedProject"
+				v-if="selectedProject"
+			/>
 		</div>
 
 		<div class="flex">
@@ -145,6 +160,7 @@ ui.showRedisManager = false;
 				<div
 					class="tooltip tooltip-bottom"
 					data-tip="View database structure and relationships"
+					v-if="!props.isRemoteConnection"
 				>
 					<button
 						class="btn btn-ghost btn-sm"
@@ -171,28 +187,8 @@ ui.showRedisManager = false;
 
 				<div
 					class="tooltip tooltip-bottom"
-					data-tip="Change database or project connection"
-				>
-					<button
-						class="btn btn-ghost btn-sm"
-						@click="emit('open-database-switcher')"
-					>
-						<svg
-							class="h-4 w-4"
-							fill="currentColor"
-							xmlns="http://www.w3.org/2000/svg"
-							viewBox="0 0 448 512"
-						>
-							<path
-								d="M448 80l0 48c0 44.2-100.3 80-224 80S0 172.2 0 128L0 80C0 35.8 100.3 0 224 0S448 35.8 448 80zM393.2 214.7c20.8-7.4 39.9-16.9 54.8-28.6L448 288c0 44.2-100.3 80-224 80S0 332.2 0 288L0 186.1c14.9 11.8 34 21.2 54.8 28.6C99.7 230.7 159.5 240 224 240s124.3-9.3 169.2-25.3zM0 346.1c14.9 11.8 34 21.2 54.8 28.6C99.7 390.7 159.5 400 224 400s124.3-9.3 169.2-25.3c20.8-7.4 39.9-16.9 54.8-28.6l0 85.9c0 44.2-100.3 80-224 80S0 476.2 0 432l0-85.9z"
-							/>
-						</svg>
-					</button>
-				</div>
-
-				<div
-					class="tooltip tooltip-bottom"
 					data-tip="Monitor database changes in real-time"
+					v-if="!props.isRemoteConnection"
 				>
 					<button
 						class="btn btn-ghost btn-sm"
@@ -235,6 +231,7 @@ ui.showRedisManager = false;
 				<div
 					class="tooltip tooltip-bottom"
 					data-tip="Manage migrations and artisan commands"
+					v-if="!props.isRemoteConnection"
 				>
 					<button
 						class="btn btn-ghost btn-sm relative"
@@ -308,6 +305,7 @@ ui.showRedisManager = false;
 				<div
 					class="tooltip tooltip-bottom"
 					data-tip="Visualize database table relationships"
+					v-if="!props.isRemoteConnection"
 				>
 					<button
 						class="btn btn-ghost btn-sm"
@@ -329,10 +327,9 @@ ui.showRedisManager = false;
 				<div
 					class="tooltip tooltip-bottom"
 					data-tip="Show Redis Keys"
+					v-if="!props.isRemoteConnection && isRedisAvailable"
 				>
 					<button
-						:disabled="!isRedisAvailable"
-						:class="{ 'opacity-20': !isRedisAvailable }"
 						class="btn btn-ghost btn-sm"
 						@click="ui.showRedisManager = true"
 					>
@@ -352,6 +349,7 @@ ui.showRedisManager = false;
 				<div
 					class="tooltip tooltip-bottom"
 					data-tip="Run Project Commands"
+					v-if="!props.isRemoteConnection"
 				>
 					<button
 						class="btn btn-ghost btn-sm"
