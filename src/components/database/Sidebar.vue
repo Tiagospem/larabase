@@ -8,7 +8,6 @@ import Modal from '@/components/Modal.vue';
 import { MysqlConnection } from '@/types/mysql-connection';
 import TableListSkeleton from '@/components/TableListSkeleton.vue';
 import { Table } from '@/types/table';
-import RemoteBadge from '@/components/ui/RemoteBadge.vue';
 
 const showAlert = inject<(message: string, type: string) => void>('showAlert')!;
 
@@ -33,10 +32,6 @@ const isAllSelected = computed(() => {
 const selectedProject = computed<ProjectConnection | null>(
 	() => connectionsStore.getSelectedProject || null
 );
-
-const isRemoteConnection = computed(() => {
-	return selectedProject.value?.isRemote || false;
-});
 
 function toggleDeleteMode() {
 	isDeleteMode.value = !isDeleteMode.value;
@@ -101,7 +96,7 @@ async function dropTables() {
 		const params = {
 			projectId: selectedProject.value?.id as string,
 			dbConnection: toRaw(
-				selectedProject.value?.db_config
+				selectedProject.value?.dbConfig
 			) as MysqlConnection,
 			tables: mappedTableNames,
 			ignoreForeignKeys: Boolean(ignoreForeignKeys.value),
@@ -176,10 +171,6 @@ watchEffect(() => {
 			class="bg-base-200 flex h-full w-full flex-col border-r border-black/10"
 		>
 			<div class="shrink-0 border-b border-black/10 p-3">
-				<div v-if="isRemoteConnection" class="flex justify-end mb-2">
-					<RemoteBadge />
-				</div>
-				
 				<div class="relative mb-2">
 					<label class="input input-sm">
 						<svg
