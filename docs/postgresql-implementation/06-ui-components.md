@@ -36,7 +36,7 @@ Modify the `src/components/home/ManageConnection.vue` file to allow selecting Po
         <span class="label-text">Port</span>
     </label>
     <input
-        v-model="newConnection.db_config.port"
+        v-model="newConnection.dbConfig.port"
         type="text"
         :placeholder="newConnection.type === 'postgresql' ? '5432' : '3306'"
         class="input w-full"
@@ -50,7 +50,7 @@ Modify the `src/components/home/ManageConnection.vue` file to allow selecting Po
         <span class="label-text">Schema</span>
     </label>
     <input
-        v-model="newConnection.db_config.schema"
+        v-model="newConnection.dbConfig.schema"
         type="text"
         placeholder="public"
         class="input w-full"
@@ -65,7 +65,7 @@ Modify the `src/components/home/ManageConnection.vue` file to allow selecting Po
     <label class="label cursor-pointer">
         <span class="label-text">Use SSL Connection?</span>
         <input
-            v-model="newConnection.db_config.ssl"
+            v-model="newConnection.dbConfig.ssl"
             type="checkbox"
             class="toggle toggle-primary"
         />
@@ -91,22 +91,22 @@ async function saveNewConnection() {
 		if (newConnection.value.type === 'postgresql') {
 			// Use PostgreSQL connection test
 			testResult = await window.ipcRenderer.testPostgreSQLConnection({
-				host: newConnection.value.db_config.host,
-				port: newConnection.value.db_config.port,
-				user: newConnection.value.db_config.user,
-				password: newConnection.value.db_config.password,
-				database: newConnection.value.db_config.database,
-				schema: newConnection.value.db_config.schema || 'public',
-				ssl: newConnection.value.db_config.ssl || false
+				host: newConnection.value.dbConfig.host,
+				port: newConnection.value.dbConfig.port,
+				user: newConnection.value.dbConfig.user,
+				password: newConnection.value.dbConfig.password,
+				database: newConnection.value.dbConfig.database,
+				schema: newConnection.value.dbConfig.schema || 'public',
+				ssl: newConnection.value.dbConfig.ssl || false
 			});
 		} else {
 			// Use MySQL connection test
 			testResult = await window.ipcRenderer.testMySQLConnection({
-				host: newConnection.value.db_config.host,
-				port: newConnection.value.db_config.port,
-				user: newConnection.value.db_config.user,
-				password: newConnection.value.db_config.password,
-				database: newConnection.value.db_config.database
+				host: newConnection.value.dbConfig.host,
+				port: newConnection.value.dbConfig.port,
+				user: newConnection.value.dbConfig.user,
+				password: newConnection.value.dbConfig.password,
+				database: newConnection.value.dbConfig.database
 			});
 		}
 
@@ -118,26 +118,26 @@ async function saveNewConnection() {
 
 		showAlert('Connection successful! Saving configuration...', 'success');
 
-		// Create the db_config object based on the database type
+		// Create the dbConfig object based on the database type
 		let dbConfig;
 		if (newConnection.value.type === 'postgresql') {
 			dbConfig = {
-				database: newConnection.value.db_config.database,
-				host: newConnection.value.db_config.host,
-				port: newConnection.value.db_config.port,
-				user: newConnection.value.db_config.user,
-				password: newConnection.value.db_config.password,
-				schema: newConnection.value.db_config.schema || 'public',
-				ssl: newConnection.value.db_config.ssl || false,
+				database: newConnection.value.dbConfig.database,
+				host: newConnection.value.dbConfig.host,
+				port: newConnection.value.dbConfig.port,
+				user: newConnection.value.dbConfig.user,
+				password: newConnection.value.dbConfig.password,
+				schema: newConnection.value.dbConfig.schema || 'public',
+				ssl: newConnection.value.dbConfig.ssl || false,
 				connectTimeout: 10000
 			};
 		} else {
 			dbConfig = {
-				database: newConnection.value.db_config.database,
-				host: newConnection.value.db_config.host,
-				port: newConnection.value.db_config.port,
-				user: newConnection.value.db_config.user,
-				password: newConnection.value.db_config.password,
+				database: newConnection.value.dbConfig.database,
+				host: newConnection.value.dbConfig.host,
+				port: newConnection.value.dbConfig.port,
+				user: newConnection.value.dbConfig.user,
+				password: newConnection.value.dbConfig.password,
 				connectTimeout: 10000
 			};
 		}
@@ -148,11 +148,11 @@ async function saveNewConnection() {
 			name: newConnection.value.name,
 			type: newConnection.value.type,
 			icon: newConnection.value.type.charAt(0).toUpperCase(),
-			db_config: dbConfig,
-			redis_config: {
-				port: newConnection.value.redis_config.port,
-				host: newConnection.value.redis_config.host,
-				password: newConnection.value.redis_config.password
+			dbConfig: dbConfig,
+			redisConfig: {
+				port: newConnection.value.redisConfig.port,
+				host: newConnection.value.redisConfig.host,
+				password: newConnection.value.redisConfig.password
 			},
 			usingSail: newConnection.value.usingSail,
 			status: 'ready',
@@ -197,11 +197,11 @@ async function loadConnections(id: string | null = null) {
 
                         if (project.type === 'postgresql') {
                             check = await window.ipcRenderer.testPostgreSQLConnection(
-                                toRaw(project.db_config)
+                                toRaw(project.dbConfig)
                             );
                         } else {
                             check = await window.ipcRenderer.testMySQLConnection(
-                                toRaw(project.db_config)
+                                toRaw(project.dbConfig)
                             );
                         }
 
@@ -263,14 +263,14 @@ async function selectProjectDirectory() {
 				) {
 					newConnection.value.type = 'postgresql';
 					// Set default PostgreSQL port
-					if (!newConnection.value.db_config.port) {
-						newConnection.value.db_config.port = 5432;
+					if (!newConnection.value.dbConfig.port) {
+						newConnection.value.dbConfig.port = 5432;
 					}
 				} else {
 					newConnection.value.type = 'mysql';
 					// Set default MySQL port
-					if (!newConnection.value.db_config.port) {
-						newConnection.value.db_config.port = 3306;
+					if (!newConnection.value.dbConfig.port) {
+						newConnection.value.dbConfig.port = 3306;
 					}
 				}
 			}
@@ -296,7 +296,7 @@ const getDefaultValues = (type = 'mysql') => ({
 	name: '',
 	type: type,
 	icon: '',
-	db_config: {
+	dbConfig: {
 		database: '',
 		host: 'localhost',
 		port: type === 'postgresql' ? 5432 : 3306,
@@ -306,7 +306,7 @@ const getDefaultValues = (type = 'mysql') => ({
 		ssl: type === 'postgresql' ? false : undefined,
 		connectTimeout: 10000
 	},
-	redis_config: {
+	redisConfig: {
 		port: 6379,
 		host: 'localhost',
 		password: ''
@@ -323,13 +323,13 @@ watch(
 	(newType) => {
 		// Update default port when database type changes
 		if (newType === 'postgresql') {
-			newConnection.value.db_config.port = 5432;
-			newConnection.value.db_config.schema = 'public';
-			newConnection.value.db_config.ssl = false;
+			newConnection.value.dbConfig.port = 5432;
+			newConnection.value.dbConfig.schema = 'public';
+			newConnection.value.dbConfig.ssl = false;
 		} else {
-			newConnection.value.db_config.port = 3306;
-			delete newConnection.value.db_config.schema;
-			delete newConnection.value.db_config.ssl;
+			newConnection.value.dbConfig.port = 3306;
+			delete newConnection.value.dbConfig.schema;
+			delete newConnection.value.dbConfig.ssl;
 		}
 	}
 );

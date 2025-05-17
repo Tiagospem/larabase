@@ -128,13 +128,13 @@ async function executeQuery() {
 		// Choose the appropriate handler based on database type
 		if (project.value.type === 'postgresql') {
 			result = await window.ipcRenderer.executePostgresqlQuery(
-				toRaw(project.value.db_config),
+				toRaw(project.value.dbConfig),
 				query
 			);
 		} else {
 			// Default to MySQL
 			result = await window.ipcRenderer.executeMysqlQuery(
-				toRaw(project.value.db_config),
+				toRaw(project.value.dbConfig),
 				query
 			);
 		}

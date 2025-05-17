@@ -42,8 +42,8 @@ export interface ProjectConnection {
 	projectPath: string;
 	type: string; // Now can be 'mysql' or 'postgresql'
 	icon: string | undefined | null;
-	db_config: MysqlConnection | PostgresqlConnection; // Update this line
-	redis_config: RedisConnection;
+	dbConfig: MysqlConnection | PostgresqlConnection; // Update this line
+	redisConfig: RedisConnection;
 	usingSail: boolean;
 	status: string;
 	isValid: boolean;

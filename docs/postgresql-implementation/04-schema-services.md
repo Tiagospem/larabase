@@ -249,12 +249,12 @@ const fetchDatabaseSchema = async (
 
 		if (selectedProject.type === 'postgresql') {
 			result = await window.ipcRenderer.getPostgresqlDatabaseSchemaForAI(
-				toRaw(selectedProject.db_config)
+				toRaw(selectedProject.dbConfig)
 			);
 		} else {
 			// Default to MySQL
 			result = await window.ipcRenderer.getDatabaseSchemaForAI(
-				toRaw(selectedProject.db_config)
+				toRaw(selectedProject.dbConfig)
 			);
 		}
 
