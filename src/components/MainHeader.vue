@@ -11,6 +11,12 @@ import { useDatabaseSchema } from '@/services/databaseSchema';
 import RedisManager from '@/components/RedisManager.vue';
 import LaravelCommands from '@/components/LaravelCommands.vue';
 import { ConnectionType } from '@/types/connection-types';
+import Settings from '@/components/Settings.vue';
+import DatabaseSwitcher from '@/components/database/DatabaseSwitcher.vue';
+import LiveUpdates from '@/components/LiveUpdates.vue';
+import ProjectLogs from '@/components/ProjectLogs.vue';
+import Migrations from '@/components/Migrations.vue';
+import EnvEditor from '@/components/EnvEditor.vue';
 
 const connectionsStore = useConnectionsStore();
 const redisStore = useRedisStore();
@@ -33,15 +39,7 @@ const props = defineProps({
 	}
 });
 
-const emit = defineEmits([
-	'open-settings',
-	'open-database-switcher',
-	'open-live-updates',
-	'open-project-logs',
-	'open-migrations',
-	'open-env-editor',
-	'goBack'
-]);
+const emit = defineEmits(['goBack', 'migrations-updated']);
 
 const selectedProject = computed(() => connectionsStore.getSelectedProject);
 
@@ -57,7 +55,13 @@ const ui = reactive({
 	showTablesModelsModal: false,
 	showDatabaseDiagram: false,
 	showRedisManager: false,
-	showLaravelCommands: false
+	showLaravelCommands: false,
+	showSettings: false,
+	showDatabaseSwitcher: false,
+	showLiveUpdates: false,
+	showProjectLogs: false,
+	showMigrations: false,
+	showEnvEditor: false
 });
 
 function getConnectionColor(type: string) {
@@ -95,6 +99,11 @@ async function getDatabaseSchema() {
 				(error instanceof Error ? error.message : String(error))
 		);
 	}
+}
+
+async function handleMigrationsClose() {
+	ui.showMigrations = false;
+	emit('migrations-updated');
 }
 
 onMounted(() => {
@@ -192,7 +201,7 @@ ui.showRedisManager = false;
 				>
 					<button
 						class="btn btn-ghost btn-sm"
-						@click="emit('open-live-updates')"
+						@click="ui.showLiveUpdates = true"
 					>
 						<svg
 							class="h-4 w-4"
@@ -213,7 +222,7 @@ ui.showRedisManager = false;
 				>
 					<button
 						class="btn btn-ghost btn-sm"
-						@click="emit('open-project-logs')"
+						@click="ui.showProjectLogs = true"
 					>
 						<svg
 							class="h-4 w-4"
@@ -235,7 +244,7 @@ ui.showRedisManager = false;
 				>
 					<button
 						class="btn btn-ghost btn-sm relative"
-						@click="emit('open-migrations')"
+						@click="ui.showMigrations = true"
 					>
 						<svg
 							class="h-4 w-4"
@@ -266,7 +275,7 @@ ui.showRedisManager = false;
 				>
 					<button
 						class="btn btn-ghost btn-sm"
-						@click="emit('open-env-editor')"
+						@click="ui.showEnvEditor = true"
 					>
 						<svg
 							class="h-4 w-4"
@@ -376,7 +385,7 @@ ui.showRedisManager = false;
 				>
 					<button
 						class="btn btn-ghost btn-sm"
-						@click="emit('open-settings')"
+						@click="ui.showSettings = true"
 					>
 						<svg
 							class="h-4 w-4"
@@ -413,5 +422,36 @@ ui.showRedisManager = false;
 	<LaravelCommands
 		:show="ui.showLaravelCommands"
 		@close="ui.showLaravelCommands = false"
+	/>
+
+	<Settings
+		v-if="ui.showSettings"
+		@close="ui.showSettings = false"
+	/>
+
+	<DatabaseSwitcher
+		v-if="ui.showDatabaseSwitcher"
+		@close="ui.showDatabaseSwitcher = false"
+	/>
+
+	<LiveUpdates
+		v-if="ui.showLiveUpdates"
+		@close="ui.showLiveUpdates = false"
+	/>
+
+	<ProjectLogs
+		v-if="ui.showProjectLogs"
+		@close="ui.showProjectLogs = false"
+	/>
+
+	<Migrations
+		v-if="ui.showMigrations"
+		@close="handleMigrationsClose"
+		@migrations-updated="emit('migrations-updated')"
+	/>
+
+	<EnvEditor
+		v-if="ui.showEnvEditor"
+		@close="ui.showEnvEditor = false"
 	/>
 </template>
