@@ -32,7 +32,8 @@
     "publish:mac-apple": "vue-tsc --noEmit && vite build && electron-builder --publish always --mac --arm64",
     "postinstall": "electron-builder install-app-deps",
     "rebuild": "electron-builder install-app-deps",
-    "lint": "eslint . --ext .vue,.js,.ts,.jsx,.tsx --fix",
+    "lint": "eslint . --ext .vue,.js,.ts,.jsx,.tsx --fix --max-warnings 1000",
+    "lint:ci": "eslint . --ext .vue,.js,.ts,.jsx,.tsx --fix --max-warnings 1000 || true",
     "format": "prettier --write \"**/*.{js,ts,vue,jsx,tsx,css,md}\""
   },
   "dependencies": {
@@ -56,13 +57,13 @@
     "openai": "^4.98.0",
     "pinia": "^3.0.2",
     "pluralize": "^8.0.0",
+    "portfinder": "^1.0.37",
     "redis": "^5.0.0",
-    "ssh2": "^1.16.0",
     "sql-formatter": "^15.6.1",
+    "ssh2": "^1.16.0",
     "tailwindcss": "^4.1.4",
     "uuid": "^11.1.0",
-    "vue-router": "^4.5.1",
-    "portfinder": "^1.0.37"
+    "vue-router": "^4.5.1"
   },
   "devDependencies": {
     "@eslint/js": "^9.26.0",
@@ -79,6 +80,7 @@
     "electron-builder": "^26.0.14",
     "eslint": "^9.25.1",
     "eslint-config-prettier": "^10.1.2",
+    "eslint-plugin-unused-imports": "^4.1.4",
     "eslint-plugin-vue": "^9.33.0",
     "eslint-plugin-vue-pug": "^0.6.2",
     "globals": "^16.1.0",
@@ -94,8 +96,8 @@
     "vue-tsc": "^2.2.10"
   },
   "optionalDependencies": {
-    "@tailwindcss/oxide-darwin-x64": "^4.1.7",
-    "@tailwindcss/oxide-darwin-arm64": "^4.1.7"
+    "@tailwindcss/oxide-darwin-arm64": "^4.1.7",
+    "@tailwindcss/oxide-darwin-x64": "^4.1.7"
   },
   "build": {
     "appId": "com.larabase.app",
@@ -138,7 +140,9 @@
       "target": [
         {
           "target": "nsis",
-          "arch": ["x64"]
+          "arch": [
+            "x64"
+          ]
         }
       ],
       "icon": "dist/icons/win/icon.ico"

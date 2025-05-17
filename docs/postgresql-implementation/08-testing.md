@@ -60,7 +60,7 @@ Test PostgreSQL connection by:
     - Host: localhost (or your server address)
     - Port: 5432
     - Database: larabase_test
-    - Username: larabase
+    - User: larabase
     - Password: password
     - Schema: public
 

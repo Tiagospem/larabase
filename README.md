@@ -104,7 +104,7 @@ The SSH tunneling implementation uses:
 
 To use SSH tunneling, you need:
 
-1. SSH access to the remote server (username/password or key-based authentication)
+1. SSH access to the remote server (user/password or key-based authentication)
 2. The remote server needs access to the MySQL database
 3. Create a connection in Larabase with SSH tunneling enabled
 
@@ -112,8 +112,8 @@ To use SSH tunneling, you need:
 
 When creating a new connection, select the SSH option and provide:
 
-1. SSH server details (host, port, username, password/private key)
-2. Remote database details (host, port, username, password, database name)
+1. SSH server details (host, port, user, password/private key)
+2. Remote database details (host, port, user, password, database name)
 
 Once connected, you can use all Larabase features as you would with a local database.
 
