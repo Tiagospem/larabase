@@ -5,7 +5,6 @@ import electron from 'vite-plugin-electron/simple';
 import pkg from './package.json';
 import path from 'path';
 
-// Ensure these native modules are properly excluded
 const nativeNodeModules = [
 	'ssh2',
 	'ssh2-streams',
@@ -29,13 +28,7 @@ export default defineConfig(({ command }) => {
 				main: {
 					entry: 'electron/main/index.ts',
 					onstart({ startup }) {
-						if (process.env.VSCODE_DEBUG) {
-							console.log(
-								/* For `.vscode/.debug.script.mjs` */ '[startup] Electron App'
-							);
-						} else {
-							startup();
-						}
+						startup();
 					},
 					vite: {
 						build: {
