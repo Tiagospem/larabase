@@ -50,8 +50,8 @@ onMounted(async () => {
 	await connectionsStore.loadConnections();
 });
 
-function openConnection(connectionId: string) {
-	router.push(`/database/${connectionId}`);
+function openConnection(project: ProjectConnection) {
+	router.push(`/database/${project.id}/${project.isRemote}`);
 }
 
 function getConnectionColor(type: string) {
@@ -331,9 +331,7 @@ function getConnectionColor(type: string) {
 											:disabled="!connection.isValid"
 											class="btn btn-sm btn-ghost"
 											@click.stop="
-												openConnection(
-													connection.id as string
-												)
+												openConnection(connection)
 											"
 										>
 											<svg
