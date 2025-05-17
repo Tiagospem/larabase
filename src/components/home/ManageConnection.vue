@@ -7,6 +7,7 @@ import { ProjectConnection } from '@/types/project';
 import { Env } from '@/types/env';
 import { DockerInfo } from '@/types/docker-info';
 import {
+	ConnectionStatus,
 	ConnectionType,
 	getConnectionTypeIcon
 } from '@/types/connection-types';
@@ -27,39 +28,38 @@ const defaultValues = {
 	name: '',
 	type: ConnectionType.MySQL,
 	icon: getConnectionTypeIcon(ConnectionType.MySQL),
-	db_config: {
+	dbConfig: {
 		database: '',
-		host: 'localhost',
+		host: '127.0.0.1',
 		port: 3306,
 		user: '',
 		password: '',
 		connectTimeout: 10000
 	},
-	redis_config: {
+	redisConfig: {
 		port: 6379,
-		host: 'localhost',
+		host: '127.0.0.1',
 		password: ''
 	},
 	usingSail: false,
-	status: 'ready',
+	status: ConnectionStatus.Connected,
 	isValid: true,
 	isRemote: false,
 	dockerInfo: null
 };
-
 const newConnection = ref<ProjectConnection>(defaultValues);
 const sshConfig = ref<SshConnection>({
 	name: '',
 	host: '',
 	port: 22,
-	username: '',
+	user: '',
 	remotePath: '',
-	remoteDbType: 'mysql',
+	remoteDbType: ConnectionType.MySQL,
 	remoteDbConfig: {
-		host: 'localhost',
+		host: '127.0.0.1',
 		port: 3306,
 		database: '',
-		username: '',
+		user: '',
 		password: ''
 	}
 });
@@ -72,13 +72,28 @@ async function saveNewConnection() {
 	try {
 		if (
 			!newConnection.value.projectPath &&
-			newConnection.value.type !== ConnectionType.SSH
+			newConnection.value.type === ConnectionType.MySQL
 		) {
 			projectPathError.value = 'Project path is required';
 			return;
 		}
 
-		// Check for a name in either the main form or the SSH form
+		const plainSshConfig = {
+			name: sshConfig.value.name,
+			host: sshConfig.value.host,
+			port: sshConfig.value.port,
+			user: sshConfig.value.user,
+			remotePath: sshConfig.value.remotePath,
+			remoteDbType: ConnectionType.MySQL,
+			remoteDbConfig: {
+				host: sshConfig.value.remoteDbConfig.host,
+				port: sshConfig.value.remoteDbConfig.port,
+				database: sshConfig.value.remoteDbConfig.database,
+				user: sshConfig.value.remoteDbConfig.user,
+				password: sshConfig.value.remoteDbConfig.password || ''
+			}
+		} as any;
+
 		const hasName =
 			newConnection.value.type === ConnectionType.SSH
 				? !!sshConfig.value.name
@@ -90,10 +105,9 @@ async function saveNewConnection() {
 		}
 
 		if (newConnection.value.type === ConnectionType.SSH) {
-			// Validate SSH connection fields
 			if (
 				!sshConfig.value.host ||
-				!sshConfig.value.username ||
+				!sshConfig.value.user ||
 				!sshConfig.value.remotePath
 			) {
 				showAlert('Please fill all required SSH fields', 'error');
@@ -102,35 +116,19 @@ async function saveNewConnection() {
 
 			if (
 				!sshConfig.value.remoteDbConfig.database ||
-				!sshConfig.value.remoteDbConfig.username
+				!sshConfig.value.remoteDbConfig.user
 			) {
 				showAlert('Please fill all required database fields', 'error');
 				return;
 			}
 		} else {
-			// Validate local connection fields
 			if (
-				!newConnection.value.db_config?.database ||
-				!newConnection.value.db_config?.user
+				!newConnection.value.dbConfig?.database ||
+				!newConnection.value.dbConfig?.user
 			) {
 				showAlert('Please fill all required fields', 'error');
 				return;
 			}
-		}
-
-		const exists = connectionsStore.connections.some(
-			(conn) =>
-				(conn.projectPath === newConnection.value.projectPath ||
-					conn.name === newConnection.value.name) &&
-				conn.id !== editConnectionId.value
-		);
-
-		if (exists) {
-			showAlert(
-				'A connection with this name or project path already exists',
-				'error'
-			);
-			return;
 		}
 
 		isSaving.value = true;
@@ -138,27 +136,8 @@ async function saveNewConnection() {
 		let testResult = { success: true, message: '' };
 
 		if (newConnection.value.type === ConnectionType.SSH) {
-			// Test SSH connection
 			showAlert('Testing SSH connection...', 'info');
-			
-			// Create a plain JavaScript object from the reactive SSH config
-			const plainSshConfig = {
-				name: sshConfig.value.name || '',
-				host: sshConfig.value.host,
-				port: sshConfig.value.port,
-				username: sshConfig.value.username,
-				remotePath: sshConfig.value.remotePath,
-				remoteDbType: 'mysql',
-				remoteDbConfig: {
-					host: sshConfig.value.remoteDbConfig.host,
-					port: sshConfig.value.remoteDbConfig.port,
-					database: sshConfig.value.remoteDbConfig.database,
-					username: sshConfig.value.remoteDbConfig.username,
-					password: sshConfig.value.remoteDbConfig.password || ''
-				}
-			} as any;
-			
-			// Add authentication details
+
 			if (sshConfig.value.password) {
 				plainSshConfig.password = sshConfig.value.password;
 			}
@@ -168,24 +147,27 @@ async function saveNewConnection() {
 					plainSshConfig.passphrase = sshConfig.value.passphrase;
 				}
 			}
-			
-			testResult = await window.ipcRenderer.ssh.testConnection(toRaw(plainSshConfig));
+
+			testResult = await window.ipcRenderer.ssh.testConnection(
+				toRaw(plainSshConfig)
+			);
 		} else if (newConnection.value.type === ConnectionType.MySQL) {
-			// Test MySQL connection
 			showAlert('Testing database connection...', 'info');
-			if (newConnection.value.db_config) {
+
+			if (newConnection.value.dbConfig) {
 				testResult = await window.ipcRenderer.testMySQLConnection({
-					host: newConnection.value.db_config.host,
-					port: newConnection.value.db_config.port,
-					user: newConnection.value.db_config.user,
-					password: newConnection.value.db_config.password,
-					database: newConnection.value.db_config.database
+					host: newConnection.value.dbConfig.host,
+					port: newConnection.value.dbConfig.port,
+					user: newConnection.value.dbConfig.user,
+					password: newConnection.value.dbConfig.password,
+					database: newConnection.value.dbConfig.database
 				});
 			}
 		}
 
 		if (!testResult.success) {
 			showAlert(`Connection failed: ${testResult.message}`, 'error');
+
 			isSaving.value = false;
 			return;
 		}
@@ -201,11 +183,11 @@ async function saveNewConnection() {
 			name:
 				newConnection.value.type === ConnectionType.SSH
 					? sshConfig.value.name || ''
-					: newConnection.value.name,
+					: newConnection.value.name || '',
 			type: newConnection.value.type,
 			icon: getConnectionTypeIcon(newConnection.value.type),
 			isRemote: newConnection.value.type === ConnectionType.SSH,
-			status: 'ready',
+			status: ConnectionStatus.Connected,
 			isValid: true,
 			usingSail:
 				newConnection.value.type !== ConnectionType.SSH
@@ -215,33 +197,14 @@ async function saveNewConnection() {
 				newConnection.value.type !== ConnectionType.SSH
 					? dockerInfo.value || null
 					: null,
-			redis_config: {
-				port: newConnection.value.redis_config.port,
-				host: newConnection.value.redis_config.host,
-				password: newConnection.value.redis_config.password
+			redisConfig: {
+				port: newConnection.value.redisConfig.port,
+				host: newConnection.value.redisConfig.host,
+				password: newConnection.value.redisConfig.password
 			}
 		};
 
-		// Add the appropriate configuration based on connection type
 		if (newConnection.value.type === ConnectionType.SSH) {
-			// Create a clean, serializable object for SSH config
-			const plainSshConfig = {
-				name: sshConfig.value.name || '',
-				host: sshConfig.value.host,
-				port: sshConfig.value.port,
-				username: sshConfig.value.username,
-				remotePath: sshConfig.value.remotePath,
-				remoteDbType: 'mysql',
-				remoteDbConfig: {
-					host: sshConfig.value.remoteDbConfig.host,
-					port: sshConfig.value.remoteDbConfig.port,
-					database: sshConfig.value.remoteDbConfig.database,
-					username: sshConfig.value.remoteDbConfig.username,
-					password: sshConfig.value.remoteDbConfig.password || ''
-				}
-			} as any;
-			
-			// Add authentication details
 			if (sshConfig.value.password) {
 				plainSshConfig.password = sshConfig.value.password;
 			}
@@ -251,16 +214,15 @@ async function saveNewConnection() {
 					plainSshConfig.passphrase = sshConfig.value.passphrase;
 				}
 			}
-			
-			connectionData.ssh_config = toRaw(plainSshConfig);
-		} else if (newConnection.value.db_config) {
-			connectionData.db_config = {
-				database: newConnection.value.db_config.database,
-				host: newConnection.value.db_config.host,
-				port: newConnection.value.db_config.port,
-				user: newConnection.value.db_config.user,
-				password: newConnection.value.db_config.password,
-				connectTimeout: 10000
+
+			connectionData.sshConfig = toRaw(plainSshConfig);
+		} else if (newConnection.value.dbConfig) {
+			connectionData.dbConfig = {
+				database: newConnection.value.dbConfig.database,
+				host: newConnection.value.dbConfig.host,
+				port: newConnection.value.dbConfig.port,
+				user: newConnection.value.dbConfig.user,
+				password: newConnection.value.dbConfig.password
 			};
 		}
 
@@ -279,7 +241,6 @@ async function saveNewConnection() {
 
 		isCreateModalOpen.value = false;
 	} catch (error: any) {
-		console.error('Error saving connection:', error);
 		showAlert(`Error saving connection: ${error.message}`, 'error');
 	} finally {
 		isSaving.value = false;
@@ -297,23 +258,23 @@ function editConnection(project: ProjectConnection) {
 		type: project.type,
 		icon: project.icon,
 		isRemote: project.isRemote || false,
-		redis_config: {
-			port: project.redis_config.port,
-			host: project.redis_config.host,
-			password: project.redis_config.password
+		redisConfig: {
+			port: project.redisConfig.port,
+			host: project.redisConfig.host,
+			password: project.redisConfig.password
 		},
 		usingSail: project.usingSail,
-		status: 'ready',
+		status: project.status || ConnectionStatus.Connected,
 		isValid: true,
 		dockerInfo: project.dockerInfo
 	};
 
-	if (project.db_config) {
-		newConnection.value.db_config = { ...project.db_config };
+	if (project.dbConfig) {
+		newConnection.value.dbConfig = { ...project.dbConfig };
 	}
 
-	if (project.ssh_config) {
-		sshConfig.value = { ...project.ssh_config };
+	if (project.sshConfig) {
+		sshConfig.value = { ...project.sshConfig };
 	}
 
 	projectPathError.value = '';
@@ -353,71 +314,81 @@ async function selectProjectDirectory() {
 					envConfig.APP_NAME || selectedPath.split('/').pop();
 			}
 
-			if (envConfig.DB_HOST === 'mysql') {
-				newConnection.value.db_config.host = '0.0.0.0';
+			if (
+				envConfig.DB_HOST === ConnectionType.MySQL &&
+				newConnection.value.dbConfig
+			) {
+				newConnection.value.dbConfig.host = '0.0.0.0';
 			}
 
 			if (
-				!newConnection.value.db_config.host ||
-				newConnection.value.db_config.host === ''
+				newConnection.value.dbConfig &&
+				(!newConnection.value.dbConfig.host ||
+					newConnection.value.dbConfig.host === '')
 			) {
-				newConnection.value.db_config.host =
-					envConfig.DB_HOST || 'localhost';
-			}
-
-			if (!newConnection.value.db_config.port) {
-				newConnection.value.db_config.port = envConfig.DB_PORT || 3306;
+				newConnection.value.dbConfig.host =
+					envConfig.DB_HOST || '127.0.0.1';
 			}
 
 			if (
-				!newConnection.value.db_config.database ||
-				newConnection.value.db_config.database === ''
+				newConnection.value.dbConfig &&
+				!newConnection.value.dbConfig.port
 			) {
-				newConnection.value.db_config.database =
+				newConnection.value.dbConfig.port = envConfig.DB_PORT || 3306;
+			}
+
+			if (
+				newConnection.value.dbConfig &&
+				(!newConnection.value.dbConfig.database ||
+					newConnection.value.dbConfig.database === '')
+			) {
+				newConnection.value.dbConfig.database =
 					envConfig.DB_DATABASE || '';
 			}
 
 			if (
-				!newConnection.value.db_config.user ||
-				newConnection.value.db_config.user === ''
+				newConnection.value.dbConfig &&
+				(!newConnection.value.dbConfig.user ||
+					newConnection.value.dbConfig.user === '')
 			) {
-				newConnection.value.db_config.user =
+				newConnection.value.dbConfig.user =
 					envConfig.DB_USERNAME || 'root';
 			}
 
 			if (
-				!newConnection.value.db_config.password ||
-				newConnection.value.db_config.password === ''
+				newConnection.value.dbConfig &&
+				(!newConnection.value.dbConfig.password ||
+					newConnection.value.dbConfig.password === '')
 			) {
-				newConnection.value.db_config.password =
+				newConnection.value.dbConfig.password =
 					envConfig.DB_PASSWORD || '';
 			}
 
 			if (envConfig.REDIS_HOST === 'redis') {
-				newConnection.value.redis_config.host = '0.0.0.0';
+				newConnection.value.redisConfig.host = '0.0.0.0';
 			}
 
 			if (
-				!newConnection.value.redis_config.host ||
-				newConnection.value.redis_config.host === ''
+				!newConnection.value.redisConfig.host ||
+				newConnection.value.redisConfig.host === ''
 			) {
-				newConnection.value.redis_config.host =
+				newConnection.value.redisConfig.host =
 					envConfig.REDIS_HOST || '127.0.0.1';
 			}
 
 			if (
-				!newConnection.value.redis_config.port ||
-				newConnection.value.redis_config.port === ''
+				!newConnection.value.redisConfig.port ||
+				newConnection.value.redisConfig.port === ''
 			) {
-				newConnection.value.redis_config.port =
+				newConnection.value.redisConfig.port =
 					envConfig.REDIS_PORT || '6379';
 			}
 
 			if (
-				!newConnection.value.redis_config.password ||
-				newConnection.value.redis_config.password === 'null'
+				!newConnection.value.redisConfig.password ||
+				newConnection.value.redisConfig.password === 'null'
 			) {
-				newConnection.value.redis_config.password = '';
+				newConnection.value.redisConfig.password = '';
 			}
 
 			if (envConfig.DOCKER_INFO) {
@@ -463,32 +434,25 @@ function openCreateConnectionModal() {
 	isCreateModalOpen.value = true;
 }
 
-// Watch for connection type changes
 watch(
 	() => newConnection.value.type,
 	(newType) => {
-		// Reset validation errors
 		projectPathError.value = '';
 
 		if (newType === ConnectionType.SSH) {
-			// When switching to SSH, copy the name from the main form if it has one
 			if (newConnection.value.name) {
 				sshConfig.value.name = newConnection.value.name;
 			}
 		} else if (sshConfig.value.name) {
-			// When switching from SSH, copy the name back to the main form
 			newConnection.value.name = sshConfig.value.name;
 		}
 
-		// Set appropriate icon
 		newConnection.value.icon = getConnectionTypeIcon(newType);
 
-		// Set isRemote flag based on connection type
 		newConnection.value.isRemote = newType === ConnectionType.SSH;
 	}
 );
 
-// Additional watch to keep names in sync when either changes
 watch(
 	() => newConnection.value.name,
 	(newName) => {
@@ -519,7 +483,7 @@ defineExpose({ editConnection, removeConnection, openCreateConnectionModal });
 		:show-cancel-button="false"
 	>
 		<div class="max-h-[70vh] overflow-hidden flex flex-col">
-			<div class="overflow-y-auto pr-2 flex-1">
+			<div class="overflow-y-auto px-2 flex-1">
 				<fieldset class="fieldset mb-4 w-full">
 					<label class="label">
 						<span class="label-text">Connection Type</span>
@@ -531,9 +495,7 @@ defineExpose({ editConnection, removeConnection, openCreateConnectionModal });
 						<option :value="ConnectionType.MySQL">
 							MySQL (Local)
 						</option>
-						<option :value="ConnectionType.SSH">
-							SSH (Remote)
-						</option>
+						<option :value="ConnectionType.SSH">SSH</option>
 					</select>
 					<p class="text-base-content mt-1 text-xs">
 						{{
@@ -544,12 +506,10 @@ defineExpose({ editConnection, removeConnection, openCreateConnectionModal });
 					</p>
 				</fieldset>
 
-				<!-- SSH Connection Form -->
 				<div v-if="newConnection.type === ConnectionType.SSH">
 					<SshConnectionForm v-model="sshConfig" />
 				</div>
 
-				<!-- Local Connection Form -->
 				<div v-else>
 					<fieldset class="fieldset mb-4 w-full">
 						<label class="label">
@@ -676,7 +636,7 @@ defineExpose({ editConnection, removeConnection, openCreateConnectionModal });
 									>
 										Docker is available, but no MySQL
 										container was found running on port
-										{{ newConnection.db_config.port }}. A
+										{{ newConnection.dbConfig?.port }}. A
 										local connection will be used.
 									</span>
 									<span v-else>
@@ -727,10 +687,19 @@ defineExpose({ editConnection, removeConnection, openCreateConnectionModal });
 								<span class="label-text">Host</span>
 							</label>
 							<input
-								v-model="newConnection.db_config.host"
+								v-if="newConnection.dbConfig"
+								v-model="newConnection.dbConfig.host"
 								type="text"
-								placeholder="localhost"
+								placeholder="127.0.0.1"
 								class="input w-full"
+								required
+							/>
+							<input
+								v-else
+								type="text"
+								placeholder="127.0.0.1"
+								class="input w-full"
+								disabled
 								required
 							/>
 						</fieldset>
@@ -740,10 +709,19 @@ defineExpose({ editConnection, removeConnection, openCreateConnectionModal });
 								<span class="label-text">Port</span>
 							</label>
 							<input
-								v-model="newConnection.db_config.port"
+								v-if="newConnection.dbConfig"
+								v-model="newConnection.dbConfig.port"
 								type="text"
 								placeholder="3306"
 								class="input w-full"
+								required
+							/>
+							<input
+								v-else
+								type="text"
+								placeholder="3306"
+								class="input w-full"
+								disabled
 								required
 							/>
 						</fieldset>
@@ -753,10 +731,19 @@ defineExpose({ editConnection, removeConnection, openCreateConnectionModal });
 								<span class="label-text">Database</span>
 							</label>
 							<input
-								v-model="newConnection.db_config.database"
+								v-if="newConnection.dbConfig"
+								v-model="newConnection.dbConfig.database"
 								type="text"
 								placeholder="database"
 								class="input w-full"
+								required
+							/>
+							<input
+								v-else
+								type="text"
+								placeholder="database"
+								class="input w-full"
+								disabled
 								required
 							/>
 						</fieldset>
@@ -766,10 +753,19 @@ defineExpose({ editConnection, removeConnection, openCreateConnectionModal });
 								<span class="label-text">Username</span>
 							</label>
 							<input
-								v-model="newConnection.db_config.user"
+								v-if="newConnection.dbConfig"
+								v-model="newConnection.dbConfig.user"
 								type="text"
 								placeholder="root"
 								class="input w-full"
+								required
+							/>
+							<input
+								v-else
+								type="text"
+								placeholder="root"
+								class="input w-full"
+								disabled
 								required
 							/>
 						</fieldset>
@@ -779,10 +775,18 @@ defineExpose({ editConnection, removeConnection, openCreateConnectionModal });
 								<span class="label-text">Password</span>
 							</label>
 							<input
-								v-model="newConnection.db_config.password"
+								v-if="newConnection.dbConfig"
+								v-model="newConnection.dbConfig.password"
 								type="text"
 								placeholder="password"
 								class="input w-full"
+							/>
+							<input
+								v-else
+								type="text"
+								placeholder="password"
+								class="input w-full"
+								disabled
 							/>
 						</fieldset>
 					</div>
@@ -795,7 +799,7 @@ defineExpose({ editConnection, removeConnection, openCreateConnectionModal });
 								<span class="label-text">Redis Host</span>
 							</label>
 							<input
-								v-model="newConnection.redis_config.host"
+								v-model="newConnection.redisConfig.host"
 								type="text"
 								placeholder="127.0.0.1"
 								class="input w-full"
@@ -807,7 +811,7 @@ defineExpose({ editConnection, removeConnection, openCreateConnectionModal });
 								<span class="label-text">Redis Port</span>
 							</label>
 							<input
-								v-model="newConnection.redis_config.port"
+								v-model="newConnection.redisConfig.port"
 								type="text"
 								placeholder="6379"
 								class="input w-full"
@@ -819,7 +823,7 @@ defineExpose({ editConnection, removeConnection, openCreateConnectionModal });
 								<span class="label-text">Redis Password</span>
 							</label>
 							<input
-								v-model="newConnection.redis_config.password"
+								v-model="newConnection.redisConfig.password"
 								type="text"
 								placeholder="Leave empty if none"
 								class="input w-full"
