@@ -247,7 +247,7 @@ async function fetchAllFilteredData(): Promise<Record<string, any>[]> {
 			sortDirection: dataTableStore.currentSortDirection,
 			filter: filter,
 			tableName: props.tableName,
-			dbConnection: toRaw(connectionStore.getSelectedProject?.db_config)
+			dbConnection: toRaw(connectionStore.getSelectedProject?.dbConfig)
 		} as TableRecord;
 
 		const response = await window.ipcRenderer.getTableRecords(params);
