@@ -1,38 +1,48 @@
+<script setup lang="ts">
+interface Props {
+	size?: 'sm' | 'md' | 'lg';
+}
+
+const props = withDefaults(defineProps<Props>(), {
+	size: 'sm'
+});
+
+const sizeClasses = {
+	sm: 'h-3 w-3 text-xs',
+	md: 'h-4 w-4 text-sm',
+	lg: 'h-5 w-5 text-base'
+};
+</script>
+
 <template>
 	<div
-		class="badge badge-sm"
-		:class="[size === 'lg' ? 'badge-lg' : '', getColorClass()]"
+		class="tooltip tooltip-bottom"
+		data-tip="Remote Connection"
 	>
-		<svg
-			xmlns="http://www.w3.org/2000/svg"
-			viewBox="0 0 24 24"
-			fill="currentColor"
-			class="w-3 h-3 mr-1"
+		<div
+			class="badge badge-sm gap-1"
+			:class="{
+				'badge-sm': props.size === 'sm',
+				'badge-md': props.size === 'md',
+				'badge-lg': props.size === 'lg'
+			}"
 		>
-			<path
-				fill-rule="evenodd"
-				d="M11.54 22.351l.07.04.028.016a.76.76 0 00.723 0l.028-.015.071-.041a16.975 16.975 0 001.144-.742 19.58 19.58 0 002.683-2.282c1.944-1.99 3.963-4.98 3.963-8.827a8.25 8.25 0 00-16.5 0c0 3.846 2.02 6.837 3.963 8.827a19.58 19.58 0 002.682 2.282 16.975 16.975 0 001.145.742zM12 13.5a3 3 0 100-6 3 3 0 000 6z"
-				clip-rule="evenodd"
-			/>
-		</svg>
-		{{ label }}
+			<svg
+				xmlns="http://www.w3.org/2000/svg"
+				fill="none"
+				viewBox="0 0 24 24"
+				stroke-width="1.5"
+				stroke="currentColor"
+				:class="sizeClasses[props.size]"
+			>
+				<path
+					stroke-linecap="round"
+					stroke-linejoin="round"
+					d="M21.75 17.25v-.228a4.5 4.5 0 0 0-.12-1.03l-2.268-9.64a3.375 3.375 0 0 0-3.285-2.602H7.923a3.375 3.375 0 0 0-3.285 2.602l-2.268 9.64a4.5 4.5 0 0 0-.12 1.03v.228m19.5 0a3 3 0 0 1-3 3H5.25a3 3 0 0 1-3-3m19.5 0a3 3 0 0 0-3-3H5.25a3 3 0 0 0-3 3m16.5 0h.008v.008h-.008v-.008Zm-3 0h.008v.008h-.008v-.008Z"
+				/>
+			</svg>
+
+			<span>Remote</span>
+		</div>
 	</div>
 </template>
-
-<script lang="ts" setup>
-const props = defineProps<{
-	type?: 'remote' | 'local';
-	size?: 'sm' | 'lg';
-	label?: string;
-}>();
-
-// Default values
-const type = props.type || 'remote';
-const label = props.label || (type === 'remote' ? 'REMOTE' : 'LOCAL');
-
-function getColorClass(): string {
-	return type === 'remote'
-		? 'bg-green-600 text-white'
-		: 'bg-blue-600 text-white';
-}
-</script> 
