@@ -59,7 +59,7 @@ async function startMonitoring(clearHistory = false) {
 
 		const result = await window.ipcRenderer.startLiveDbUpdate({
 			connectionId: projectId,
-			dbConnection: toRaw(project.db_config),
+			dbConnection: toRaw(project.dbConfig),
 			clearHistory
 		});
 
