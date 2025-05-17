@@ -109,7 +109,7 @@ watch(
 				host: newValue.remoteDbConfig?.host || 'localhost',
 				port: newValue.remoteDbConfig?.port || 3306,
 				database: newValue.remoteDbConfig?.database,
-				username: newValue.remoteDbConfig?.username,
+				user: newValue.remoteDbConfig?.user,
 				password: newValue.remoteDbConfig?.password || ''
 			};
 
@@ -173,14 +173,14 @@ async function testSshConnection() {
 			name: sshConfig.value.name,
 			host: sshConfig.value.host,
 			port: sshConfig.value.port,
-			username: sshConfig.value.username,
+			user: sshConfig.value.user,
 			remotePath: sshConfig.value.remotePath,
 			remoteDbType: ConnectionType.MySQL,
 			remoteDbConfig: {
 				host: sshConfig.value.remoteDbConfig.host,
 				port: sshConfig.value.remoteDbConfig.port,
 				database: sshConfig.value.remoteDbConfig.database,
-				username: sshConfig.value.remoteDbConfig.username,
+				user: sshConfig.value.remoteDbConfig.user,
 				password: sshConfig.value.remoteDbConfig.password || ''
 			}
 		};
@@ -258,7 +258,7 @@ async function testSshConnection() {
 					<span class="label-text">Username</span>
 				</label>
 				<input
-					v-model="sshConfig.username"
+					v-model="sshConfig.user"
 					type="text"
 					placeholder="SSH username"
 					class="input input-bordered w-full"
@@ -407,7 +407,7 @@ async function testSshConnection() {
 					<span class="label-text">Username</span>
 				</label>
 				<input
-					v-model="sshConfig.remoteDbConfig.username"
+					v-model="sshConfig.remoteDbConfig.user"
 					type="text"
 					placeholder="database_user"
 					class="input input-bordered w-full"
