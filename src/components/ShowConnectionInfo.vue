@@ -1,48 +1,90 @@
 <script setup lang="ts">
-import { computed, watch, inject } from 'vue';
+import { computed, watch, inject, ref } from 'vue';
 import Modal from '@/components/Modal.vue';
-import { useProjectStore } from '@/store/project';
 import RemoteBadge from '@/components/ui/RemoteBadge.vue';
+import { useProjectStore } from '@/store/project';
+import type { ProjectConnection } from '@/types/project';
+import { ConnectionType } from '@/types/connection-types';
 
-const showAlert = inject<(msg: string, type: string) => void>('showAlert')!;
+const showAlert = inject<(message: string, type: string) => void>('showAlert')!;
+
+interface Props {
+	connection: ProjectConnection;
+	isRemoteConnection: boolean;
+}
+const props = defineProps<Props>();
 
 const projectStore = useProjectStore();
 
-const comparisonTooltip = computed(() => {
-	if (!projectStore.targetDatabase) return 'Error checking project database';
-	if (!projectStore.state.projectDatabase)
-		return 'Project database not found';
-	return `Project database: ${projectStore.state.projectDatabase}`;
+const isDetailsOpen = ref<boolean>(false);
+const isDatabaseMismatch = ref<boolean>(false);
+
+const connectionDetails = computed(() => {
+	const { connection, isRemoteConnection } = props;
+
+	if (isRemoteConnection && connection.sshConfig) {
+		const { sshConfig } = connection;
+		return {
+			name: sshConfig.name,
+			host: sshConfig.remoteDbConfig.host,
+			port: sshConfig.port,
+			user: sshConfig.user,
+			database: sshConfig.remoteDbConfig.database,
+			path: sshConfig.remotePath,
+			remotePort: sshConfig.port,
+			remoteUser: sshConfig.user,
+			dbType: sshConfig.remoteDbType,
+			remoteHost: sshConfig.host
+		};
+	}
+
+	return {
+		name: connection.name,
+		host: connection.dbConfig?.host ?? null,
+		port: connection.dbConfig?.port ?? null,
+		user: connection.dbConfig?.user ?? null,
+		database: connection.dbConfig?.database ?? null,
+		path: connection.projectPath,
+		remotePort: null,
+		remoteUser: null,
+		dbType: ConnectionType.MySQL,
+		remoteHost: null
+	};
 });
 
-async function updateProjectEnv() {
-	const path = projectStore.selectedProject?.projectPath;
-	if (!path || !projectStore.targetDatabase) return;
+async function updateProjectEnv(): Promise<void> {
+	const projectPath = projectStore.selectedProject?.projectPath;
+	const targetDb = projectStore.targetDatabase;
+
+	if (!projectPath || !targetDb) {
+		return;
+	}
 
 	try {
-		const { success, message } = await window.ipcRenderer.updateEnvDatabase(
-			{
-				projectPath: path,
-				database: projectStore.targetDatabase
-			}
-		);
+		const result = await window.ipcRenderer.updateEnvDatabase({
+			projectPath,
+			database: targetDb
+		});
 
-		if (success) {
-			projectStore.state.databaseMatch = true;
-			projectStore.state.projectDatabase = projectStore.targetDatabase;
+		if (result.success) {
+			isDatabaseMismatch.value = true;
+			projectStore.state.projectDatabase = targetDb;
 			showAlert('Database updated in .env file successfully!', 'success');
 		} else {
-			showAlert(`Error updating database: ${message}`, 'error');
+			showAlert(`Error updating database: ${result.message}`, 'error');
 		}
-	} catch (err: any) {
-		showAlert(`Error updating database: ${err.message}`, 'error');
+	} catch (error: unknown) {
+		const msg = error instanceof Error ? error.message : String(error);
+		showAlert(`Error updating database: ${msg}`, 'error');
 	}
 }
 
 watch(
 	() => projectStore.selectedProject,
 	(proj) => {
-		if (proj) projectStore.checkProjectDatabase();
+		if (proj) {
+			projectStore.checkProjectDatabase();
+		}
 	},
 	{ immediate: true }
 );
@@ -52,18 +94,20 @@ watch(
 	<div v-if="projectStore.selectedProject">
 		<div class="flex items-center justify-between">
 			<h1 class="text-lg font-semibold flex items-center">
-				{{ projectStore.selectedProject.name }}
-				<RemoteBadge 
-					v-if="projectStore.selectedProject.isRemote" 
-					class="ml-2" 
+				{{ connectionDetails.name }}
+				<RemoteBadge
+					v-if="props.isRemoteConnection"
+					class="ml-2"
 				/>
 			</h1>
 		</div>
 
 		<div class="mt-1 flex items-center gap-1 text-xs">
-			<div>{{ projectStore.targetDatabase }}</div>
+			<div>
+				{{ connectionDetails.database }} ({{ connectionDetails.host }})
+			</div>
 			<button
-				@click="projectStore.state.showConnectionInfo = true"
+				@click="isDetailsOpen = true"
 				class="text-sm opacity-70 hover:opacity-100"
 			>
 				<svg
@@ -82,16 +126,10 @@ watch(
 				</svg>
 			</button>
 			<div
-				v-if="
-					!projectStore.state.databaseMatch &&
-					!projectStore.state.isLoading
-				"
+				v-if="isDatabaseMismatch && !projectStore.state.isLoading"
 				class="flex items-center text-amber-400"
 			>
-				<div
-					class="tooltip tooltip-bottom"
-					:data-tip="comparisonTooltip"
-				>
+				<div class="tooltip tooltip-bottom">
 					<span class="text-error">Mismatch DB </span>
 				</div>
 				<button
@@ -116,54 +154,58 @@ watch(
 				</button>
 			</div>
 		</div>
-	</div>
 
-	<Modal
-		:show="projectStore.state.showConnectionInfo"
-		@close="projectStore.state.showConnectionInfo = false"
-		width="md"
-		z-index="99999"
-		title="Connection Details"
-		@action="updateProjectEnv"
-		:show-action-button="!projectStore.state.databaseMatch"
-		action-button-text="Update .env"
-	>
-		<div class="space-y-2 py-4 text-sm">
-			<p class="flex items-center">
-				<strong>Name:</strong> {{ projectStore.selectedProject?.name }}
-				<RemoteBadge 
-					v-if="projectStore.selectedProject?.isRemote" 
-					class="ml-2" 
-				/>
-			</p>
-			<p>
-				<strong>Project Path:</strong>
-				{{ projectStore.selectedProject?.projectPath }}
-			</p>
-			<p><strong>Database:</strong> {{ projectStore.targetDatabase }}</p>
-			<p>
-				<strong>Project Database:</strong>
-				{{ projectStore.state.projectDatabase || 'Not found' }}
-			</p>
-			<div v-if="projectStore.selectedProject?.isRemote && projectStore.selectedProject?.ssh_config">
-				<div class="divider">SSH Information</div>
-				<p>
-					<strong>SSH Host:</strong>
-					{{ projectStore.selectedProject.ssh_config.host }}:{{ projectStore.selectedProject.ssh_config.port }}
+		<Modal
+			:show="isDetailsOpen"
+			@close="isDetailsOpen = false"
+			width="md"
+			z-index="99999"
+			title="Connection Details"
+			@action="updateProjectEnv"
+			:show-action-button="isDatabaseMismatch"
+			action-button-text="Update .env"
+		>
+			<div class="space-y-2 py-4 text-sm">
+				<p class="flex items-center">
+					<strong>Name:</strong> {{ connectionDetails.name }}
+					<RemoteBadge
+						v-if="props.isRemoteConnection"
+						class="ml-2"
+					/>
 				</p>
 				<p>
-					<strong>SSH User:</strong>
-					{{ projectStore.selectedProject.ssh_config.username }}
+					<strong>Project Path:</strong> {{ connectionDetails.path }}
 				</p>
 				<p>
-					<strong>Remote Path:</strong>
-					{{ projectStore.selectedProject.ssh_config.remotePath }}
+					<strong>Database:</strong> {{ connectionDetails.database }}
 				</p>
+				<p><strong>Host:</strong> {{ connectionDetails.host }}</p>
 				<p>
-					<strong>Remote DB Type:</strong>
-					{{ projectStore.selectedProject.ssh_config.remoteDbType }}
+					<strong>Project Database:</strong>
+					{{ connectionDetails.database || 'Not found' }}
 				</p>
+
+				<div v-if="props.isRemoteConnection">
+					<div class="divider">SSH Information</div>
+					<p>
+						<strong>SSH Host:</strong>
+						{{ connectionDetails.remoteHost }}:{{
+							connectionDetails.remotePort
+						}}
+					</p>
+					<p>
+						<strong>SSH User:</strong> {{ connectionDetails.user }}
+					</p>
+					<p>
+						<strong>Remote Path:</strong>
+						{{ connectionDetails.path }}
+					</p>
+					<p>
+						<strong>Remote DB Type:</strong>
+						{{ connectionDetails.dbType }}
+					</p>
+				</div>
 			</div>
-		</div>
-	</Modal>
+		</Modal>
+	</div>
 </template>
