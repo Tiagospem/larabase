@@ -35,7 +35,7 @@ async function testConnection() {
 	try {
 		isRetrying.value = true;
 		const result = await window.ipcRenderer.testMySQLConnection(
-			toRaw(selectedProject.db_config)
+			toRaw(selectedProject.dbConfig)
 		);
 
 		connectionResult.value = result;
