@@ -61,7 +61,8 @@
     "sql-formatter": "^15.6.1",
     "tailwindcss": "^4.1.4",
     "uuid": "^11.1.0",
-    "vue-router": "^4.5.1"
+    "vue-router": "^4.5.1",
+    "portfinder": "^1.0.37"
   },
   "devDependencies": {
     "@eslint/js": "^9.26.0",
