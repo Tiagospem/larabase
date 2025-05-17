@@ -58,8 +58,6 @@ function getConnectionColor(type: string) {
 	switch (type) {
 		case ConnectionType.MySQL:
 			return 'bg-orange-500';
-		case ConnectionType.PostgreSQL:
-			return 'bg-blue-600';
 		case ConnectionType.SSH:
 			return 'bg-purple-600';
 		default:
@@ -195,7 +193,9 @@ function getConnectionColor(type: string) {
 										class="card-title overflow-hidden text-ellipsis whitespace-nowrap"
 									>
 										<span>{{ connection.name }}</span>
-										<RemoteBadge v-if="connection.isRemote" />
+										<RemoteBadge
+											v-if="connection.isRemote"
+										/>
 									</h2>
 									<p
 										class="overflow-hidden text-xs text-ellipsis whitespace-nowrap"
@@ -203,9 +203,9 @@ function getConnectionColor(type: string) {
 										{{
 											connection.type ===
 												ConnectionType.SSH &&
-											connection.ssh_config
-												? connection.ssh_config.host
-												: connection.db_config?.host
+											connection.sshConfig
+												? connection.sshConfig.host
+												: connection.dbConfig?.host
 										}}
 									</p>
 									<p
@@ -214,10 +214,10 @@ function getConnectionColor(type: string) {
 										{{
 											connection.type ===
 												ConnectionType.SSH &&
-											connection.ssh_config
-												? connection.ssh_config
+											connection.sshConfig
+												? connection.sshConfig
 														.remoteDbConfig.database
-												: connection.db_config?.database
+												: connection.dbConfig?.database
 										}}
 										<span
 											v-if="
@@ -265,6 +265,10 @@ function getConnectionColor(type: string) {
 										</button>
 									</div>
 									<div
+										v-if="
+											connection.type ===
+											ConnectionType.MySQL
+										"
 										class="tooltip tooltip-bottom"
 										data-tip="Restore database"
 									>
