@@ -186,7 +186,7 @@ onMounted(async () => {
 		const config = {
 			projectPath: selectedProject.value.projectPath,
 			usingSail: selectedProject.value.usingSail,
-			db_config: toRaw(selectedProject.value.db_config)
+			dbConfig: toRaw(selectedProject.value.dbConfig)
 		};
 
 		const result = await window.ipcRenderer.invoke(
