@@ -364,7 +364,7 @@ const updateRecord = async () => {
 		);
 
 		const response = await window.ipcRenderer.updateTableRecord({
-			dbConnection: toRaw(connectionStore.getSelectedProject.db_config),
+			dbConnection: toRaw(connectionStore.getSelectedProject.dbConfig),
 			tableName: props.tableName,
 			data: cleanData,
 			id: processedFormData.id
