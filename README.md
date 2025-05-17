@@ -75,6 +75,48 @@ npm run build:win         # Windows
 npm run build:linux       # Linux
 ```
 
+## SSH Tunneling Support
+
+Larabase now supports connecting to MySQL databases through SSH tunnels. This feature allows you to:
+
+1. Connect to remote database servers securely via SSH
+2. Work with databases that are not directly accessible from your machine
+3. Maintain the same workflow and functionality as with local database connections
+
+### How SSH Tunneling Works
+
+SSH tunneling creates a secure encrypted channel between your local machine and the remote server:
+
+1. An SSH connection is established to the remote server
+2. A local port is forwarded to the remote database server port
+3. Your connection uses this local port, which securely tunnels traffic to the remote server
+4. All database operations work transparently through this tunnel
+
+### Implementation Details
+
+The SSH tunneling implementation uses:
+
+- The `ssh2` library for SSH connections and port forwarding
+- The `portfinder` library to dynamically find available local ports
+- The existing MySQL connection module, modified to work through SSH tunnels
+
+### Setup
+
+To use SSH tunneling, you need:
+
+1. SSH access to the remote server (username/password or key-based authentication)
+2. The remote server needs access to the MySQL database
+3. Create a connection in Larabase with SSH tunneling enabled
+
+### Usage
+
+When creating a new connection, select the SSH option and provide:
+
+1. SSH server details (host, port, username, password/private key)
+2. Remote database details (host, port, username, password, database name)
+
+Once connected, you can use all Larabase features as you would with a local database.
+
 ## License
 
 This project is licensed under the MIT License - see the LICENSE file for details.
