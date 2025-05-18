@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { ref, computed, markRaw, defineAsyncComponent } from 'vue';
 import { useSidebarStore } from '@/store/sidebar';
+import { useConnectionsStore } from '@/store/connections';
+import { ConnectionType } from '@/types/connection-types';
 
 const DataTab = markRaw(
 	defineAsyncComponent(() => import('./database/tables/Records.vue'))
@@ -31,6 +33,7 @@ defineOptions({
 });
 
 const sidebarStore = useSidebarStore();
+const connectionsStore = useConnectionsStore();
 
 const activeContentTab = ref('data');
 
@@ -44,14 +47,35 @@ const contentTabs = [
 	{ id: 'factory', label: 'Factory' }
 ];
 
+const isSSHConnection = computed(() => {
+	const selectedProject = connectionsStore.getSelectedProject;
+	return selectedProject?.type === ConnectionType.SSH;
+});
+
 const visibleTabs = computed(() => {
 	return contentTabs.filter((tab) => {
-		// if (tab.id === "monitoring") {
-		//   return isJobBatchesTable.value;
-		// }
-		return true;
+		return !(
+			(tab.id === 'migrations' ||
+				tab.id === 'model' ||
+				tab.id === 'factory') &&
+			isSSHConnection.value
+		);
 	});
 });
+
+if (
+	activeContentTab.value === 'migrations' ||
+	activeContentTab.value === 'model' ||
+	activeContentTab.value === 'factory'
+) {
+	const shouldResetTab = computed(() => {
+		return isSSHConnection.value;
+	});
+
+	if (shouldResetTab.value) {
+		activeContentTab.value = 'data';
+	}
+}
 
 const currentTabComponent = computed(() => {
 	switch (activeContentTab.value) {
