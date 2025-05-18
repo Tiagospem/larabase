@@ -3,6 +3,7 @@ import { ref, toRaw, watch } from 'vue';
 import Modal from '@/components/Modal.vue';
 import { inject } from 'vue';
 import { useConnectionsStore } from '@/store/connections';
+import { AppConnection } from '@/types/ssh-connection';
 
 const props = defineProps({
 	show: {
@@ -67,6 +68,8 @@ async function updatePassword() {
 		return;
 	}
 
+	const project = connectionStore.getSelectedProject;
+
 	try {
 		isLoading.value = true;
 
@@ -83,14 +86,19 @@ async function updatePassword() {
 
 		const hashedPassword = result.hash;
 
-		if (!connectionStore.getSelectedProject?.db_config) {
+		if (!project?.dbConfig) {
 			showAlert('No database connection available', 'error');
 
 			return;
 		}
 
+		const AppConnection = {
+			localDbConfig: toRaw(project.dbConfig),
+			remote: toRaw(project.sshConfig)
+		} as AppConnection;
+
 		const updateResult = await window.ipcRenderer.updateTableRecord({
-			dbConnection: toRaw(connectionStore.getSelectedProject.db_config),
+			appConnection: AppConnection,
 			tableName: props.tableName,
 			data: { password: hashedPassword },
 			id: props.record.id
