@@ -2,6 +2,7 @@
 import { ref, onMounted, watch, toRaw, onUnmounted } from 'vue';
 import { useConnectionsStore } from '@/store/connections';
 import { useNavigation } from '@/composables/useNavigation';
+import { AppConnection } from '@/types/ssh-connection';
 
 const props = defineProps({
 	projectId: {
@@ -34,9 +35,14 @@ async function testConnection() {
 
 	try {
 		isRetrying.value = true;
-		const result = await window.ipcRenderer.testMySQLConnection(
-			toRaw(selectedProject.dbConfig)
-		);
+
+		const AppConnection = {
+			localDbConfig: toRaw(selectedProject.dbConfig),
+			remote: toRaw(selectedProject.sshConfig)
+		} as AppConnection;
+
+		const result =
+			await window.ipcRenderer.testMySQLConnection(AppConnection);
 
 		connectionResult.value = result;
 
