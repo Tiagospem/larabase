@@ -9,7 +9,7 @@ const dataTableStore = useDataTableStore(props.tableName);
 const tableStructure = ref<any[]>([]);
 const isLoading = ref(true);
 
-onMounted(async () => {
+async function loadTableStructure() {
 	try {
 		isLoading.value = true;
 
@@ -19,12 +19,21 @@ onMounted(async () => {
 
 		if (response.success) {
 			tableStructure.value = response.structure;
+		} else {
+			showAlert(
+				`Failed to load table structure: ${response.message}`,
+				'error'
+			);
 		}
 	} catch (error) {
 		showAlert(`Failed to load table structure: ${error}`, 'error');
 	} finally {
 		isLoading.value = false;
 	}
+}
+
+onMounted(async () => {
+	await loadTableStructure();
 });
 </script>
 
@@ -35,7 +44,7 @@ onMounted(async () => {
 		>
 			<button
 				class="btn btn-sm btn-ghost"
-				@click="dataTableStore.getTableStructure(props.tableName)"
+				@click="loadTableStructure"
 			>
 				<svg
 					xmlns="http://www.w3.org/2000/svg"
