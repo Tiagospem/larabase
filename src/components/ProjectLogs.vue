@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { ref, onMounted, inject, onUnmounted } from 'vue';
+import { ref, onMounted, inject, onUnmounted, computed } from 'vue';
 import { useProjectLogsStore } from '@/store/projectLogs';
 import { useConnectionsStore } from '@/store/connections';
+import { ConnectionType } from '@/types/connection-types';
 import Modal from '@/components/Modal.vue';
 import { LogEntry } from '@/types/project';
 
@@ -18,6 +19,11 @@ const showDeleteConfirm = ref(false);
 const logToDelete = ref<LogEntry | null>(null);
 const deleteAllConfirm = ref(false);
 const deleteFileConfirm = ref(false);
+
+const isSSHConnection = computed(() => {
+	const selectedProject = connectionsStore.getSelectedProject;
+	return selectedProject?.type === ConnectionType.SSH;
+});
 
 function handleClose() {
 	emit('close');
@@ -54,6 +60,14 @@ function formatSize(bytes: number): string {
 
 async function openFileInEditor(path: string) {
 	try {
+		if (isSSHConnection.value) {
+			showAlert(
+				'File editing not available for SSH connections',
+				'warning'
+			);
+			return;
+		}
+
 		await window.ipcRenderer.openFile(path);
 	} catch (error: any) {
 		console.error('Error opening file:', error);
@@ -64,7 +78,7 @@ async function openFileInEditor(path: string) {
 async function refreshLogs() {
 	refreshing.value = true;
 	try {
-		await logsStore.refreshLogs();
+		await logsStore.refreshLogs(isSSHConnection.value);
 	} catch (error: any) {
 		showAlert(`Failed to refresh logs: ${error.message}`, 'error');
 	} finally {
@@ -73,6 +87,14 @@ async function refreshLogs() {
 }
 
 async function deleteLogEntry(entry: LogEntry) {
+	if (isSSHConnection.value) {
+		showAlert(
+			'Deleting log entries is not supported for SSH connections',
+			'warning'
+		);
+		return;
+	}
+
 	logToDelete.value = entry;
 	showDeleteConfirm.value = true;
 }
@@ -108,6 +130,14 @@ async function confirmDeleteLog() {
 
 async function confirmDeleteAllLogs() {
 	try {
+		if (isSSHConnection.value) {
+			showAlert(
+				'Clearing logs is not supported for SSH connections',
+				'warning'
+			);
+			return;
+		}
+
 		const result = await logsStore.clearAllLogs();
 
 		if (result && result.success) {
@@ -127,6 +157,14 @@ async function confirmDeleteAllLogs() {
 }
 
 async function deleteLogFile() {
+	if (isSSHConnection.value) {
+		showAlert(
+			'Deleting log files is not supported for SSH connections',
+			'warning'
+		);
+		return;
+	}
+
 	if (!logsStore.selectedLogFile) {
 		showAlert('No log file selected', 'error');
 		return;
@@ -181,9 +219,16 @@ function closeLogDetail() {
 }
 
 onMounted(async () => {
-	if (connectionsStore.getSelectedProject?.projectPath) {
+	const selectedProject = connectionsStore.getSelectedProject;
+	if (selectedProject) {
 		try {
-			await logsStore.loadLogFiles();
+			if (isSSHConnection.value) {
+				await logsStore.loadRemoteLogFiles(selectedProject.sshConfig);
+			} else if (selectedProject.projectPath) {
+				await logsStore.loadLogFiles();
+			} else {
+				showAlert('No valid project path found', 'error');
+			}
 		} catch (error: any) {
 			showAlert(`Failed to load logs: ${error.message}`, 'error');
 		}
@@ -208,7 +253,17 @@ onUnmounted(() => {
 		:show-cancel-button="false"
 		@close="handleClose"
 	>
-		<div class="flex flex-col">
+		<div
+			v-if="logsStore.isLoading"
+			class="flex h-[400px] w-full items-center justify-center"
+		>
+			<div class="loading loading-spinner loading-lg text-primary"></div>
+		</div>
+
+		<div
+			v-else
+			class="flex flex-col"
+		>
 			<div class="flex justify-end px-4 py-2">
 				<button
 					class="btn btn-sm mr-2"
@@ -238,7 +293,7 @@ onUnmounted(() => {
 				</button>
 
 				<button
-					v-if="logsStore.selectedLogFile"
+					v-if="logsStore.selectedLogFile && !isSSHConnection"
 					class="btn btn-sm mr-2"
 					@click="openFileInEditor(logsStore.selectedLogFile.path)"
 				>
@@ -260,7 +315,7 @@ onUnmounted(() => {
 				</button>
 
 				<button
-					v-if="logsStore.selectedLogFile"
+					v-if="logsStore.selectedLogFile && !isSSHConnection"
 					class="btn btn-sm btn-warning mr-2"
 					@click="deleteLogFile"
 					title="Delete Current Log File"
@@ -283,10 +338,10 @@ onUnmounted(() => {
 				</button>
 
 				<button
+					v-if="logsStore.logEntries.length > 0 && !isSSHConnection"
 					class="btn btn-sm btn-error mr-2"
 					@click="deleteAllConfirm = true"
 					title="Clear All Logs"
-					v-if="logsStore.logEntries.length > 0"
 				>
 					<svg
 						xmlns="http://www.w3.org/2000/svg"
@@ -316,7 +371,7 @@ onUnmounted(() => {
 					<select
 						v-model="logsStore.selectedLogFile"
 						class="select select-bordered w-full"
-						@change="logsStore.filterLogs(false)"
+						@change="logsStore.filterLogs(isSSHConnection)"
 					>
 						<option
 							v-if="logsStore.logFiles.length === 0"
@@ -343,7 +398,7 @@ onUnmounted(() => {
 					<select
 						v-model="logsStore.selectedLogType"
 						class="select select-bordered w-full"
-						@change="logsStore.filterLogs(false)"
+						@change="logsStore.filterLogs(isSSHConnection)"
 					>
 						<option
 							v-for="type in logsStore.availableLogTypes"
@@ -373,16 +428,7 @@ onUnmounted(() => {
 
 			<div class="overflow-y-hidden">
 				<div
-					v-if="logsStore.isLoading"
-					class="flex h-full w-full items-center justify-center"
-				>
-					<div
-						class="loading loading-spinner loading-lg text-primary"
-					></div>
-				</div>
-
-				<div
-					v-else-if="logsStore.error"
+					v-if="logsStore.error"
 					class="flex h-full w-full items-center justify-center"
 				>
 					<div class="text-center">
@@ -492,6 +538,7 @@ onUnmounted(() => {
 												</svg>
 											</button>
 											<button
+												v-if="!isSSHConnection"
 												class="btn btn-xs btn-ghost"
 												@click="deleteLogEntry(entry)"
 												title="Delete"
@@ -566,6 +613,7 @@ onUnmounted(() => {
 		</div>
 	</Modal>
 
+	<!-- These modals don't need to be hidden during loading since they're controlled by their own conditions -->
 	<Modal
 		v-if="showLogDetail && selectedLogEntry"
 		title="Log Entry Details"
