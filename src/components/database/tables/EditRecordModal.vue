@@ -4,6 +4,7 @@ import Modal from '@/components/Modal.vue';
 import { useConnectionsStore } from '@/store/connections';
 import { useTableStructure } from '@/composables/useTableStructure';
 import UpdatePasswordModal from '@/components/database/tables/UpdatePasswordModal.vue';
+import { AppConnection } from '@/types/ssh-connection';
 
 const props = defineProps({
 	show: {
@@ -255,6 +256,8 @@ const handleJsonInput = (columnName: string, value: string) => {
 const updateRecord = async () => {
 	if (!connectionStore.getSelectedProject) return;
 
+	const project = connectionStore.getSelectedProject;
+
 	try {
 		isUpdating.value = true;
 		updateError.value = '';
@@ -363,8 +366,13 @@ const updateRecord = async () => {
 				.filter(([key]) => key !== null)
 		);
 
+		const AppConnection = {
+			localDbConfig: toRaw(project.dbConfig),
+			remote: toRaw(project.sshConfig)
+		} as AppConnection;
+
 		const response = await window.ipcRenderer.updateTableRecord({
-			dbConnection: toRaw(connectionStore.getSelectedProject.dbConfig),
+			appConnection: AppConnection,
 			tableName: props.tableName,
 			data: cleanData,
 			id: processedFormData.id
