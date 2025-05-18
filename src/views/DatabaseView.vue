@@ -23,6 +23,7 @@ import { useTabsStore } from '@/store/tabs';
 import { useSplitPane } from '@/composables/useSplitPane';
 import { useNavigation } from '@/composables/useNavigation';
 import { ConnectionType } from '@/types/connection-types';
+import { AppConnection } from '@/types/ssh-connection';
 
 const route = useRoute();
 const connectionsStore = useConnectionsStore();
@@ -42,10 +43,17 @@ async function checkPendingMigrations() {
 	if (!connectionsStore.getSelectedProject) return;
 
 	try {
+		const project = connectionsStore.getSelectedProject;
+
+		const AppConnection = {
+			localDbConfig: toRaw(project.dbConfig),
+			remote: toRaw(project.sshConfig)
+		} as AppConnection;
+
 		const config = {
-			projectPath: connectionsStore.getSelectedProject.projectPath,
-			usingSail: connectionsStore.getSelectedProject.usingSail,
-			dbConfig: toRaw(connectionsStore.getSelectedProject.dbConfig)
+			projectPath: project.projectPath,
+			usingSail: project.usingSail,
+			appConnection: AppConnection
 		};
 
 		const result = await window.ipcRenderer.invoke(
@@ -105,12 +113,6 @@ function showAlert(message: string, type: string) {
 
 provide('showAlert', showAlert);
 
-function handleGlobalKeydown(event: KeyboardEvent) {
-	if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') {
-		event.preventDefault();
-	}
-}
-
 function handleGoBack() {
 	stopMigrationChecking();
 	goToMainPage();
@@ -138,7 +140,6 @@ async function initializeData() {
 }
 
 onMounted(async () => {
-	window.addEventListener('keydown', handleGlobalKeydown);
 	await initializeData();
 });
 
@@ -153,7 +154,6 @@ watch(
 );
 
 onUnmounted(() => {
-	window.removeEventListener('keydown', handleGlobalKeydown);
 	stopMigrationChecking();
 });
 </script>
