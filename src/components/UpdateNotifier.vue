@@ -415,20 +415,6 @@ function installUpdate() {
 }
 </script>
 
-<style>
-#releaseNotes h2 {
-	font-size: 1.125rem !important;
-	line-height: 1.75rem !important;
-	font-weight: 600 !important;
-}
-
-#releaseNotes ul {
-	list-style: disc !important;
-	margin-left: 36px !important;
-	padding: 4px;
-}
-</style>
-
 <template>
 	<div class="text-sm space-y-3 text-base-content">
 		<Modal
@@ -600,3 +586,17 @@ function installUpdate() {
 		</Modal>
 	</div>
 </template>
+
+<style>
+#releaseNotes h2 {
+	font-size: 1.125rem !important;
+	line-height: 1.75rem !important;
+	font-weight: 600 !important;
+}
+
+#releaseNotes ul {
+	list-style: disc !important;
+	margin-left: 36px !important;
+	padding: 4px;
+}
+</style>
