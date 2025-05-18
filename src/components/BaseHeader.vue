@@ -1,5 +1,9 @@
 <script setup lang="ts">
 import { ProjectConnection } from '@/types/project';
+import {
+	ConnectionType,
+	getConnectionTypeColor
+} from '@/types/connection-types';
 
 const props = defineProps({
 	title: {
@@ -12,15 +16,18 @@ const props = defineProps({
 	}
 });
 
-function getConnectionColor(type: string) {
-	switch (type) {
-		case 'mysql':
-			return 'bg-orange-500';
-		case 'pgsql':
-			return 'bg-indigo-600';
-		default:
-			return 'bg-gray-600';
+function getConnectionInfo(project: ProjectConnection | null) {
+	if (!project) return '';
+
+	if (project.type === ConnectionType.SSH && project.sshConfig) {
+		const remoteConfig = project.sshConfig.remoteDbConfig;
+		if (remoteConfig) {
+			return `${remoteConfig.host}:${remoteConfig.port}/${remoteConfig.database}`;
+		}
+		return project.sshConfig.host || '';
 	}
+
+	return project?.dbConfig?.database || project?.projectPath || '';
 }
 
 const emit = defineEmits(['goBack']);
@@ -59,7 +66,11 @@ const handleGoBack = () => {
 
 			<div
 				class="mr-2 flex h-8 w-8 items-center justify-center rounded-full"
-				:class="getConnectionColor(props.project?.type as string)"
+				:class="
+					getConnectionTypeColor(
+						props.project?.type as ConnectionType
+					)
+				"
 			>
 				<span class="text-base-100 text-sm font-bold">{{
 					props.project?.icon
@@ -67,12 +78,16 @@ const handleGoBack = () => {
 			</div>
 
 			<div>
-				<h1 class="text-lg font-semibold">{{ props.title }}</h1>
+				<h1 class="text-lg font-semibold flex items-center">
+					{{ props.title }}
+					<span
+						v-if="props.project?.type === 'ssh'"
+						class="ml-2 badge badge-sm badge-info"
+						>Remote</span
+					>
+				</h1>
 				<div class="text-xs">
-					{{
-						props.project?.db_config.database ||
-						props.project?.projectPath
-					}}
+					{{ getConnectionInfo(props.project) }}
 				</div>
 			</div>
 		</div>
