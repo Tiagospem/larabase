@@ -1,7 +1,8 @@
 import { defineStore } from 'pinia';
 import { computed, ref, toRaw } from 'vue';
 import { ProjectConnection } from '@/types/project';
-import { ConnectionType } from '@/types/connection-types';
+import { ConnectionStatus, ConnectionType } from '@/types/connection-types';
+import { AppConnection } from '@/types/ssh-connection';
 
 export const useConnectionsStore = defineStore('connections', () => {
 	const connections = ref<ProjectConnection[]>([]);
@@ -27,32 +28,74 @@ export const useConnectionsStore = defineStore('connections', () => {
 						Array.isArray(savedProjects) &&
 						savedProjects.length > 0
 					) {
-						for (const project of savedProjects) {
-							let check = { success: false, message: '' };
+						if (id) {
+							const projectToValidate = savedProjects.find(
+								(project) => project.id === id
+							);
+							if (projectToValidate) {
+								let check = { success: false, message: '' };
 
-							if (
-								project.type === ConnectionType.SSH &&
-								project.ssh_config
-							) {
-								// Skip testing SSH connections to avoid validation issues
-								// Set them as valid/connected by default
-								check = {
-									success: true,
-									message:
-										'SSH connection (validation skipped)'
-								};
-							} else if (project.db_config) {
-								// Test MySQL connection
-								check =
-									await window.ipcRenderer.testMySQLConnection(
-										toRaw(project.db_config)
-									);
+								if (
+									projectToValidate.type ===
+										ConnectionType.SSH &&
+									projectToValidate.sshConfig
+								) {
+									check = {
+										success: true,
+										message:
+											'SSH connection (validation skipped)'
+									};
+								} else if (projectToValidate.dbConfig) {
+									const AppConnection = {
+										localDbConfig: toRaw(
+											projectToValidate.dbConfig
+										),
+										remote: toRaw(
+											projectToValidate.sshConfig
+										)
+									} as AppConnection;
+
+									check =
+										await window.ipcRenderer.testMySQLConnection(
+											AppConnection
+										);
+								}
+
+								projectToValidate.isValid = check.success;
+								projectToValidate.status = check.success
+									? ConnectionStatus.Connected
+									: ConnectionStatus.Disconnected;
 							}
+						} else {
+							for (const project of savedProjects) {
+								let check = { success: false, message: '' };
 
-							project.isValid = check.success;
-							project.status = check.success
-								? 'connected'
-								: 'disconnected';
+								if (
+									project.type === ConnectionType.SSH &&
+									project.sshConfig
+								) {
+									check = {
+										success: true,
+										message:
+											'SSH connection (validation skipped)'
+									};
+								} else if (project.dbConfig) {
+									const AppConnection = {
+										localDbConfig: toRaw(project.dbConfig),
+										remote: toRaw(project.sshConfig)
+									} as AppConnection;
+
+									check =
+										await window.ipcRenderer.testMySQLConnection(
+											AppConnection
+										);
+								}
+
+								project.isValid = check.success;
+								project.status = check.success
+									? ConnectionStatus.Connected
+									: ConnectionStatus.Disconnected;
+							}
 						}
 
 						connections.value = savedProjects;
