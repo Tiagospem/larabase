@@ -149,7 +149,7 @@ const tableData = computed(() => {
 });
 
 function goBack() {
-	router.push(`/database/${projectId.value}`);
+	router.push(`/database/${projectId.value}/${project.value?.isRemote}`);
 }
 
 function loadSavedSql() {
