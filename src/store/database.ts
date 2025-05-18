@@ -3,8 +3,8 @@ import { ref, computed, toRaw } from 'vue';
 import { ProjectConnection } from '@/types/project';
 import { Table, TableList } from '@/types/table';
 import { useConnectionsStore } from '@/store/connections';
-import { MysqlConnection } from '@/types/mysql-connection';
 import { useSidebarStore } from '@/store/sidebar';
+import { AppConnection } from '@/types/ssh-connection';
 
 export const useDatabaseStore = defineStore('database', () => {
 	const connectionStore = useConnectionsStore();
@@ -69,14 +69,18 @@ export const useDatabaseStore = defineStore('database', () => {
 		table.isApproximate = isApproximate;
 	}
 
-	const sanitizeIds = (ids: any) =>
-		ids.map((id: any) => (id && typeof id === 'object' ? String(id) : id));
-
 	function markAllTablesApproximate(tables: Table[], isApproximate: boolean) {
 		for (const table of tables) {
 			table.isApproximate = isApproximate;
 		}
 	}
+
+	const sanitizeIds = (
+		ids: Array<string | number | Record<string, unknown>>
+	) =>
+		ids.map((id: string | number | Record<string, unknown>) =>
+			id && typeof id === 'object' ? String(id) : id
+		);
 
 	async function loadTables(project: ProjectConnection) {
 		isLoading.value = true;
@@ -84,38 +88,37 @@ export const useDatabaseStore = defineStore('database', () => {
 		try {
 			const storageKey = `tables-${project.id}`;
 
-			try {
-				const storedData = localStorage.getItem(storageKey);
+			const storedData = localStorage.getItem(storageKey);
 
-				if (storedData) {
+			if (storedData) {
+				try {
 					const parsedData = JSON.parse(storedData);
 
-					if (parsedData && parsedData.tables) {
-						const cacheExpired =
-							!parsedData.timestamp ||
-							Date.now() - parsedData.timestamp > 10000;
-
-						if (!cacheExpired) {
+					if (
+						parsedData &&
+						parsedData.tables &&
+						Array.isArray(parsedData.tables) &&
+						parsedData.timestamp
+					) {
+						if (Date.now() - parsedData.timestamp < 10000) {
 							tables.value = parsedData;
-
 							isLoading.value = false;
-							return;
-						} else {
-							console.log('Cache expired, fetching fresh data');
+							return parsedData.tables;
 						}
 					}
+				} catch (err) {
+					console.error('Error parsing stored tables:', err);
 				}
-			} catch (storageError) {
-				console.error(
-					'Error reading tables from localStorage:',
-					storageError
-				);
 			}
 
-			const databaseConnection = toRaw(project.db_config);
+			const AppConnection = {
+				localDbConfig: toRaw(project.dbConfig),
+				remote: toRaw(project.sshConfig)
+			} as AppConnection;
 
-			const result =
-				await window.ipcRenderer.listTables(databaseConnection);
+			const result = await window.ipcRenderer.listTables(
+				toRaw(AppConnection)
+			);
 
 			tables.value =
 				result.success && result.tables
@@ -138,14 +141,21 @@ export const useDatabaseStore = defineStore('database', () => {
 		} finally {
 			isLoading.value = false;
 		}
+
+		return tables.value.tables;
 	}
 
 	async function truncateTable(
-		connection: MysqlConnection,
+		project: ProjectConnection,
 		tableName: string
 	) {
+		const AppConnection = {
+			localDbConfig: toRaw(project.dbConfig),
+			remote: toRaw(project.sshConfig)
+		} as AppConnection;
+
 		const result = await window.ipcRenderer.truncateTable(
-			toRaw(connection),
+			AppConnection,
 			tableName
 		);
 
@@ -168,16 +178,13 @@ export const useDatabaseStore = defineStore('database', () => {
 		const results = await Promise.all(
 			tableNames.map(async (tableName) => {
 				try {
-					const result = await truncateTable(
-						project.db_config,
-						tableName
-					);
+					const result = await truncateTable(project, tableName);
 					return {
 						tableName,
 						success: result.success,
 						message: result.message
 					};
-				} catch (error: any) {
+				} catch (error: unknown) {
 					console.error(
 						`Error truncating table ${tableName}:`,
 						error
@@ -185,7 +192,10 @@ export const useDatabaseStore = defineStore('database', () => {
 					return {
 						tableName,
 						success: false,
-						message: error.message || 'Error truncating table'
+						message:
+							error instanceof Error
+								? error.message
+								: 'Error truncating table'
 					};
 				}
 			})
@@ -220,8 +230,13 @@ export const useDatabaseStore = defineStore('database', () => {
 
 		const project = connectionStore.getSelectedProject as ProjectConnection;
 
+		const AppConnection = {
+			localDbConfig: toRaw(project.dbConfig),
+			remote: toRaw(project.sshConfig)
+		} as AppConnection;
+
 		const deleteConfig = {
-			dbConnection: toRaw(project.db_config),
+			appConnection: AppConnection,
 			tableName,
 			ids: sanitizeIds(ids),
 			ignoreForeignKeys
@@ -235,9 +250,10 @@ export const useDatabaseStore = defineStore('database', () => {
 
 		if (getTable) {
 			const countResult = await window.ipcRenderer.getTableRecordCount(
-				toRaw(project.db_config),
+				AppConnection,
 				toRaw(getTable)
 			);
+
 			if (countResult && countResult.success) {
 				sidebarStore.updateTableRecordCount(
 					tableName,
