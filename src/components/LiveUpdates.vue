@@ -4,6 +4,7 @@ import { ref, onMounted, onBeforeUnmount, toRaw } from 'vue';
 import { useConnectionsStore } from '@/store/connections';
 import { useTabsStore } from '@/store/tabs';
 import { useSidebarStore } from '@/store/sidebar';
+import { AppConnection } from '@/types/ssh-connection';
 
 const emit = defineEmits(['close']);
 
@@ -57,9 +58,14 @@ async function startMonitoring(clearHistory = false) {
 			return;
 		}
 
+		const AppConnection = {
+			localDbConfig: toRaw(project.dbConfig),
+			remote: toRaw(project.sshConfig)
+		} as AppConnection;
+
 		const result = await window.ipcRenderer.startLiveDbUpdate({
 			connectionId: projectId,
-			dbConnection: toRaw(project.dbConfig),
+			appConnection: AppConnection,
 			clearHistory
 		});
 
