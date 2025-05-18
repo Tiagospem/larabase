@@ -2,7 +2,7 @@
 import { useConnectionsStore } from '@/store/connections';
 import { useRedisStore } from '@/store/redis';
 import { ProjectConnection } from '@/types/project';
-import { watchEffect, reactive, computed, onMounted } from 'vue';
+import { watchEffect, reactive, computed, onMounted, onUnmounted } from 'vue';
 import { useRouter } from 'vue-router';
 import ShowConnectionInfo from '@/components/ShowConnectionInfo.vue';
 import DatabaseSchemaViewer from '@/components/schema/DatabaseSchemaViewer.vue';
@@ -10,7 +10,10 @@ import ERDModal from '@/components/ERDModal.vue';
 import { useDatabaseSchema } from '@/services/databaseSchema';
 import RedisManager from '@/components/RedisManager.vue';
 import LaravelCommands from '@/components/LaravelCommands.vue';
-import { ConnectionType } from '@/types/connection-types';
+import {
+	ConnectionType,
+	getConnectionTypeColor
+} from '@/types/connection-types';
 import Settings from '@/components/Settings.vue';
 import DatabaseSwitcher from '@/components/database/DatabaseSwitcher.vue';
 import LiveUpdates from '@/components/LiveUpdates.vue';
@@ -64,17 +67,6 @@ const ui = reactive({
 	showEnvEditor: false
 });
 
-function getConnectionColor(type: string) {
-	switch (type) {
-		case ConnectionType.MySQL:
-			return 'bg-orange-500';
-		case ConnectionType.SSH:
-			return 'bg-purple-600';
-		default:
-			return 'bg-gray-600';
-	}
-}
-
 function openSqlEditor() {
 	router.push(
 		`/sql-editor/${selectedProject.value?.id}/${props.isRemoteConnection}`
@@ -106,8 +98,18 @@ async function handleMigrationsClose() {
 	emit('migrations-updated');
 }
 
+function handleGlobalKeydown(event: KeyboardEvent) {
+	if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') {
+		event.preventDefault();
+
+		ui.showDatabaseSwitcher = true;
+	}
+}
+
 onMounted(() => {
 	if (!props.isRemoteConnection) {
+		window.addEventListener('keydown', handleGlobalKeydown);
+
 		initializeSchema();
 	}
 });
@@ -120,7 +122,9 @@ watchEffect(() => {
 	}
 });
 
-ui.showRedisManager = false;
+onUnmounted(() => {
+	window.removeEventListener('keydown', handleGlobalKeydown);
+});
 </script>
 
 <template>
@@ -150,7 +154,11 @@ ui.showRedisManager = false;
 			</button>
 			<div
 				class="mr-2 flex h-8 w-8 items-center justify-center rounded-full"
-				:class="getConnectionColor(selectedProject?.type as string)"
+				:class="
+					getConnectionTypeColor(
+						selectedProject?.type as ConnectionType
+					)
+				"
 			>
 				<span class="text-base-100 text-sm font-bold">{{
 					selectedProject?.icon
@@ -189,6 +197,32 @@ ui.showRedisManager = false;
 						>
 							<path
 								d="M64 256l0-96 160 0 0 96L64 256zm0 64l160 0 0 96L64 416l0-96zm224 96l0-96 160 0 0 96-160 0zM448 256l-160 0 0-96 160 0 0 96zM64 32C28.7 32 0 60.7 0 96L0 416c0 35.3 28.7 64 64 64l384 0c35.3 0 64-28.7 64-64l0-320c0-35.3-28.7-64-64-64L64 32z"
+							/>
+						</svg>
+					</button>
+				</div>
+
+				<div
+					class="tooltip tooltip-bottom"
+					data-tip="Manage databases"
+					v-if="!props.isRemoteConnection"
+				>
+					<button
+						class="btn btn-ghost btn-sm"
+						@click="ui.showDatabaseSwitcher = true"
+					>
+						<svg
+							xmlns="http://www.w3.org/2000/svg"
+							fill="none"
+							viewBox="0 0 24 24"
+							stroke-width="1.5"
+							stroke="currentColor"
+							class="h-4 w-4"
+						>
+							<path
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								d="M20.25 6.375c0 2.278-3.694 4.125-8.25 4.125S3.75 8.653 3.75 6.375m16.5 0c0-2.278-3.694-4.125-8.25-4.125S3.75 4.097 3.75 6.375m16.5 0v11.25c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125V6.375m16.5 0v3.75m-16.5-3.75v3.75m16.5 0v3.75C20.25 16.153 16.556 18 12 18s-8.25-1.847-8.25-4.125v-3.75m16.5 0c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125"
 							/>
 						</svg>
 					</button>
