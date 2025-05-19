@@ -34,7 +34,7 @@ const isCreatingDatabase = ref(false);
 async function switchDatabase(databaseName: string, shouldUpdateEnv: boolean) {
 	if (
 		!project.value ||
-		(databaseName === project.value.dbConfig.database &&
+		(databaseName === project.value?.dbConfig?.database &&
 			(!shouldUpdateEnv || databaseName === projectDatabase.value))
 	) {
 		return;
@@ -64,11 +64,19 @@ async function switchDatabase(databaseName: string, shouldUpdateEnv: boolean) {
 					'warning'
 				);
 			}
-		} else if (databaseName !== project.value.dbConfig.database) {
+		} else if (
+			project.value &&
+			project.value.dbConfig &&
+			databaseName !== project.value.dbConfig.database
+		) {
 			showAlert('Database connection updated successfully', 'success');
 		}
 
-		if (databaseName !== project.value.dbConfig.database) {
+		if (
+			project.value &&
+			project.value.dbConfig &&
+			databaseName !== project.value.dbConfig.database
+		) {
 			project.value.dbConfig.database = databaseName;
 
 			await connectionStore.updateConnection(
@@ -179,7 +187,7 @@ async function checkProjectDatabase() {
 	try {
 		const result = await window.ipcRenderer.compareProjectDatabase({
 			projectPath: project.value.projectPath,
-			connectionDatabase: project.value.dbConfig.database
+			connectionDatabase: project.value?.dbConfig?.database
 		});
 
 		if (result.success) {
