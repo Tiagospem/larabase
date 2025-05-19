@@ -9,6 +9,18 @@ import {
 	readRemoteFile
 } from '@/services/remote-file-service';
 
+interface GuessedRemoteFileEntry {
+	filename?: string;
+	name?: string;
+	isDirectory?: boolean;
+	attrs?: {
+		size?: number;
+		mtime?: number;
+	};
+	size?: number;
+	mtime?: number;
+}
+
 export const useProjectLogsStore = defineStore('projectLogs', () => {
 	const logFiles = ref<LogFile[]>([]);
 	const logEntries = ref<LogEntry[]>([]);
@@ -400,24 +412,34 @@ export const useProjectLogsStore = defineStore('projectLogs', () => {
 			if (files && files.length > 0) {
 				const logFilesList = files.filter((file) => {
 					if (!file) return false;
-					const fileName = file.name || file.filename;
+
+					const f = file as GuessedRemoteFileEntry;
+					const fileName = f.filename || f.name;
+					const isDirectory =
+						typeof f.isDirectory === 'boolean'
+							? f.isDirectory
+							: !(fileName && fileName.includes('.'));
+
 					if (!fileName) return false;
-					return fileName.endsWith('.log') && !file.isDirectory;
+					return fileName.endsWith('.log') && !isDirectory;
 				});
 
 				if (logFilesList.length > 0) {
 					logFiles.value = logFilesList.map((file) => {
-						const fileName = file.name || file.filename;
-						const fileSize =
-							file.size || (file.attrs ? file.attrs.size : 0);
+						const f = file as GuessedRemoteFileEntry;
+						const fileName = f.filename || f.name;
+						const fileSize = f.attrs?.size ?? f.size ?? 0;
+						const modTimeRaw =
+							f.attrs?.mtime ?? f.mtime ?? Date.now() / 1000;
 						const modTime =
-							file.mtime ||
-							(file.attrs ? file.attrs.mtime * 1000 : Date.now());
+							modTimeRaw > 1000000000000
+								? modTimeRaw
+								: modTimeRaw * 1000;
 
 						return {
-							name: fileName,
+							name: fileName as string,
 							path: normalizePath(`${dirPath}/${fileName}`),
-							size: fileSize || 0,
+							size: fileSize as number,
 							modified: new Date(modTime)
 						};
 					});
