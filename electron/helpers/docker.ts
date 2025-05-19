@@ -3,15 +3,6 @@ import fs from 'fs';
 import * as zlib from 'node:zlib';
 import { RestorationProgressConfig } from '../../src/types/project';
 
-declare module 'dockerode' {
-	interface Container {
-		getExec(id: string): Docker.Exec;
-	}
-	interface Exec {
-		stop(): Promise<any>;
-	}
-}
-
 interface DockerExecStream extends NodeJS.ReadWriteStream {
 	dockerExecId?: string;
 	dockerContainer?: string;
@@ -46,42 +37,6 @@ async function isDockerAvailable() {
 	} catch (error) {
 		console.error('Docker connection error:', error.message);
 		return false;
-	}
-}
-
-async function isDockerRunning() {
-	try {
-		return await isDockerAvailable();
-	} catch (error) {
-		return false;
-	}
-}
-
-async function getDockerContainers() {
-	try {
-		const docker = createDockerClient();
-		const containers = await docker.listContainers({ all: false });
-
-		return containers.map((container) => {
-			const name = container.Names[0].replace(/^\//, '');
-
-			let ports = '';
-			if (container.Ports && container.Ports.length > 0) {
-				ports = container.Ports.map((port) => {
-					if (port.PublicPort && port.PrivatePort) {
-						return `${port.PublicPort}->${port.PrivatePort}/${port.Type}`;
-					} else if (port.PrivatePort) {
-						return `${port.PrivatePort}/${port.Type}`;
-					}
-					return '';
-				}).join(', ');
-			}
-
-			return `${name} ${ports}`;
-		});
-	} catch (error) {
-		console.error('Error listing Docker containers:', error.message);
-		return [];
 	}
 }
 
@@ -135,21 +90,6 @@ async function detectDockerMysql(port: number) {
 		console.error('Error detecting Docker MySQL:', error.message);
 		result.message = `Error detecting Docker: ${error.message}`;
 		return result;
-	}
-}
-
-async function checkDockerRedis() {
-	try {
-		const docker = createDockerClient();
-		const containers = await docker.listContainers();
-
-		return containers.some((container) => {
-			const name = container.Names[0].replace(/^\//, '');
-			return name.toLowerCase().includes('redis');
-		});
-	} catch (error) {
-		console.error('Error checking Docker Redis:', error.message);
-		return false;
 	}
 }
 
@@ -239,12 +179,12 @@ async function executeMysqlFileInContainer(
 		execStream.dockerExecId = exec.id;
 		execStream.dockerContainer = containerName;
 
-		let output = '';
+		let _output = '';
 
 		execStream.on('data', (chunk) => {
 			if (isCancelled) return;
 
-			output += chunk.toString();
+			_output += chunk.toString();
 		});
 
 		let totalSize = fs.statSync(sqlFilePath).size;
@@ -505,9 +445,6 @@ async function executeMysqlFileInContainer(
 export {
 	createDockerClient,
 	isDockerAvailable,
-	isDockerRunning,
-	getDockerContainers,
 	detectDockerMysql,
-	checkDockerRedis,
 	executeMysqlFileInContainer
 };
