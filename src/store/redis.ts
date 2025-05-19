@@ -33,16 +33,16 @@ export const useRedisStore = defineStore('redis', () => {
 	const hasMoreKeys = computed(() => keysCursor.value !== '0');
 
 	async function checkRedisAvailability(project: ProjectConnection) {
-		if (!project.redis_config.host || !project.redis_config.port) {
+		if (!project.redisConfig.host || !project.redisConfig.port) {
 			isRedisAvailable.value = false;
 			return;
 		}
 
 		try {
 			const config = {
-				host: project.redis_config.host,
-				port: project.redis_config.port,
-				password: project.redis_config.password
+				host: project.redisConfig.host,
+				port: project.redisConfig.port,
+				password: project.redisConfig.password
 			};
 
 			const result = await window.ipcRenderer.checkRedisStatus(
