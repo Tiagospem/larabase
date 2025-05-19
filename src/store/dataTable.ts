@@ -2,10 +2,21 @@ import { defineStore } from 'pinia';
 import { useConnectionsStore } from '@/store/connections';
 import { computed, ref, toRaw } from 'vue';
 import { TableColumn, TableRecord } from '@/types/table';
+import { AppConnection } from '@/types/ssh-connection';
 
 export interface TableRow {
 	id: string | number;
-	[key: string]: any;
+	[key: string]: string | number | boolean | null | Date | Buffer | undefined;
+}
+
+interface TableStructure {
+	name: string;
+	foreign_key?: boolean;
+	type?: string;
+	nullable?: boolean;
+	default?: string | null;
+	key?: string;
+	extra?: string;
 }
 
 export const useDataTableStore = (table: string) => {
@@ -15,7 +26,7 @@ export const useDataTableStore = (table: string) => {
 		const foreignKeyColumns = ref<string[]>([]);
 		const lastKnownColumns = ref<TableColumn[]>([]);
 		const tableData = ref<TableRow[]>([]);
-		const tableStructure = ref<any[]>([]);
+		const tableStructure = ref<TableStructure[]>([]);
 		const isFirstLoad = ref(true);
 		const isLoading = ref(true);
 		const filterTerm = ref('');
@@ -30,10 +41,12 @@ export const useDataTableStore = (table: string) => {
 
 		const columns = computed<TableColumn[]>(() => {
 			if (tableStructure.value.length > 0) {
-				const newColumns = tableStructure.value.map((col: any) => ({
-					field: col.name,
-					width: 150
-				}));
+				const newColumns = tableStructure.value.map(
+					(col: TableStructure) => ({
+						field: col.name,
+						width: 150
+					})
+				);
 
 				const idIndex = newColumns.findIndex(
 					(col: TableColumn) => col.field === 'id'
@@ -89,11 +102,17 @@ export const useDataTableStore = (table: string) => {
 
 		async function getTableForeignKeys(tableName: string) {
 			const project = connectionStore.getSelectedProject;
+			if (!project) return [];
 
 			try {
+				const AppConnection = {
+					localDbConfig: toRaw(project.dbConfig),
+					remote: toRaw(project.sshConfig)
+				} as AppConnection;
+
 				const { success, foreignKeys, message } =
 					await window.ipcRenderer.getTableForeignKeys(
-						toRaw(project?.db_config),
+						AppConnection,
 						tableName
 					);
 
@@ -113,9 +132,20 @@ export const useDataTableStore = (table: string) => {
 		}
 
 		async function getTableStructure(tableName: string) {
+			const project = connectionStore.getSelectedProject;
+
+			if (!project) {
+				throw new Error('No project selected');
+			}
+
 			try {
+				const AppConnection = {
+					localDbConfig: toRaw(project.dbConfig),
+					remote: toRaw(project.sshConfig)
+				} as AppConnection;
+
 				return await window.ipcRenderer.getTableStructure(
-					toRaw(connectionStore.getSelectedProject?.db_config),
+					AppConnection,
 					tableName
 				);
 			} catch (err) {
@@ -125,8 +155,19 @@ export const useDataTableStore = (table: string) => {
 		}
 
 		async function getTableData(tableName: string) {
+			const selectedProject = connectionStore.getSelectedProject;
+
+			if (!selectedProject) {
+				throw new Error('No project selected');
+			}
+
 			try {
 				isLoading.value = true;
+
+				const AppConnection = {
+					localDbConfig: toRaw(selectedProject.dbConfig),
+					remote: toRaw(selectedProject.sshConfig)
+				} as AppConnection;
 
 				const params = {
 					limit: rowsPerPage.value,
@@ -135,9 +176,7 @@ export const useDataTableStore = (table: string) => {
 					sortDirection: currentSortDirection.value,
 					filter: activeFilter.value,
 					tableName: tableName,
-					dbConnection: toRaw(
-						connectionStore.getSelectedProject?.db_config
-					)
+					appConnection: AppConnection
 				} as TableRecord;
 
 				const response =
@@ -150,7 +189,7 @@ export const useDataTableStore = (table: string) => {
 					}
 
 					tableData.value = response.data.map(
-						(row: any, index: number) => {
+						(row: Record<string, unknown>, index: number) => {
 							if (row.id === undefined) {
 								return { id: `row-${index}`, ...row };
 							}
@@ -159,6 +198,12 @@ export const useDataTableStore = (table: string) => {
 					);
 
 					totalRecords.value = response.totalRecords;
+				} else {
+					console.error(
+						'Failed to get table records:',
+						response.message
+					);
+					tableData.value = [];
 				}
 			} catch (err) {
 				console.error('Error getting table data:', err);
