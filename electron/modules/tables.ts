@@ -1,5 +1,4 @@
 import { ipcMain } from 'electron';
-import { MysqlConnection } from '../../src/types/mysql-connection';
 import { createConnection, safeEndConnection } from '../helpers/mysql';
 import {
 	BASE_COUNT_SQL,
@@ -19,6 +18,40 @@ import {
 	TableRecord,
 	UpdateTableRecord
 } from '../../src/types/table';
+import { AppConnection } from '../../src/types/ssh-connection';
+import { PoolConnection, RowDataPacket, ResultSetHeader } from 'mysql2/promise';
+
+interface TableRow extends RowDataPacket {
+	name: string;
+	rowCount?: number;
+	isApproximate?: boolean;
+}
+
+interface TableCountRow extends RowDataPacket {
+	name: string;
+	rowCount: number;
+}
+
+interface CountResult extends RowDataPacket {
+	count: number;
+}
+
+interface TableColumn extends RowDataPacket {
+	name: string;
+	type?: string;
+	foreign_key?: boolean;
+}
+
+interface ForeignKeyRow extends RowDataPacket {
+	type?: 'outgoing' | 'incoming';
+}
+
+interface IndexRow extends RowDataPacket {
+	name: string;
+	columns?: string | string[];
+	is_unique?: number;
+	type: string;
+}
 
 function error(type: string, message: string) {
 	const base = { success: false, message };
@@ -33,15 +66,18 @@ function error(type: string, message: string) {
 	return (map[type] || map.default)();
 }
 
-async function toggleForeignKeyChecks(connection: any, enable: boolean) {
+async function toggleForeignKeyChecks(
+	connection: PoolConnection,
+	enable: boolean
+): Promise<void> {
 	await connection.query(`SET FOREIGN_KEY_CHECKS = ${enable ? 1 : 0}`);
 }
 
 function applySortingAndPagination(
 	baseSql: string,
-	connection: any,
+	connection: PoolConnection,
 	config: TableRecord
-) {
+): string {
 	let sql = baseSql;
 
 	if (config.sortColumn) {
@@ -55,29 +91,42 @@ function applySortingAndPagination(
 }
 
 async function getTableStructure(
-	connection: any,
+	connection: PoolConnection,
 	database: string,
 	tableName: string
-) {
-	const [cols] = await connection.query(COLUMN_SQL, [database, tableName]);
-	const [fks] = await connection.query(FK_SQL, [database, tableName]);
-	const fkSet = new Set(fks.map((f: any) => f.column_name));
+): Promise<TableColumn[]> {
+	const [cols] = await connection.query<RowDataPacket[]>(COLUMN_SQL, [
+		database,
+		tableName
+	]);
+	const [fks] = await connection.query<RowDataPacket[]>(FK_SQL, [
+		database,
+		tableName
+	]);
+	const fkSet = new Set(fks.map((f) => f.column_name));
 
-	return cols.map((c: any) => ({ ...c, foreign_key: fkSet.has(c.name) }));
+	return cols.map((c) => {
+		return {
+			...(c as unknown as Record<string, unknown>),
+			name: c.name as string,
+			type: c.type as string,
+			foreign_key: fkSet.has(c.name as string)
+		} as TableColumn;
+	});
 }
 
 async function findRestrictingIds(
-	connection: any,
+	connection: PoolConnection,
 	tableName: string,
 	ids: (string | number)[]
 ): Promise<(string | number)[]> {
-	const [constraints]: any[] = await connection.query(
+	const [constraints] = await connection.query<RowDataPacket[]>(
 		REFERENCE_CONSTRAINTS_SQL,
-		[tableName, connection.database]
+		[tableName, connection.config.database]
 	);
 
-	const restricts = constraints.filter((c: any) =>
-		['RESTRICT', 'NO ACTION'].includes(c.on_delete)
+	const restricts = constraints.filter((c: RowDataPacket) =>
+		['RESTRICT', 'NO ACTION'].includes(c.on_delete as string)
 	);
 
 	const problematic: (string | number)[] = [];
@@ -90,7 +139,7 @@ async function findRestrictingIds(
          WHERE ${connection.escapeId(child_column)} = ?
          LIMIT 1
       `;
-			const [rows]: any[] = await connection.query(sql, [id]);
+			const [rows] = await connection.query<RowDataPacket[]>(sql, [id]);
 			if (rows.length) {
 				problematic.push(id);
 				break;
@@ -102,29 +151,42 @@ async function findRestrictingIds(
 }
 
 async function deleteRecords(
-	connection: any,
+	connection: PoolConnection,
 	tableName: string,
 	ids: (string | number)[]
 ): Promise<{ affectedRows: number }> {
 	const placeholders = ids.map(() => '?').join(',');
+
+	// noinspection SqlResolve
 	const sql = `
     DELETE
       FROM ${connection.escapeId(tableName)}
      WHERE id IN (${placeholders})
   `;
-	const [result]: any[] = await connection.execute(sql, ids);
+	const [result] = await connection.execute<ResultSetHeader>(sql, ids);
 
 	return { affectedRows: result.affectedRows };
 }
 
-async function listTablesHandler(_: any, config: MysqlConnection) {
-	let connection: any;
+async function listTablesHandler(_: unknown, config: AppConnection) {
+	let connection: PoolConnection | null = null;
+
+	const db =
+		config.localDbConfig || (config.remote && config.remote.remoteDbConfig);
+
+	if (!db) {
+		return {
+			success: false,
+			message: 'No valid database configuration found',
+			tables: []
+		};
+	}
 
 	try {
 		connection = await createConnection(config);
 
-		const [tables] = await connection.query(LIST_TABLES_SQL, [
-			config.database
+		const [tables] = await connection.query<TableRow[]>(LIST_TABLES_SQL, [
+			db.database
 		]);
 
 		if (tables.length === 0) {
@@ -132,61 +194,64 @@ async function listTablesHandler(_: any, config: MysqlConnection) {
 		}
 
 		try {
-			const [info] = await connection.query(BASE_COUNT_SQL, [
-				config.database
-			]);
-			const counts = Object.fromEntries(
-				info.map(({ name, rowCount }: any) => [name, +rowCount || 0])
+			const [info] = await connection.query<TableCountRow[]>(
+				BASE_COUNT_SQL,
+				[db.database]
 			);
-			tables.forEach((t: any) => {
+			const counts = Object.fromEntries(
+				info.map(({ name, rowCount }) => [name, +rowCount || 0])
+			);
+			tables.forEach((t) => {
 				t.rowCount = counts[t.name] || 0;
 				t.isApproximate = true;
 			});
 		} catch (e) {
 			console.error('Error fetching counts:', e);
-			tables.forEach((t: any) => {
+			tables.forEach((t) => {
 				t.rowCount = 0;
 				t.isApproximate = true;
 			});
 		}
 
 		return { success: true, tables };
-	} catch (err: any) {
-		return error('tables', err.message);
+	} catch (err) {
+		const errorMessage = err instanceof Error ? err.message : String(err);
+		return error('tables', errorMessage);
 	} finally {
 		await safeEndConnection(connection);
 	}
 }
 
 async function getTableRecordCountHandler(
-	_: any,
-	config: MysqlConnection,
+	_: unknown,
+	config: AppConnection,
 	table: Table
 ) {
-	let connection: any;
+	let connection: PoolConnection | null = null;
 
 	try {
 		connection = await createConnection(config);
 		const escaped = connection.escapeId(table.name);
-		const [rows] = await connection.query(
+		const [rows] = await connection.query<CountResult[]>(
 			`SELECT COUNT(*) AS count FROM ${escaped}`
 		);
 
 		return rows.length
 			? { success: true, count: rows[0].count || 0, isApproximate: false }
 			: error('count', 'Failed to count records');
-	} catch (err: any) {
-		return error('count', err.message);
+	} catch (err) {
+		const errorMessage = err instanceof Error ? err.message : String(err);
+		return error('count', errorMessage);
 	} finally {
 		await safeEndConnection(connection);
 	}
 }
 
-async function dropTablesHandler(_: any, params: DropTableParams) {
-	let connection: any;
+async function dropTablesHandler(_: unknown, params: DropTableParams) {
+	let connection: PoolConnection | null = null;
 
 	try {
-		connection = await createConnection(params.dbConnection);
+		connection = await createConnection(params.appConnection);
 		await connection.query('START TRANSACTION');
 
 		if (params.ignoreForeignKeys) {
@@ -204,8 +269,9 @@ async function dropTablesHandler(_: any, params: DropTableParams) {
 
 				await connection.query(`DROP TABLE${cascade} ${esc}`);
 				successCount++;
-			} catch (e: any) {
-				console.error(`Drop failed for ${name}:`, e.message);
+			} catch (e) {
+				const errorMessage = e instanceof Error ? e.message : String(e);
+				console.error(`Drop failed for ${name}:`, errorMessage);
 				failed.push(name);
 			}
 		}
@@ -229,7 +295,7 @@ async function dropTablesHandler(_: any, params: DropTableParams) {
 				message: `Failed to drop tables: ${failed.join(', ')}`
 			};
 		}
-	} catch (err: any) {
+	} catch (err) {
 		console.error('Error in dropTablesHandler:', err);
 
 		if (connection) {
@@ -238,12 +304,15 @@ async function dropTablesHandler(_: any, params: DropTableParams) {
 				if (params.ignoreForeignKeys) {
 					await toggleForeignKeyChecks(connection, true);
 				}
-			} catch {}
+			} catch {
+				/* empty */
+			}
 		}
 
+		const errorMessage = err instanceof Error ? err.message : String(err);
 		return {
 			success: false,
-			message: err.message || 'Error dropping tables'
+			message: errorMessage || 'Error dropping tables'
 		};
 	} finally {
 		await safeEndConnection(connection);
@@ -251,20 +320,24 @@ async function dropTablesHandler(_: any, params: DropTableParams) {
 }
 
 async function truncateTableHandler(
-	_: any,
-	config: MysqlConnection,
+	_: unknown,
+	config: AppConnection,
 	tableName: string
 ) {
-	let connection: any;
+	let connection: PoolConnection | null = null;
 	let fkDisabled = false;
 
 	try {
 		connection = await createConnection(config);
 
-		const [fkRes] = await connection.query(HAS_FK_USAGE_SQL, [
-			tableName,
-			config.database
-		]);
+		const database = config.remote
+			? config.remote.remoteDbConfig.database
+			: config.localDbConfig.database;
+
+		const [fkRes] = await connection.query<RowDataPacket[]>(
+			HAS_FK_USAGE_SQL,
+			[tableName, database]
+		);
 
 		fkDisabled = fkRes.length > 0;
 
@@ -286,35 +359,46 @@ async function truncateTableHandler(
 			success: true,
 			message: `Table ${tableName} truncated successfully`
 		};
-	} catch (err: any) {
+	} catch (err) {
 		console.error(`Error truncating ${tableName}:`, err);
 
 		if (connection) {
-			await connection.rollback().catch(() => {});
+			try {
+				await connection.rollback().catch(() => {});
 
-			if (fkDisabled) {
-				await toggleForeignKeyChecks(connection, true).catch(() => {});
+				if (fkDisabled) {
+					await toggleForeignKeyChecks(connection, true).catch(
+						() => {}
+					);
+				}
+			} catch (e) {
+				console.error('Error during rollback:', e);
 			}
 		}
 
+		const errorMessage = err instanceof Error ? err.message : String(err);
 		return {
 			success: false,
-			message: err.message || 'Error truncating table'
+			message: errorMessage || 'Error truncating table'
 		};
 	} finally {
 		await safeEndConnection(connection);
 	}
 }
 
-async function getTableRecordsHandler(_: any, config: TableRecord) {
-	let connection: any;
+async function getTableRecordsHandler(_: unknown, config: TableRecord) {
+	let connection: PoolConnection | null = null;
 
 	try {
-		connection = await createConnection(config.dbConnection);
+		const database =
+			config.appConnection.localDbConfig?.database ||
+			config.appConnection.remote?.remoteDbConfig.database;
+
+		connection = await createConnection(config.appConnection);
 
 		const structure = await getTableStructure(
 			connection,
-			config.dbConnection.database,
+			database,
 			config.tableName
 		);
 
@@ -334,13 +418,21 @@ async function getTableRecordsHandler(_: any, config: TableRecord) {
 		const countQuery = `SELECT COUNT(*) AS totalRecords FROM ${tableNameEsc}${where}`;
 
 		try {
-			const [countRows] = await connection.query(countQuery);
+			interface TotalRecordsRow extends RowDataPacket {
+				totalRecords: number;
+			}
+
+			const [countRows] =
+				await connection.query<TotalRecordsRow[]>(countQuery);
 			const totalRecords = countRows[0]?.totalRecords || 0;
 
 			const baseSql = `SELECT * FROM ${tableNameEsc}${where}`;
 			const sql = applySortingAndPagination(baseSql, connection, config);
 
-			const [rows] = await connection.query(sql, [limit, offset]);
+			const [rows] = await connection.query<RowDataPacket[]>(sql, [
+				limit,
+				offset
+			]);
 
 			return {
 				success: true,
@@ -350,12 +442,19 @@ async function getTableRecordsHandler(_: any, config: TableRecord) {
 				limit,
 				structure
 			};
-		} catch (queryError: any) {
+		} catch (queryError) {
 			console.error('SQL Error:', queryError);
 
+			interface SqlError extends Error {
+				code?: string;
+				sqlMessage?: string;
+			}
+
+			const sqlError = queryError as SqlError;
+
 			if (
-				queryError.code === 'ER_PARSE_ERROR' &&
-				queryError.sqlMessage.includes('order')
+				sqlError.code === 'ER_PARSE_ERROR' &&
+				sqlError.sqlMessage?.includes('order')
 			) {
 				return {
 					success: false,
@@ -368,10 +467,11 @@ async function getTableRecordsHandler(_: any, config: TableRecord) {
 
 			throw queryError;
 		}
-	} catch (err: any) {
+	} catch (err) {
+		const errorMessage = err instanceof Error ? err.message : String(err);
 		return {
 			success: false,
-			message: err.message || 'Error fetching records',
+			message: errorMessage || 'Error fetching records',
 			data: [],
 			totalRecords: 0
 		};
@@ -381,18 +481,22 @@ async function getTableRecordsHandler(_: any, config: TableRecord) {
 }
 
 async function getTableStructureHandler(
-	_: any,
-	config: MysqlConnection,
+	_: unknown,
+	config: AppConnection,
 	tableName: string
 ) {
-	let connection: any;
+	let connection: PoolConnection | null = null;
 
 	try {
 		connection = await createConnection(config);
 
+		const database = config.remote
+			? config.remote.remoteDbConfig.database
+			: config.localDbConfig.database;
+
 		const structure = await getTableStructure(
 			connection,
-			config.database,
+			database,
 			tableName
 		);
 
@@ -400,10 +504,11 @@ async function getTableStructureHandler(
 			success: true,
 			structure
 		};
-	} catch (err: any) {
+	} catch (err) {
+		const errorMessage = err instanceof Error ? err.message : String(err);
 		return {
 			success: false,
-			message: err.message || 'Error fetching records'
+			message: errorMessage || 'Error fetching records'
 		};
 	} finally {
 		await safeEndConnection(connection);
@@ -411,42 +516,47 @@ async function getTableStructureHandler(
 }
 
 async function getTableForeignKeysHandler(
-	_: any,
-	config: MysqlConnection,
+	_: unknown,
+	config: AppConnection,
 	tableName: string
 ) {
-	let connection: any;
+	let connection: PoolConnection | null = null;
+
+	const database = config.remote
+		? config.remote.remoteDbConfig.database
+		: config.localDbConfig.database;
 
 	try {
 		connection = await createConnection(config);
 
-		const [out] = await connection.query(OUTGOING_SQL, [
-			config.database,
+		const [out] = await connection.query<ForeignKeyRow[]>(OUTGOING_SQL, [
+			database,
 			tableName
 		]);
-		const [inc] = await connection.query(INCOMING_SQL, [
-			config.database,
+		const [inc] = await connection.query<ForeignKeyRow[]>(INCOMING_SQL, [
+			database,
 			tableName
 		]);
 
 		return {
 			success: true,
 			foreignKeys: [
-				...out.map((fk: any) => ({ ...fk, type: 'outgoing' })),
-				...inc.map((fk: any) => ({ ...fk, type: 'incoming' }))
+				...out.map((fk) => ({ ...fk, type: 'outgoing' as const })),
+				...inc.map((fk) => ({ ...fk, type: 'incoming' as const }))
 			]
 		};
 	} catch (err) {
-		return error('foreign', err.message || 'Failed to fetch foreign keys');
+		const errorMessage = err instanceof Error ? err.message : String(err);
+		return error('foreign', errorMessage || 'Failed to fetch foreign keys');
 	} finally {
 		await safeEndConnection(connection);
 	}
 }
 
 async function deleteTableRecordsHandler(
-	_: any,
+	_: unknown,
 	{
-		dbConnection: config,
+		appConnection: config,
 		tableName,
 		ids,
 		ignoreForeignKeys
@@ -456,7 +566,7 @@ async function deleteTableRecordsHandler(
 		throw new Error('At least one record ID is required');
 	}
 
-	let connection: any;
+	let connection: PoolConnection | null = null;
 
 	try {
 		connection = await createConnection(config);
@@ -498,8 +608,14 @@ async function deleteTableRecordsHandler(
 			message: `${affectedRows} record(s) deleted successfully`,
 			affectedRows
 		};
-	} catch (err: any) {
-		if (err.code === 'ER_ROW_IS_REFERENCED_2') {
+	} catch (err) {
+		interface SqlError extends Error {
+			code?: string;
+		}
+
+		const sqlError = err as SqlError;
+
+		if (sqlError.code === 'ER_ROW_IS_REFERENCED_2') {
 			return {
 				success: false,
 				message:
@@ -508,11 +624,12 @@ async function deleteTableRecordsHandler(
 			};
 		}
 
-		return { success: false, message: err.message };
+		const errorMessage = err instanceof Error ? err.message : String(err);
+		return { success: false, message: errorMessage };
 	} finally {
 		if (connection) {
 			if (ignoreForeignKeys) {
-				await toggleForeignKeyChecks(connection, true).catch((e: any) =>
+				await toggleForeignKeyChecks(connection, true).catch((e) =>
 					console.error('Error re-enabling foreign key checks:', e)
 				);
 			}
@@ -522,11 +639,15 @@ async function deleteTableRecordsHandler(
 	}
 }
 
-async function updateRecordHandler(_: any, config: UpdateTableRecord) {
-	let connection: any;
+async function updateRecordHandler(_: unknown, config: UpdateTableRecord) {
+	let connection: PoolConnection | null = null;
 
 	try {
-		connection = await createConnection(config.dbConnection);
+		connection = await createConnection(config.appConnection);
+
+		const database =
+			config.appConnection.localDbConfig?.database ||
+			config.appConnection.remote?.remoteDbConfig.database;
 
 		const { tableName, data, id } = config;
 
@@ -544,12 +665,12 @@ async function updateRecordHandler(_: any, config: UpdateTableRecord) {
 
 		const structure = await getTableStructure(
 			connection,
-			config.dbConnection.database,
+			database,
 			tableName
 		);
 		const jsonColumns = structure
-			.filter((col: any) => col.type?.toLowerCase().includes('json'))
-			.map((col: any) => col.name);
+			.filter((col) => col.type?.toLowerCase().includes('json'))
+			.map((col) => col.name);
 
 		const processedData = Object.fromEntries(
 			Object.entries(updateData).map(([key, value]) => {
@@ -573,18 +694,19 @@ async function updateRecordHandler(_: any, config: UpdateTableRecord) {
 
 		const values = [...Object.values(processedData), id];
 
-		const [result] = await connection.execute(sql, values);
+		const [result] = await connection.execute<ResultSetHeader>(sql, values);
 
 		return {
 			success: true,
 			message: `Record updated successfully`,
 			affectedRows: result.affectedRows
 		};
-	} catch (err: any) {
+	} catch (err) {
 		console.error('Error updating record:', err);
+		const errorMessage = err instanceof Error ? err.message : String(err);
 		return {
 			success: false,
-			message: err.message || 'Error updating record'
+			message: errorMessage || 'Error updating record'
 		};
 	} finally {
 		await safeEndConnection(connection);
@@ -592,25 +714,31 @@ async function updateRecordHandler(_: any, config: UpdateTableRecord) {
 }
 
 async function getTableIndexesHandler(
-	_: any,
-	config: MysqlConnection,
+	_: unknown,
+	config: AppConnection,
 	tableName: string
 ) {
-	let connection: any;
+	let connection: PoolConnection | null = null;
 
 	try {
 		connection = await createConnection(config);
 
-		const [indexes] = await connection.query(TABLE_INDEXES_SQL, [
-			config.database,
-			tableName
-		]);
+		const database = config.remote
+			? config.remote.remoteDbConfig.database
+			: config.localDbConfig.database;
 
-		indexes.forEach((index: any) => {
+		const [indexes] = await connection.query<IndexRow[]>(
+			TABLE_INDEXES_SQL,
+			[database, tableName]
+		);
+
+		indexes.forEach((index) => {
 			if (index.columns && typeof index.columns === 'string') {
-				index.columns = index.columns.split(',');
-			} else {
-				index.columns = [];
+				(index.columns as unknown) = (index.columns as string).split(
+					','
+				);
+			} else if (!index.columns) {
+				(index.columns as unknown) = [];
 			}
 
 			if (index.name === 'PRIMARY') {
@@ -632,10 +760,11 @@ async function getTableIndexesHandler(
 			success: true,
 			indexes
 		};
-	} catch (err: any) {
+	} catch (err) {
+		const errorMessage = err instanceof Error ? err.message : String(err);
 		return {
 			success: false,
-			message: err.message || 'Error fetching table indexes',
+			message: errorMessage || 'Error fetching table indexes',
 			indexes: []
 		};
 	} finally {
@@ -643,14 +772,21 @@ async function getTableIndexesHandler(
 	}
 }
 
-async function getDatabaseSchemaForAIHandler(_: any, config: MysqlConnection) {
-	let connection: any;
+async function getDatabaseSchemaForAIHandler(
+	_: unknown,
+	config: AppConnection
+) {
+	let connection: PoolConnection | null = null;
+
+	const database = config.remote
+		? config.remote.remoteDbConfig.database
+		: config.localDbConfig.database;
 
 	try {
 		connection = await createConnection(config);
 
-		const [tables] = await connection.query(LIST_TABLES_SQL, [
-			config.database
+		const [tables] = await connection.query<TableRow[]>(LIST_TABLES_SQL, [
+			database
 		]);
 
 		if (tables.length === 0) {
@@ -664,34 +800,36 @@ async function getDatabaseSchemaForAIHandler(_: any, config: MysqlConnection) {
 
 			const structure = await getTableStructure(
 				connection,
-				config.database,
+				database,
 				tableName
 			);
 
-			const [outgoing] = await connection.query(OUTGOING_SQL, [
-				config.database,
-				tableName
-			]);
-			const [incoming] = await connection.query(INCOMING_SQL, [
-				config.database,
-				tableName
-			]);
+			const [outgoing] = await connection.query<ForeignKeyRow[]>(
+				OUTGOING_SQL,
+				[database, tableName]
+			);
+			const [incoming] = await connection.query<ForeignKeyRow[]>(
+				INCOMING_SQL,
+				[database, tableName]
+			);
 
 			const foreignKeys = [
-				...outgoing.map((fk: any) => ({ ...fk, type: 'outgoing' })),
-				...incoming.map((fk: any) => ({ ...fk, type: 'incoming' }))
+				...outgoing.map((fk) => ({ ...fk, type: 'outgoing' as const })),
+				...incoming.map((fk) => ({ ...fk, type: 'incoming' as const }))
 			];
 
-			const [indexes] = await connection.query(TABLE_INDEXES_SQL, [
-				config.database,
-				tableName
-			]);
+			const [indexes] = await connection.query<IndexRow[]>(
+				TABLE_INDEXES_SQL,
+				[database, tableName]
+			);
 
-			indexes.forEach((index: any) => {
+			indexes.forEach((index) => {
 				if (index.columns && typeof index.columns === 'string') {
-					index.columns = index.columns.split(',');
-				} else {
-					index.columns = [];
+					(index.columns as unknown) = (
+						index.columns as string
+					).split(',');
+				} else if (!index.columns) {
+					(index.columns as unknown) = [];
 				}
 
 				if (index.name === 'PRIMARY') {
@@ -721,10 +859,11 @@ async function getDatabaseSchemaForAIHandler(_: any, config: MysqlConnection) {
 			success: true,
 			databaseSchema
 		};
-	} catch (err: any) {
+	} catch (err) {
+		const errorMessage = err instanceof Error ? err.message : String(err);
 		return {
 			success: false,
-			message: err.message || 'Error fetching database schema',
+			message: errorMessage || 'Error fetching database schema',
 			databaseSchema: { tables: [] }
 		};
 	} finally {
@@ -732,7 +871,7 @@ async function getDatabaseSchemaForAIHandler(_: any, config: MysqlConnection) {
 	}
 }
 
-function registerTablesHandlers() {
+function registerTablesHandlers(): void {
 	ipcMain.handle('list-tables', listTablesHandler);
 	ipcMain.handle('get-table-record-count', getTableRecordCountHandler);
 	ipcMain.handle('drop-tables', dropTablesHandler);
