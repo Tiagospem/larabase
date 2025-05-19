@@ -36,6 +36,7 @@ export default [
 		rules: {
 			// disable core rule to allow plugin to handle it
 			'no-unused-vars': 'off',
+			'no-throw-literal': 'off',
 			'unused-imports/no-unused-imports': 'error',
 			'unused-imports/no-unused-vars': [
 				'warn',
