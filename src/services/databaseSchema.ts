@@ -50,7 +50,7 @@ const databaseSchema = ref<DatabaseSchema | null>(null);
 const isLoading = ref(false);
 const error = ref<string | null>(null);
 
-export const useDatabaseSchema = () => {
+export const useDatabaseSchema = (isRemote: boolean = false) => {
 	const connectionsStore = useConnectionsStore();
 	const projectStore = useProjectStore();
 
@@ -172,6 +172,8 @@ export const useDatabaseSchema = () => {
 	};
 
 	onMounted(async () => {
+		if (isRemote) return;
+
 		await initializeSchema();
 	});
 
