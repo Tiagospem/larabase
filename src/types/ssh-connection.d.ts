@@ -15,5 +15,5 @@ export interface SshConnection {
 
 export interface AppConnection {
 	localDbConfig: MysqlConnection;
-	remote: SshConnection;
+	remote?: SshConnection;
 }

@@ -12,7 +12,7 @@ import {
 	getConnectionTypeIcon
 } from '@/types/connection-types';
 import SshConnectionForm from '@/components/home/SshConnectionForm.vue';
-import { SshConnection } from '@/types/ssh-connection';
+import { AppConnection, SshConnection } from '@/types/ssh-connection';
 
 const connectionsStore = useConnectionsStore();
 
@@ -155,13 +155,14 @@ async function saveNewConnection() {
 			showAlert('Testing database connection...', 'info');
 
 			if (newConnection.value.dbConfig) {
-				testResult = await window.ipcRenderer.testMySQLConnection({
-					host: newConnection.value.dbConfig.host,
-					port: newConnection.value.dbConfig.port,
-					user: newConnection.value.dbConfig.user,
-					password: newConnection.value.dbConfig.password,
-					database: newConnection.value.dbConfig.database
-				});
+				const AppConnection = {
+					localDbConfig: {
+						...newConnection.value.dbConfig
+					}
+				} as AppConnection;
+
+				testResult =
+					await window.ipcRenderer.testMySQLConnection(AppConnection);
 			}
 		}
 

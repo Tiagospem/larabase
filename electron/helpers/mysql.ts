@@ -217,7 +217,6 @@ async function testConnection(
 	} catch (err) {
 		console.error('Error testing MySQL connection:', err);
 
-		// Tratar o erro como um MysqlError para acessar a propriedade code
 		const mysqlErr = err as MysqlError;
 		const errorCode = mysqlErr.code || '';
 
