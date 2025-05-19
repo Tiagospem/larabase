@@ -51,7 +51,10 @@ export interface ExplainResult {
 	error?: string;
 }
 
-export function useSQLEditor(props: { modelValue: string }, emit: EmitFn) {
+export function useSQLEditor(
+	props: { modelValue: string; isRemoteConnection: boolean },
+	emit: EmitFn
+) {
 	const container = ref<HTMLDivElement | null>(null);
 	let editor: monaco.editor.IStandaloneCodeEditor | null = null;
 	let isUpdating = false;
@@ -59,7 +62,9 @@ export function useSQLEditor(props: { modelValue: string }, emit: EmitFn) {
 	const connectionsStore = useConnectionsStore();
 	const sqlResultsStore = useSqlResultsStore();
 	const aiService = AIService.getInstance();
-	const { databaseSchema, initializeSchema } = useDatabaseSchema();
+	const { databaseSchema, initializeSchema } = useDatabaseSchema(
+		props.isRemoteConnection
+	);
 
 	const isFixingSQL = ref(false);
 	const showProcessingOverlay = ref(false);
@@ -434,75 +439,83 @@ export function useSQLEditor(props: { modelValue: string }, emit: EmitFn) {
 			}
 		});
 
-		editor.addAction({
-			id: 'explain-sql',
-			label: 'Explain SQL',
-			keybindings: [monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyE],
-			contextMenuGroupId: 'navigation',
-			contextMenuOrder: 1.3,
-			run: async function (ed) {
-				const selectedText = getEditorSelectedText(ed);
+		if (!props.isRemoteConnection) {
+			editor.addAction({
+				id: 'explain-sql',
+				label: 'Explain SQL',
+				keybindings: [monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyE],
+				contextMenuGroupId: 'navigation',
+				contextMenuOrder: 1.3,
+				run: async function (ed) {
+					const selectedText = getEditorSelectedText(ed);
 
-				if (selectedText.trim()) {
-					const query = selectedText.trim();
-					const project = connectionsStore.getSelectedProject;
+					if (selectedText.trim()) {
+						const query = selectedText.trim();
+						const project = connectionsStore.getSelectedProject;
 
-					if (project) {
-						explainResult.value = {
-							rawExplain: [],
-							queryToExplain: query,
-							isExplaining: true
-						};
+						if (project) {
+							explainResult.value = {
+								rawExplain: [],
+								queryToExplain: query,
+								isExplaining: true
+							};
 
-						emit('explain-sql', { ...explainResult.value });
+							emit('explain-sql', { ...explainResult.value });
 
-						try {
-							const AppConnection = createAppConnection(project);
+							try {
+								const AppConnection =
+									createAppConnection(project);
 
-							const result =
-								await window.ipcRenderer.executeExplainSql(
-									AppConnection,
-									query
+								const result =
+									await window.ipcRenderer.executeExplainSql(
+										AppConnection,
+										query
+									);
+
+								if (result && result.success) {
+									explainResult.value = {
+										rawExplain:
+											result.explainResults as ExplainRow[],
+										queryToExplain: query,
+										isExplaining: false,
+										jsonExplain:
+											result.jsonExplain as JsonExplainPlan
+									};
+
+									emit('explain-sql', {
+										...explainResult.value
+									});
+								} else {
+									const errorMsg =
+										result && result.error
+											? result.error
+											: 'Unknown SQL error occurred';
+									console.error(
+										'Explain SQL Error:',
+										errorMsg
+									);
+									explainResult.value.isExplaining = false;
+									emit('explain-sql', {
+										...explainResult.value,
+										error: `Error executing EXPLAIN: ${errorMsg}`
+									});
+								}
+							} catch (error) {
+								const errorMessage = handleError(
+									error,
+									'Exception explaining SQL'
 								);
-
-							if (result && result.success) {
-								explainResult.value = {
-									rawExplain:
-										result.explainResults as ExplainRow[],
-									queryToExplain: query,
-									isExplaining: false,
-									jsonExplain:
-										result.jsonExplain as JsonExplainPlan
-								};
-
-								emit('explain-sql', { ...explainResult.value });
-							} else {
-								const errorMsg =
-									result && result.error
-										? result.error
-										: 'Unknown SQL error occurred';
-								console.error('Explain SQL Error:', errorMsg);
 								explainResult.value.isExplaining = false;
 								emit('explain-sql', {
 									...explainResult.value,
-									error: `Error executing EXPLAIN: ${errorMsg}`
+									error: `Error: ${errorMessage}`
 								});
 							}
-						} catch (error) {
-							const errorMessage = handleError(
-								error,
-								'Exception explaining SQL'
-							);
-							explainResult.value.isExplaining = false;
-							emit('explain-sql', {
-								...explainResult.value,
-								error: `Error: ${errorMessage}`
-							});
 						}
 					}
 				}
-			}
-		});
+			});
+		}
 
 		editor.addAction({
 			id: 'beautify-sql',
@@ -706,7 +719,10 @@ export function useSQLEditor(props: { modelValue: string }, emit: EmitFn) {
 
 	onMounted(() => {
 		setTimeout(async () => {
-			await initializeSchema();
+			if (!props.isRemoteConnection) {
+				await initializeSchema();
+			}
+
 			createEditor();
 		}, 50);
 		window.addEventListener('resize', handleResize);
