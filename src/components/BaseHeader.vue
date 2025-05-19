@@ -13,6 +13,10 @@ const props = defineProps({
 	project: {
 		type: Object as () => ProjectConnection | null,
 		default: null
+	},
+	isRemoteConnection: {
+		type: Boolean,
+		default: false
 	}
 });
 
