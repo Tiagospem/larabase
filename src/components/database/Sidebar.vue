@@ -5,7 +5,6 @@ import { useConnectionsStore } from '@/store/connections';
 import { useTabsStore } from '@/store/tabs';
 import type { ModelInfo, ProjectConnection } from '@/types/project';
 import Modal from '@/components/Modal.vue';
-import { MysqlConnection } from '@/types/mysql-connection';
 import TableListSkeleton from '@/components/TableListSkeleton.vue';
 import { Table } from '@/types/table';
 import { AppConnection } from '@/types/ssh-connection';
