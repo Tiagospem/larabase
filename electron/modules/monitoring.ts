@@ -1,7 +1,7 @@
 import { BrowserWindow, ipcMain } from 'electron';
-import { MysqlConnection } from '../../src/types/mysql-connection';
 import { createConnection, safeEndConnection } from '../helpers/mysql';
 import { RowDataPacket, PoolConnection } from 'mysql2/promise';
+import { AppConnection } from '../../src/types/ssh-connection';
 
 interface ColumnRow extends RowDataPacket {
 	column_name: string;
@@ -11,6 +11,11 @@ interface ColumnRow extends RowDataPacket {
 interface TableRow extends RowDataPacket {
 	table_name: string;
 	TABLE_NAME: string;
+}
+
+interface TriggerRow extends RowDataPacket {
+	trigger_name?: string;
+	TRIGGER_NAME?: string;
 }
 
 interface ActivityLogRow extends RowDataPacket {
@@ -33,6 +38,7 @@ const state = {
 	monitoredDatabases: new Map<string, string>()
 };
 
+// noinspection SqlResolve
 const SQL = {
 	CREATE_ACTIVITY_LOG: `
     CREATE TABLE IF NOT EXISTS ${ACTIVITY_LOG_TABLE} (
@@ -94,10 +100,11 @@ const SQL = {
     LIMIT ?
   `,
 	GET_NEW_ACTIVITY: `
-    SELECT * FROM ${ACTIVITY_LOG_TABLE}
-    WHERE id > ?
-    ORDER BY id ASC
-  `,
+		SELECT *
+		FROM ${ACTIVITY_LOG_TABLE}
+		WHERE id > ?
+		ORDER BY id
+	`,
 	TRUNCATE_ACTIVITY_LOG: `TRUNCATE TABLE ${ACTIVITY_LOG_TABLE}`,
 	CHECK_TABLE_EXISTS: `
     SELECT 1 
@@ -121,8 +128,11 @@ async function dropTableTriggers(
 	for (const trigger of triggers) {
 		try {
 			await connection.query(`DROP TRIGGER IF EXISTS ${trigger}`);
-		} catch (error) {
-			console.error(`Error dropping trigger ${trigger}`);
+		} catch (error: unknown) {
+			console.error(
+				`Error dropping trigger ${trigger}`,
+				error instanceof Error ? error.message : ''
+			);
 		}
 	}
 }
@@ -138,7 +148,7 @@ async function findAndDropAllTriggers(
 		);
 
 		if (triggersResult && Array.isArray(triggersResult)) {
-			for (const row of triggersResult as any[]) {
+			for (const row of triggersResult as TriggerRow[]) {
 				const triggerName = row.trigger_name || row.TRIGGER_NAME;
 				await connection.query(`DROP TRIGGER IF EXISTS ${triggerName}`);
 			}
@@ -151,21 +161,27 @@ async function findAndDropAllTriggers(
 			);
 
 			if (refTriggers && Array.isArray(refTriggers)) {
-				for (const row of refTriggers as any[]) {
+				for (const row of refTriggers as TriggerRow[]) {
 					const triggerName = row.TRIGGER_NAME || row.trigger_name;
 					await connection.query(
 						`DROP TRIGGER IF EXISTS ${triggerName}`
 					);
 				}
 			}
-		} catch (error) {
+		} catch (error: unknown) {
 			console.error(
-				`Error dropping triggers referencing ${ACTIVITY_LOG_TABLE}`
+				`Error dropping triggers referencing ${ACTIVITY_LOG_TABLE}`,
+				error instanceof Error ? error.message : ''
 			);
 		}
 
 		return true;
-	} catch (error) {
+	} catch (error: unknown) {
+		console.error(
+			`Error dropping triggers for ${database}`,
+			error instanceof Error ? error.message : ''
+		);
+
 		return false;
 	}
 }
@@ -195,8 +211,11 @@ async function createTableTriggers(
 				const firstColumn = firstColumnResult[0] as ColumnRow;
 				idColumn = firstColumn.column_name || firstColumn.COLUMN_NAME;
 			}
-		} catch (error) {
-			console.error(`Error getting first column for ${tableName}`);
+		} catch (error: unknown) {
+			console.error(
+				`Error getting first column for ${tableName}`,
+				error instanceof Error ? error.message : ''
+			);
 		}
 	}
 
@@ -293,8 +312,11 @@ async function createTableTriggers(
 		}
 
 		return true;
-	} catch (error) {
-		console.error(`Error creating triggers for ${tableName}`);
+	} catch (error: unknown) {
+		console.error(
+			`Error creating triggers for ${tableName}`,
+			error instanceof Error ? error.message : ''
+		);
 		return false;
 	}
 }
@@ -303,7 +325,12 @@ async function dropMonitoringTable(connection: PoolConnection) {
 	try {
 		await connection.query(SQL.DROP_ACTIVITY_LOG);
 		return true;
-	} catch (error) {
+	} catch (error: unknown) {
+		console.error(
+			'Error dropping monitoring table',
+			error instanceof Error ? error.message : ''
+		);
+
 		return false;
 	}
 }
@@ -312,7 +339,12 @@ async function clearActivityLog(connection: PoolConnection) {
 	try {
 		await connection.query(SQL.TRUNCATE_ACTIVITY_LOG);
 		return true;
-	} catch (error) {
+	} catch (error: unknown) {
+		console.error(
+			'Error clearing activity log',
+			error instanceof Error ? error.message : ''
+		);
+
 		return false;
 	}
 }
@@ -367,7 +399,7 @@ function startPolling(
 					);
 				}
 			}
-		} catch (error) {
+		} catch (error: unknown) {
 			console.error(`Error polling for new activities: ${error}`);
 			state.lastSeenIds.set(connectionId, 0);
 			stopPolling(connectionId);
@@ -419,7 +451,11 @@ async function cleanupMonitoring(connectionId: string) {
 			}
 
 			return true;
-		} catch (error) {
+		} catch (error: unknown) {
+			console.error(
+				`Error cleaning up monitoring for ${connectionId}`,
+				error instanceof Error ? error.message : ''
+			);
 			return false;
 		}
 	}
@@ -463,22 +499,26 @@ export function registerMonitoringHandlers(mainWindow: BrowserWindow) {
 			_,
 			config: {
 				connectionId: string;
-				dbConnection: MysqlConnection;
+				appConnection: AppConnection;
 				clearHistory: boolean;
 			}
 		) => {
-			const { connectionId, dbConnection, clearHistory = false } = config;
+			const {
+				connectionId,
+				appConnection,
+				clearHistory = false
+			} = config;
 
 			if (state.connections.has(connectionId)) {
 				await cleanupMonitoring(connectionId);
 			}
 
 			try {
-				const connection = await createConnection(dbConnection);
+				const connection = await createConnection(appConnection);
 				state.connections.set(connectionId, connection);
 				state.monitoredDatabases.set(
 					connectionId,
-					dbConnection.database
+					appConnection.localDbConfig.database
 				);
 				registerConnectionWithWindow(mainWindow.id, connectionId);
 
@@ -488,7 +528,7 @@ export function registerMonitoringHandlers(mainWindow: BrowserWindow) {
 				}
 
 				const [tablesResult] = await connection.query(SQL.GET_TABLES, [
-					dbConnection.database,
+					appConnection.localDbConfig.database,
 					ACTIVITY_LOG_TABLE
 				]);
 
@@ -497,7 +537,7 @@ export function registerMonitoringHandlers(mainWindow: BrowserWindow) {
 						const tableName = table.table_name || table.TABLE_NAME;
 						const [primaryKeyResult] = await connection.query(
 							SQL.CHECK_PRIMARY_KEY,
-							[dbConnection.database, tableName]
+							[appConnection.localDbConfig.database, tableName]
 						);
 
 						const primaryKeyColumn =
@@ -511,7 +551,7 @@ export function registerMonitoringHandlers(mainWindow: BrowserWindow) {
 
 						await createTableTriggers(
 							connection,
-							dbConnection.database,
+							appConnection.localDbConfig.database,
 							tableName,
 							primaryKeyColumn
 						);
@@ -521,7 +561,10 @@ export function registerMonitoringHandlers(mainWindow: BrowserWindow) {
 				try {
 					const [tableExists] = await connection.query(
 						SQL.CHECK_TABLE_EXISTS,
-						[dbConnection.database, ACTIVITY_LOG_TABLE]
+						[
+							appConnection.localDbConfig.database,
+							ACTIVITY_LOG_TABLE
+						]
 					);
 
 					if (Array.isArray(tableExists) && tableExists.length > 0) {
@@ -550,7 +593,12 @@ export function registerMonitoringHandlers(mainWindow: BrowserWindow) {
 					} else {
 						state.lastSeenIds.set(connectionId, 0);
 					}
-				} catch (error) {
+				} catch (error: unknown) {
+					console.error(
+						`Error checking if ${ACTIVITY_LOG_TABLE} exists`,
+						error instanceof Error ? error.message : ''
+					);
+
 					state.lastSeenIds.set(connectionId, 0);
 				}
 
@@ -559,10 +607,13 @@ export function registerMonitoringHandlers(mainWindow: BrowserWindow) {
 					success: true,
 					message: 'Monitoring started successfully'
 				};
-			} catch (error: any) {
+			} catch (error: unknown) {
 				return {
 					success: false,
-					message: error.message || 'Failed to start monitoring'
+					message:
+						error instanceof Error
+							? error.message
+							: 'Failed to start monitoring'
 				};
 			}
 		}
@@ -572,10 +623,13 @@ export function registerMonitoringHandlers(mainWindow: BrowserWindow) {
 		try {
 			await cleanupMonitoring(connectionId);
 			return { success: true, message: 'Monitoring stopped' };
-		} catch (error: any) {
+		} catch (error: unknown) {
 			return {
 				success: false,
-				message: error.message || 'Failed to stop monitoring'
+				message:
+					error instanceof Error
+						? error.message
+						: 'Failed to stop monitoring'
 			};
 		}
 	});
@@ -593,7 +647,12 @@ export function registerMonitoringHandlers(mainWindow: BrowserWindow) {
 
 			try {
 				await connection.query('SELECT 1');
-			} catch (pingError) {
+			} catch (error: unknown) {
+				console.error(
+					`Error checking connection status for ${connectionId}`,
+					error instanceof Error ? error.message : ''
+				);
+
 				state.connections.delete(connectionId);
 				return {
 					success: false,
@@ -616,10 +675,13 @@ export function registerMonitoringHandlers(mainWindow: BrowserWindow) {
 					message: 'Failed to clear activity history'
 				};
 			}
-		} catch (error: any) {
+		} catch (error: unknown) {
 			return {
 				success: false,
-				message: error.message || 'Failed to clear history'
+				message:
+					error instanceof Error
+						? error.message
+						: 'Failed to clear activity history'
 			};
 		}
 	});
