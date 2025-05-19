@@ -2,7 +2,7 @@ import mysql, {
 	ConnectionOptions,
 	Pool,
 	PoolConnection,
-	RowDataPacket,
+	RowDataPacket
 } from 'mysql2/promise';
 import { createTunnel, closeTunnel } from './ssh';
 import { AppConnection } from '../../src/types/ssh-connection';
