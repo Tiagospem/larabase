@@ -7,7 +7,7 @@ export const useProjectStore = defineStore('project', () => {
 	const models = ref<Models>({ models: [], success: false });
 
 	const targetDatabase = computed(
-		() => selectedProject.value?.dbConfig.database || ''
+		() => selectedProject.value?.dbConfig?.database
 	);
 
 	const state = reactive({
