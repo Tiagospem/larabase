@@ -5,6 +5,7 @@ import { useConnectionsStore } from '@/store/connections';
 import { ConnectionType } from '@/types/connection-types';
 import Modal from '@/components/Modal.vue';
 import { LogEntry } from '@/types/project';
+import { SshConnection } from '@/types/ssh-connection';
 
 const emit = defineEmits(['close']);
 const logsStore = useProjectLogsStore();
@@ -223,7 +224,9 @@ onMounted(async () => {
 	if (selectedProject) {
 		try {
 			if (isSSHConnection.value) {
-				await logsStore.loadRemoteLogFiles(selectedProject.sshConfig);
+				await logsStore.loadRemoteLogFiles(
+					selectedProject.sshConfig as SshConnection
+				);
 			} else if (selectedProject.projectPath) {
 				await logsStore.loadLogFiles();
 			} else {
