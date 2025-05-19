@@ -23,8 +23,6 @@ function validateParams(config: AppConnection): void {
 		throw new Error('Connection configuration is missing');
 	}
 
-	console.log('Validating config:', JSON.stringify(config, null, 2));
-
 	if (config.remote) {
 		const remoteConfig = config.remote.remoteDbConfig;
 
