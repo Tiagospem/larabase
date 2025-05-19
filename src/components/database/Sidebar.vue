@@ -8,6 +8,7 @@ import Modal from '@/components/Modal.vue';
 import { MysqlConnection } from '@/types/mysql-connection';
 import TableListSkeleton from '@/components/TableListSkeleton.vue';
 import { Table } from '@/types/table';
+import { AppConnection } from '@/types/ssh-connection';
 
 const showAlert = inject<(message: string, type: string) => void>('showAlert')!;
 
@@ -93,11 +94,16 @@ async function dropTables() {
 	const mappedTableNames = tablesToDelete.map((table) => table.name);
 
 	try {
+		const project = selectedProject.value as ProjectConnection;
+
+		const AppConnection = {
+			localDbConfig: toRaw(project.dbConfig),
+			remote: toRaw(project.sshConfig)
+		} as AppConnection;
+
 		const params = {
 			projectId: selectedProject.value?.id as string,
-			dbConnection: toRaw(
-				selectedProject.value?.dbConfig
-			) as MysqlConnection,
+			appConnection: AppConnection,
 			tables: mappedTableNames,
 			ignoreForeignKeys: Boolean(ignoreForeignKeys.value),
 			cascade: Boolean(cascadeDelete.value)
@@ -153,7 +159,7 @@ watch(
 
 watchEffect(() => {
 	const project = selectedProject.value;
-	if (project) {
+	if (project && !project.isRemote) {
 		setTimeout(async () => {
 			try {
 				await sidebarStore.updateApproximateTableCounts(project);
