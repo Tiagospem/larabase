@@ -6,18 +6,48 @@ import { useSqlResultsStore } from '@/store/sqlResults';
 import { AIService } from '@/services/aiService';
 import { toRaw } from 'vue';
 import { useDatabaseSchema } from '@/services/databaseSchema';
+import { AppConnection } from '@/types/ssh-connection';
+import { ProjectConnection } from '@/types/project';
 
-type EmitFn = (
-	event: 'update:modelValue' | 'processing-state' | 'explain-sql',
-	...args: any[]
+type EmitEvents = {
+	'update:modelValue': [string];
+	'processing-state': [boolean];
+	'explain-sql': [ExplainResult];
+};
+
+type EmitFn = <E extends keyof EmitEvents>(
+	event: E,
+	...args: EmitEvents[E]
 ) => void;
 
+interface ExplainRow {
+	id: number;
+	select_type?: string;
+	table?: string;
+	partitions?: string | null;
+	type?: string;
+	possible_keys?: string | null;
+	key?: string | null;
+	key_len?: string | null;
+	ref?: string | null;
+	rows?: number;
+	filtered?: number;
+	Extra?: string;
+	[key: string]: unknown;
+}
+
+interface JsonExplainPlan {
+	query_block?: Record<string, unknown>;
+	steps?: Array<Record<string, unknown>>;
+	[key: string]: unknown;
+}
+
 export interface ExplainResult {
-	rawExplain: any[];
+	rawExplain: ExplainRow[];
 	queryToExplain: string;
 	isExplaining: boolean;
 	aiAnalysis?: string;
-	jsonExplain?: any;
+	jsonExplain?: JsonExplainPlan;
 	error?: string;
 }
 
@@ -29,8 +59,7 @@ export function useSQLEditor(props: { modelValue: string }, emit: EmitFn) {
 	const connectionsStore = useConnectionsStore();
 	const sqlResultsStore = useSqlResultsStore();
 	const aiService = AIService.getInstance();
-	const { databaseSchema, fetchDatabaseSchema, initializeSchema } =
-		useDatabaseSchema();
+	const { databaseSchema, initializeSchema } = useDatabaseSchema();
 
 	const isFixingSQL = ref(false);
 	const showProcessingOverlay = ref(false);
@@ -205,7 +234,7 @@ export function useSQLEditor(props: { modelValue: string }, emit: EmitFn) {
 							kind: monaco.languages.CompletionItemKind.Keyword,
 							insertText: keyword,
 							detail: 'Keyword',
-							sortText: '9' + keyword, // Lower priority than tables/columns
+							sortText: '9' + keyword,
 							range: {
 								startLineNumber: position.lineNumber,
 								endLineNumber: position.lineNumber,
@@ -289,6 +318,35 @@ export function useSQLEditor(props: { modelValue: string }, emit: EmitFn) {
 		});
 	};
 
+	const getEditorSelectedText = (ed: monaco.editor.ICodeEditor): string => {
+		const selection = ed.getSelection();
+		let selectedText = '';
+
+		if (selection && !selection.isEmpty()) {
+			selectedText = ed.getModel()?.getValueInRange(selection) || '';
+		} else {
+			const position = ed.getPosition();
+			if (position) {
+				const lineNumber = position.lineNumber;
+				selectedText = ed.getModel()?.getLineContent(lineNumber) || '';
+			}
+		}
+
+		return selectedText;
+	};
+
+	const createAppConnection = (project: ProjectConnection): AppConnection => {
+		return {
+			localDbConfig: toRaw(project.dbConfig),
+			remote: toRaw(project.sshConfig)
+		} as AppConnection;
+	};
+
+	const handleError = (error: unknown, prefix: string): string => {
+		console.error(`${prefix}:`, error);
+		return error instanceof Error ? error.message : String(error);
+	};
+
 	const createEditor = () => {
 		if (!container.value) return;
 		if (editor) return;
@@ -327,31 +385,19 @@ export function useSQLEditor(props: { modelValue: string }, emit: EmitFn) {
 			contextMenuGroupId: 'navigation',
 			contextMenuOrder: 1.5,
 			run: async function (ed) {
-				const selection = ed.getSelection();
-				let selectedText = '';
-
-				if (selection && !selection.isEmpty()) {
-					selectedText =
-						ed.getModel()?.getValueInRange(selection) || '';
-				} else {
-					const position = ed.getPosition();
-					if (position) {
-						const lineNumber = position.lineNumber;
-						selectedText =
-							ed.getModel()?.getLineContent(lineNumber) || '';
-					}
-				}
+				const selectedText = getEditorSelectedText(ed);
 
 				if (selectedText.trim()) {
-					const projectConfig =
-						connectionsStore.getSelectedProject?.db_config;
-					if (projectConfig) {
+					const projects = connectionsStore.getSelectedProject;
+					if (projects) {
 						sqlResultsStore.isLoading = true;
 						const startTime = Date.now();
 						try {
+							const AppConnection = createAppConnection(projects);
+
 							const result =
 								await window.ipcRenderer.executeSqlQuery(
-									toRaw(projectConfig),
+									AppConnection,
 									selectedText.trim()
 								);
 
@@ -375,12 +421,11 @@ export function useSQLEditor(props: { modelValue: string }, emit: EmitFn) {
 								);
 							}
 						} catch (error) {
-							console.error('Exception executing SQL:', error);
-							sqlResultsStore.setError(
-								error instanceof Error
-									? error.message
-									: 'Error executing SQL query'
+							const errorMessage = handleError(
+								error,
+								'Exception executing SQL'
 							);
+							sqlResultsStore.setError(errorMessage);
 						} finally {
 							sqlResultsStore.isLoading = false;
 						}
@@ -396,27 +441,13 @@ export function useSQLEditor(props: { modelValue: string }, emit: EmitFn) {
 			contextMenuGroupId: 'navigation',
 			contextMenuOrder: 1.3,
 			run: async function (ed) {
-				const selection = ed.getSelection();
-				let selectedText = '';
-
-				if (selection && !selection.isEmpty()) {
-					selectedText =
-						ed.getModel()?.getValueInRange(selection) || '';
-				} else {
-					const position = ed.getPosition();
-					if (position) {
-						const lineNumber = position.lineNumber;
-						selectedText =
-							ed.getModel()?.getLineContent(lineNumber) || '';
-					}
-				}
+				const selectedText = getEditorSelectedText(ed);
 
 				if (selectedText.trim()) {
 					const query = selectedText.trim();
-					const projectConfig =
-						connectionsStore.getSelectedProject?.db_config;
+					const project = connectionsStore.getSelectedProject;
 
-					if (projectConfig) {
+					if (project) {
 						explainResult.value = {
 							rawExplain: [],
 							queryToExplain: query,
@@ -426,18 +457,22 @@ export function useSQLEditor(props: { modelValue: string }, emit: EmitFn) {
 						emit('explain-sql', { ...explainResult.value });
 
 						try {
+							const AppConnection = createAppConnection(project);
+
 							const result =
 								await window.ipcRenderer.executeExplainSql(
-									toRaw(projectConfig),
+									AppConnection,
 									query
 								);
 
 							if (result && result.success) {
 								explainResult.value = {
-									rawExplain: result.explainResults,
+									rawExplain:
+										result.explainResults as ExplainRow[],
 									queryToExplain: query,
 									isExplaining: false,
-									jsonExplain: result.jsonExplain
+									jsonExplain:
+										result.jsonExplain as JsonExplainPlan
 								};
 
 								emit('explain-sql', { ...explainResult.value });
@@ -454,11 +489,14 @@ export function useSQLEditor(props: { modelValue: string }, emit: EmitFn) {
 								});
 							}
 						} catch (error) {
-							console.error('Exception explaining SQL:', error);
+							const errorMessage = handleError(
+								error,
+								'Exception explaining SQL'
+							);
 							explainResult.value.isExplaining = false;
 							emit('explain-sql', {
 								...explainResult.value,
-								error: `Error: ${error instanceof Error ? error.message : String(error)}`
+								error: `Error: ${errorMessage}`
 							});
 						}
 					}
@@ -475,7 +513,7 @@ export function useSQLEditor(props: { modelValue: string }, emit: EmitFn) {
 			run: function (ed) {
 				try {
 					const selection = ed.getSelection();
-					let text = '';
+					let text: string;
 					let formattedText = '';
 					let range;
 
@@ -516,7 +554,13 @@ export function useSQLEditor(props: { modelValue: string }, emit: EmitFn) {
 							}
 						]);
 					}
-				} catch (error) {}
+				} catch (error: unknown) {
+					const errorMessage = handleError(
+						error,
+						'Error beautifying SQL'
+					);
+					alert('Error beautifying SQL: ' + errorMessage);
+				}
 			}
 		});
 
@@ -564,14 +608,12 @@ export function useSQLEditor(props: { modelValue: string }, emit: EmitFn) {
 								}
 							]);
 						}
-					} catch (error) {
-						console.error('Exception fixing SQL:', error);
-						alert(
-							'Error fixing SQL: ' +
-								(error instanceof Error
-									? error.message
-									: String(error))
+					} catch (error: unknown) {
+						const errorMessage = handleError(
+							error,
+							'Exception fixing SQL'
 						);
+						alert('Error fixing SQL: ' + errorMessage);
 					} finally {
 						isFixingSQL.value = false;
 						showProcessingOverlay.value = false;
@@ -644,12 +686,7 @@ export function useSQLEditor(props: { modelValue: string }, emit: EmitFn) {
 
 	const getSelectedText = (): string => {
 		if (!editor) return '';
-
-		const selection = editor.getSelection();
-		if (selection && !selection.isEmpty()) {
-			return editor.getModel()?.getValueInRange(selection) || '';
-		}
-		return editor.getValue();
+		return getEditorSelectedText(editor);
 	};
 
 	const saveAsScratch = () => {
