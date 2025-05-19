@@ -2,25 +2,21 @@ import { ipcMain } from 'electron';
 import * as path from 'path';
 import {
 	testConnection,
-	createConnection,
 	closeConnection,
 	executeCommand,
 	readRemoteFile,
 	writeRemoteFile,
 	listRemoteFiles,
-	// New tunnel functions
 	createTunnel,
 	closeTunnel
 } from '../helpers/ssh';
 import { SshConnection } from '../../src/types/ssh-connection';
 
 function registerSshHandlers() {
-	// Test SSH connection
 	ipcMain.handle('ssh:test-connection', async (_, config: SshConnection) => {
 		return await testConnection(config);
 	});
 
-	// Execute a command on the remote server
 	ipcMain.handle(
 		'ssh:execute-command',
 		async (_, config: SshConnection, command: string) => {
@@ -28,7 +24,6 @@ function registerSshHandlers() {
 		}
 	);
 
-	// Read a file from the remote server
 	ipcMain.handle(
 		'ssh:read-file',
 		async (_, config: SshConnection, filePath: string) => {
@@ -47,7 +42,6 @@ function registerSshHandlers() {
 		}
 	);
 
-	// Write a file to the remote server
 	ipcMain.handle(
 		'ssh:write-file',
 		async (_, config: SshConnection, filePath: string, content: string) => {
@@ -66,7 +60,6 @@ function registerSshHandlers() {
 		}
 	);
 
-	// List files in a directory on the remote server
 	ipcMain.handle(
 		'ssh:list-files',
 		async (_, config: SshConnection, dirPath: string) => {
@@ -85,7 +78,6 @@ function registerSshHandlers() {
 		}
 	);
 
-	// Get Laravel environment variables
 	ipcMain.handle('ssh:get-env', async (_, config: SshConnection) => {
 		try {
 			const envPath = path.join(config.remotePath, '.env');
@@ -103,7 +95,6 @@ function registerSshHandlers() {
 		}
 	});
 
-	// Update Laravel environment variables
 	ipcMain.handle(
 		'ssh:update-env',
 		async (_, config: SshConnection, content: string) => {
@@ -124,13 +115,11 @@ function registerSshHandlers() {
 		}
 	);
 
-	// Close SSH connection
 	ipcMain.handle('ssh:close-connection', (_, config: SshConnection) => {
 		closeConnection(config);
 		return { success: true };
 	});
 
-	// Create an SSH tunnel
 	ipcMain.handle(
 		'ssh:create-tunnel',
 		async (
@@ -164,7 +153,6 @@ function registerSshHandlers() {
 		}
 	);
 
-	// Close an SSH tunnel
 	ipcMain.handle('ssh:close-tunnel', (_, tunnelId: string) => {
 		const success = closeTunnel(tunnelId);
 		return { success };
