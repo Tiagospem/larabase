@@ -18,7 +18,7 @@ import { registerSqlExecutorHandlers } from '../modules/sql-executor';
 import { registerUpdaterHandlers, cleanup } from '../modules/updater';
 import { registerSshHandlers } from '../modules/ssh';
 import { closeAllPools } from '../helpers/mysql';
-import { closeAllConnections } from '../helpers/ssh';
+import { closeAllConnections, closeAllTunnels } from '../helpers/ssh';
 
 let handlersRegistered = false;
 
@@ -111,6 +111,7 @@ app.on('window-all-closed', () => {
 		})
 		.finally(() => {
 			closeAllConnections();
+			closeAllTunnels();
 
 			if (process.platform === 'darwin') app.quit();
 		});
