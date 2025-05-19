@@ -5,11 +5,34 @@ import { FitAddon } from '@xterm/addon-fit';
 import '@xterm/xterm/css/xterm.css';
 import { useConnectionsStore } from '@/store/connections';
 import terminalService from '@/services/terminal';
+import { executeProjectCommand } from '@/services/remote-terminal-service';
+import { ConnectionType } from '@/types/connection-types';
 
 const connectionsStore = useConnectionsStore();
+const selectedProject = computed(() => connectionsStore.getSelectedProject);
+
+const isSSHConnection = computed(() => {
+	return selectedProject.value?.type === ConnectionType.SSH;
+});
+
+const sshConfig = computed(() => {
+	if (!selectedProject.value?.sshConfig) return null;
+
+	const config = selectedProject.value.sshConfig;
+
+	return sanitizeObject(config);
+});
+
 const projectPath = computed(() => {
-	const selectedProject = connectionsStore.getSelectedProject;
-	return selectedProject?.projectPath || '';
+	const selected = connectionsStore.getSelectedProject;
+	return selected?.projectPath || '';
+});
+
+const remotePath = computed(() => {
+	if (isSSHConnection.value && sshConfig.value) {
+		return sshConfig.value.remotePath || '/var/www/html';
+	}
+	return '';
 });
 
 const terminalElement = ref<HTMLElement | null>(null);
@@ -27,6 +50,10 @@ const larabaseAscii = `
 \\____/\\__,_/_/   \\__,_/_.___/\\__,_/____/\\___/ 
                                               
 `;
+
+function sanitizeObject<T>(obj: T): T {
+	return structuredClone(JSON.parse(JSON.stringify(obj)));
+}
 
 const toggleTerminal = () => {
 	isVisible.value = !isVisible.value;
@@ -51,7 +78,7 @@ const fitTerminal = () => {
 const executeCommand = async () => {
 	if (!commandInput.value.trim() || isCommandRunning.value) return;
 
-	if (commandInput.value.trim().startsWith('cd ')) {
+	if (commandInput.value.trim().startsWith('cd ') && !isSSHConnection.value) {
 		if (terminal.value) {
 			terminal.value.writeln(`$ ${commandInput.value}`);
 			terminal.value.writeln(
@@ -71,7 +98,48 @@ const executeCommand = async () => {
 		commandInput.value = '';
 
 		try {
-			if (window.ipcRenderer) {
+			if (isSSHConnection.value && sshConfig.value) {
+				terminal.value.writeln(
+					'\r\n\x1b[33mExecuting command via SSH...\x1b[0m'
+				);
+
+				try {
+					const cleanConfig = { ...sshConfig.value };
+
+					const result = await executeProjectCommand(
+						cleanConfig,
+						savedCommand
+					);
+
+					if (result.stdout) {
+						terminal.value.writeln(result.stdout);
+					}
+
+					if (result.stderr) {
+						terminal.value.writeln(
+							`\x1b[31m${result.stderr}\x1b[0m`
+						);
+					}
+
+					if (result.code !== 0) {
+						terminal.value.writeln(
+							`\r\n\x1b[31mCommand exited with code ${result.code}\x1b[0m`
+						);
+					} else {
+						terminal.value.writeln(
+							'\r\n\x1b[32mCommand completed successfully\x1b[0m'
+						);
+					}
+				} catch (error) {
+					console.error('SSH command error:', error);
+					terminal.value.writeln(
+						`\r\n\x1b[31mError executing command: ${error}\x1b[0m`
+					);
+				} finally {
+					isCommandRunning.value = false;
+					scrollToBottomOfTerminal();
+				}
+			} else if (window.ipcRenderer) {
 				window.ipcRenderer.on('terminal-stdout', (_event, data) => {
 					if (terminal.value && data) {
 						terminal.value.write(data);
@@ -141,12 +209,19 @@ const executeCommand = async () => {
 };
 
 const cancelCurrentCommand = () => {
-	if (isCommandRunning.value && window.ipcRenderer) {
-		window.ipcRenderer.cancel_terminal_process();
-		if (terminal.value) {
-			terminal.value.writeln(
-				'\r\n\x1b[33mCommand canceled by user\x1b[0m'
+	if (isCommandRunning.value) {
+		if (isSSHConnection.value) {
+			terminal.value?.writeln(
+				'\r\n\x1b[33mCannot cancel remote SSH commands\x1b[0m'
 			);
+			isCommandRunning.value = false;
+		} else if (window.ipcRenderer) {
+			window.ipcRenderer.cancel_terminal_process();
+			if (terminal.value) {
+				terminal.value.writeln(
+					'\r\n\x1b[33mCommand canceled by user\x1b[0m'
+				);
+			}
 		}
 	}
 };
@@ -197,9 +272,18 @@ onMounted(() => {
 		term.writeln(
 			'Terminal started. Type commands in the input field below.'
 		);
-		term.writeln(
-			`Working directory: ${projectPath.value || 'Application Root'}`
-		);
+
+		if (isSSHConnection.value && sshConfig.value) {
+			term.writeln(
+				`SSH connection: ${sshConfig.value.user}@${sshConfig.value.host}`
+			);
+			term.writeln(`Working directory: ${remotePath.value}`);
+		} else {
+			term.writeln(
+				`Working directory: ${projectPath.value || 'Application Root'}`
+			);
+		}
+
 		term.writeln(
 			'Commands will be displayed in real-time as they execute.'
 		);
