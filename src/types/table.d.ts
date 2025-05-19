@@ -1,4 +1,4 @@
-import { MysqlConnection } from './mysql-connection';
+import { AppConnection } from './ssh-connection';
 
 export interface Table {
 	name: string;
@@ -17,7 +17,7 @@ export interface TableList {
 
 export interface DropTableParams {
 	projectId: string;
-	dbConnection: MysqlConnection;
+	appConnection: AppConnection;
 	tables: string[];
 	ignoreForeignKeys: boolean;
 	cascade: boolean;
@@ -30,7 +30,7 @@ export interface TableRecord {
 	sortDirection?: string | null;
 	filter?: string;
 	tableName: string;
-	dbConnection: MysqlConnection;
+	appConnection: AppConnection;
 }
 
 export interface TableColumn {
@@ -39,14 +39,14 @@ export interface TableColumn {
 }
 
 export interface DeleteRowsConfig {
-	dbConnection: MysqlConnection;
+	appConnection: AppConnection;
 	tableName: string;
 	ids: (string | number)[];
 	ignoreForeignKeys: boolean;
 }
 
 export interface UpdateTableRecord {
-	dbConnection: MysqlConnection;
+	appConnection: AppConnection;
 	tableName: string;
 	data: Record<string, any>;
 	id: string | number;
