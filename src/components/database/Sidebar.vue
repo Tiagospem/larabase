@@ -254,6 +254,7 @@ watchEffect(() => {
 							</button>
 						</div>
 						<div
+							v-if="!selectedProject?.isRemote"
 							class="tooltip tooltip-right"
 							data-tip="Sort by records"
 						>
@@ -465,6 +466,7 @@ watchEffect(() => {
 							</div>
 
 							<span
+								v-if="!selectedProject?.isRemote"
 								class="badge badge-xs flex-shrink-0"
 								:class="{
 									'animate-pulse': table.isApproximate,
