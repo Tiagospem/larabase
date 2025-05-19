@@ -10,9 +10,9 @@ export interface ProjectConnection {
 	projectPath: string;
 	type: ConnectionType;
 	icon: string | undefined | null;
-	db_config?: MysqlConnection;
-	ssh_config?: SshConnection;
-	redis_config: RedisConnection;
+	dbConfig?: MysqlConnection;
+	sshConfig?: SshConnection;
+	redisConfig: RedisConnection;
 	usingSail: boolean;
 	status: string;
 	isValid: boolean;
@@ -93,11 +93,4 @@ export interface LogEntry {
 	level: string;
 	message: string;
 	content: string[];
-}
-
-export interface LogResponse {
-	success: boolean;
-	message?: string;
-	entries?: LogEntry[];
-	logs?: LogFile[];
 }
