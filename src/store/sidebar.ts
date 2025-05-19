@@ -6,6 +6,7 @@ import { useProjectStore } from '@/store/project';
 import { Table } from '@/types/table';
 import { useConnectionsStore } from '@/store/connections';
 import { ConnectionType } from '@/types/connection-types';
+import { AppConnection } from '@/types/ssh-connection';
 
 export const useSidebarStore = defineStore('sidebar', () => {
 	const databaseStore = useDatabaseStore();
@@ -176,10 +177,13 @@ export const useSidebarStore = defineStore('sidebar', () => {
 		project: ProjectConnection
 	) {
 		try {
-			const connectionConfig = project.dbConfig;
+			const AppConnection = {
+				localDbConfig: toRaw(project.dbConfig),
+				remote: toRaw(project.sshConfig)
+			} as AppConnection;
 
 			const countResult = await window.ipcRenderer.getTableRecordCount(
-				toRaw(connectionConfig),
+				AppConnection,
 				toRaw(table)
 			);
 
