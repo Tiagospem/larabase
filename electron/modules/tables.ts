@@ -66,11 +66,51 @@ function error(type: string, message: string) {
 	return (map[type] || map.default)();
 }
 
+function getDatabaseName(config: AppConnection): string {
+	return config.remote
+		? config.remote.remoteDbConfig.database
+		: config.localDbConfig.database;
+}
+
 async function toggleForeignKeyChecks(
 	connection: PoolConnection,
 	enable: boolean
 ): Promise<void> {
 	await connection.query(`SET FOREIGN_KEY_CHECKS = ${enable ? 1 : 0}`);
+}
+
+async function withTransaction<T>(
+	connection: PoolConnection,
+	callback: () => Promise<T>,
+	disableForeignKeys = false
+): Promise<T> {
+	let fkDisabled = false;
+
+	try {
+		await connection.beginTransaction();
+
+		if (disableForeignKeys) {
+			await toggleForeignKeyChecks(connection, false);
+			fkDisabled = true;
+		}
+
+		const result = await callback();
+
+		if (fkDisabled) {
+			await toggleForeignKeyChecks(connection, true);
+		}
+
+		await connection.commit();
+		return result;
+	} catch (err) {
+		await connection.rollback().catch(() => {});
+
+		if (fkDisabled) {
+			await toggleForeignKeyChecks(connection, true).catch(() => {});
+		}
+
+		throw err;
+	}
 }
 
 function applySortingAndPagination(
@@ -113,6 +153,66 @@ async function getTableStructure(
 			foreign_key: fkSet.has(c.name as string)
 		} as TableColumn;
 	});
+}
+
+async function getTableForeignKeys(
+	connection: PoolConnection,
+	database: string,
+	tableName: string
+): Promise<ForeignKeyRow[]> {
+	const [out] = await connection.query<ForeignKeyRow[]>(OUTGOING_SQL, [
+		database,
+		tableName
+	]);
+	const [inc] = await connection.query<ForeignKeyRow[]>(INCOMING_SQL, [
+		database,
+		tableName
+	]);
+
+	return [
+		...out.map((fk) => ({ ...fk, type: 'outgoing' as const })),
+		...inc.map((fk) => ({ ...fk, type: 'incoming' as const }))
+	];
+}
+
+function processIndexes(indexes: IndexRow[]): IndexRow[] {
+	return indexes.map((index) => {
+		const result = { ...index };
+
+		if (result.columns && typeof result.columns === 'string') {
+			(result.columns as unknown) = (result.columns as string).split(',');
+		} else if (!result.columns) {
+			(result.columns as unknown) = [];
+		}
+
+		if (result.name === 'PRIMARY') {
+			result.type = 'PRIMARY';
+		} else if (result.is_unique === 0) {
+			result.type = 'UNIQUE';
+		} else if (result.type === 'FULLTEXT') {
+			result.type = 'FULLTEXT';
+		} else if (result.type === 'SPATIAL') {
+			result.type = 'SPATIAL';
+		} else {
+			result.type = 'INDEX';
+		}
+
+		delete result.is_unique;
+		return result;
+	});
+}
+
+async function getTableIndexes(
+	connection: PoolConnection,
+	database: string,
+	tableName: string
+): Promise<IndexRow[]> {
+	const [indexes] = await connection.query<IndexRow[]>(TABLE_INDEXES_SQL, [
+		database,
+		tableName
+	]);
+
+	return processIndexes(indexes);
 }
 
 async function findRestrictingIds(
@@ -252,63 +352,45 @@ async function dropTablesHandler(_: unknown, params: DropTableParams) {
 
 	try {
 		connection = await createConnection(params.appConnection);
-		await connection.query('START TRANSACTION');
 
-		if (params.ignoreForeignKeys) {
-			await toggleForeignKeyChecks(connection, false);
-		}
+		const dropTables = async () => {
+			const failed: string[] = [];
+			let successCount = 0;
 
-		const failed: string[] = [];
+			for (const name of params.tables) {
+				try {
+					const esc = connection.escapeId(name);
+					const cascade = params.cascade ? ' CASCADE' : '';
 
-		let successCount = 0;
-
-		for (const name of params.tables) {
-			try {
-				const esc = connection.escapeId(name);
-				const cascade = params.cascade ? ' CASCADE' : '';
-
-				await connection.query(`DROP TABLE${cascade} ${esc}`);
-				successCount++;
-			} catch (e) {
-				const errorMessage = e instanceof Error ? e.message : String(e);
-				console.error(`Drop failed for ${name}:`, errorMessage);
-				failed.push(name);
+					await connection.query(`DROP TABLE${cascade} ${esc}`);
+					successCount++;
+				} catch (e) {
+					const errorMessage =
+						e instanceof Error ? e.message : String(e);
+					console.error(`Drop failed for ${name}:`, errorMessage);
+					failed.push(name);
+				}
 			}
-		}
 
-		if (params.ignoreForeignKeys) {
-			await toggleForeignKeyChecks(connection, true);
-		}
+			if (failed.length > 0) {
+				throw new Error(`Failed to drop tables: ${failed.join(', ')}`);
+			}
 
-		if (failed.length === 0) {
-			await connection.query('COMMIT');
+			return { successCount };
+		};
 
-			return {
-				success: true,
-				message: `Dropped ${successCount} tables successfully`
-			};
-		} else {
-			await connection.query('ROLLBACK');
+		const { successCount } = await withTransaction(
+			connection,
+			dropTables,
+			params.ignoreForeignKeys
+		);
 
-			return {
-				success: false,
-				message: `Failed to drop tables: ${failed.join(', ')}`
-			};
-		}
+		return {
+			success: true,
+			message: `Dropped ${successCount} tables successfully`
+		};
 	} catch (err) {
 		console.error('Error in dropTablesHandler:', err);
-
-		if (connection) {
-			try {
-				await connection.query('ROLLBACK');
-				if (params.ignoreForeignKeys) {
-					await toggleForeignKeyChecks(connection, true);
-				}
-			} catch {
-				/* empty */
-			}
-		}
-
 		const errorMessage = err instanceof Error ? err.message : String(err);
 		return {
 			success: false,
@@ -325,35 +407,28 @@ async function truncateTableHandler(
 	tableName: string
 ) {
 	let connection: PoolConnection | null = null;
-	let fkDisabled = false;
 
 	try {
 		connection = await createConnection(config);
-
-		const database = config.remote
-			? config.remote.remoteDbConfig.database
-			: config.localDbConfig.database;
+		const database = getDatabaseName(config);
 
 		const [fkRes] = await connection.query<RowDataPacket[]>(
 			HAS_FK_USAGE_SQL,
 			[tableName, database]
 		);
 
-		fkDisabled = fkRes.length > 0;
+		const hasFkReferences = fkRes.length > 0;
 
-		await connection.beginTransaction();
-
-		if (fkDisabled) {
-			await toggleForeignKeyChecks(connection, false);
-		}
-		await connection.query(
-			`TRUNCATE TABLE ${connection.escapeId(tableName)}`
+		await withTransaction(
+			connection,
+			async () => {
+				await connection.query(
+					`TRUNCATE TABLE ${connection.escapeId(tableName)}`
+				);
+				return true;
+			},
+			hasFkReferences
 		);
-		if (fkDisabled) {
-			await toggleForeignKeyChecks(connection, true);
-		}
-
-		await connection.commit();
 
 		return {
 			success: true,
@@ -361,21 +436,6 @@ async function truncateTableHandler(
 		};
 	} catch (err) {
 		console.error(`Error truncating ${tableName}:`, err);
-
-		if (connection) {
-			try {
-				await connection.rollback().catch(() => {});
-
-				if (fkDisabled) {
-					await toggleForeignKeyChecks(connection, true).catch(
-						() => {}
-					);
-				}
-			} catch (e) {
-				console.error('Error during rollback:', e);
-			}
-		}
-
 		const errorMessage = err instanceof Error ? err.message : String(err);
 		return {
 			success: false,
@@ -390,11 +450,8 @@ async function getTableRecordsHandler(_: unknown, config: TableRecord) {
 	let connection: PoolConnection | null = null;
 
 	try {
-		const database =
-			config.appConnection.localDbConfig?.database ||
-			config.appConnection.remote?.remoteDbConfig.database;
-
 		connection = await createConnection(config.appConnection);
+		const database = getDatabaseName(config.appConnection);
 
 		const structure = await getTableStructure(
 			connection,
@@ -489,11 +546,7 @@ async function getTableStructureHandler(
 
 	try {
 		connection = await createConnection(config);
-
-		const database = config.remote
-			? config.remote.remoteDbConfig.database
-			: config.localDbConfig.database;
-
+		const database = getDatabaseName(config);
 		const structure = await getTableStructure(
 			connection,
 			database,
@@ -522,28 +575,19 @@ async function getTableForeignKeysHandler(
 ) {
 	let connection: PoolConnection | null = null;
 
-	const database = config.remote
-		? config.remote.remoteDbConfig.database
-		: config.localDbConfig.database;
-
 	try {
 		connection = await createConnection(config);
+		const database = getDatabaseName(config);
 
-		const [out] = await connection.query<ForeignKeyRow[]>(OUTGOING_SQL, [
+		const foreignKeys = await getTableForeignKeys(
+			connection,
 			database,
 			tableName
-		]);
-		const [inc] = await connection.query<ForeignKeyRow[]>(INCOMING_SQL, [
-			database,
-			tableName
-		]);
+		);
 
 		return {
 			success: true,
-			foreignKeys: [
-				...out.map((fk) => ({ ...fk, type: 'outgoing' as const })),
-				...inc.map((fk) => ({ ...fk, type: 'incoming' as const }))
-			]
+			foreignKeys
 		};
 	} catch (err) {
 		const errorMessage = err instanceof Error ? err.message : String(err);
@@ -644,11 +688,7 @@ async function updateRecordHandler(_: unknown, config: UpdateTableRecord) {
 
 	try {
 		connection = await createConnection(config.appConnection);
-
-		const database =
-			config.appConnection.localDbConfig?.database ||
-			config.appConnection.remote?.remoteDbConfig.database;
-
+		const database = getDatabaseName(config.appConnection);
 		const { tableName, data, id } = config;
 
 		if (!tableName || !data || !id) {
@@ -678,7 +718,13 @@ async function updateRecordHandler(_: unknown, config: UpdateTableRecord) {
 					try {
 						JSON.parse(value);
 						return [key, value];
-					} catch (e) {
+					} catch (e: unknown) {
+						console.error(
+							`Invalid JSON for column ${key}:`,
+							e,
+							value
+						);
+
 						return [key, value];
 					}
 				}
@@ -690,6 +736,7 @@ async function updateRecordHandler(_: unknown, config: UpdateTableRecord) {
 			.map(([key, _]) => `${connection.escapeId(key)} = ?`)
 			.join(', ');
 
+		// noinspection SqlResolve
 		const sql = `UPDATE ${tableNameEsc} SET ${setClause} WHERE id = ?`;
 
 		const values = [...Object.values(processedData), id];
@@ -722,39 +769,9 @@ async function getTableIndexesHandler(
 
 	try {
 		connection = await createConnection(config);
+		const database = getDatabaseName(config);
 
-		const database = config.remote
-			? config.remote.remoteDbConfig.database
-			: config.localDbConfig.database;
-
-		const [indexes] = await connection.query<IndexRow[]>(
-			TABLE_INDEXES_SQL,
-			[database, tableName]
-		);
-
-		indexes.forEach((index) => {
-			if (index.columns && typeof index.columns === 'string') {
-				(index.columns as unknown) = (index.columns as string).split(
-					','
-				);
-			} else if (!index.columns) {
-				(index.columns as unknown) = [];
-			}
-
-			if (index.name === 'PRIMARY') {
-				index.type = 'PRIMARY';
-			} else if (index.is_unique === 0) {
-				index.type = 'UNIQUE';
-			} else if (index.type === 'FULLTEXT') {
-				index.type = 'FULLTEXT';
-			} else if (index.type === 'SPATIAL') {
-				index.type = 'SPATIAL';
-			} else {
-				index.type = 'INDEX';
-			}
-
-			delete index.is_unique;
-		});
+		const indexes = await getTableIndexes(connection, database, tableName);
 
 		return {
 			success: true,
@@ -778,12 +795,9 @@ async function getDatabaseSchemaForAIHandler(
 ) {
 	let connection: PoolConnection | null = null;
 
-	const database = config.remote
-		? config.remote.remoteDbConfig.database
-		: config.localDbConfig.database;
-
 	try {
 		connection = await createConnection(config);
+		const database = getDatabaseName(config);
 
 		const [tables] = await connection.query<TableRow[]>(LIST_TABLES_SQL, [
 			database
@@ -804,48 +818,17 @@ async function getDatabaseSchemaForAIHandler(
 				tableName
 			);
 
-			const [outgoing] = await connection.query<ForeignKeyRow[]>(
-				OUTGOING_SQL,
-				[database, tableName]
-			);
-			const [incoming] = await connection.query<ForeignKeyRow[]>(
-				INCOMING_SQL,
-				[database, tableName]
+			const foreignKeys = await getTableForeignKeys(
+				connection,
+				database,
+				tableName
 			);
 
-			const foreignKeys = [
-				...outgoing.map((fk) => ({ ...fk, type: 'outgoing' as const })),
-				...incoming.map((fk) => ({ ...fk, type: 'incoming' as const }))
-			];
-
-			const [indexes] = await connection.query<IndexRow[]>(
-				TABLE_INDEXES_SQL,
-				[database, tableName]
+			const indexes = await getTableIndexes(
+				connection,
+				database,
+				tableName
 			);
-
-			indexes.forEach((index) => {
-				if (index.columns && typeof index.columns === 'string') {
-					(index.columns as unknown) = (
-						index.columns as string
-					).split(',');
-				} else if (!index.columns) {
-					(index.columns as unknown) = [];
-				}
-
-				if (index.name === 'PRIMARY') {
-					index.type = 'PRIMARY';
-				} else if (index.is_unique === 0) {
-					index.type = 'UNIQUE';
-				} else if (index.type === 'FULLTEXT') {
-					index.type = 'FULLTEXT';
-				} else if (index.type === 'SPATIAL') {
-					index.type = 'SPATIAL';
-				} else {
-					index.type = 'INDEX';
-				}
-
-				delete index.is_unique;
-			});
 
 			databaseSchema.tables.push({
 				name: tableName,
