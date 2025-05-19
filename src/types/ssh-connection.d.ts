@@ -1,18 +1,19 @@
+import { MysqlConnection } from './mysql-connection';
+
 export interface SshConnection {
-	name?: string; // Connection name
+	name?: string;
 	host: string;
 	port: number;
-	username: string;
+	user: string;
 	password?: string;
 	privateKey?: string;
 	passphrase?: string;
 	remotePath: string;
-	remoteDbType: 'mysql'; // Only MySQL is supported
-	remoteDbConfig: {
-		host: string;
-		port: number;
-		database: string;
-		username: string;
-		password?: string;
-	};
+	remoteDbType: 'mysql';
+	remoteDbConfig: MysqlConnection;
+}
+
+export interface AppConnection {
+	localDbConfig: MysqlConnection;
+	remote: SshConnection;
 }
