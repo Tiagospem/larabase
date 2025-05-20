@@ -21,14 +21,12 @@ import ConnectionGuard from '@/components/ConnectionGuard.vue';
 import { useConnectionsStore } from '@/store/connections';
 import { useTabsStore } from '@/store/tabs';
 import { useSplitPane } from '@/composables/useSplitPane';
-import { useNavigation } from '@/composables/useNavigation';
 import { ConnectionType } from '@/types/connection-types';
 import { AppConnection } from '@/types/ssh-connection';
 
 const route = useRoute();
 const connectionsStore = useConnectionsStore();
 const tabsStore = useTabsStore();
-const { goToMainPage } = useNavigation();
 
 const isContentReady = ref(false);
 const pendingMigrationsCount = ref(0);
@@ -113,11 +111,6 @@ function showAlert(message: string, type: string) {
 
 provide('showAlert', showAlert);
 
-function handleGoBack() {
-	stopMigrationChecking();
-	goToMainPage();
-}
-
 function handleConnectionValid() {
 	isContentReady.value = true;
 }
@@ -181,7 +174,6 @@ onUnmounted(() => {
 		<MainHeader
 			:is-remote-connection="isRemoteConnection"
 			:pending-migrations="pendingMigrationsCount"
-			@goBack="handleGoBack"
 			@migrations-updated="handleMigrationsUpdated"
 		>
 		</MainHeader>
