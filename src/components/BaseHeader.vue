@@ -17,6 +17,10 @@ const props = defineProps({
 	isRemoteConnection: {
 		type: Boolean,
 		default: false
+	},
+	showBackButton: {
+		type: Boolean,
+		default: true
 	}
 });
 
@@ -49,6 +53,7 @@ const handleGoBack = () => {
 	>
 		<div class="flex items-center">
 			<button
+				v-if="showBackButton"
 				class="btn btn-ghost btn-sm mr-2"
 				@click="handleGoBack"
 			>
