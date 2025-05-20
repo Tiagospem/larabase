@@ -38,6 +38,17 @@ contextBridge.exposeInMainWorld('ipcRenderer', {
 		return ipcRenderer.removeAllListeners(channel);
 	},
 	/**
+	 * Window Management
+	 */
+	openConnectionWindow: (connectionId: string, isRemote: boolean) =>
+		ipcRenderer.invoke('open-connection-window', connectionId, isRemote),
+	closeConnectionWindow: (connectionId: string) =>
+		ipcRenderer.invoke('close-connection-window', connectionId),
+	openSqlEditorWindow: (connectionId: string, isRemote: boolean) =>
+		ipcRenderer.invoke('open-sql-editor-window', connectionId, isRemote),
+	showHomeWindow: () => ipcRenderer.invoke('show-home-window'),
+	getWindowId: () => ipcRenderer.invoke('get-window-id'),
+	/**
 	 * DB monitoring
 	 */
 	startLiveDbUpdate: (config: {
