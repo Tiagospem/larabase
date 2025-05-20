@@ -44,7 +44,7 @@ if (!app.requestSingleInstanceLock()) {
 	process.exit(0);
 }
 
-const openDevToolsOnInit: boolean = true;
+const openDevToolsOnInit: boolean = false;
 
 let win: BrowserWindow | null = null;
 
@@ -62,7 +62,6 @@ async function createWindow() {
 		minWidth: 1200,
 		minHeight: 500,
 		resizable: true,
-		alwaysOnTop: false,
 		center: true,
 		titleBarStyle: 'hiddenInset',
 		webPreferences: {
