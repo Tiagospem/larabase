@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
+import SQLExportDataModal from '@/components/SQLExportDataModal.vue';
 
 const props = defineProps<{
 	totalRecords: number;
@@ -11,6 +12,7 @@ const props = defineProps<{
 const emit = defineEmits(['update:currentPage', 'update:rowsPerPage']);
 
 const pageInput = ref(props.currentPage);
+const showExportModal = ref(false);
 
 const totalPages = computed(() => {
 	if (props.rowsPerPage === 0) return 1;
@@ -95,6 +97,33 @@ watch(
 					(execution time: {{ executionTimeDisplay }})
 				</span>
 			</span>
+			<div class="ml-4 flex space-x-2">
+				<div
+					class="tooltip tooltip-top"
+					data-tip="Export"
+				>
+					<button
+						v-if="totalRecords > 0"
+						class="btn btn-ghost btn-xs"
+						@click="showExportModal = true"
+					>
+						<svg
+							xmlns="http://www.w3.org/2000/svg"
+							fill="none"
+							viewBox="0 0 24 24"
+							stroke-width="1.5"
+							stroke="currentColor"
+							class="h-4 w-4"
+						>
+							<path
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3"
+							/>
+						</svg>
+					</button>
+				</div>
+			</div>
 		</div>
 
 		<div class="flex items-center space-x-2">
@@ -233,4 +262,10 @@ watch(
 			</div>
 		</div>
 	</div>
+
+	<SQLExportDataModal
+		v-if="showExportModal"
+		:show="showExportModal"
+		@close="showExportModal = false"
+	/>
 </template>
