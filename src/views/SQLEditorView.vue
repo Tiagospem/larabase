@@ -151,10 +151,6 @@ const tableData = computed(() => {
 	});
 });
 
-function goBack() {
-	router.push(`/database/${projectId.value}/${project.value?.isRemote}`);
-}
-
 function loadSavedSql() {
 	const savedSql = localStorage.getItem(
 		`sql-editor-content-${projectId.value}`
@@ -488,10 +484,10 @@ onBeforeUnmount(() => {
 		</div>
 		<template v-else-if="isContentReady">
 			<BaseHeader
-				@goBack="goBack"
 				:is-remote-connection="isRemoteConnection"
 				:title="`SQL Editor - ${activeScratch?.isDefault ? 'Default' : activeScratch?.name}`"
 				:project="project"
+				:show-back-button="false"
 				class="z-20 mt-8"
 			>
 				<template #actions>

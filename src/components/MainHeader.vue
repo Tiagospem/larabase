@@ -3,7 +3,6 @@ import { useConnectionsStore } from '@/store/connections';
 import { useRedisStore } from '@/store/redis';
 import { ProjectConnection } from '@/types/project';
 import { watchEffect, reactive, computed, onMounted, onUnmounted } from 'vue';
-import { useRouter } from 'vue-router';
 import ShowConnectionInfo from '@/components/ShowConnectionInfo.vue';
 import DatabaseSchemaViewer from '@/components/schema/DatabaseSchemaViewer.vue';
 import ERDModal from '@/components/ERDModal.vue';
@@ -23,11 +22,11 @@ import EnvEditor from '@/components/EnvEditor.vue';
 
 const connectionsStore = useConnectionsStore();
 const redisStore = useRedisStore();
-const router = useRouter();
+
 const {
 	databaseSchema,
 	isLoading: isLoadingSchema,
-	fetchDatabaseSchema,
+	fetchDatabaseSchema
 } = useDatabaseSchema();
 
 const props = defineProps({
@@ -66,10 +65,13 @@ const ui = reactive({
 	showEnvEditor: false
 });
 
-function openSqlEditor() {
-	router.push(
-		`/sql-editor/${selectedProject.value?.id}/${props.isRemoteConnection}`
-	);
+async function openSqlEditor() {
+	if (selectedProject.value?.id) {
+		await window.ipcRenderer.openSqlEditorWindow(
+			selectedProject.value.id,
+			props.isRemoteConnection
+		);
+	}
 }
 
 async function getDatabaseSchema() {
@@ -105,6 +107,12 @@ function handleGlobalKeydown(event: KeyboardEvent) {
 	}
 }
 
+async function handleGoBack() {
+	await window.ipcRenderer.showHomeWindow();
+
+	window.close();
+}
+
 onMounted(() => {
 	if (!props.isRemoteConnection) {
 		window.addEventListener('keydown', handleGlobalKeydown);
@@ -132,7 +140,7 @@ onUnmounted(() => {
 		<div class="flex items-center">
 			<button
 				class="btn btn-ghost btn-sm mr-2"
-				@click="emit('goBack')"
+				@click="handleGoBack"
 			>
 				<svg
 					xmlns="http://www.w3.org/2000/svg"
