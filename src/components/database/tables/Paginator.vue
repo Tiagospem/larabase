@@ -234,6 +234,8 @@ watch(rowsPerPage, (newValue, oldValue) => {
 					<option value="25">25 rows</option>
 					<option value="50">50 rows</option>
 					<option value="100">100 rows</option>
+					<option value="500">500 rows</option>
+					<option value="1000">1k rows</option>
 				</select>
 			</div>
 
@@ -244,7 +246,7 @@ watch(rowsPerPage, (newValue, oldValue) => {
 					type="number"
 					min="1"
 					:max="totalPages"
-					class="input input-xs input-bordered w-14"
+					class="input input-xs input-bordered w-24"
 					@keyup.enter="goToPage"
 				/>
 				<button
