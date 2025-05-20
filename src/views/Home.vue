@@ -50,8 +50,14 @@ onMounted(async () => {
 	await connectionsStore.loadConnections();
 });
 
-function openConnection(project: ProjectConnection) {
-	router.push(`/database/${project.id}/${project.isRemote}`);
+async function openConnection(project: ProjectConnection) {
+	const success = await window.ipcRenderer.openConnectionWindow(
+		project.id,
+		project.isRemote
+	);
+	if (success) {
+		window.close();
+	}
 }
 
 function getConnectionColor(type: string) {
