@@ -28,7 +28,6 @@ const {
 	databaseSchema,
 	isLoading: isLoadingSchema,
 	fetchDatabaseSchema,
-	initializeSchema
 } = useDatabaseSchema();
 
 const props = defineProps({
@@ -109,8 +108,6 @@ function handleGlobalKeydown(event: KeyboardEvent) {
 onMounted(() => {
 	if (!props.isRemoteConnection) {
 		window.addEventListener('keydown', handleGlobalKeydown);
-
-		initializeSchema();
 	}
 });
 
