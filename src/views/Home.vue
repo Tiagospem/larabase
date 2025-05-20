@@ -174,7 +174,7 @@ function getConnectionColor(type: string) {
 					<div
 						v-for="connection in connectionsStore.connections"
 						:key="connection.id as string"
-						class="card bg-base-300 border-base-300 hover:bg-base-200 border shadow-sm transition-colors"
+						class="card bg-base-300 border-base-300 hover:bg-base-200 border shadow-xs transition-colors"
 					>
 						<div class="card-body px-5 py-4">
 							<div
@@ -224,11 +224,11 @@ function getConnectionColor(type: string) {
 												connection.type !==
 												ConnectionType.SSH
 											"
-											class="ml-1 text-xs"
+											class="ml-1 text-xs badge badge-xs"
 											:class="{
-												'text-success':
+												'badge-success':
 													connection.isValid,
-												'text-error':
+												'badge-error':
 													!connection.isValid
 											}"
 											>{{ connection.status }}</span
