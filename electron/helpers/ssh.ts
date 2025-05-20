@@ -93,9 +93,6 @@ async function createConnection(config: SshConnection): Promise<Client> {
 
 		conn.on('ready', () => {
 			console.log(`SSH connection established to ${config.host}`);
-
-			const key = getConnectionKey(config);
-			sshConnections.set(key, conn);
 			resolve(conn);
 		});
 
@@ -112,30 +109,7 @@ async function createConnection(config: SshConnection): Promise<Client> {
 }
 
 async function getConnection(config: SshConnection): Promise<Client> {
-	const key = getConnectionKey(config);
-
-	if (sshConnections.has(key)) {
-		const conn = sshConnections.get(key)!;
-
-		if (
-			(conn as unknown as { _state?: string })._state === 'authenticated'
-		) {
-			return conn;
-		} else {
-			sshConnections.delete(key);
-			try {
-				conn.end();
-			} catch (e: unknown) {
-				console.error(
-					`Failed to connect to SSH server: ${
-						e instanceof Error ? e.message : String(e)
-					}`
-				);
-			}
-		}
-	}
-
-	return await createConnection(config);
+	return createConnection(config);
 }
 
 async function getSftpSession(client: Client): Promise<SFTPWrapper> {
@@ -151,11 +125,12 @@ async function executeCommand(
 	config: SshConnection,
 	command: string
 ): Promise<{ stdout: string; stderr: string; code: number | null }> {
-	const client = await getConnection(config);
+	const client = await createConnection(config);
 
 	return new Promise((resolve, reject) => {
 		client.exec(command, (err, stream) => {
 			if (err) {
+				client.end();
 				reject(err);
 				return;
 			}
@@ -172,10 +147,12 @@ async function executeCommand(
 			});
 
 			stream.on('close', (code: number | null) => {
+				client.end();
 				resolve({ stdout, stderr, code });
 			});
 
 			stream.on('error', (err: Error) => {
+				client.end();
 				reject(err);
 			});
 		});
@@ -186,15 +163,26 @@ async function readRemoteFile(
 	config: SshConnection,
 	filePath: string
 ): Promise<Buffer> {
-	const client = await getConnection(config);
-	const sftp = await getSftpSession(client);
+	const client = await createConnection(config);
 
-	return new Promise((resolve, reject) => {
-		sftp.readFile(filePath, (err, data) => {
-			if (err) reject(err);
-			else resolve(data);
+	try {
+		const sftp = await getSftpSession(client);
+
+		return new Promise((resolve, reject) => {
+			sftp.readFile(filePath, (err, data) => {
+				if (err) {
+					reject(err);
+				} else {
+					resolve(data);
+				}
+
+				client.end();
+			});
 		});
-	});
+	} catch (error) {
+		client.end();
+		throw error;
+	}
 }
 
 async function writeRemoteFile(
@@ -202,58 +190,78 @@ async function writeRemoteFile(
 	filePath: string,
 	data: Buffer | string
 ): Promise<void> {
-	const client = await getConnection(config);
-	const sftp = await getSftpSession(client);
+	const client = await createConnection(config);
 
-	return new Promise((resolve, reject) => {
-		sftp.writeFile(filePath, data, (err) => {
-			if (err) reject(err);
-			else resolve();
+	try {
+		const sftp = await getSftpSession(client);
+
+		return new Promise((resolve, reject) => {
+			sftp.writeFile(filePath, data, (err) => {
+				if (err) {
+					reject(err);
+				} else {
+					resolve();
+				}
+
+				client.end();
+			});
 		});
-	});
+	} catch (error) {
+		client.end();
+		throw error;
+	}
 }
 
 async function listRemoteFiles(
 	config: SshConnection,
 	dirPath: string
 ): Promise<SftpFile[]> {
-	console.log(`Attempting to list files in: ${dirPath}`);
-	console.log('SSH config (sensitive info redacted):', {
-		host: config.host,
-		port: config.port,
-		user: config.user,
-		remotePath: config.remotePath,
-		hasPassword: !!config.password,
-		hasPrivateKey: !!config.privateKey,
-		hasPassphrase: !!config.passphrase
-	});
+	const client = await createConnection(config);
 
 	try {
-		const client = await getConnection(config);
 		console.log('SSH connection established, getting SFTP session');
-
 		const sftp = await getSftpSession(client);
 		console.log('SFTP session created, attempting to read directory');
 
 		return new Promise((resolve, reject) => {
 			sftp.readdir(dirPath, (err, list) => {
+				const closeAndReturn = (value: any, isError = false) => {
+					try {
+						client.end();
+						console.log(
+							`SSH connection closed after listing files in ${dirPath}`
+						);
+					} catch (e) {
+						console.error('Error closing SSH connection:', e);
+					}
+
+					if (isError) {
+						reject(value);
+					} else {
+						resolve(value);
+					}
+				};
+
 				if (err) {
 					console.error(`Error listing files in ${dirPath}:`, err);
 
 					const sshErr = err as SshError;
 					if (sshErr.code === 'ENOENT') {
-						reject(
-							new Error(`Directory does not exist: ${dirPath}`)
+						closeAndReturn(
+							new Error(`Directory does not exist: ${dirPath}`),
+							true
 						);
 					} else if (sshErr.code === 'EACCES') {
-						reject(
+						closeAndReturn(
 							new Error(
 								`Permission denied for directory: ${dirPath}`
-							)
+							),
+							true
 						);
 					} else {
-						reject(
-							new Error(`Failed to list files: ${err.message}`)
+						closeAndReturn(
+							new Error(`Failed to list files: ${err.message}`),
+							true
 						);
 					}
 				} else {
@@ -271,12 +279,13 @@ async function listRemoteFiles(
 							mode: item.attrs.mode
 						}
 					})) as SftpFile[];
-					resolve(sftpFiles);
+					closeAndReturn(sftpFiles);
 				}
 			});
 		});
 	} catch (error) {
 		console.error('SSH connection error in listRemoteFiles:', error);
+		client.end();
 		throw error;
 	}
 }
@@ -471,7 +480,10 @@ async function createTunnel(
 	remotePort: number,
 	localPort: number = 0
 ): Promise<{ tunnelId: string; localPort: number }> {
-	const sshClient = await getConnection(config);
+	// This is the critical fix - always create a fresh connection for tunneling
+	// This ensures we don't reuse a connection that might be in a bad state
+	// from other operations like SFTP
+	const sshClient = await createConnection(config);
 
 	return new Promise((resolve, reject) => {
 		const server = net.createServer((socket) => {
