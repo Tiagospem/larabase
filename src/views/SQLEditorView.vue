@@ -5,7 +5,7 @@ import DataTable from '@/components/DataTable.vue';
 import SQLPaginator from '@/components/SQLPaginator.vue';
 import SQLScratchSidebar from '@/components/SQLScratchSidebar.vue';
 import DatabaseSchemaViewer from '@/components/schema/DatabaseSchemaViewer.vue';
-import { useRoute, useRouter } from 'vue-router';
+import { useRoute } from 'vue-router';
 import { computed, onMounted, ref, watch, onBeforeUnmount } from 'vue';
 import { useConnectionsStore } from '@/store/connections';
 import { useSqlResultsStore } from '@/store/sqlResults';
@@ -19,7 +19,6 @@ import type { ExplainResult } from '@/composables/useSQLEditor';
 import ConnectionGuard from '@/components/ConnectionGuard.vue';
 
 const route = useRoute();
-const router = useRouter();
 const isLoading = ref(true);
 const isContentReady = ref(false);
 const isResizing = ref(false);
