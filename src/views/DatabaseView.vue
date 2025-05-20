@@ -78,7 +78,7 @@ function startMigrationChecking() {
 
 	migrationCheckIntervalId.value = window.setInterval(() => {
 		checkPendingMigrations();
-	}, 5000);
+	}, 3000);
 }
 
 function stopMigrationChecking() {
