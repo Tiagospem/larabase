@@ -33,7 +33,10 @@
 				</button>
 			</div>
 
-			<div class="modal-content" :class="{ 'overflow-hidden': preventScrollContent }">
+			<div
+				class="modal-content"
+				:class="{ 'overflow-hidden': preventScrollContent }"
+			>
 				<slot></slot>
 			</div>
 
