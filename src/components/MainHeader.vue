@@ -20,6 +20,7 @@ import ProjectLogs from '@/components/ProjectLogs.vue';
 import Migrations from '@/components/Migrations.vue';
 import EnvEditor from '@/components/EnvEditor.vue';
 import RemoteFileExplorer from '@/components/RemoteFileExplorer.vue';
+import { SshConnection } from '@/types/ssh-connection';
 
 const connectionsStore = useConnectionsStore();
 const redisStore = useRedisStore();
@@ -521,7 +522,7 @@ onUnmounted(() => {
 			selectedProject
 		"
 		:show="ui.showRemoteFileExplorer"
-		:connection="selectedProject.sshConfig"
+		:connection="selectedProject.sshConfig as SshConnection"
 		@close="ui.showRemoteFileExplorer = false"
 	/>
 </template>
