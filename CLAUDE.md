@@ -106,3 +106,7 @@ The application follows a communication pattern using Electron's IPC:
 - **MySQL2**: Database connectivity
 - **SSH2**: SSH tunneling support
 - **IoRedis**: Redis client functionality
+
+## Code Tips and Tricks
+
+- Always use toRaw for reactive objects to avoid errors like "An object could not be cloned."

@@ -22,6 +22,14 @@ interface SftpFile {
 	};
 }
 
+interface FileExplorerItem {
+	name: string;
+	type: 'file' | 'directory';
+	size: number;
+	modTime: number;
+	path: string;
+}
+
 const sshConnections = new Map<string, Client>();
 
 const activeTunnels = new Map<
@@ -215,8 +223,14 @@ async function writeRemoteFile(
 async function listRemoteFiles(
 	config: SshConnection,
 	dirPath: string
-): Promise<SftpFile[]> {
+): Promise<FileExplorerItem[]> {
 	const client = await createConnection(config);
+
+	// Safety check to make sure we don't go outside the project directory
+	if (!dirPath.startsWith(config.remotePath)) {
+		// If dirPath is outside remotePath, default to remotePath
+		dirPath = config.remotePath;
+	}
 
 	try {
 		console.log('SSH connection established, getting SFTP session');
@@ -267,19 +281,24 @@ async function listRemoteFiles(
 				} else {
 					console.log(`Listed ${list.length} files in ${dirPath}`);
 
-					const sftpFiles = list.map((item) => ({
-						filename: item.filename,
-						longname: item.longname,
-						attrs: {
-							size: item.attrs.size,
-							mtime: item.attrs.mtime,
-							atime: item.attrs.atime,
-							uid: item.attrs.uid,
-							gid: item.attrs.gid,
-							mode: item.attrs.mode
-						}
-					})) as SftpFile[];
-					closeAndReturn(sftpFiles);
+					const fileExplorerItems = list
+						.filter(
+							(item) =>
+								item.filename !== '.' && item.filename !== '..'
+						)
+						.map((item) => {
+							const isDirectory =
+								(item.attrs.mode & 0o40000) !== 0;
+							return {
+								name: item.filename,
+								type: isDirectory ? 'directory' : 'file',
+								size: item.attrs.size,
+								modTime: item.attrs.mtime * 1000, // Convert to JavaScript timestamp
+								path: `${dirPath}/${item.filename}`
+							} as FileExplorerItem;
+						});
+
+					closeAndReturn(fileExplorerItems);
 				}
 			});
 		});

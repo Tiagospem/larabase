@@ -19,6 +19,7 @@ import LiveUpdates from '@/components/LiveUpdates.vue';
 import ProjectLogs from '@/components/ProjectLogs.vue';
 import Migrations from '@/components/Migrations.vue';
 import EnvEditor from '@/components/EnvEditor.vue';
+import RemoteFileExplorer from '@/components/RemoteFileExplorer.vue';
 
 const connectionsStore = useConnectionsStore();
 const redisStore = useRedisStore();
@@ -62,7 +63,8 @@ const ui = reactive({
 	showLiveUpdates: false,
 	showProjectLogs: false,
 	showMigrations: false,
-	showEnvEditor: false
+	showEnvEditor: false,
+	showRemoteFileExplorer: false
 });
 
 async function openSqlEditor() {
@@ -327,6 +329,28 @@ onUnmounted(() => {
 
 				<div
 					class="tooltip tooltip-bottom"
+					data-tip="Remote File Explorer"
+					v-if="props.isRemoteConnection"
+				>
+					<button
+						class="btn btn-ghost btn-sm"
+						@click="ui.showRemoteFileExplorer = true"
+					>
+						<svg
+							class="h-4 w-4"
+							fill="currentColor"
+							xmlns="http://www.w3.org/2000/svg"
+							viewBox="0 0 576 512"
+						>
+							<path
+								d="M0 64C0 28.7 28.7 0 64 0h224.3c12.8 0 25 5.1 34 14.1L404.3 96H544c17.7 0 32 14.3 32 32v320c0 17.7-14.3 32-32 32H64c-17.7 0-32-14.3-32-32V64zm384 256c0 35.3-28.7 64-64 64s-64-28.7-64-64s28.7-64 64-64s64 28.7 64 64z"
+							/>
+						</svg>
+					</button>
+				</div>
+
+				<div
+					class="tooltip tooltip-bottom"
 					data-tip="SQL query editor"
 				>
 					<button
@@ -488,5 +512,16 @@ onUnmounted(() => {
 	<EnvEditor
 		v-if="ui.showEnvEditor"
 		@close="ui.showEnvEditor = false"
+	/>
+
+	<RemoteFileExplorer
+		v-if="
+			ui.showRemoteFileExplorer &&
+			props.isRemoteConnection &&
+			selectedProject
+		"
+		:show="ui.showRemoteFileExplorer"
+		:connection="selectedProject.sshConfig"
+		@close="ui.showRemoteFileExplorer = false"
 	/>
 </template>
