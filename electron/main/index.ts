@@ -235,7 +235,23 @@ async function createSqlEditorWindow(connectionId: string, isRemote: boolean) {
 	return sqlEditorWindow;
 }
 
+function updatePendingMigrationsBadge(count: number) {
+	if (process.platform === 'darwin') {
+		const displayCount =
+			count > 0 ? (count >= 100 ? '99' : count.toString()) : '';
+		app.dock.setBadge(displayCount);
+	} else if (process.platform === 'win32' || process.platform === 'linux') {
+		const displayCount = count > 0 ? (count >= 100 ? 99 : count) : 0;
+		app.setBadgeCount(displayCount);
+	}
+}
+
 function registerWindowHandlers() {
+	ipcMain.handle('update-migrations-badge', (_, count) => {
+		updatePendingMigrationsBadge(count);
+		return true;
+	});
+
 	ipcMain.handle(
 		'open-connection-window',
 		async (_, connectionId, isRemote) => {

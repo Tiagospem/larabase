@@ -10,7 +10,6 @@ import {
 	UpdateTableRecord
 } from '../../src/types/table';
 import { AppConnection, SshConnection } from '../../src/types/ssh-connection';
-import { SSHConfig } from '../../src/types/ssh-config';
 
 contextBridge.exposeInMainWorld('ipcRenderer', {
 	on(...args: Parameters<typeof ipcRenderer.on>) {
@@ -275,13 +274,19 @@ contextBridge.exposeInMainWorld('ipcRenderer', {
 	findAvailablePort: (min: number, max: number) =>
 		ipcRenderer.invoke('find-available-port', { min, max }),
 	createSSHTunnel: (config: {
-		sshConfig: SSHConfig;
+		sshConfig: SshConnection;
 		localPort: number;
 		remoteHost: string;
 		remotePort: number;
 	}) => ipcRenderer.invoke('create-ssh-tunnel', config),
 	closeSSHTunnel: (tunnel: { server: unknown; connection: unknown }) =>
-		ipcRenderer.invoke('close-ssh-tunnel', tunnel)
+		ipcRenderer.invoke('close-ssh-tunnel', tunnel),
+
+	/**
+	 * App Icon Badge
+	 */
+	updateMigrationsBadge: (count: number) =>
+		ipcRenderer.invoke('update-migrations-badge', count)
 });
 
 function domReady(

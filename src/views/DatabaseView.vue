@@ -61,6 +61,9 @@ async function checkPendingMigrations() {
 
 		if (result.success) {
 			pendingMigrationsCount.value = result.pendingMigrations.length;
+			window.ipcRenderer.updateMigrationsBadge(
+				pendingMigrationsCount.value
+			);
 		}
 	} catch (error) {
 		console.error('Error checking pending migrations:', error);
