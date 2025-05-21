@@ -360,6 +360,14 @@ function startPolling(
 
 	const interval = setInterval(async () => {
 		try {
+			if (mainWindow.isDestroyed()) {
+				console.log(
+					`Window for connection ${connectionId} is destroyed, stopping polling`
+				);
+				stopPolling(connectionId);
+				return;
+			}
+
 			const [tableExists] = await connection.query(
 				SQL.CHECK_TABLE_EXISTS,
 				[connection.config.database, ACTIVITY_LOG_TABLE]
@@ -392,16 +400,33 @@ function startPolling(
 					].id
 				);
 
-				for (const activity of newActivities as ActivityLogRow[]) {
-					mainWindow.webContents.send(
-						`db-operation-${connectionId}`,
-						activity
-					);
+				if (!mainWindow.isDestroyed()) {
+					for (const activity of newActivities as ActivityLogRow[]) {
+						mainWindow.webContents.send(
+							`db-operation-${connectionId}`,
+							activity
+						);
+					}
 				}
 			}
 		} catch (error: unknown) {
-			console.error(`Error polling for new activities: ${error}`);
+			const errorMessage =
+				error instanceof Error ? error.message : String(error);
+			console.error(`Error polling for new activities: ${errorMessage}`);
+
+			if (
+				errorMessage.includes('destroyed') ||
+				errorMessage.includes('invalid')
+			) {
+				console.log(
+					`Reference to destroyed object detected for connection ${connectionId}, stopping polling`
+				);
+				stopPolling(connectionId);
+				return;
+			}
+
 			state.lastSeenIds.set(connectionId, 0);
+
 			stopPolling(connectionId);
 		}
 	}, 2000);
@@ -423,22 +448,37 @@ async function cleanupMonitoring(connectionId: string) {
 			const connection = state.connections.get(connectionId);
 			const database = state.monitoredDatabases.get(connectionId);
 
+			stopPolling(connectionId);
+
 			if (database) {
-				await findAndDropAllTriggers(connection, database);
+				try {
+					await findAndDropAllTriggers(connection, database);
 
-				const tables = state.monitoredTables.get(database) || [];
-				for (const tableName of tables) {
-					await dropTableTriggers(connection, tableName);
+					const tables = state.monitoredTables.get(database) || [];
+					for (const tableName of tables) {
+						await dropTableTriggers(connection, tableName);
+					}
+					state.monitoredTables.delete(database);
+
+					await dropMonitoringTable(connection);
+				} catch (err) {
+					console.error(
+						'Error cleaning up tables/triggers:',
+						err instanceof Error ? err.message : String(err)
+					);
 				}
-				state.monitoredTables.delete(database);
-
-				await dropMonitoringTable(connection);
 			}
 
-			await safeEndConnection(connection);
+			try {
+				await safeEndConnection(connection);
+			} catch (err) {
+				console.error(
+					'Error ending connection:',
+					err instanceof Error ? err.message : String(err)
+				);
+			}
 
 			state.connections.delete(connectionId);
-			stopPolling(connectionId);
 			state.monitoredDatabases.delete(connectionId);
 
 			const windowEntries = Array.from(
@@ -454,8 +494,13 @@ async function cleanupMonitoring(connectionId: string) {
 		} catch (error: unknown) {
 			console.error(
 				`Error cleaning up monitoring for ${connectionId}`,
-				error instanceof Error ? error.message : ''
+				error instanceof Error ? error.message : String(error)
 			);
+
+			state.connections.delete(connectionId);
+			stopPolling(connectionId);
+			state.monitoredDatabases.delete(connectionId);
+
 			return false;
 		}
 	}
@@ -480,23 +525,10 @@ function registerConnectionWithWindow(windowId: number, connectionId: string) {
 }
 
 export function registerMonitoringHandlers(mainWindow: BrowserWindow) {
-	const windowId = mainWindow.id;
-
-	mainWindow.on('closed', async () => {
-		await closeAllWindowConnections(windowId);
-	});
-
-	mainWindow.webContents.on('did-start-navigation', async (_, url) => {
-		const currentURL = mainWindow.webContents.getURL();
-		if (url === currentURL) {
-			await closeAllWindowConnections(windowId);
-		}
-	});
-
 	ipcMain.handle(
 		'start-live-db-updates',
 		async (
-			_,
+			event,
 			config: {
 				connectionId: string;
 				appConnection: AppConnection;
@@ -509,6 +541,14 @@ export function registerMonitoringHandlers(mainWindow: BrowserWindow) {
 				clearHistory = false
 			} = config;
 
+			const senderWindow = BrowserWindow.fromWebContents(event.sender);
+			if (!senderWindow || senderWindow.isDestroyed()) {
+				return {
+					success: false,
+					message: 'Window is invalid or destroyed'
+				};
+			}
+
 			if (state.connections.has(connectionId)) {
 				await cleanupMonitoring(connectionId);
 			}
@@ -520,7 +560,7 @@ export function registerMonitoringHandlers(mainWindow: BrowserWindow) {
 					connectionId,
 					appConnection.localDbConfig.database
 				);
-				registerConnectionWithWindow(mainWindow.id, connectionId);
+				registerConnectionWithWindow(senderWindow.id, connectionId);
 
 				await connection.query(SQL.CREATE_ACTIVITY_LOG);
 				if (clearHistory) {
@@ -577,11 +617,13 @@ export function registerMonitoringHandlers(mainWindow: BrowserWindow) {
 							Array.isArray(recentActivities) &&
 							recentActivities.length > 0
 						) {
-							for (const activity of recentActivities as ActivityLogRow[]) {
-								mainWindow.webContents.send(
-									`db-operation-${connectionId}`,
-									activity
-								);
+							if (!senderWindow.isDestroyed()) {
+								for (const activity of recentActivities as ActivityLogRow[]) {
+									senderWindow.webContents.send(
+										`db-operation-${connectionId}`,
+										activity
+									);
+								}
 							}
 							state.lastSeenIds.set(
 								connectionId,
@@ -596,13 +638,13 @@ export function registerMonitoringHandlers(mainWindow: BrowserWindow) {
 				} catch (error: unknown) {
 					console.error(
 						`Error checking if ${ACTIVITY_LOG_TABLE} exists`,
-						error instanceof Error ? error.message : ''
+						error instanceof Error ? error.message : String(error)
 					);
 
 					state.lastSeenIds.set(connectionId, 0);
 				}
 
-				startPolling(connectionId, connection, mainWindow);
+				startPolling(connectionId, connection, senderWindow);
 				return {
 					success: true,
 					message: 'Monitoring started successfully'
@@ -634,7 +676,15 @@ export function registerMonitoringHandlers(mainWindow: BrowserWindow) {
 		}
 	});
 
-	ipcMain.handle('clear-db-history', async (_, connectionId: string) => {
+	ipcMain.handle('clear-db-history', async (event, connectionId: string) => {
+		const senderWindow = BrowserWindow.fromWebContents(event.sender);
+		if (!senderWindow || senderWindow.isDestroyed()) {
+			return {
+				success: false,
+				message: 'Window is invalid or destroyed'
+			};
+		}
+
 		try {
 			if (!state.connections.has(connectionId)) {
 				return {
@@ -650,7 +700,7 @@ export function registerMonitoringHandlers(mainWindow: BrowserWindow) {
 			} catch (error: unknown) {
 				console.error(
 					`Error checking connection status for ${connectionId}`,
-					error instanceof Error ? error.message : ''
+					error instanceof Error ? error.message : String(error)
 				);
 
 				state.connections.delete(connectionId);
@@ -665,9 +715,13 @@ export function registerMonitoringHandlers(mainWindow: BrowserWindow) {
 			const success = await clearActivityLog(connection);
 			if (success) {
 				state.lastSeenIds.set(connectionId, 0);
-				mainWindow.webContents.send(
-					`db-operation-clear-${connectionId}`
-				);
+
+				if (!senderWindow.isDestroyed()) {
+					senderWindow.webContents.send(
+						`db-operation-clear-${connectionId}`
+					);
+				}
+
 				return { success: true, message: 'Activity history cleared' };
 			} else {
 				return {
