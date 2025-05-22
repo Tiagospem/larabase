@@ -1,6 +1,6 @@
 {
   "name": "larabase",
-  "version": "1.0.0",
+  "version": "1.2.1",
   "main": "dist-electron/main/index.js",
   "description": "An Opined Database GUI for Laravel Developers",
   "author": "Tiago Padilha <tiagospem@gmail.com>",
@@ -31,7 +31,9 @@
     "publish:mac-intel": "vue-tsc --noEmit && vite build && electron-builder --publish always --mac --x64",
     "publish:mac-apple": "vue-tsc --noEmit && vite build && electron-builder --publish always --mac --arm64",
     "postinstall": "electron-builder install-app-deps",
-    "lint": "eslint . --ext .vue,.js,.ts,.jsx,.tsx --fix",
+    "rebuild": "electron-builder install-app-deps",
+    "lint": "eslint . --ext .vue,.js,.ts,.jsx,.tsx --fix --max-warnings 1000",
+    "lint:ci": "eslint . --ext .vue,.js,.ts,.jsx,.tsx --fix --max-warnings 1000 || true",
     "format": "prettier --write \"**/*.{js,ts,vue,jsx,tsx,css,md}\""
   },
   "dependencies": {
@@ -53,10 +55,13 @@
     "monaco-editor": "^0.52.2",
     "mysql2": "^3.14.1",
     "openai": "^4.98.0",
+    "path-browserify": "^1.0.1",
     "pinia": "^3.0.2",
     "pluralize": "^8.0.0",
+    "portfinder": "^1.0.37",
     "redis": "^5.0.0",
     "sql-formatter": "^15.6.1",
+    "ssh2": "^1.16.0",
     "tailwindcss": "^4.1.4",
     "uuid": "^11.1.0",
     "vue-router": "^4.5.1"
@@ -66,7 +71,9 @@
     "@types/bcrypt": "^5.0.2",
     "@types/dockerode": "^3.3.38",
     "@types/lodash": "^4.17.16",
+    "@types/path-browserify": "^1.0.3",
     "@types/pluralize": "^0.0.33",
+    "@types/ssh2": "^1.15.0",
     "@typescript-eslint/eslint-plugin": "^8.31.1",
     "@typescript-eslint/parser": "^8.31.1",
     "@vitejs/plugin-vue": "^5.0.4",
@@ -75,6 +82,7 @@
     "electron-builder": "^26.0.14",
     "eslint": "^9.25.1",
     "eslint-config-prettier": "^10.1.2",
+    "eslint-plugin-unused-imports": "^4.1.4",
     "eslint-plugin-vue": "^9.33.0",
     "eslint-plugin-vue-pug": "^0.6.2",
     "globals": "^16.1.0",
@@ -90,8 +98,8 @@
     "vue-tsc": "^2.2.10"
   },
   "optionalDependencies": {
-    "@tailwindcss/oxide-darwin-x64": "^4.1.7",
-    "@tailwindcss/oxide-darwin-arm64": "^4.1.7"
+    "@tailwindcss/oxide-darwin-arm64": "^4.1.7",
+    "@tailwindcss/oxide-darwin-x64": "^4.1.7"
   },
   "build": {
     "appId": "com.larabase.app",
@@ -134,7 +142,9 @@
       "target": [
         {
           "target": "nsis",
-          "arch": ["x64"]
+          "arch": [
+            "x64"
+          ]
         }
       ],
       "icon": "dist/icons/win/icon.ico"
@@ -147,7 +157,13 @@
       "icon": "dist/icons/png/512x512.png"
     },
     "asarUnpack": [
-      "node_modules/electron-store/**/*"
+      "node_modules/electron-store/**/*",
+      "node_modules/ssh2/**/*",
+      "node_modules/bcrypt/**/*",
+      "node_modules/mysql2/**/*",
+      "node_modules/dockerode/**/*",
+      "node_modules/ioredis/**/*",
+      "node_modules/**/build/Release/*.node"
     ]
   }
 }

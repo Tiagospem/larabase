@@ -4,6 +4,7 @@ import Modal from '@/components/Modal.vue';
 import PhpViewer from '@/components/PhpViewer.vue';
 import { useConnectionsStore } from '@/store/connections';
 import terminalService from '@/services/terminal';
+import { AppConnection } from '@/types/ssh-connection';
 
 const emit = defineEmits(['close', 'migrations-updated']);
 const connectionsStore = useConnectionsStore();
@@ -183,10 +184,17 @@ onMounted(async () => {
 	}
 
 	try {
+		const project = selectedProject.value;
+
+		const AppConnection = {
+			localDbConfig: toRaw(project.dbConfig),
+			remote: toRaw(project.sshConfig)
+		} as AppConnection;
+
 		const config = {
-			projectPath: selectedProject.value.projectPath,
-			usingSail: selectedProject.value.usingSail,
-			db_config: toRaw(selectedProject.value.db_config)
+			projectPath: project.projectPath,
+			usingSail: project.usingSail,
+			appConnection: AppConnection
 		};
 
 		const result = await window.ipcRenderer.invoke(

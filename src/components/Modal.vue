@@ -6,7 +6,8 @@
 	>
 		<div
 			class="modal-box bg-base-300 relative"
-			:class="width"
+			:class="[width, height]"
+			:style="customStyle"
 		>
 			<div class="mb-4 flex items-center justify-between">
 				<h3 class="text-lg font-bold">{{ title }}</h3>
@@ -32,7 +33,10 @@
 				</button>
 			</div>
 
-			<div class="modal-content">
+			<div
+				class="modal-content"
+				:class="{ 'overflow-hidden': preventScrollContent }"
+			>
 				<slot></slot>
 			</div>
 
@@ -121,6 +125,18 @@ const props = defineProps({
 	width: {
 		type: String,
 		default: 'max-w-4xl'
+	},
+	height: {
+		type: String,
+		default: ''
+	},
+	customStyle: {
+		type: Object,
+		default: () => ({})
+	},
+	preventScrollContent: {
+		type: Boolean,
+		default: false
 	},
 	zIndex: {
 		type: [Number, String],

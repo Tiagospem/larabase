@@ -5,6 +5,10 @@ const props = defineProps({
 	modelValue: {
 		type: String,
 		default: '-- Write your SQL query here'
+	},
+	isRemoteConnection: {
+		type: Boolean,
+		default: false
 	}
 });
 
@@ -19,8 +23,7 @@ const {
 	layout,
 	getSelectedText,
 	saveAsScratch,
-	showProcessingOverlay,
-	explainResult
+	showProcessingOverlay
 } = useSQLEditor(props, emit);
 
 defineExpose({

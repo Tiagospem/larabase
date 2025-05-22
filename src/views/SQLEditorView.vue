@@ -5,7 +5,7 @@ import DataTable from '@/components/DataTable.vue';
 import SQLPaginator from '@/components/SQLPaginator.vue';
 import SQLScratchSidebar from '@/components/SQLScratchSidebar.vue';
 import DatabaseSchemaViewer from '@/components/schema/DatabaseSchemaViewer.vue';
-import { useRoute, useRouter } from 'vue-router';
+import { useRoute } from 'vue-router';
 import { computed, onMounted, ref, watch, onBeforeUnmount } from 'vue';
 import { useConnectionsStore } from '@/store/connections';
 import { useSqlResultsStore } from '@/store/sqlResults';
@@ -19,7 +19,6 @@ import type { ExplainResult } from '@/composables/useSQLEditor';
 import ConnectionGuard from '@/components/ConnectionGuard.vue';
 
 const route = useRoute();
-const router = useRouter();
 const isLoading = ref(true);
 const isContentReady = ref(false);
 const isResizing = ref(false);
@@ -42,6 +41,9 @@ const explainData = ref<ExplainResult>({
 	isExplaining: false
 });
 const isProcessing = ref(false);
+const isRemoteConnection = computed(() => {
+	return route.params.isRemote === 'true';
+});
 
 const currentPage = ref(1);
 const rowsPerPage = ref(25);
@@ -147,10 +149,6 @@ const tableData = computed(() => {
 		return formattedRow;
 	});
 });
-
-function goBack() {
-	router.push(`/database/${projectId.value}`);
-}
 
 function loadSavedSql() {
 	const savedSql = localStorage.getItem(
@@ -355,9 +353,16 @@ function handleConnectionValid() {
 
 onMounted(async () => {
 	isLoading.value = true;
+
 	await connectionsStore.loadConnections(projectId.value);
+
 	sqlScratchService.loadScratches(projectId.value);
-	await initializeSchema();
+
+	if (!isRemoteConnection.value) {
+		await initializeSchema();
+	} else {
+		isContentReady.value = true;
+	}
 
 	const active = sqlScratchService.getActiveScratch();
 	if (active) {
@@ -460,6 +465,7 @@ onBeforeUnmount(() => {
 <template>
 	<div class="relative flex h-full flex-col">
 		<ConnectionGuard
+			v-if="!isRemoteConnection"
 			:projectId="projectId"
 			:key="projectId"
 			@connection-valid="handleConnectionValid"
@@ -477,9 +483,10 @@ onBeforeUnmount(() => {
 		</div>
 		<template v-else-if="isContentReady">
 			<BaseHeader
-				@goBack="goBack"
+				:is-remote-connection="isRemoteConnection"
 				:title="`SQL Editor - ${activeScratch?.isDefault ? 'Default' : activeScratch?.name}`"
 				:project="project"
+				:show-back-button="false"
 				class="z-20 mt-8"
 			>
 				<template #actions>
@@ -507,6 +514,7 @@ onBeforeUnmount(() => {
 						</button>
 
 						<div
+							v-if="!isRemoteConnection"
 							class="tooltip tooltip-left"
 							data-tip="Database Schema"
 						>
@@ -535,6 +543,7 @@ onBeforeUnmount(() => {
 						</div>
 
 						<div
+							v-if="!isRemoteConnection"
 							class="tooltip tooltip-left"
 							data-tip="AI SQL Assistant"
 						>
@@ -619,6 +628,7 @@ onBeforeUnmount(() => {
 						<SQLEditor
 							ref="sqlEditorRef"
 							v-model="sqlQuery"
+							:is-remote-connection="isRemoteConnection"
 							class="h-full w-full"
 							@explain-sql="handleExplainSQL"
 							@processing-state="
@@ -879,6 +889,7 @@ onBeforeUnmount(() => {
 			</div>
 
 			<DatabaseSchemaViewer
+				v-if="!isRemoteConnection"
 				:show="showSchemaModal"
 				:schema-data="databaseSchema || { tables: [] }"
 				@close="showSchemaModal = false"
@@ -892,6 +903,7 @@ onBeforeUnmount(() => {
 			/>
 
 			<SQLExplainModal
+				v-if="!isRemoteConnection"
 				:show="showExplainModal"
 				:explain-data="explainData"
 				@close="closeExplainModal"

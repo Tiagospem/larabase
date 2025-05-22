@@ -20,6 +20,10 @@ import {
 	createDockerClient
 } from '../helpers/docker';
 import { exec } from 'child_process';
+import { toRaw } from 'vue';
+import { AppConnection } from '../../src/types/ssh-connection';
+import { MysqlConnection } from '../../src/types/mysql-connection';
+import { PoolConnection } from 'mysql2/promise';
 
 let activeRestoreProcess = null;
 
@@ -54,11 +58,12 @@ function buildBaseCommand(
 	return `set -o pipefail && ${command}`;
 }
 
-function buildCredentialFlags({ user, password, host, port }) {
-	let flags = ` -u${user || 'root'}`;
-	if (password) flags += ` -p${password}`;
-	if (host && host !== 'localhost') flags += ` -h${host}`;
-	if (port) flags += ` -P${port}`;
+function buildCredentialFlags(mysqlConnection: MysqlConnection) {
+	let flags = ` -u${mysqlConnection.user || 'root'}`;
+	if (mysqlConnection.password) flags += ` -p${mysqlConnection.password}`;
+	if (mysqlConnection.host && mysqlConnection.host !== 'localhost')
+		flags += ` -h${mysqlConnection.host}`;
+	if (mysqlConnection.port) flags += ` -P${mysqlConnection.port}`;
 	return flags;
 }
 
@@ -83,10 +88,10 @@ function getFileSizeOrThrow(filePath: string) {
 function ensureConfig(projectConnection: ProjectConnection, type: string) {
 	if (
 		!projectConnection ||
-		!projectConnection.db_config.host ||
-		!projectConnection.db_config.port ||
-		!projectConnection.db_config.user ||
-		!projectConnection.db_config.database
+		!projectConnection.dbConfig.host ||
+		!projectConnection.dbConfig.port ||
+		!projectConnection.dbConfig.user ||
+		!projectConnection.dbConfig.database
 	) {
 		throw new Error(
 			`Missing connection configuration for ${type} restore command`
@@ -95,17 +100,21 @@ function ensureConfig(projectConnection: ProjectConnection, type: string) {
 }
 
 async function validateDatabaseHasContent(restorationObject: RestoreConfig) {
-	let dbConnection: any;
+	let dbConnection: PoolConnection;
 
 	try {
 		try {
-			dbConnection = await createConnection(
-				restorationObject.project.db_config,
-				{
-					useConnectionDb: false,
-					targetDatabase: restorationObject.targetDatabase
-				}
-			);
+			const project = restorationObject.project;
+
+			const AppConnection = {
+				localDbConfig: toRaw(project.dbConfig),
+				remote: toRaw(project.sshConfig)
+			} as AppConnection;
+
+			dbConnection = await createConnection(AppConnection, {
+				useConnectionDb: false,
+				targetDatabase: restorationObject.targetDatabase
+			});
 
 			const [rows] = await dbConnection.query(`SHOW TABLES`);
 
@@ -142,7 +151,7 @@ function buildLocalRestoreCommand(restorationObject: RestoreConfig) {
 	let command = buildBaseCommand(filePath, sedFilters, useGunzip, true);
 
 	command += ' | mysql';
-	command += buildCredentialFlags(restorationObject.project.db_config);
+	command += buildCredentialFlags(restorationObject.project.dbConfig);
 	command += ' --binary-mode=1 --force';
 	command += ` --init-command="DROP DATABASE IF EXISTS \\\`${targetDatabase}\\\`; CREATE DATABASE \\\`${targetDatabase}\\\`; USE \\\`${targetDatabase}\\\`;"`;
 	command += ` --database=\`${targetDatabase}\``;
@@ -152,7 +161,7 @@ function buildLocalRestoreCommand(restorationObject: RestoreConfig) {
 	return {
 		command: command,
 		container: null,
-		connection: restorationObject.project.db_config,
+		connection: restorationObject.project.dbConfig,
 		sqlFilePath: restorationObject.filePath,
 		ignoredTables: restorationObject.ignoredTables || [],
 		useDockerApi: false,
@@ -177,7 +186,7 @@ function buildDockerRestoreCommand(restorationObject: RestoreConfig) {
 	return {
 		command: null,
 		container: restorationObject.project.dockerInfo.dockerContainerName,
-		connection: restorationObject.project.db_config,
+		connection: restorationObject.project.dbConfig,
 		sqlFilePath: restorationObject.filePath,
 		ignoredTables: restorationObject.ignoredTables || [],
 		useDockerApi: true,
@@ -214,7 +223,12 @@ async function restoreDatabase(
 	sendProgress('starting', 0, 'Starting database restoration process');
 
 	try {
-		await testConnection(restorationObject.project.db_config);
+		const AppConnection = {
+			localDbConfig: toRaw(restorationObject.project.dbConfig),
+			remote: toRaw(restorationObject.project.sshConfig)
+		} as AppConnection;
+
+		await testConnection(AppConnection);
 
 		sendProgress('validating', 10, 'Database connection validated');
 	} catch (err) {
@@ -698,7 +712,7 @@ async function extractTables(filePath: string, isGzipped: boolean) {
 				}
 
 				tableStats.set(currentTable, stats);
-			} catch (e) {
+			} catch (e: unknown) {
 				const stats = tableStats.get(currentTable) || {
 					estimatedRows: 0
 				};
@@ -711,6 +725,11 @@ async function extractTables(filePath: string, isGzipped: boolean) {
 				}
 
 				tableStats.set(currentTable, stats);
+
+				console.error(
+					`Error processing insert for table ${currentTable}:`,
+					e
+				);
 			}
 
 			currentTable = null;
@@ -879,7 +898,7 @@ function registerDatabaseRestoreHandlers(mainWindow: BrowserWindow) {
 			try {
 				if (
 					!restorationConfig ||
-					!restorationConfig.project.db_config ||
+					!restorationConfig.project.dbConfig ||
 					!restorationConfig.filePath
 				) {
 					return {
@@ -898,7 +917,7 @@ function registerDatabaseRestoreHandlers(mainWindow: BrowserWindow) {
 
 				const targetDatabase =
 					restorationConfig.targetDatabase ||
-					restorationConfig.project.db_config.database;
+					restorationConfig.project.dbConfig.database;
 
 				if (!targetDatabase) {
 					return {
@@ -928,7 +947,7 @@ function registerDatabaseRestoreHandlers(mainWindow: BrowserWindow) {
 
 					console.log(`Restoring database: ${targetDatabase}`);
 					console.log(
-						`Original connection database: ${project.db_config.database}`
+						`Original connection database: ${project.dbConfig.database}`
 					);
 					console.log(`Docker mode: ${useDocker ? 'Yes' : 'No'}`);
 					console.log(`Gzipped file: ${isGzipped ? 'Yes' : 'No'}`);

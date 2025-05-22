@@ -254,7 +254,7 @@ async function updateConnectionDatabase(
 		);
 
 		if (connection) {
-			connection.db_config.database = targetDatabase;
+			connection.dbConfig.database = targetDatabase;
 
 			localStorage.setItem('connections', JSON.stringify(connections));
 
@@ -298,7 +298,7 @@ async function startRestore() {
 		let targetDatabase;
 
 		if (overwriteCurrentDb.value) {
-			targetDatabase = selectedProject.value?.db_config?.database;
+			targetDatabase = selectedProject.value?.dbConfig?.database;
 		} else {
 			targetDatabase = restoreConfig.value.targetDatabase;
 		}
@@ -332,7 +332,7 @@ async function startRestore() {
 			if (
 				!overwriteCurrentDb.value &&
 				restoreConfig.value.setAsDefault &&
-				targetDatabase !== selectedProject.value?.db_config?.database
+				targetDatabase !== selectedProject.value?.dbConfig?.database
 			) {
 				await updateConnectionDatabase(
 					selectedProject.value?.id as string,
@@ -384,7 +384,6 @@ function restoreDatabase(project: ProjectConnection) {
 	currentStep.value = 0;
 }
 
-// Safely add event listener only if ipcRenderer is available
 onMounted(() => {
 	if (window.ipcRenderer) {
 		window.ipcRenderer.on(
@@ -416,7 +415,6 @@ onMounted(() => {
 });
 
 onUnmounted(() => {
-	// Clean up the event listener
 	if (window.ipcRenderer) {
 		window.ipcRenderer.removeAllListeners('restoration-progress');
 	}
@@ -628,8 +626,8 @@ defineExpose({ restoreDatabase });
 										<p class="mt-1 text-xs">
 											Overwrite
 											{{
-												selectedProject?.db_config
-													.database
+												selectedProject?.dbConfig
+													?.database
 											}}
 										</p>
 									</div>
@@ -763,7 +761,7 @@ defineExpose({ restoreDatabase });
 							<span class="font-medium">Destination:</span>
 							{{
 								overwriteCurrentDb
-									? selectedProject?.db_config?.database
+									? selectedProject?.dbConfig?.database
 									: restoreConfig.targetDatabase
 							}}
 						</li>

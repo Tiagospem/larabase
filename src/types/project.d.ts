@@ -1,18 +1,22 @@
 import { MysqlConnection } from './mysql-connection';
 import { RedisConnection } from './redis';
 import { DockerInfo } from './docker-info';
+import { SshConnection } from './ssh-connection';
+import { ConnectionType } from './connection-types';
 
 export interface ProjectConnection {
 	id?: string | null;
 	name: string;
 	projectPath: string;
-	type: string;
+	type: ConnectionType;
 	icon: string | undefined | null;
-	db_config: MysqlConnection;
-	redis_config: RedisConnection;
+	dbConfig?: MysqlConnection;
+	sshConfig?: SshConnection;
+	redisConfig: RedisConnection;
 	usingSail: boolean;
 	status: string;
 	isValid: boolean;
+	isRemote: boolean;
 	dockerInfo?: DockerInfo | undefined | null;
 }
 
@@ -89,11 +93,4 @@ export interface LogEntry {
 	level: string;
 	message: string;
 	content: string[];
-}
-
-export interface LogResponse {
-	success: boolean;
-	message?: string;
-	entries?: LogEntry[];
-	logs?: LogFile[];
 }

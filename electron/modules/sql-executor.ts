@@ -1,10 +1,10 @@
 import { ipcMain } from 'electron';
 import { createConnection, releaseConnection } from '../helpers/mysql';
-import { MysqlConnection } from '../../src/types/mysql-connection';
+import { AppConnection } from '../../src/types/ssh-connection';
 
 async function executeSqlQueryHandler(
 	_: any,
-	config: MysqlConnection,
+	config: AppConnection,
 	query: string
 ) {
 	let connection: any;
@@ -32,7 +32,7 @@ async function executeSqlQueryHandler(
 
 async function executeExplainSqlHandler(
 	_: any,
-	config: MysqlConnection,
+	config: AppConnection,
 	query: string
 ) {
 	let connection: any;
@@ -96,6 +96,6 @@ async function executeExplainSqlHandler(
 }
 
 export function registerSqlExecutorHandlers() {
-	ipcMain.handle('executeSqlQuery', executeSqlQueryHandler);
-	ipcMain.handle('executeExplainSql', executeExplainSqlHandler);
+	ipcMain.handle('execute-sql-query', executeSqlQueryHandler);
+	ipcMain.handle('execute-explain-sql', executeExplainSqlHandler);
 }

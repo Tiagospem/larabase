@@ -2,6 +2,7 @@
 import { ref, onMounted, inject } from 'vue';
 import { useConnectionsStore } from '@/store/connections';
 import { toRaw } from 'vue';
+import { AppConnection } from '@/types/ssh-connection';
 
 const props = defineProps<{ tableName: string }>();
 const showAlert = inject<(message: string, type: string) => void>('showAlert')!;
@@ -28,10 +29,19 @@ function getBadgeClass(indexType: string) {
 async function loadTableIndexes() {
 	try {
 		isLoading.value = true;
-		const dbConfig = toRaw(connectionsStore.getSelectedProject?.db_config);
+		const selectedProject = connectionsStore.getSelectedProject;
+		if (!selectedProject) {
+			showAlert('No project selected', 'error');
+			return;
+		}
+
+		const AppConnection = {
+			localDbConfig: toRaw(selectedProject.dbConfig),
+			remote: toRaw(selectedProject.sshConfig)
+		} as AppConnection;
 
 		const response = await window.ipcRenderer.getTableIndexes(
-			dbConfig,
+			AppConnection,
 			props.tableName
 		);
 

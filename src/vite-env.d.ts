@@ -7,7 +7,6 @@ declare module '*.vue' {
 }
 
 interface ExtendedIpcRenderer extends IpcRenderer {
-	executeSqlQuery: (config: any, query: string) => Promise<any>;
 	[key: string]: any;
 }
 

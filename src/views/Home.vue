@@ -7,6 +7,8 @@ import RestoreDatabase from '@/components/home/RestoreDatabase.vue';
 import { ProjectConnection } from '@/types/project';
 import ManageConnection from '@/components/home/ManageConnection.vue';
 import Settings from '@/components/Settings.vue';
+import { ConnectionType } from '@/types/connection-types';
+import RemoteBadge from '@/components/ui/RemoteBadge.vue';
 
 const router = useRouter();
 const connectionsStore = useConnectionsStore();
@@ -48,16 +50,22 @@ onMounted(async () => {
 	await connectionsStore.loadConnections();
 });
 
-function openConnection(connectionId: string) {
-	router.push(`/database/${connectionId}`);
+async function openConnection(project: ProjectConnection) {
+	const success = await window.ipcRenderer.openConnectionWindow(
+		project.id,
+		project.isRemote
+	);
+	if (success) {
+		window.close();
+	}
 }
 
 function getConnectionColor(type: string) {
 	switch (type) {
-		case 'mysql':
+		case ConnectionType.MySQL:
 			return 'bg-orange-500';
-		case 'postgresql':
-			return 'bg-blue-600';
+		case ConnectionType.SSH:
+			return 'bg-purple-600';
 		default:
 			return 'bg-gray-600';
 	}
@@ -172,7 +180,7 @@ function getConnectionColor(type: string) {
 					<div
 						v-for="connection in connectionsStore.connections"
 						:key="connection.id as string"
-						class="card bg-base-300 border-base-300 hover:bg-base-200 border shadow-sm transition-colors"
+						class="card bg-base-300 border-base-300 hover:bg-base-200 border shadow-xs transition-colors"
 					>
 						<div class="card-body px-5 py-4">
 							<div
@@ -191,22 +199,42 @@ function getConnectionColor(type: string) {
 										class="card-title overflow-hidden text-ellipsis whitespace-nowrap"
 									>
 										<span>{{ connection.name }}</span>
+										<RemoteBadge
+											v-if="connection.isRemote"
+										/>
 									</h2>
 									<p
 										class="overflow-hidden text-xs text-ellipsis whitespace-nowrap"
 									>
-										{{ connection.db_config.host }}
+										{{
+											connection.type ===
+												ConnectionType.SSH &&
+											connection.sshConfig
+												? connection.sshConfig.host
+												: connection.dbConfig?.host
+										}}
 									</p>
 									<p
 										class="mt-1 overflow-hidden text-xs font-medium text-ellipsis whitespace-nowrap"
 									>
-										{{ connection.db_config.database }}
+										{{
+											connection.type ===
+												ConnectionType.SSH &&
+											connection.sshConfig
+												? connection.sshConfig
+														.remoteDbConfig.database
+												: connection.dbConfig?.database
+										}}
 										<span
-											class="ml-1 text-xs"
+											v-if="
+												connection.type !==
+												ConnectionType.SSH
+											"
+											class="ml-1 text-xs badge badge-xs"
 											:class="{
-												'text-success':
+												'badge-success':
 													connection.isValid,
-												'text-error':
+												'badge-error':
 													!connection.isValid
 											}"
 											>{{ connection.status }}</span
@@ -243,6 +271,10 @@ function getConnectionColor(type: string) {
 										</button>
 									</div>
 									<div
+										v-if="
+											connection.type ===
+											ConnectionType.MySQL
+										"
 										class="tooltip tooltip-bottom"
 										data-tip="Restore database"
 									>
@@ -305,9 +337,7 @@ function getConnectionColor(type: string) {
 											:disabled="!connection.isValid"
 											class="btn btn-sm btn-ghost"
 											@click.stop="
-												openConnection(
-													connection.id as string
-												)
+												openConnection(connection)
 											"
 										>
 											<svg

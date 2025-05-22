@@ -6,22 +6,55 @@ import { useSqlResultsStore } from '@/store/sqlResults';
 import { AIService } from '@/services/aiService';
 import { toRaw } from 'vue';
 import { useDatabaseSchema } from '@/services/databaseSchema';
+import { AppConnection } from '@/types/ssh-connection';
+import { ProjectConnection } from '@/types/project';
 
-type EmitFn = (
-	event: 'update:modelValue' | 'processing-state' | 'explain-sql',
-	...args: any[]
+type EmitEvents = {
+	'update:modelValue': [string];
+	'processing-state': [boolean];
+	'explain-sql': [ExplainResult];
+};
+
+type EmitFn = <E extends keyof EmitEvents>(
+	event: E,
+	...args: EmitEvents[E]
 ) => void;
 
+interface ExplainRow {
+	id: number;
+	select_type?: string;
+	table?: string;
+	partitions?: string | null;
+	type?: string;
+	possible_keys?: string | null;
+	key?: string | null;
+	key_len?: string | null;
+	ref?: string | null;
+	rows?: number;
+	filtered?: number;
+	Extra?: string;
+	[key: string]: unknown;
+}
+
+interface JsonExplainPlan {
+	query_block?: Record<string, unknown>;
+	steps?: Array<Record<string, unknown>>;
+	[key: string]: unknown;
+}
+
 export interface ExplainResult {
-	rawExplain: any[];
+	rawExplain: ExplainRow[];
 	queryToExplain: string;
 	isExplaining: boolean;
 	aiAnalysis?: string;
-	jsonExplain?: any;
+	jsonExplain?: JsonExplainPlan;
 	error?: string;
 }
 
-export function useSQLEditor(props: { modelValue: string }, emit: EmitFn) {
+export function useSQLEditor(
+	props: { modelValue: string; isRemoteConnection: boolean },
+	emit: EmitFn
+) {
 	const container = ref<HTMLDivElement | null>(null);
 	let editor: monaco.editor.IStandaloneCodeEditor | null = null;
 	let isUpdating = false;
@@ -29,8 +62,9 @@ export function useSQLEditor(props: { modelValue: string }, emit: EmitFn) {
 	const connectionsStore = useConnectionsStore();
 	const sqlResultsStore = useSqlResultsStore();
 	const aiService = AIService.getInstance();
-	const { databaseSchema, fetchDatabaseSchema, initializeSchema } =
-		useDatabaseSchema();
+	const { databaseSchema, initializeSchema } = useDatabaseSchema(
+		props.isRemoteConnection
+	);
 
 	const isFixingSQL = ref(false);
 	const showProcessingOverlay = ref(false);
@@ -205,7 +239,7 @@ export function useSQLEditor(props: { modelValue: string }, emit: EmitFn) {
 							kind: monaco.languages.CompletionItemKind.Keyword,
 							insertText: keyword,
 							detail: 'Keyword',
-							sortText: '9' + keyword, // Lower priority than tables/columns
+							sortText: '9' + keyword,
 							range: {
 								startLineNumber: position.lineNumber,
 								endLineNumber: position.lineNumber,
@@ -289,6 +323,35 @@ export function useSQLEditor(props: { modelValue: string }, emit: EmitFn) {
 		});
 	};
 
+	const getEditorSelectedText = (ed: monaco.editor.ICodeEditor): string => {
+		const selection = ed.getSelection();
+		let selectedText = '';
+
+		if (selection && !selection.isEmpty()) {
+			selectedText = ed.getModel()?.getValueInRange(selection) || '';
+		} else {
+			const position = ed.getPosition();
+			if (position) {
+				const lineNumber = position.lineNumber;
+				selectedText = ed.getModel()?.getLineContent(lineNumber) || '';
+			}
+		}
+
+		return selectedText;
+	};
+
+	const createAppConnection = (project: ProjectConnection): AppConnection => {
+		return {
+			localDbConfig: toRaw(project.dbConfig),
+			remote: toRaw(project.sshConfig)
+		} as AppConnection;
+	};
+
+	const handleError = (error: unknown, prefix: string): string => {
+		console.error(`${prefix}:`, error);
+		return error instanceof Error ? error.message : String(error);
+	};
+
 	const createEditor = () => {
 		if (!container.value) return;
 		if (editor) return;
@@ -327,31 +390,19 @@ export function useSQLEditor(props: { modelValue: string }, emit: EmitFn) {
 			contextMenuGroupId: 'navigation',
 			contextMenuOrder: 1.5,
 			run: async function (ed) {
-				const selection = ed.getSelection();
-				let selectedText = '';
-
-				if (selection && !selection.isEmpty()) {
-					selectedText =
-						ed.getModel()?.getValueInRange(selection) || '';
-				} else {
-					const position = ed.getPosition();
-					if (position) {
-						const lineNumber = position.lineNumber;
-						selectedText =
-							ed.getModel()?.getLineContent(lineNumber) || '';
-					}
-				}
+				const selectedText = getEditorSelectedText(ed);
 
 				if (selectedText.trim()) {
-					const projectConfig =
-						connectionsStore.getSelectedProject?.db_config;
-					if (projectConfig) {
+					const projects = connectionsStore.getSelectedProject;
+					if (projects) {
 						sqlResultsStore.isLoading = true;
 						const startTime = Date.now();
 						try {
+							const AppConnection = createAppConnection(projects);
+
 							const result =
 								await window.ipcRenderer.executeSqlQuery(
-									toRaw(projectConfig),
+									AppConnection,
 									selectedText.trim()
 								);
 
@@ -375,12 +426,11 @@ export function useSQLEditor(props: { modelValue: string }, emit: EmitFn) {
 								);
 							}
 						} catch (error) {
-							console.error('Exception executing SQL:', error);
-							sqlResultsStore.setError(
-								error instanceof Error
-									? error.message
-									: 'Error executing SQL query'
+							const errorMessage = handleError(
+								error,
+								'Exception executing SQL'
 							);
+							sqlResultsStore.setError(errorMessage);
 						} finally {
 							sqlResultsStore.isLoading = false;
 						}
@@ -389,82 +439,83 @@ export function useSQLEditor(props: { modelValue: string }, emit: EmitFn) {
 			}
 		});
 
-		editor.addAction({
-			id: 'explain-sql',
-			label: 'Explain SQL',
-			keybindings: [monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyE],
-			contextMenuGroupId: 'navigation',
-			contextMenuOrder: 1.3,
-			run: async function (ed) {
-				const selection = ed.getSelection();
-				let selectedText = '';
+		if (!props.isRemoteConnection) {
+			editor.addAction({
+				id: 'explain-sql',
+				label: 'Explain SQL',
+				keybindings: [monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyE],
+				contextMenuGroupId: 'navigation',
+				contextMenuOrder: 1.3,
+				run: async function (ed) {
+					const selectedText = getEditorSelectedText(ed);
 
-				if (selection && !selection.isEmpty()) {
-					selectedText =
-						ed.getModel()?.getValueInRange(selection) || '';
-				} else {
-					const position = ed.getPosition();
-					if (position) {
-						const lineNumber = position.lineNumber;
-						selectedText =
-							ed.getModel()?.getLineContent(lineNumber) || '';
-					}
-				}
+					if (selectedText.trim()) {
+						const query = selectedText.trim();
+						const project = connectionsStore.getSelectedProject;
 
-				if (selectedText.trim()) {
-					const query = selectedText.trim();
-					const projectConfig =
-						connectionsStore.getSelectedProject?.db_config;
+						if (project) {
+							explainResult.value = {
+								rawExplain: [],
+								queryToExplain: query,
+								isExplaining: true
+							};
 
-					if (projectConfig) {
-						explainResult.value = {
-							rawExplain: [],
-							queryToExplain: query,
-							isExplaining: true
-						};
+							emit('explain-sql', { ...explainResult.value });
 
-						emit('explain-sql', { ...explainResult.value });
+							try {
+								const AppConnection =
+									createAppConnection(project);
 
-						try {
-							const result =
-								await window.ipcRenderer.executeExplainSql(
-									toRaw(projectConfig),
-									query
+								const result =
+									await window.ipcRenderer.executeExplainSql(
+										AppConnection,
+										query
+									);
+
+								if (result && result.success) {
+									explainResult.value = {
+										rawExplain:
+											result.explainResults as ExplainRow[],
+										queryToExplain: query,
+										isExplaining: false,
+										jsonExplain:
+											result.jsonExplain as JsonExplainPlan
+									};
+
+									emit('explain-sql', {
+										...explainResult.value
+									});
+								} else {
+									const errorMsg =
+										result && result.error
+											? result.error
+											: 'Unknown SQL error occurred';
+									console.error(
+										'Explain SQL Error:',
+										errorMsg
+									);
+									explainResult.value.isExplaining = false;
+									emit('explain-sql', {
+										...explainResult.value,
+										error: `Error executing EXPLAIN: ${errorMsg}`
+									});
+								}
+							} catch (error) {
+								const errorMessage = handleError(
+									error,
+									'Exception explaining SQL'
 								);
-
-							if (result && result.success) {
-								explainResult.value = {
-									rawExplain: result.explainResults,
-									queryToExplain: query,
-									isExplaining: false,
-									jsonExplain: result.jsonExplain
-								};
-
-								emit('explain-sql', { ...explainResult.value });
-							} else {
-								const errorMsg =
-									result && result.error
-										? result.error
-										: 'Unknown SQL error occurred';
-								console.error('Explain SQL Error:', errorMsg);
 								explainResult.value.isExplaining = false;
 								emit('explain-sql', {
 									...explainResult.value,
-									error: `Error executing EXPLAIN: ${errorMsg}`
+									error: `Error: ${errorMessage}`
 								});
 							}
-						} catch (error) {
-							console.error('Exception explaining SQL:', error);
-							explainResult.value.isExplaining = false;
-							emit('explain-sql', {
-								...explainResult.value,
-								error: `Error: ${error instanceof Error ? error.message : String(error)}`
-							});
 						}
 					}
 				}
-			}
-		});
+			});
+		}
 
 		editor.addAction({
 			id: 'beautify-sql',
@@ -475,7 +526,7 @@ export function useSQLEditor(props: { modelValue: string }, emit: EmitFn) {
 			run: function (ed) {
 				try {
 					const selection = ed.getSelection();
-					let text = '';
+					let text: string;
 					let formattedText = '';
 					let range;
 
@@ -516,7 +567,13 @@ export function useSQLEditor(props: { modelValue: string }, emit: EmitFn) {
 							}
 						]);
 					}
-				} catch (error) {}
+				} catch (error: unknown) {
+					const errorMessage = handleError(
+						error,
+						'Error beautifying SQL'
+					);
+					alert('Error beautifying SQL: ' + errorMessage);
+				}
 			}
 		});
 
@@ -564,14 +621,12 @@ export function useSQLEditor(props: { modelValue: string }, emit: EmitFn) {
 								}
 							]);
 						}
-					} catch (error) {
-						console.error('Exception fixing SQL:', error);
-						alert(
-							'Error fixing SQL: ' +
-								(error instanceof Error
-									? error.message
-									: String(error))
+					} catch (error: unknown) {
+						const errorMessage = handleError(
+							error,
+							'Exception fixing SQL'
 						);
+						alert('Error fixing SQL: ' + errorMessage);
 					} finally {
 						isFixingSQL.value = false;
 						showProcessingOverlay.value = false;
@@ -644,12 +699,7 @@ export function useSQLEditor(props: { modelValue: string }, emit: EmitFn) {
 
 	const getSelectedText = (): string => {
 		if (!editor) return '';
-
-		const selection = editor.getSelection();
-		if (selection && !selection.isEmpty()) {
-			return editor.getModel()?.getValueInRange(selection) || '';
-		}
-		return editor.getValue();
+		return getEditorSelectedText(editor);
 	};
 
 	const saveAsScratch = () => {
@@ -669,7 +719,10 @@ export function useSQLEditor(props: { modelValue: string }, emit: EmitFn) {
 
 	onMounted(() => {
 		setTimeout(async () => {
-			await initializeSchema();
+			if (!props.isRemoteConnection) {
+				await initializeSchema();
+			}
+
 			createEditor();
 		}, 50);
 		window.addEventListener('resize', handleResize);

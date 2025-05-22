@@ -4,6 +4,7 @@ import path from 'path';
 import { spawn } from 'child_process';
 import { RowDataPacket } from 'mysql2';
 import { createConnection, safeEndConnection } from '../helpers/mysql';
+import { PoolConnection } from 'mysql2/promise';
 
 interface MigrationRow extends RowDataPacket {
 	id: number;
@@ -23,7 +24,7 @@ function registerMigrationHandlers() {
 				};
 			}
 
-			if (!config.db_config) {
+			if (!config.appConnection) {
 				return {
 					success: false,
 					message: 'Database configuration is required',
@@ -144,10 +145,12 @@ function registerMigrationHandlers() {
 			}
 
 			if (migrationsHistory.length === 0) {
-				let connection;
-				try {
-					connection = await createConnection(config.db_config);
+				let connection: PoolConnection;
 
+				try {
+					connection = await createConnection(config.appConnection);
+
+					// noinspection SqlResolve
 					const [rows] = await connection.query(
 						'SELECT * FROM migrations ORDER BY batch DESC, id DESC'
 					);

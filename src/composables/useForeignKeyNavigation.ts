@@ -1,9 +1,17 @@
 import { useTabsStore } from '@/store/tabs';
 import { useSidebarStore } from '@/store/sidebar';
 import { Table } from '@/types/table';
-import { ForeignKey } from '@/types/mysql-connection';
 import { useConnectionsStore } from '@/store/connections';
 import { toRaw } from 'vue';
+import { AppConnection } from '@/types/ssh-connection';
+
+export interface ForeignKey {
+	column: string;
+	referenced_table: string;
+	referenced_column: string;
+	constraint_name?: string;
+	type: 'outgoing' | 'incoming';
+}
 
 export function useForeignKeyNavigation() {
 	const tabsStore = useTabsStore();
@@ -26,8 +34,13 @@ export function useForeignKeyNavigation() {
 				return [];
 			}
 
+			const AppConnection = {
+				localDbConfig: toRaw(selectedProject.dbConfig),
+				remote: toRaw(selectedProject.sshConfig)
+			} as AppConnection;
+
 			const result = await window.ipcRenderer.getTableForeignKeys(
-				toRaw(selectedProject.db_config),
+				AppConnection,
 				tableName
 			);
 
@@ -54,7 +67,7 @@ export function useForeignKeyNavigation() {
 	async function navigateToForeignKey(
 		tableName: string,
 		column: string,
-		value: any,
+		value: string | number | null | undefined,
 		onError?: (message: string) => void
 	): Promise<boolean> {
 		if (value === null || value === undefined) {

@@ -1,6 +1,5 @@
 import { ipcRenderer, contextBridge } from 'electron';
 import { Settings } from '../../src/types/settings';
-import { MysqlConnection } from '../../src/types/mysql-connection';
 import { RestoreConfig } from '../../src/types/project';
 import { RedisConnection } from '../../src/types/redis';
 import {
@@ -10,6 +9,7 @@ import {
 	TableRecord,
 	UpdateTableRecord
 } from '../../src/types/table';
+import { AppConnection, SshConnection } from '../../src/types/ssh-connection';
 
 contextBridge.exposeInMainWorld('ipcRenderer', {
 	on(...args: Parameters<typeof ipcRenderer.on>) {
@@ -37,11 +37,22 @@ contextBridge.exposeInMainWorld('ipcRenderer', {
 		return ipcRenderer.removeAllListeners(channel);
 	},
 	/**
+	 * Window Management
+	 */
+	openConnectionWindow: (connectionId: string, isRemote: boolean) =>
+		ipcRenderer.invoke('open-connection-window', connectionId, isRemote),
+	closeConnectionWindow: (connectionId: string) =>
+		ipcRenderer.invoke('close-connection-window', connectionId),
+	openSqlEditorWindow: (connectionId: string, isRemote: boolean) =>
+		ipcRenderer.invoke('open-sql-editor-window', connectionId, isRemote),
+	showHomeWindow: () => ipcRenderer.invoke('show-home-window'),
+	getWindowId: () => ipcRenderer.invoke('get-window-id'),
+	/**
 	 * DB monitoring
 	 */
 	startLiveDbUpdate: (config: {
 		connectionId: string;
-		dbConnection: MysqlConnection;
+		appConnection: AppConnection;
 		clearHistory?: boolean;
 	}) => ipcRenderer.invoke('start-live-db-updates', config),
 	stopDbMonitoring: (connectionId: string) =>
@@ -90,36 +101,36 @@ contextBridge.exposeInMainWorld('ipcRenderer', {
 	/**
 	 * MySQL
 	 */
-	testMySQLConnection: (config: MysqlConnection) =>
+	testMySQLConnection: (config: AppConnection) =>
 		ipcRenderer.invoke('test-mysql-connection', config),
-	listDatabases: (config: MysqlConnection) =>
+	listDatabases: (config: AppConnection) =>
 		ipcRenderer.invoke('list-databases', config),
-	dropDatabase: (config: MysqlConnection, databaseName: string) =>
+	dropDatabase: (config: AppConnection, databaseName: string) =>
 		ipcRenderer.invoke('drop-database', config, databaseName),
-	createDatabase: (config: MysqlConnection, databaseName: string) =>
+	createDatabase: (config: AppConnection, databaseName: string) =>
 		ipcRenderer.invoke('create-database', config, databaseName),
 	/**
 	 * Tables
 	 */
 	dropTables: (params: DropTableParams) =>
 		ipcRenderer.invoke('drop-tables', params),
-	listTables: (config: MysqlConnection) =>
+	listTables: (config: AppConnection) =>
 		ipcRenderer.invoke('list-tables', config),
-	getTableRecordCount: (config: MysqlConnection, table: Table) =>
+	getTableRecordCount: (config: AppConnection, table: Table) =>
 		ipcRenderer.invoke('get-table-record-count', config, table),
-	truncateTable: (config: MysqlConnection, tableName: string) =>
+	truncateTable: (config: AppConnection, tableName: string) =>
 		ipcRenderer.invoke('truncate-table', config, tableName),
 	getTableRecords: (config: TableRecord) =>
 		ipcRenderer.invoke('get-table-records', config),
 	deleteRecords: (config: DeleteRowsConfig) =>
 		ipcRenderer.invoke('delete-table-records', config),
-	getTableStructure: (config: MysqlConnection, tableName: string) =>
+	getTableStructure: (config: AppConnection, tableName: string) =>
 		ipcRenderer.invoke('get-table-structure', config, tableName),
-	getTableForeignKeys: (config: MysqlConnection, tableName: string) =>
+	getTableForeignKeys: (config: AppConnection, tableName: string) =>
 		ipcRenderer.invoke('get-table-foreign-keys', config, tableName),
-	getTableIndexes: (config: MysqlConnection, tableName: string) =>
+	getTableIndexes: (config: AppConnection, tableName: string) =>
 		ipcRenderer.invoke('get-table-indexes', config, tableName),
-	getDatabaseSchemaForAI: (config: MysqlConnection) =>
+	getDatabaseSchemaForAI: (config: AppConnection) =>
 		ipcRenderer.invoke('get-database-schema-for-ai', config),
 	updateTableRecord: (config: UpdateTableRecord) =>
 		ipcRenderer.invoke('update-table-record', config),
@@ -131,13 +142,13 @@ contextBridge.exposeInMainWorld('ipcRenderer', {
 	getMigrationStatus: (config: {
 		projectPath: string;
 		usingSail: boolean;
-		db_config: MysqlConnection;
+		appConnection: AppConnection;
 	}) => ipcRenderer.invoke('get-migration-status', config),
 	/**
 	 * Files
 	 */
 	readFile: (filePath: string) => ipcRenderer.invoke('read-file', filePath),
-	saveFile: (filePath: string, content: any) =>
+	saveFile: (filePath: string, content: string) =>
 		ipcRenderer.invoke('save-file', filePath, content),
 	/**
 	 * Project
@@ -154,6 +165,7 @@ contextBridge.exposeInMainWorld('ipcRenderer', {
 	findModelsForTables: (projectPath: string) =>
 		ipcRenderer.invoke('find-models-for-tables', projectPath),
 	selectDirectory: () => ipcRenderer.invoke('select-directory'),
+	selectFile: (options: object) => ipcRenderer.invoke('select-file', options),
 	validateLaravelProject: (projectPath: string) =>
 		ipcRenderer.invoke('validate-laravel-project', projectPath),
 	readEnvFile: (projectPath: string) =>
@@ -196,15 +208,18 @@ contextBridge.exposeInMainWorld('ipcRenderer', {
 	/**
 	 * SQL Executor
 	 */
-	executeSqlQuery: (config: MysqlConnection, query: string) =>
-		ipcRenderer.invoke('executeSqlQuery', config, query),
-	executeExplainSql: (config: MysqlConnection, query: string) =>
-		ipcRenderer.invoke('executeExplainSql', config, query),
+	executeSqlQuery: (config: AppConnection, query: string) =>
+		ipcRenderer.invoke('execute-sql-query', config, query),
+	executeExplainSql: (config: AppConnection, query: string) =>
+		ipcRenderer.invoke('execute-explain-sql', config, query),
 	/**
 	 * Auto-updater
 	 */
 	onUpdateStatus: (callback: Function) => {
-		const subscription = (_event: any, ...args: any[]) => callback(...args);
+		const subscription = (
+			_event: Electron.IpcRendererEvent,
+			...args: unknown[]
+		) => callback(...args);
 		ipcRenderer.on('update-status', subscription);
 		return () => {
 			ipcRenderer.removeListener('update-status', subscription);
@@ -214,7 +229,64 @@ contextBridge.exposeInMainWorld('ipcRenderer', {
 	downloadUpdate: () => ipcRenderer.invoke('download-update'),
 	quitAndInstall: () => ipcRenderer.invoke('quit-and-install'),
 	getCurrentVersion: () => ipcRenderer.invoke('get-current-version'),
-	openExternal: (url: string) => ipcRenderer.invoke('open-external', url)
+	openExternal: (url: string) => ipcRenderer.invoke('open-external', url),
+
+	/**
+	 * SSH Operations
+	 */
+	ssh: {
+		testConnection: (config: SshConnection) =>
+			ipcRenderer.invoke('ssh:test-connection', config),
+		executeCommand: (config: SshConnection, command: string) =>
+			ipcRenderer.invoke('ssh:execute-command', config, command),
+		readFile: (config: SshConnection, filePath: string) =>
+			ipcRenderer.invoke('ssh:read-file', config, filePath),
+		writeFile: (config: SshConnection, filePath: string, content: string) =>
+			ipcRenderer.invoke('ssh:write-file', config, filePath, content),
+		listFiles: (config: SshConnection, dirPath: string) =>
+			ipcRenderer.invoke('ssh:list-files', config, dirPath),
+		getEnv: (config: SshConnection) =>
+			ipcRenderer.invoke('ssh:get-env', config),
+		updateEnv: (config: SshConnection, content: string) =>
+			ipcRenderer.invoke('ssh:update-env', config, content),
+		closeConnection: (config: SshConnection) =>
+			ipcRenderer.invoke('ssh:close-connection', config),
+		createTunnel: (
+			config: SshConnection,
+			remoteHost: string,
+			remotePort: number,
+			localPort?: number
+		) =>
+			ipcRenderer.invoke(
+				'ssh:create-tunnel',
+				config,
+				remoteHost,
+				remotePort,
+				localPort
+			),
+		closeTunnel: (tunnelId: string) =>
+			ipcRenderer.invoke('ssh:close-tunnel', tunnelId)
+	},
+
+	/**
+	 * SSH Tunneling
+	 */
+	findAvailablePort: (min: number, max: number) =>
+		ipcRenderer.invoke('find-available-port', { min, max }),
+	createSSHTunnel: (config: {
+		sshConfig: SshConnection;
+		localPort: number;
+		remoteHost: string;
+		remotePort: number;
+	}) => ipcRenderer.invoke('create-ssh-tunnel', config),
+	closeSSHTunnel: (tunnel: { server: unknown; connection: unknown }) =>
+		ipcRenderer.invoke('close-ssh-tunnel', tunnel),
+
+	/**
+	 * App Icon Badge
+	 */
+	updateMigrationsBadge: (count: number) =>
+		ipcRenderer.invoke('update-migrations-badge', count)
 });
 
 function domReady(
@@ -298,7 +370,7 @@ function useLoading() {
 const { appendLoading, removeLoading } = useLoading();
 domReady().then(appendLoading);
 
-window.onmessage = (ev) => {
+window.onmessage = (ev: MessageEvent<{ payload: string }>) => {
 	ev.data.payload === 'removeLoading' && removeLoading();
 };
 

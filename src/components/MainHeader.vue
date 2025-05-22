@@ -2,46 +2,52 @@
 import { useConnectionsStore } from '@/store/connections';
 import { useRedisStore } from '@/store/redis';
 import { ProjectConnection } from '@/types/project';
-import { watchEffect, reactive, computed, onMounted } from 'vue';
-import { useRouter } from 'vue-router';
+import { watchEffect, reactive, computed, onMounted, onUnmounted } from 'vue';
 import ShowConnectionInfo from '@/components/ShowConnectionInfo.vue';
 import DatabaseSchemaViewer from '@/components/schema/DatabaseSchemaViewer.vue';
 import ERDModal from '@/components/ERDModal.vue';
 import { useDatabaseSchema } from '@/services/databaseSchema';
 import RedisManager from '@/components/RedisManager.vue';
 import LaravelCommands from '@/components/LaravelCommands.vue';
+import {
+	ConnectionType,
+	getConnectionTypeColor
+} from '@/types/connection-types';
+import Settings from '@/components/Settings.vue';
+import DatabaseSwitcher from '@/components/database/DatabaseSwitcher.vue';
+import LiveUpdates from '@/components/LiveUpdates.vue';
+import ProjectLogs from '@/components/ProjectLogs.vue';
+import Migrations from '@/components/Migrations.vue';
+import EnvEditor from '@/components/EnvEditor.vue';
+import RemoteFileExplorer from '@/components/RemoteFileExplorer.vue';
+import { SshConnection } from '@/types/ssh-connection';
 
 const connectionsStore = useConnectionsStore();
 const redisStore = useRedisStore();
-const router = useRouter();
+
 const {
 	databaseSchema,
 	isLoading: isLoadingSchema,
-	fetchDatabaseSchema,
-	initializeSchema
+	fetchDatabaseSchema
 } = useDatabaseSchema();
 
 const props = defineProps({
 	pendingMigrations: {
 		type: Number,
 		default: 0
+	},
+	isRemoteConnection: {
+		type: Boolean,
+		default: false
 	}
 });
 
-const emit = defineEmits([
-	'open-settings',
-	'open-database-switcher',
-	'open-live-updates',
-	'open-project-logs',
-	'open-migrations',
-	'open-env-editor',
-	'goBack'
-]);
+const emit = defineEmits(['goBack', 'migrations-updated']);
 
 const selectedProject = computed(() => connectionsStore.getSelectedProject);
 
 const isRedisAvailable = computed(() => {
-	return redisStore.isRedisAvailable;
+	return redisStore.isRedisAvailable && !props.isRemoteConnection;
 });
 
 const isLoading = computed(() => {
@@ -52,25 +58,30 @@ const ui = reactive({
 	showTablesModelsModal: false,
 	showDatabaseDiagram: false,
 	showRedisManager: false,
-	showLaravelCommands: false
+	showLaravelCommands: false,
+	showSettings: false,
+	showDatabaseSwitcher: false,
+	showLiveUpdates: false,
+	showProjectLogs: false,
+	showMigrations: false,
+	showEnvEditor: false,
+	showRemoteFileExplorer: false
 });
 
-function getConnectionColor(type: string) {
-	switch (type) {
-		case 'mysql':
-			return 'bg-orange-500';
-		case 'postgresql':
-			return 'bg-blue-600';
-		default:
-			return 'bg-gray-600';
+async function openSqlEditor() {
+	if (selectedProject.value?.id) {
+		await window.ipcRenderer.openSqlEditorWindow(
+			selectedProject.value.id,
+			props.isRemoteConnection
+		);
 	}
 }
 
-function openSqlEditor() {
-	router.push(`/sql-editor/${selectedProject.value?.id}`);
-}
-
 async function getDatabaseSchema() {
+	if (props.isRemoteConnection) {
+		return;
+	}
+
 	try {
 		const result = await fetchDatabaseSchema(true);
 
@@ -86,19 +97,42 @@ async function getDatabaseSchema() {
 	}
 }
 
+async function handleMigrationsClose() {
+	ui.showMigrations = false;
+	emit('migrations-updated');
+}
+
+function handleGlobalKeydown(event: KeyboardEvent) {
+	if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') {
+		event.preventDefault();
+
+		ui.showDatabaseSwitcher = true;
+	}
+}
+
+async function handleGoBack() {
+	await window.ipcRenderer.showHomeWindow();
+
+	window.close();
+}
+
 onMounted(() => {
-	initializeSchema();
+	if (!props.isRemoteConnection) {
+		window.addEventListener('keydown', handleGlobalKeydown);
+	}
 });
 
 watchEffect(() => {
-	if (selectedProject.value?.id) {
+	if (selectedProject.value?.id && !props.isRemoteConnection) {
 		redisStore.checkRedisAvailability(
 			selectedProject.value as ProjectConnection
 		);
 	}
 });
 
-ui.showRedisManager = false;
+onUnmounted(() => {
+	window.removeEventListener('keydown', handleGlobalKeydown);
+});
 </script>
 
 <template>
@@ -109,7 +143,7 @@ ui.showRedisManager = false;
 		<div class="flex items-center">
 			<button
 				class="btn btn-ghost btn-sm mr-2"
-				@click="emit('goBack')"
+				@click="handleGoBack"
 			>
 				<svg
 					xmlns="http://www.w3.org/2000/svg"
@@ -128,14 +162,22 @@ ui.showRedisManager = false;
 			</button>
 			<div
 				class="mr-2 flex h-8 w-8 items-center justify-center rounded-full"
-				:class="getConnectionColor(selectedProject?.type as string)"
+				:class="
+					getConnectionTypeColor(
+						selectedProject?.type as ConnectionType
+					)
+				"
 			>
 				<span class="text-base-100 text-sm font-bold">{{
 					selectedProject?.icon
 				}}</span>
 			</div>
 
-			<ShowConnectionInfo />
+			<ShowConnectionInfo
+				:is-remote-connection="props.isRemoteConnection"
+				:connection="selectedProject"
+				v-if="selectedProject"
+			/>
 		</div>
 
 		<div class="flex">
@@ -143,6 +185,7 @@ ui.showRedisManager = false;
 				<div
 					class="tooltip tooltip-bottom"
 					data-tip="View database structure and relationships"
+					v-if="!props.isRemoteConnection"
 				>
 					<button
 						class="btn btn-ghost btn-sm"
@@ -169,11 +212,12 @@ ui.showRedisManager = false;
 
 				<div
 					class="tooltip tooltip-bottom"
-					data-tip="Change database or project connection"
+					data-tip="Manage databases"
+					v-if="!props.isRemoteConnection"
 				>
 					<button
 						class="btn btn-ghost btn-sm"
-						@click="emit('open-database-switcher')"
+						@click="ui.showDatabaseSwitcher = true"
 					>
 						<svg
 							class="h-4 w-4"
@@ -191,10 +235,11 @@ ui.showRedisManager = false;
 				<div
 					class="tooltip tooltip-bottom"
 					data-tip="Monitor database changes in real-time"
+					v-if="!props.isRemoteConnection"
 				>
 					<button
 						class="btn btn-ghost btn-sm"
-						@click="emit('open-live-updates')"
+						@click="ui.showLiveUpdates = true"
 					>
 						<svg
 							class="h-4 w-4"
@@ -215,7 +260,7 @@ ui.showRedisManager = false;
 				>
 					<button
 						class="btn btn-ghost btn-sm"
-						@click="emit('open-project-logs')"
+						@click="ui.showProjectLogs = true"
 					>
 						<svg
 							class="h-4 w-4"
@@ -233,10 +278,11 @@ ui.showRedisManager = false;
 				<div
 					class="tooltip tooltip-bottom"
 					data-tip="Manage migrations and artisan commands"
+					v-if="!props.isRemoteConnection"
 				>
 					<button
 						class="btn btn-ghost btn-sm relative"
-						@click="emit('open-migrations')"
+						@click="ui.showMigrations = true"
 					>
 						<svg
 							class="h-4 w-4"
@@ -267,7 +313,7 @@ ui.showRedisManager = false;
 				>
 					<button
 						class="btn btn-ghost btn-sm"
-						@click="emit('open-env-editor')"
+						@click="ui.showEnvEditor = true"
 					>
 						<svg
 							class="h-4 w-4"
@@ -277,6 +323,28 @@ ui.showRedisManager = false;
 						>
 							<path
 								d="M208 32c0-17.7 14.3-32 32-32l32 0c17.7 0 32 14.3 32 32l0 140.9 122-70.4c15.3-8.8 34.9-3.6 43.7 11.7l16 27.7c8.8 15.3 3.6 34.9-11.7 43.7L352 256l122 70.4c15.3 8.8 20.6 28.4 11.7 43.7l-16 27.7c-8.8 15.3-28.4 20.6-43.7 11.7L304 339.1 304 480c0 17.7-14.3 32-32 32l-32 0c-17.7 0-32-14.3-32-32l0-140.9L86 409.6c-15.3 8.8-34.9 3.6-43.7-11.7l-16-27.7c-8.8-15.3-3.6-34.9 11.7-43.7L160 256 38 185.6c-15.3-8.8-20.5-28.4-11.7-43.7l16-27.7C51.1 98.8 70.7 93.6 86 102.4l122 70.4L208 32z"
+							/>
+						</svg>
+					</button>
+				</div>
+
+				<div
+					class="tooltip tooltip-bottom"
+					data-tip="Remote File Explorer"
+					v-if="props.isRemoteConnection"
+				>
+					<button
+						class="btn btn-ghost btn-sm"
+						@click="ui.showRemoteFileExplorer = true"
+					>
+						<svg
+							class="h-4 w-4"
+							fill="currentColor"
+							xmlns="http://www.w3.org/2000/svg"
+							viewBox="0 0 576 512"
+						>
+							<path
+								d="M64 32C64 14.3 49.7 0 32 0S0 14.3 0 32l0 96L0 384c0 35.3 28.7 64 64 64l192 0 0-64L64 384l0-224 192 0 0-64L64 96l0-64zM288 192c0 17.7 14.3 32 32 32l224 0c17.7 0 32-14.3 32-32l0-128c0-17.7-14.3-32-32-32l-98.7 0c-8.5 0-16.6-3.4-22.6-9.4L409.4 9.4c-6-6-14.1-9.4-22.6-9.4L320 0c-17.7 0-32 14.3-32 32l0 160zm0 288c0 17.7 14.3 32 32 32l224 0c17.7 0 32-14.3 32-32l0-128c0-17.7-14.3-32-32-32l-98.7 0c-8.5 0-16.6-3.4-22.6-9.4l-13.3-13.3c-6-6-14.1-9.4-22.6-9.4L320 288c-17.7 0-32 14.3-32 32l0 160z"
 							/>
 						</svg>
 					</button>
@@ -306,6 +374,7 @@ ui.showRedisManager = false;
 				<div
 					class="tooltip tooltip-bottom"
 					data-tip="Visualize database table relationships"
+					v-if="!props.isRemoteConnection"
 				>
 					<button
 						class="btn btn-ghost btn-sm"
@@ -327,10 +396,9 @@ ui.showRedisManager = false;
 				<div
 					class="tooltip tooltip-bottom"
 					data-tip="Show Redis Keys"
+					v-if="!props.isRemoteConnection && isRedisAvailable"
 				>
 					<button
-						:disabled="!isRedisAvailable"
-						:class="{ 'opacity-20': !isRedisAvailable }"
 						class="btn btn-ghost btn-sm"
 						@click="ui.showRedisManager = true"
 					>
@@ -350,6 +418,7 @@ ui.showRedisManager = false;
 				<div
 					class="tooltip tooltip-bottom"
 					data-tip="Run Project Commands"
+					v-if="!props.isRemoteConnection"
 				>
 					<button
 						class="btn btn-ghost btn-sm"
@@ -376,7 +445,7 @@ ui.showRedisManager = false;
 				>
 					<button
 						class="btn btn-ghost btn-sm"
-						@click="emit('open-settings')"
+						@click="ui.showSettings = true"
 					>
 						<svg
 							class="h-4 w-4"
@@ -413,5 +482,47 @@ ui.showRedisManager = false;
 	<LaravelCommands
 		:show="ui.showLaravelCommands"
 		@close="ui.showLaravelCommands = false"
+	/>
+
+	<Settings
+		v-if="ui.showSettings"
+		@close="ui.showSettings = false"
+	/>
+
+	<DatabaseSwitcher
+		v-if="ui.showDatabaseSwitcher"
+		@close="ui.showDatabaseSwitcher = false"
+	/>
+
+	<LiveUpdates
+		v-if="ui.showLiveUpdates"
+		@close="ui.showLiveUpdates = false"
+	/>
+
+	<ProjectLogs
+		v-if="ui.showProjectLogs"
+		@close="ui.showProjectLogs = false"
+	/>
+
+	<Migrations
+		v-if="ui.showMigrations"
+		@close="handleMigrationsClose"
+		@migrations-updated="emit('migrations-updated')"
+	/>
+
+	<EnvEditor
+		v-if="ui.showEnvEditor"
+		@close="ui.showEnvEditor = false"
+	/>
+
+	<RemoteFileExplorer
+		v-if="
+			ui.showRemoteFileExplorer &&
+			props.isRemoteConnection &&
+			selectedProject
+		"
+		:show="ui.showRemoteFileExplorer"
+		:connection="selectedProject.sshConfig as SshConnection"
+		@close="ui.showRemoteFileExplorer = false"
 	/>
 </template>

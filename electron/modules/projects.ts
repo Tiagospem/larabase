@@ -31,6 +31,15 @@ function registerProjectHandlers(mainWindow: Electron.BrowserWindow) {
 		}
 	});
 
+	ipcMain.handle('select-file', async (_, options) => {
+		try {
+			return await dialog.showOpenDialog(mainWindow, options);
+		} catch (error) {
+			console.error('Error selecting file:', error);
+			throw error;
+		}
+	});
+
 	ipcMain.handle('validate-laravel-project', async (_, projectPath) => {
 		try {
 			const hasEnv = fs.existsSync(path.join(projectPath, '.env'));

@@ -97,12 +97,6 @@ watch(
 	}
 );
 
-const formatExecutionStepValue = (value: any): string => {
-	if (value === null) return 'NULL';
-	if (typeof value === 'object') return JSON.stringify(value);
-	return String(value);
-};
-
 const formatAIAnalysis = (text: string): string => {
 	if (!text) return '';
 
@@ -167,13 +161,10 @@ const formatAIAnalysis = (text: string): string => {
 			continue;
 		}
 
-		// For empty lines, only add paragraph break if we have multiple consecutive empty lines
-		// or it's after a header/list item
 		if (line.trim() === '') {
 			const prevLine = i > 0 ? lines[i - 1].trim() : '';
 			const nextLine = i < lines.length - 1 ? lines[i + 1].trim() : '';
 
-			// Only add paragraph breaks for double empty lines or after headers/lists
 			const isPrevSpecial =
 				prevLine.startsWith('#') || prevLine.match(/^\d+\.\s/);
 			const isDoubleBreak = nextLine === '' || prevLine === '';
@@ -209,7 +200,6 @@ const formatAIAnalysis = (text: string): string => {
 			!formattedLines[formattedLines.length - 1].startsWith('<div') &&
 			!formattedLines[formattedLines.length - 1].startsWith('<pre')
 		) {
-			// Append to existing paragraph instead of creating new one
 			formattedLines[formattedLines.length - 1] += ' ' + formattedLine;
 		} else {
 			formattedLines.push(`<p class="mb-2 text-sm">${formattedLine}`);
@@ -286,7 +276,7 @@ const isProblematicValue = (key: any, value: any): boolean => {
 		:show-action-button="false"
 		:show-footer="false"
 	>
-		<div class="space-y-6">
+		<div class="space-y-6 max-h-[80vh]">
 			<div
 				class="bg-base-100 border-base-300 rounded-md border p-4 shadow-sm"
 			>

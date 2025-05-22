@@ -1,22 +1,37 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, inject } from 'vue';
+import { computed, onMounted, ref, inject, toRaw } from 'vue';
 import { useConnectionsStore } from '@/store/connections';
+import { ConnectionType } from '@/types/connection-types';
 import DotEnvEditor from '@/components/DotEnvEditor.vue';
 import Modal from '@/components/Modal.vue';
+import {
+	getRemoteEnvVariables,
+	updateRemoteEnvVariables
+} from '@/services/remote-file-service';
+import { SshConnection } from '@/types/ssh-connection.d';
 
 const emit = defineEmits<{
 	close: [];
 }>();
 
 const showAlert = inject<(message: string, type: string) => void>('showAlert')!;
+
 const connectionsStore = useConnectionsStore();
 
-const projectPath = computed(
-	() => connectionsStore.getSelectedProject?.projectPath
-);
+const project = computed(() => connectionsStore.getSelectedProject);
+
 const envFilePath = computed(() =>
-	projectPath.value ? `${projectPath.value}/.env` : ''
+	project.value?.projectPath ? `${project.value?.projectPath}/.env` : ''
 );
+
+const isSSHConnection = computed(() => {
+	const selectedProject = connectionsStore.getSelectedProject;
+	return selectedProject?.type === ConnectionType.SSH;
+});
+
+const sshConfig = computed(() => {
+	return connectionsStore.getSelectedProject?.sshConfig;
+});
 
 const envContent = ref('');
 const originalContent = ref('');
@@ -32,21 +47,37 @@ function handleClose() {
 }
 
 async function loadEnvFile() {
-	if (!envFilePath.value) return;
-
 	isLoading.value = true;
 
 	try {
-		const result = await window.ipcRenderer.readFile(envFilePath.value);
+		if (isSSHConnection.value && sshConfig.value) {
+			const content = await getRemoteEnvVariables(
+				toRaw(project.value?.sshConfig) as SshConnection
+			);
 
-		if (result.success) {
-			envContent.value = result.content;
-			originalContent.value = result.content;
-			showAlert('File loaded successfully', 'success');
+			if (content) {
+				envContent.value = content;
+				originalContent.value = content;
+				showAlert('Remote .env file loaded successfully', 'success');
+			} else {
+				envContent.value = '';
+				originalContent.value = '';
+				showAlert('Error: Could not load remote .env file', 'error');
+			}
+		} else if (envFilePath.value) {
+			const result = await window.ipcRenderer.readFile(envFilePath.value);
+
+			if (result.success) {
+				envContent.value = result.content;
+				originalContent.value = result.content;
+				showAlert('File loaded successfully', 'success');
+			} else {
+				envContent.value = '';
+				originalContent.value = '';
+				showAlert(`Error: ${result.message || result.error}`, 'error');
+			}
 		} else {
-			envContent.value = '';
-			originalContent.value = '';
-			showAlert(`Error: ${result.message || result.error}`, 'error');
+			showAlert('No valid project path or SSH connection found', 'error');
 		}
 	} catch (error: any) {
 		console.error('Error loading .env file:', error);
@@ -59,28 +90,33 @@ async function loadEnvFile() {
 }
 
 async function saveEnvFile() {
-	if (
-		!envContent.value ||
-		!hasChanges.value ||
-		isSaving.value ||
-		!envFilePath.value
-	)
-		return;
+	if (!envContent.value || !hasChanges.value || isSaving.value) return;
 
 	isSaving.value = true;
 	showAlert('Saving...', 'info');
 
 	try {
-		const result = await window.ipcRenderer.saveFile(
-			envFilePath.value,
-			envContent.value
-		);
-
-		if (result.success) {
+		if (isSSHConnection.value && sshConfig.value) {
+			await updateRemoteEnvVariables(
+				toRaw(project.value?.sshConfig) as SshConnection,
+				envContent.value
+			);
 			originalContent.value = envContent.value;
-			showAlert('File saved successfully', 'success');
+			showAlert('Remote .env file saved successfully', 'success');
+		} else if (envFilePath.value) {
+			const result = await window.ipcRenderer.saveFile(
+				envFilePath.value,
+				envContent.value
+			);
+
+			if (result.success) {
+				originalContent.value = envContent.value;
+				showAlert('File saved successfully', 'success');
+			} else {
+				showAlert(`Error saving: ${result.message}`, 'error');
+			}
 		} else {
-			showAlert(`Error saving: ${result.message}`, 'error');
+			showAlert('No valid project path or SSH connection found', 'error');
 		}
 	} catch (error: any) {
 		console.error('Error saving .env file:', error);
@@ -105,12 +141,46 @@ onMounted(() => {
 	>
 		<div class="mb-4 flex items-center gap-2">
 			<div class="flex-1 text-sm opacity-75">
-				<span v-if="envFilePath">{{ envFilePath }}</span>
+				<span v-if="isSSHConnection && sshConfig">
+					{{ sshConfig.remotePath }}/.../.env
+					<span class="badge badge-sm ml-2">Remote SSH</span>
+				</span>
+				<span v-else-if="envFilePath">{{ envFilePath }}</span>
+			</div>
+			<div>
+				<button
+					class="btn btn-sm btn-outline"
+					@click="loadEnvFile"
+					:disabled="isLoading"
+				>
+					<svg
+						xmlns="http://www.w3.org/2000/svg"
+						fill="none"
+						viewBox="0 0 24 24"
+						stroke-width="1.5"
+						stroke="currentColor"
+						class="h-4 w-4 mr-1"
+					>
+						<path
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99"
+						/>
+					</svg>
+					Refresh
+				</button>
 			</div>
 		</div>
 
 		<div
-			v-if="!projectPath"
+			v-if="isLoading"
+			class="flex h-64 items-center justify-center"
+		>
+			<span class="loading loading-spinner loading-lg"></span>
+		</div>
+
+		<div
+			v-else-if="!project?.projectPath && !isSSHConnection"
 			class="flex h-64 items-center justify-center"
 		>
 			<div class="text-center">
@@ -128,15 +198,8 @@ onMounted(() => {
 						d="M3.75 9.776c.112-.017.227-.026.344-.026h15.812c.117 0 .232.009.344.026m-16.5 0a2.25 2.25 0 00-1.883 2.542l.857 6a2.25 2.25 0 002.227 1.932H19.05a2.25 2.25 0 002.227-1.932l.857-6a2.25 2.25 0 00-1.883-2.542m-16.5 0V6A2.25 2.25 0 016 3.75h3.879a1.5 1.5 0 011.06.44l2.122 2.12a1.5 1.5 0 001.06.44H18A2.25 2.25 0 0120.25 9v .776"
 					/>
 				</svg>
-				<p>No Laravel project path selected</p>
+				<p>No Laravel project path or SSH connection selected</p>
 			</div>
-		</div>
-
-		<div
-			v-else-if="isLoading"
-			class="flex h-64 items-center justify-center"
-		>
-			<span class="loading loading-spinner loading-lg"></span>
 		</div>
 
 		<div

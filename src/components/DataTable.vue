@@ -96,11 +96,13 @@ export default defineComponent({
 				(col) => col.width || props.initialColumnWidth
 			);
 
-			document.addEventListener('mousemove', handleMouseMove);
-			document.addEventListener('mouseup', stopResize);
-			document.addEventListener('mouseup', stopRowSelection);
+			if (!props.disableSelection) {
+				document.addEventListener('mousemove', handleMouseMove);
+				document.addEventListener('mouseup', stopResize);
+				document.addEventListener('mouseup', stopRowSelection);
+				document.addEventListener('keydown', handleKeyDown);
+			}
 			window.addEventListener('resize', handleWindowResize);
-			document.addEventListener('keydown', handleKeyDown);
 
 			if (
 				props.tableStructureData &&
@@ -113,11 +115,14 @@ export default defineComponent({
 		});
 
 		onBeforeUnmount(() => {
-			document.removeEventListener('mousemove', handleMouseMove);
-			document.removeEventListener('mouseup', stopResize);
-			document.removeEventListener('mouseup', stopRowSelection);
+			if (!props.disableSelection) {
+				document.removeEventListener('mousemove', handleMouseMove);
+				document.removeEventListener('mouseup', stopResize);
+				document.removeEventListener('mouseup', stopRowSelection);
+				document.removeEventListener('keydown', handleKeyDown);
+			}
+
 			window.removeEventListener('resize', handleWindowResize);
-			document.removeEventListener('keydown', handleKeyDown);
 		});
 
 		const handleWindowResize = () => {

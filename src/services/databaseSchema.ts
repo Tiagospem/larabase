@@ -1,6 +1,7 @@
 import { onMounted, ref, toRaw } from 'vue';
 import { useConnectionsStore } from '@/store/connections';
 import { useProjectStore } from '@/store/project';
+import { AppConnection } from '@/types/ssh-connection';
 
 export interface TableModel {
 	name: string;
@@ -49,7 +50,7 @@ const databaseSchema = ref<DatabaseSchema | null>(null);
 const isLoading = ref(false);
 const error = ref<string | null>(null);
 
-export const useDatabaseSchema = () => {
+export const useDatabaseSchema = (isRemote: boolean = false) => {
 	const connectionsStore = useConnectionsStore();
 	const projectStore = useProjectStore();
 
@@ -70,9 +71,13 @@ export const useDatabaseSchema = () => {
 		error.value = null;
 
 		try {
-			const result = await window.ipcRenderer.getDatabaseSchemaForAI(
-				toRaw(selectedProject.db_config)
-			);
+			const AppConnection = {
+				localDbConfig: toRaw(selectedProject.dbConfig),
+				remote: toRaw(selectedProject.sshConfig)
+			} as AppConnection;
+
+			const result =
+				await window.ipcRenderer.getDatabaseSchemaForAI(AppConnection);
 
 			if (result.success) {
 				const modelsResult =
@@ -112,7 +117,6 @@ export const useDatabaseSchema = () => {
 		}
 	};
 
-	// Create a compact LLM-friendly text representation without JSON syntax
 	const getCompactSchema = (): string => {
 		if (!databaseSchema.value || !databaseSchema.value.tables) {
 			return '';
@@ -168,6 +172,8 @@ export const useDatabaseSchema = () => {
 	};
 
 	onMounted(async () => {
+		if (isRemote) return;
+
 		await initializeSchema();
 	});
 

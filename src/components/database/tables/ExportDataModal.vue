@@ -3,6 +3,7 @@ import { ref, computed, toRaw } from 'vue';
 import { useDataTableStore } from '@/store/dataTable';
 import { TableColumn, TableRecord } from '@/types/table';
 import { useConnectionsStore } from '@/store/connections';
+import { AppConnection } from '@/types/ssh-connection';
 import * as ExcelJS from 'exceljs';
 
 const props = defineProps({
@@ -247,7 +248,12 @@ async function fetchAllFilteredData(): Promise<Record<string, any>[]> {
 			sortDirection: dataTableStore.currentSortDirection,
 			filter: filter,
 			tableName: props.tableName,
-			dbConnection: toRaw(connectionStore.getSelectedProject?.db_config)
+			appConnection: {
+				localDbConfig: toRaw(
+					connectionStore.getSelectedProject?.dbConfig
+				),
+				remote: toRaw(connectionStore.getSelectedProject?.sshConfig)
+			} as AppConnection
 		} as TableRecord;
 
 		const response = await window.ipcRenderer.getTableRecords(params);

@@ -10,8 +10,8 @@ import './style.css';
 
 const routes = [
 	{ path: '/', component: Home },
-	{ path: '/database/:id', component: DatabaseView },
-	{ path: '/sql-editor/:id', component: SQLEditorView }
+	{ path: '/database/:id/:isRemote', component: DatabaseView },
+	{ path: '/sql-editor/:id/:isRemote', component: SQLEditorView }
 ];
 
 const router = createRouter({

@@ -5,6 +5,7 @@ import { useConnectionsStore } from '@/store/connections';
 import { useSidebarStore } from '@/store/sidebar';
 import { useTabsStore } from '@/store/tabs';
 import { useProjectStore } from '@/store/project';
+import { AppConnection } from '@/types/ssh-connection';
 
 const showAlert = inject<(message: string, type: string) => void>('showAlert')!;
 
@@ -33,7 +34,7 @@ const isCreatingDatabase = ref(false);
 async function switchDatabase(databaseName: string, shouldUpdateEnv: boolean) {
 	if (
 		!project.value ||
-		(databaseName === project.value.db_config.database &&
+		(databaseName === project.value?.dbConfig?.database &&
 			(!shouldUpdateEnv || databaseName === projectDatabase.value))
 	) {
 		return;
@@ -63,12 +64,20 @@ async function switchDatabase(databaseName: string, shouldUpdateEnv: boolean) {
 					'warning'
 				);
 			}
-		} else if (databaseName !== project.value.db_config.database) {
+		} else if (
+			project.value &&
+			project.value.dbConfig &&
+			databaseName !== project.value.dbConfig.database
+		) {
 			showAlert('Database connection updated successfully', 'success');
 		}
 
-		if (databaseName !== project.value.db_config.database) {
-			project.value.db_config.database = databaseName;
+		if (
+			project.value &&
+			project.value.dbConfig &&
+			databaseName !== project.value.dbConfig.database
+		) {
+			project.value.dbConfig.database = databaseName;
 
 			await connectionStore.updateConnection(
 				project.value.id as string,
@@ -99,8 +108,13 @@ async function deleteDatabase() {
 	deletingDatabase.value = true;
 
 	try {
+		const AppConnection = {
+			localDbConfig: toRaw(project.value.dbConfig),
+			remote: toRaw(project.value.sshConfig)
+		} as AppConnection;
+
 		const result = await window.ipcRenderer.dropDatabase(
-			toRaw(project.value.db_config),
+			AppConnection,
 			databaseToDelete.value
 		);
 
@@ -136,9 +150,12 @@ async function loadAvailableDatabases() {
 	}
 
 	try {
-		const result = await window.ipcRenderer.listDatabases(
-			toRaw(project.value.db_config)
-		);
+		const AppConnection = {
+			localDbConfig: toRaw(project.value.dbConfig),
+			remote: toRaw(project.value.sshConfig)
+		} as AppConnection;
+
+		const result = await window.ipcRenderer.listDatabases(AppConnection);
 
 		if (result.success) {
 			availableDatabases.value = result.databases;
@@ -170,7 +187,7 @@ async function checkProjectDatabase() {
 	try {
 		const result = await window.ipcRenderer.compareProjectDatabase({
 			projectPath: project.value.projectPath,
-			connectionDatabase: project.value.db_config.database
+			connectionDatabase: project.value?.dbConfig?.database
 		});
 
 		if (result.success) {
@@ -219,8 +236,13 @@ async function createDatabase() {
 	databaseNameError.value = '';
 
 	try {
+		const AppConnection = {
+			localDbConfig: toRaw(project.value.dbConfig),
+			remote: toRaw(project.value.sshConfig)
+		} as AppConnection;
+
 		const result = await window.ipcRenderer.createDatabase(
-			toRaw(project.value.db_config),
+			AppConnection,
 			newDatabaseName.value
 		);
 
@@ -386,7 +408,7 @@ onMounted(async () => {
 							class="bg-base-100 border-base-300 rounded border p-3"
 							:class="{
 								'bg-base-200':
-									db === project?.db_config?.database,
+									db === project?.dbConfig?.database,
 								'border-l-accent border-l-4':
 									db === projectDatabase
 							}"
@@ -397,7 +419,7 @@ onMounted(async () => {
 									<span
 										v-if="
 											db === projectDatabase &&
-											db !== project?.db_config?.database
+											db !== project?.dbConfig?.database
 										"
 										class="badge badge-sm badge-accent ml-2"
 										>ENV</span
@@ -405,7 +427,7 @@ onMounted(async () => {
 									<span
 										v-if="
 											db ===
-												project?.db_config?.database &&
+												project?.dbConfig?.database &&
 											db === projectDatabase
 										"
 										class="badge badge-sm badge-success ml-2"
@@ -413,7 +435,7 @@ onMounted(async () => {
 									>
 									<span
 										v-else-if="
-											db === project?.db_config?.database
+											db === project?.dbConfig?.database
 										"
 										class="badge badge-sm badge-primary ml-2"
 										>CURRENT</span
@@ -423,7 +445,7 @@ onMounted(async () => {
 								<div class="flex gap-3">
 									<div
 										v-if="
-											db !== project?.db_config?.database
+											db !== project?.dbConfig?.database
 										"
 										class="tooltip tooltip-left"
 										data-tip="Switch to this database"
@@ -453,8 +475,7 @@ onMounted(async () => {
 											project?.projectPath &&
 											(db !== projectDatabase ||
 												db !==
-													project?.db_config
-														?.database)
+													project?.dbConfig?.database)
 										"
 										class="tooltip tooltip-left"
 										data-tip="Switch and update .env file"
@@ -481,7 +502,7 @@ onMounted(async () => {
 									</div>
 									<div
 										v-if="
-											db !== project?.db_config?.database
+											db !== project?.dbConfig?.database
 										"
 										class="tooltip tooltip-left"
 										data-tip="Delete database"

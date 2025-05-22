@@ -1,10 +1,12 @@
 import { defineStore } from 'pinia';
-import { ref, computed, toRaw } from 'vue';
+import { computed, ref, toRaw } from 'vue';
 import { useDatabaseStore } from '@/store/database';
-import { ModelInfo, Models, ProjectConnection } from '@/types/project';
+import { ModelInfo, ProjectConnection } from '@/types/project';
 import { useProjectStore } from '@/store/project';
 import { Table } from '@/types/table';
 import { useConnectionsStore } from '@/store/connections';
+import { ConnectionType } from '@/types/connection-types';
+import { AppConnection } from '@/types/ssh-connection';
 
 export const useSidebarStore = defineStore('sidebar', () => {
 	const databaseStore = useDatabaseStore();
@@ -101,16 +103,24 @@ export const useSidebarStore = defineStore('sidebar', () => {
 
 		lastLoadedConnection.value = project.id as string;
 
-		try {
-			const { success, models } = (await projectStore.getModelsForTables(
-				project
-			)) as Models;
+		if (project.type === ConnectionType.SSH) {
+			projectModels.value = [];
+		} else {
+			try {
+				const modelResponse =
+					await projectStore.getModelsForTables(project);
 
-			if (success && models && typeof models === 'object') {
-				projectModels.value = models;
+				if (
+					modelResponse &&
+					modelResponse.success &&
+					modelResponse.models &&
+					typeof modelResponse.models === 'object'
+				) {
+					projectModels.value = modelResponse.models;
+				}
+			} catch (err) {
+				console.error('Error loading models for tables:', err);
 			}
-		} catch (err) {
-			console.error('Error loading models for tables:', err);
 		}
 
 		await databaseStore.loadTables(project);
@@ -167,8 +177,13 @@ export const useSidebarStore = defineStore('sidebar', () => {
 		project: ProjectConnection
 	) {
 		try {
+			const AppConnection = {
+				localDbConfig: toRaw(project.dbConfig),
+				remote: toRaw(project.sshConfig)
+			} as AppConnection;
+
 			const countResult = await window.ipcRenderer.getTableRecordCount(
-				toRaw(project.db_config),
+				AppConnection,
 				toRaw(table)
 			);
 

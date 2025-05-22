@@ -1,4 +1,4 @@
-import { app, BrowserWindow, shell } from 'electron';
+import { app, BrowserWindow, shell, ipcMain } from 'electron';
 import Store from 'electron-store';
 import { fileURLToPath } from 'node:url';
 import enhancePath from '../helpers/enhance-path';
@@ -16,7 +16,9 @@ import { registerMonitoringHandlers } from '../modules/monitoring';
 import { registerMigrationHandlers } from '../modules/migrations';
 import { registerSqlExecutorHandlers } from '../modules/sql-executor';
 import { registerUpdaterHandlers, cleanup } from '../modules/updater';
+import { registerSshHandlers } from '../modules/ssh';
 import { closeAllPools } from '../helpers/mysql';
+import { closeAllConnections, closeAllTunnels } from '../helpers/ssh';
 
 let handlersRegistered = false;
 
@@ -42,17 +44,21 @@ if (!app.requestSingleInstanceLock()) {
 	process.exit(0);
 }
 
-const openDevToolsOnInit: boolean = true;
+const openDevToolsOnInit: boolean = false;
 
-let win: BrowserWindow | null = null;
+let homeWindow: BrowserWindow | null = null;
+
+const connectionWindows = new Map<string, BrowserWindow>();
+
+const sqlEditorWindows = new Map<string, BrowserWindow[]>();
 
 const preload = path.join(__dirname, '../preload/index.mjs');
 const indexHtml = path.join(RENDERER_DIST, 'index.html');
 
-async function createWindow() {
+async function createHomeWindow() {
 	enhancePath();
 
-	win = new BrowserWindow({
+	homeWindow = new BrowserWindow({
 		title: 'Larabase',
 		icon: path.join(process.env.VITE_PUBLIC, 'favicon.ico'),
 		width: 1200,
@@ -60,7 +66,6 @@ async function createWindow() {
 		minWidth: 1200,
 		minHeight: 500,
 		resizable: true,
-		alwaysOnTop: false,
 		center: true,
 		titleBarStyle: 'hiddenInset',
 		webPreferences: {
@@ -70,35 +75,255 @@ async function createWindow() {
 		}
 	});
 
-	registerHandlers(win);
+	registerHandlers(homeWindow);
 
 	if (VITE_DEV_SERVER_URL) {
-		await win.loadURL(VITE_DEV_SERVER_URL);
+		await homeWindow.loadURL(VITE_DEV_SERVER_URL);
 
 		if (openDevToolsOnInit) {
-			win.webContents.openDevTools();
+			homeWindow.webContents.openDevTools();
 		}
 	} else {
-		await win.loadFile(indexHtml);
+		await homeWindow.loadFile(indexHtml);
 	}
 
-	win.webContents.on('did-finish-load', () => {
-		win?.webContents.send(
+	homeWindow.webContents.on('did-finish-load', () => {
+		homeWindow?.webContents.send(
 			'main-process-message',
 			new Date().toLocaleString()
 		);
 	});
 
-	win.webContents.setWindowOpenHandler(({ url }) => {
+	homeWindow.webContents.setWindowOpenHandler(({ url }) => {
 		if (url.startsWith('https:')) shell.openExternal(url);
 		return { action: 'deny' };
 	});
+
+	homeWindow.on('closed', () => {
+		homeWindow = null;
+	});
 }
 
-app.whenReady().then(createWindow);
+async function createConnectionWindow(connectionId: string, isRemote: boolean) {
+	for (const [id, window] of Array.from(connectionWindows.entries())) {
+		closeAllSqlEditorsForConnection(id);
+
+		window.close();
+		connectionWindows.delete(id);
+	}
+
+	const connectionWindow = new BrowserWindow({
+		title: `Larabase - Connection ${connectionId}`,
+		icon: path.join(process.env.VITE_PUBLIC, 'favicon.ico'),
+		width: 1280,
+		height: 900,
+		minWidth: 1200,
+		minHeight: 600,
+		resizable: true,
+		center: true,
+		titleBarStyle: 'hiddenInset',
+		webPreferences: {
+			preload,
+			nodeIntegration: true,
+			contextIsolation: true
+		},
+		show: false
+	});
+
+	registerHandlers(connectionWindow);
+
+	let url = VITE_DEV_SERVER_URL
+		? `${VITE_DEV_SERVER_URL}#/database/${connectionId}/${isRemote}`
+		: `file://${indexHtml}#/database/${connectionId}/${isRemote}`;
+
+	await connectionWindow.loadURL(url);
+
+	connectionWindow.show();
+
+	if (openDevToolsOnInit) {
+		connectionWindow.webContents.openDevTools();
+	}
+
+	connectionWindow.webContents.setWindowOpenHandler(({ url }) => {
+		if (url.startsWith('https:')) shell.openExternal(url);
+		return { action: 'deny' };
+	});
+
+	connectionWindow.on('closed', () => {
+		closeAllSqlEditorsForConnection(connectionId);
+
+		connectionWindows.delete(connectionId);
+
+		if (!homeWindow) {
+			createHomeWindow();
+		} else {
+			homeWindow.show();
+		}
+	});
+
+	connectionWindows.set(connectionId, connectionWindow);
+
+	connectionWindow.on('close', (_e) => {
+		if (
+			process.platform !== 'darwin' &&
+			!homeWindow &&
+			connectionWindows.size === 1
+		) {
+			app.quit();
+		}
+	});
+
+	return connectionWindow;
+}
+
+async function createSqlEditorWindow(connectionId: string, isRemote: boolean) {
+	const sqlEditorWindow = new BrowserWindow({
+		title: `Larabase - SQL Editor ${connectionId}`,
+		icon: path.join(process.env.VITE_PUBLIC, 'favicon.ico'),
+		width: 1280,
+		height: 900,
+		minWidth: 1200,
+		minHeight: 600,
+		resizable: true,
+		center: true,
+		titleBarStyle: 'hiddenInset',
+		webPreferences: {
+			preload,
+			nodeIntegration: true,
+			contextIsolation: true
+		},
+		show: false
+	});
+
+	registerHandlers(sqlEditorWindow);
+
+	let url = VITE_DEV_SERVER_URL
+		? `${VITE_DEV_SERVER_URL}#/sql-editor/${connectionId}/${isRemote}`
+		: `file://${indexHtml}#/sql-editor/${connectionId}/${isRemote}`;
+
+	await sqlEditorWindow.loadURL(url);
+
+	sqlEditorWindow.show();
+
+	if (openDevToolsOnInit) {
+		sqlEditorWindow.webContents.openDevTools();
+	}
+
+	sqlEditorWindow.webContents.setWindowOpenHandler(({ url }) => {
+		if (url.startsWith('https:')) shell.openExternal(url);
+		return { action: 'deny' };
+	});
+
+	if (!sqlEditorWindows.has(connectionId)) {
+		sqlEditorWindows.set(connectionId, []);
+	}
+
+	sqlEditorWindows.get(connectionId)?.push(sqlEditorWindow);
+
+	sqlEditorWindow.on('closed', () => {
+		const windows = sqlEditorWindows.get(connectionId) || [];
+		const index = windows.indexOf(sqlEditorWindow);
+		if (index !== -1) {
+			windows.splice(index, 1);
+		}
+
+		if (windows.length === 0) {
+			sqlEditorWindows.delete(connectionId);
+		}
+	});
+
+	return sqlEditorWindow;
+}
+
+function updatePendingMigrationsBadge(count: number) {
+	if (process.platform === 'darwin') {
+		const displayCount =
+			count > 0 ? (count >= 100 ? '99' : count.toString()) : '';
+		app.dock.setBadge(displayCount);
+	} else if (process.platform === 'win32' || process.platform === 'linux') {
+		const displayCount = count > 0 ? (count >= 100 ? 99 : count) : 0;
+		app.setBadgeCount(displayCount);
+	}
+}
+
+function registerWindowHandlers() {
+	ipcMain.handle('update-migrations-badge', (_, count) => {
+		updatePendingMigrationsBadge(count);
+		return true;
+	});
+
+	ipcMain.handle(
+		'open-connection-window',
+		async (_, connectionId, isRemote) => {
+			const window = await createConnectionWindow(connectionId, isRemote);
+
+			if (homeWindow) {
+				homeWindow.hide();
+			}
+
+			return !!window;
+		}
+	);
+
+	ipcMain.handle('close-connection-window', (_, connectionId) => {
+		const window = connectionWindows.get(connectionId);
+		if (window) {
+			window.close();
+			return true;
+		}
+		return false;
+	});
+
+	ipcMain.handle(
+		'open-sql-editor-window',
+		async (_, connectionId, isRemote) => {
+			const window = await createSqlEditorWindow(connectionId, isRemote);
+			return !!window;
+		}
+	);
+
+	ipcMain.handle('show-home-window', async () => {
+		for (const [id, window] of Array.from(connectionWindows.entries())) {
+			closeAllSqlEditorsForConnection(id);
+
+			if (!window.isDestroyed()) {
+				window.close();
+			}
+			connectionWindows.delete(id);
+		}
+
+		if (!homeWindow) {
+			await createHomeWindow();
+		} else {
+			if (homeWindow.isMinimized()) {
+				homeWindow.restore();
+			}
+			homeWindow.show();
+			homeWindow.focus();
+		}
+		return true;
+	});
+
+	ipcMain.handle('get-window-id', (event) => {
+		const win = BrowserWindow.fromWebContents(event.sender);
+		if (win === homeWindow) return 'home';
+
+		for (const [id, window] of Array.from(connectionWindows.entries())) {
+			if (window === win) return id;
+		}
+
+		return null;
+	});
+}
+
+app.whenReady().then(async () => {
+	await createHomeWindow();
+	registerWindowHandlers();
+});
 
 app.on('window-all-closed', () => {
-	win = null;
+	homeWindow = null;
+	connectionWindows.clear();
 
 	cleanup();
 
@@ -108,23 +333,36 @@ app.on('window-all-closed', () => {
 			console.error('Error closing all pools:', err);
 		})
 		.finally(() => {
-			if (process.platform === 'darwin') app.quit();
+			closeAllConnections();
+			closeAllTunnels();
+
+			if (process.platform !== 'darwin') app.quit();
 		});
 });
 
 app.on('second-instance', () => {
-	if (win) {
-		if (win.isMinimized()) win.restore();
-		win.focus();
+	if (homeWindow) {
+		if (homeWindow.isMinimized()) homeWindow.restore();
+		homeWindow.focus();
+	} else if (connectionWindows.size > 0) {
+		const firstWindow = connectionWindows.values().next().value;
+		if (firstWindow) {
+			if (firstWindow.isMinimized()) firstWindow.restore();
+			firstWindow.focus();
+		}
 	}
 });
 
 app.on('activate', async () => {
-	const allWindows = BrowserWindow.getAllWindows();
-	if (allWindows.length) {
-		allWindows[0].focus();
+	if (homeWindow) {
+		homeWindow.focus();
+	} else if (connectionWindows.size > 0) {
+		const firstWindow = connectionWindows.values().next().value;
+		if (firstWindow) {
+			firstWindow.focus();
+		}
 	} else {
-		await createWindow();
+		await createHomeWindow();
 	}
 });
 
@@ -143,6 +381,21 @@ function registerHandlers(win: BrowserWindow) {
 	registerMigrationHandlers();
 	registerSqlExecutorHandlers();
 	registerUpdaterHandlers(win);
+	registerSshHandlers();
 
 	handlersRegistered = true;
+}
+
+function closeAllSqlEditorsForConnection(connectionId: string) {
+	const editorWindows = sqlEditorWindows.get(connectionId) || [];
+
+	const windowsToClose = [...editorWindows];
+
+	for (const window of windowsToClose) {
+		if (window && !window.isDestroyed()) {
+			window.close();
+		}
+	}
+
+	sqlEditorWindows.delete(connectionId);
 }
