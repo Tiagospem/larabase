@@ -22,6 +22,7 @@ import { closeAllPools } from '../helpers/mysql';
 import { closeAllConnections, closeAllTunnels } from '../helpers/ssh';
 
 let handlersRegistered = false;
+let isQuitting = false;
 
 const store = new Store();
 
@@ -103,6 +104,19 @@ async function createHomeWindow() {
 	homeWindow.on('closed', () => {
 		homeWindow = null;
 	});
+
+	homeWindow.on('close', (e) => {
+		if (!isQuitting && process.platform === 'darwin') {
+			e.preventDefault();
+			homeWindow?.hide();
+			return;
+		}
+
+		// If we're quitting the app and this is the last window, close all connections
+		if (isQuitting && connectionWindows.size === 0) {
+			performCleanup();
+		}
+	});
 }
 
 async function createConnectionWindow(connectionId: string, isRemote: boolean) {
@@ -164,13 +178,15 @@ async function createConnectionWindow(connectionId: string, isRemote: boolean) {
 
 	connectionWindows.set(connectionId, connectionWindow);
 
-	connectionWindow.on('close', (_e) => {
+	connectionWindow.on('close', (e) => {
 		if (
+			isQuitting &&
 			process.platform !== 'darwin' &&
 			!homeWindow &&
 			connectionWindows.size === 1
 		) {
-			app.quit();
+			// This is the last window and we're quitting
+			performCleanup();
 		}
 	});
 
@@ -315,6 +331,35 @@ function registerWindowHandlers() {
 
 		return null;
 	});
+
+	ipcMain.handle('app-quit', async () => {
+		isQuitting = true;
+		app.quit();
+		return true;
+	});
+}
+
+// Function to clean up all connections and resources
+async function performCleanup() {
+	cleanup();
+
+	try {
+		await closeAllPools();
+	} catch (err) {
+		console.error('Error closing all MySQL pools:', err);
+	}
+
+	try {
+		closeAllConnections();
+	} catch (err) {
+		console.error('Error closing all SSH connections:', err);
+	}
+
+	try {
+		closeAllTunnels();
+	} catch (err) {
+		console.error('Error closing all SSH tunnels:', err);
+	}
 }
 
 app.whenReady().then(async () => {
@@ -322,22 +367,23 @@ app.whenReady().then(async () => {
 	registerWindowHandlers();
 });
 
+app.on('before-quit', (e) => {
+	isQuitting = true;
+});
+
 app.on('window-all-closed', () => {
 	homeWindow = null;
 	connectionWindows.clear();
 
-	cleanup();
-
-	closeAllPools()
-		.then()
-		.catch((err) => {
-			console.error('Error closing all pools:', err);
+	performCleanup()
+		.then(() => {
+			if (process.platform !== 'darwin') {
+				app.exit(0);
+			}
 		})
-		.finally(() => {
-			closeAllConnections();
-			closeAllTunnels();
-
-			if (process.platform !== 'darwin') app.quit();
+		.catch((err) => {
+			console.error('Error during cleanup:', err);
+			app.exit(1);
 		});
 });
 

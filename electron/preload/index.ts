@@ -37,6 +37,10 @@ contextBridge.exposeInMainWorld('ipcRenderer', {
 		return ipcRenderer.removeAllListeners(channel);
 	},
 	/**
+	 * App Management
+	 */
+	quitApp: () => ipcRenderer.invoke('app-quit'),
+	/**
 	 * Window Management
 	 */
 	openConnectionWindow: (connectionId: string, isRemote: boolean) =>
