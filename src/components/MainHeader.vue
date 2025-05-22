@@ -138,30 +138,26 @@ onUnmounted(() => {
 <template>
 	<header
 		v-if="!isLoading"
-		class="bg-base-300 z-20 mt-8 flex items-center justify-between border-b border-black/10 px-4 pt-2 pb-2"
+		class="bg-base-300 z-20 mt-8 flex items-center justify-between border-b border-black/10 px-2 pt-2 pb-2"
 	>
 		<div class="flex items-center">
 			<button
-				class="btn btn-ghost btn-sm mr-2"
+				class="btn btn-ghost btn-sm"
 				@click="handleGoBack"
 			>
 				<svg
+					class="h-4 w-4"
+					fill="currentColor"
 					xmlns="http://www.w3.org/2000/svg"
-					fill="none"
-					viewBox="0 0 24 24"
-					stroke-width="1.5"
-					stroke="currentColor"
-					class="h-5 w-5"
+					viewBox="0 0 320 512"
 				>
 					<path
-						stroke-linecap="round"
-						stroke-linejoin="round"
-						d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18"
+						d="M9.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l192 192c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L77.3 256 246.6 86.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-192 192z"
 					/>
 				</svg>
 			</button>
 			<div
-				class="mr-2 flex h-8 w-8 items-center justify-center rounded-full"
+				class="flex h-8 w-8 items-center justify-center rounded-full"
 				:class="
 					getConnectionTypeColor(
 						selectedProject?.type as ConnectionType
@@ -173,11 +169,13 @@ onUnmounted(() => {
 				}}</span>
 			</div>
 
-			<ShowConnectionInfo
-				:is-remote-connection="props.isRemoteConnection"
-				:connection="selectedProject"
-				v-if="selectedProject"
-			/>
+			<div class="ml-4">
+				<ShowConnectionInfo
+					:is-remote-connection="props.isRemoteConnection"
+					:connection="selectedProject"
+					v-if="selectedProject"
+				/>
+			</div>
 		</div>
 
 		<div class="flex">
