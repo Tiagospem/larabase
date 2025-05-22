@@ -1,7 +1,6 @@
 import { SshConnection } from './ssh-connection';
 
 interface IpcRendererAPI {
-	// General IPC methods
 	on(channel: string, func: (...args: any[]) => void): void;
 	once(channel: string, func: (...args: any[]) => void): void;
 	removeListener(channel: string, func: (...args: any[]) => void): void;
@@ -9,7 +8,16 @@ interface IpcRendererAPI {
 	send(channel: string, ...args: any[]): void;
 	invoke(channel: string, ...args: any[]): Promise<any>;
 
-	// SSH Operations
+	git: {
+		getStatus: (projectPath: string) => Promise<{
+			isGitInstalled: boolean;
+			hasRepository: boolean;
+			currentBranch: string;
+			errorMessage?: string;
+		}>;
+		initRepository: (projectPath: string) => Promise<boolean>;
+	};
+
 	ssh: {
 		testConnection: (
 			config: SshConnection
@@ -61,7 +69,6 @@ interface IpcRendererAPI {
 		closeConnection: (
 			config: SshConnection
 		) => Promise<{ success: boolean }>;
-		// Tunnel operations
 		createTunnel: (
 			config: SshConnection,
 			remoteHost: string,

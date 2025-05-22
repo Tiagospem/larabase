@@ -286,7 +286,17 @@ contextBridge.exposeInMainWorld('ipcRenderer', {
 	 * App Icon Badge
 	 */
 	updateMigrationsBadge: (count: number) =>
-		ipcRenderer.invoke('update-migrations-badge', count)
+		ipcRenderer.invoke('update-migrations-badge', count),
+
+	/**
+	 * Git Operations
+	 */
+	git: {
+		getStatus: (projectPath: string) =>
+			ipcRenderer.invoke('git-status', projectPath),
+		initRepository: (projectPath: string) =>
+			ipcRenderer.invoke('git-init', projectPath)
+	}
 });
 
 function domReady(
