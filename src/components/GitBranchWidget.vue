@@ -68,19 +68,7 @@ async function initializeRepository() {
 	}
 }
 
-async function runTerminalCommand() {
-	if (!props.project || !props.project.projectPath) return;
-
-	try {
-		await window.ipcRenderer.start_terminal_process(
-			'git init && git add . && git commit -m "first commit" && git checkout -b develop',
-			props.project.projectPath
-		);
-	} catch (error) {
-		console.error('Error running terminal command:', error);
-	}
-}
-
+// Removed the unused `runTerminalCommand` function to clean up the codebase.
 function startAutoRefresh() {
 	if (refreshInterval.value) return;
 
