@@ -41,6 +41,7 @@ Larabase follows the standard Electron architecture with main and renderer proce
     - Redis integration (`redis.ts`)
     - Project management (`projects.ts`)
     - Terminal emulation (`terminal.ts`)
+    - Git integration (`git.ts`)
 - **Helpers:** `electron/helpers/` - Utility functions for various operations
 
 ### Renderer Process (`src/`)
@@ -78,6 +79,7 @@ The application follows a communication pattern using Electron's IPC:
 - Migration management interface
 - .env file editor
 - Terminal integration for running Artisan commands
+- Git integration with branch visibility and repository management
 
 ### Redis Support
 
@@ -110,3 +112,14 @@ The application follows a communication pattern using Electron's IPC:
 ## Code Tips and Tricks
 
 - Always use toRaw for reactive objects to avoid errors like "An object could not be cloned."
+- Use separate loading states for initial loading vs. background refreshes to avoid UI flickering
+
+## Git Integration
+
+The application includes Git integration features:
+
+- Git branch visibility in the MainHeader component for local connections
+- Git repository status detection (checks if Git is installed and if the directory is a Git repository)
+- Ability to initialize a new Git repository directly from the UI
+- Auto-refresh of Git information every 5 seconds to keep branch information current
+- Backend implementation in `electron/modules/git.ts` providing Git operations via IPC

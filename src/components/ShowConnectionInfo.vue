@@ -2,6 +2,7 @@
 import { computed, watch, inject, ref } from 'vue';
 import Modal from '@/components/Modal.vue';
 import RemoteBadge from '@/components/ui/RemoteBadge.vue';
+import GitBranchWidget from '@/components/GitBranchWidget.vue';
 import { useProjectStore } from '@/store/project';
 import type { ProjectConnection } from '@/types/project';
 import { ConnectionType } from '@/types/connection-types';
@@ -92,14 +93,20 @@ watch(
 
 <template>
 	<div v-if="projectStore.selectedProject">
-		<div class="flex items-center justify-between">
-			<h1 class="text-lg font-semibold flex items-center">
-				{{ connectionDetails.name }}
+		<div class="flex flex-col">
+			<h1 class="flex items-center">
+				<span class="text-sm font-semibold">{{
+					connectionDetails.name
+				}}</span>
 				<RemoteBadge
 					v-if="props.isRemoteConnection"
 					class="ml-2"
 				/>
 			</h1>
+			<GitBranchWidget
+				v-if="projectStore.selectedProject && !props.isRemoteConnection"
+				:project="projectStore.selectedProject"
+			/>
 		</div>
 
 		<div class="mt-1 flex items-center gap-1 text-xs">
