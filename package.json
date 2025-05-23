@@ -1,6 +1,6 @@
 {
   "name": "larabase",
-  "version": "1.2.4",
+  "version": "1.2.5",
   "main": "dist-electron/main/index.js",
   "description": "An Opined Database GUI for Laravel Developers",
   "author": "Tiago Padilha <tiagospem@gmail.com>",
@@ -130,9 +130,11 @@
     "mac": {
       "darkModeSupport": true,
       "icon": "dist/icons/mac/icon.icns",
-      "hardenedRuntime": false,
+      "hardenedRuntime": true,
       "gatekeeperAssess": false,
-      "notarize": false
+      "notarize": false,
+      "entitlements": "entitlements.mac.plist",
+      "entitlementsInherit": "entitlements.mac.plist"
     },
     "dmg": {
       "title": "${productName} ${version}",
