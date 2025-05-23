@@ -196,7 +196,7 @@ async function saveNewConnection() {
 					: false,
 			dockerInfo:
 				newConnection.value.type !== ConnectionType.SSH
-					? dockerInfo.value || null
+					? toRaw(dockerInfo.value) || null
 					: null,
 			redisConfig: {
 				port: newConnection.value.redisConfig.port,
@@ -267,7 +267,7 @@ function editConnection(project: ProjectConnection) {
 		usingSail: project.usingSail,
 		status: project.status || ConnectionStatus.Connected,
 		isValid: true,
-		dockerInfo: project.dockerInfo
+		dockerInfo: toRaw(project.dockerInfo)
 	};
 
 	if (project.dbConfig) {
@@ -279,7 +279,7 @@ function editConnection(project: ProjectConnection) {
 	}
 
 	projectPathError.value = '';
-	dockerInfo.value = project.dockerInfo as DockerInfo;
+	dockerInfo.value = toRaw(project.dockerInfo) as DockerInfo;
 	isCreateModalOpen.value = true;
 }
 
