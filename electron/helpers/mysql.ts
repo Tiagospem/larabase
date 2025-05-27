@@ -124,7 +124,6 @@ function getPoolKey(
 			)?.localPort
 		: config.localDbConfig.port;
 
-	// Para conexões remotas, use as informações do remoteDbConfig
 	const userPart = config.remote
 		? config.remote.remoteDbConfig.user
 		: config.localDbConfig.user;
@@ -142,14 +141,16 @@ async function getConnectionPool(
 	config: AppConnection,
 	{ useConnectionDb = true, targetDatabase = '' } = {}
 ): Promise<Pool> {
+	const connectionOptions = await getConnectionOptions(config, {
+		useConnectionDb,
+		targetDatabase
+	});
+
 	const poolKey = getPoolKey(config, useConnectionDb, targetDatabase);
 
 	if (!connectionPools.has(poolKey)) {
 		const poolConfig = {
-			...(await getConnectionOptions(config, {
-				useConnectionDb,
-				targetDatabase
-			})),
+			...connectionOptions,
 			connectionLimit: 10,
 			waitForConnections: true,
 			queueLimit: 0
@@ -188,7 +189,6 @@ async function ping(
 	const conn = await createConnection(config, options);
 
 	try {
-		// Define a interface para o resultado da consulta de teste
 		interface ConnectionTestRow extends RowDataPacket {
 			connection_test: number;
 		}
