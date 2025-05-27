@@ -102,7 +102,13 @@ export default defineConfig(({ command }) => {
 			}
 		},
 		optimizeDeps: {
-			exclude: nativeNodeModules
+			exclude: nativeNodeModules,
+			include: ['monaco-editor']
+		},
+		define: {
+			'process.env.NODE_ENV': JSON.stringify(
+				process.env.NODE_ENV || 'development'
+			)
 		}
 	};
 });
