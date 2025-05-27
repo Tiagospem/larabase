@@ -1,0 +1,1 @@
+/Applications/Larabase.app/Contents/MacOS/Larabase
