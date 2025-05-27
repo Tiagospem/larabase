@@ -1,33 +1,60 @@
-import editorWorker from 'monaco-editor/esm/vs/editor/editor.worker?worker';
-import jsonWorker from 'monaco-editor/esm/vs/language/json/json.worker?worker';
-import cssWorker from 'monaco-editor/esm/vs/language/css/css.worker?worker';
-import htmlWorker from 'monaco-editor/esm/vs/language/html/html.worker?worker';
-import tsWorker from 'monaco-editor/esm/vs/language/typescript/ts.worker?worker';
-
 let isConfigured = false;
 
 export function configureMonaco() {
 	if (isConfigured) return;
 
 	(self as any).MonacoEnvironment = {
-		getWorker(_: any, label: string) {
-			if (label === 'json') {
-				return new jsonWorker();
-			}
-			if (label === 'css' || label === 'scss' || label === 'less') {
-				return new cssWorker();
-			}
-			if (
-				label === 'html' ||
-				label === 'handlebars' ||
-				label === 'razor'
-			) {
-				return new htmlWorker();
-			}
-			if (label === 'typescript' || label === 'javascript') {
-				return new tsWorker();
-			}
-			return new editorWorker();
+		getWorker: function () {
+			const workerCode = `
+				class MonacoWorker {
+					constructor() {
+						this.messageId = 0;
+						this.pendingRequests = new Map();
+					}
+
+					handleMessage(e) {
+						const { id, method, args } = e.data;
+						
+						try {
+							switch (method) {
+								case 'validate':
+									this.postMessage({ id, result: [] });
+									break;
+								case 'format':
+									this.postMessage({ id, result: args[0] || '' });
+									break;
+								case 'doHover':
+									this.postMessage({ id, result: null });
+									break;
+								case 'provideCompletionItems':
+									this.postMessage({ id, result: { suggestions: [] } });
+									break;
+								default:
+									this.postMessage({ id, result: null });
+							}
+						} catch (error) {
+							this.postMessage({ id, error: error.message });
+						}
+					}
+
+					postMessage(message) {
+						self.postMessage(message);
+					}
+				}
+
+				const worker = new MonacoWorker();
+				
+				self.addEventListener('message', (e) => {
+					worker.handleMessage(e);
+				});
+
+				self.postMessage({ type: 'ready' });
+			`;
+
+			const blob = new Blob([workerCode], {
+				type: 'application/javascript'
+			});
+			return new Worker(URL.createObjectURL(blob));
 		}
 	};
 
