@@ -2,12 +2,12 @@
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import Modal from '@/components/Modal.vue';
 import { SshConnection } from '@/types/ssh-connection';
-import {
-	readRemoteFile,
-	writeRemoteFile
-} from '@/services/remote-file-service';
+import { optimizedSshService } from '@/services/optimized-ssh-service';
 import path from 'path-browserify';
 import * as monaco from 'monaco-editor';
+import { configureMonaco } from '@/utils/monaco-config';
+
+configureMonaco();
 
 const props = defineProps({
 	show: {
@@ -186,7 +186,7 @@ async function loadFile() {
 	error.value = '';
 
 	try {
-		const content = await readRemoteFile(
+		const content = await optimizedSshService.read(
 			props.connection,
 			fullFilePath.value
 		);
@@ -217,7 +217,7 @@ async function saveFile() {
 	error.value = '';
 
 	try {
-		await writeRemoteFile(
+		await optimizedSshService.write(
 			props.connection,
 			fullFilePath.value,
 			fileContent.value
