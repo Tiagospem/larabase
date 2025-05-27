@@ -114,6 +114,54 @@ The application follows a communication pattern using Electron's IPC:
 - Always use toRaw for reactive objects to avoid errors like "An object could not be cloned."
 - Use separate loading states for initial loading vs. background refreshes to avoid UI flickering
 
+## Remote File Explorer with Directory Tree
+
+The application includes an enhanced remote file explorer with sidebar navigation:
+
+### Features
+- **Directory Tree Sidebar**: Collapsible tree structure for fast navigation through nested directories
+- **State Persistence**: Remembers current directory when switching between file explorer and database views
+- **File Integration**: Click files in tree to open directly in Monaco Editor
+- **Connection-Aware State**: Different states maintained per SSH connection
+
+### Implementation Details
+- **Store**: `src/store/fileExplorer.ts` - Pinia store managing directory tree state and file operations
+- **Components**: 
+  - `DirectoryTreeSidebar.vue` - Main sidebar with expand/collapse functionality
+  - `DirectoryTreeNode.vue` - Individual tree nodes with file/directory icons
+  - `RemoteFileExplorer.vue` - Main file explorer with integrated sidebar
+- **State Management**: Uses `expandedPaths` Set to track opened directories and `currentPath` for navigation
+- **Performance**: Leverages existing optimized SSH connection pooling for instant navigation
+
+### Path Construction Fixes
+- **Breadcrumb Issues**: Fixed path calculation that was cutting off directory names
+- **Tree Navigation**: Corrected file path construction to prevent "Is a directory" errors
+- **Event Propagation**: Fixed Vue.js event handling using `(...args) => $emit('openFile', ...args)` pattern
+
+## Monaco Editor Configuration
+
+Monaco Editor requires special configuration for Vite/Electron environments:
+
+### Setup
+- **Central Configuration**: `src/utils/monaco-config.ts` provides centralized worker setup
+- **Worker Configuration**: Proper import of workers using Vite's `?worker` suffix
+- **Applied To**: RemoteFileEditor, SQLEditor (via useSQLEditor), DotEnvEditor
+
+### Common Issues
+- **`toUrl` Errors**: Fixed by configuring `MonacoEnvironment.getWorker` properly
+- **Worker Loading**: Use `import worker from 'monaco-editor/esm/vs/.../worker?worker'` pattern
+- **Multiple Components**: Always call `configureMonaco()` before using Monaco in any component
+
+### Vite Configuration
+```typescript
+optimizeDeps: {
+  include: ['monaco-editor']
+},
+define: {
+  'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV || 'development')
+}
+```
+
 ## Git Integration
 
 The application includes Git integration features:
