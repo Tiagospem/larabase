@@ -1,6 +1,9 @@
 <script lang="ts">
 import * as monaco from 'monaco-editor';
+import { configureMonaco } from '@/utils/monaco-config';
 import { defineComponent, ref, onMounted, onBeforeUnmount, watch } from 'vue';
+
+configureMonaco();
 
 interface Props {
 	modelValue: string;
