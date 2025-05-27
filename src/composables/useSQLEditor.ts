@@ -1,6 +1,9 @@
 import * as monaco from 'monaco-editor';
+import { configureMonaco } from '@/utils/monaco-config';
 import { format } from 'sql-formatter';
 import { ref, onMounted, onBeforeUnmount, watch } from 'vue';
+
+configureMonaco();
 import { useConnectionsStore } from '@/store/connections';
 import { useSqlResultsStore } from '@/store/sqlResults';
 import { AIService } from '@/services/aiService';
