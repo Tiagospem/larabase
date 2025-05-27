@@ -11,7 +11,7 @@ export interface FileEntry {
 export interface DirectoryTreeNode {
 	name: string;
 	path: string;
-	type: 'directory';
+	type: 'directory' | 'file';
 	expanded?: boolean;
 	children?: DirectoryTreeNode[];
 }
