@@ -269,7 +269,30 @@ contextBridge.exposeInMainWorld('ipcRenderer', {
 				localPort
 			),
 		closeTunnel: (tunnelId: string) =>
-			ipcRenderer.invoke('ssh:close-tunnel', tunnelId)
+			ipcRenderer.invoke('ssh:close-tunnel', tunnelId),
+
+		// Optimized SSH methods
+		optimizedList: (config: SshConnection, dirPath: string) =>
+			ipcRenderer.invoke('ssh:optimized-list', config, dirPath),
+		optimizedRead: (
+			config: SshConnection,
+			filePath: string,
+			length?: number
+		) => ipcRenderer.invoke('ssh:optimized-read', config, filePath, length),
+		optimizedWrite: (
+			config: SshConnection,
+			filePath: string,
+			content: string
+		) =>
+			ipcRenderer.invoke(
+				'ssh:optimized-write',
+				config,
+				filePath,
+				content
+			),
+		optimizedExists: (config: SshConnection, path: string) =>
+			ipcRenderer.invoke('ssh:optimized-exists', config, path),
+		connectionStats: () => ipcRenderer.invoke('ssh:connection-stats')
 	},
 
 	/**
