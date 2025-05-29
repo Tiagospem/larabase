@@ -81,6 +81,46 @@ interface IpcRendererAPI {
 			error?: string;
 		}>;
 		closeTunnel: (tunnelId: string) => Promise<{ success: boolean }>;
+
+		// Optimized SSH methods
+		optimizedList: (
+			config: SshConnection,
+			dirPath: string
+		) => Promise<{
+			success: boolean;
+			files?: any[];
+			error?: string;
+		}>;
+		optimizedRead: (
+			config: SshConnection,
+			filePath: string,
+			length?: number
+		) => Promise<{
+			success: boolean;
+			content?: string;
+			error?: string;
+		}>;
+		optimizedWrite: (
+			config: SshConnection,
+			filePath: string,
+			content: string
+		) => Promise<{
+			success: boolean;
+			error?: string;
+		}>;
+		optimizedExists: (
+			config: SshConnection,
+			path: string
+		) => Promise<{
+			success: boolean;
+			exists: boolean;
+			error?: string;
+		}>;
+		connectionStats: () => Promise<{
+			total: number;
+			inUse: number;
+			available: number;
+		}>;
 	};
 }
 

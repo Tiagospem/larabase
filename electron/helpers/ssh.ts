@@ -7,21 +7,6 @@ import { SshConnection } from '../../src/types/ssh-connection';
 interface SshError extends Error {
 	code?: string;
 }
-
-interface SftpFile {
-	filename: string;
-	longname: string;
-	attrs: {
-		size: number;
-		mtime: number;
-		atime: number;
-		uid: number;
-		gid: number;
-		mode: number;
-		[key: string]: number | string | boolean | undefined;
-	};
-}
-
 interface FileExplorerItem {
 	name: string;
 	type: 'file' | 'directory';
@@ -59,7 +44,7 @@ async function createConnection(config: SshConnection): Promise<Client> {
 			host: config.host,
 			port: config.port,
 			username: config.user, // ssh2 uses username, not user
-			debug: (message: string) => console.log(`SSH Debug: ${message}`),
+			//debug: (message: string) => console.log(`SSH Debug: ${message}`),
 			readyTimeout: 10000
 		};
 
@@ -226,9 +211,7 @@ async function listRemoteFiles(
 ): Promise<FileExplorerItem[]> {
 	const client = await createConnection(config);
 
-	// Safety check to make sure we don't go outside the project directory
 	if (!dirPath.startsWith(config.remotePath)) {
-		// If dirPath is outside remotePath, default to remotePath
 		dirPath = config.remotePath;
 	}
 
@@ -499,9 +482,6 @@ async function createTunnel(
 	remotePort: number,
 	localPort: number = 0
 ): Promise<{ tunnelId: string; localPort: number }> {
-	// This is the critical fix - always create a fresh connection for tunneling
-	// This ensures we don't reuse a connection that might be in a bad state
-	// from other operations like SFTP
 	const sshClient = await createConnection(config);
 
 	return new Promise((resolve, reject) => {

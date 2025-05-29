@@ -3,13 +3,13 @@ import * as path from 'path';
 import {
 	testConnection,
 	closeConnection,
-	executeCommand,
 	readRemoteFile,
 	writeRemoteFile,
 	listRemoteFiles,
 	createTunnel,
 	closeTunnel
 } from '../helpers/ssh';
+import { optimizedSshManager } from '../helpers/optimized-ssh';
 import { SshConnection } from '../../src/types/ssh-connection';
 
 function registerSshHandlers() {
@@ -20,7 +20,21 @@ function registerSshHandlers() {
 	ipcMain.handle(
 		'ssh:execute-command',
 		async (_, config: SshConnection, command: string) => {
-			return await executeCommand(config, command);
+			try {
+				return await optimizedSshManager.executeCommand(
+					config,
+					command
+				);
+			} catch (error) {
+				return {
+					stdout: '',
+					stderr:
+						error instanceof Error
+							? error.message
+							: 'Unknown error',
+					code: 1
+				};
+			}
 		}
 	);
 
@@ -157,6 +171,158 @@ function registerSshHandlers() {
 		const success = closeTunnel(tunnelId);
 		return { success };
 	});
+
+	ipcMain.handle(
+		'ssh:optimized-list',
+		async (_, config: SshConnection, dirPath: string) => {
+			try {
+				const command = `cd '${dirPath}' && ls -1F`;
+
+				const result = await optimizedSshManager.executeCommand(
+					config,
+					command
+				);
+
+				if (result.code !== 0) {
+					throw new Error(
+						result.stderr || 'Failed to list directory'
+					);
+				}
+
+				const files = parseLsOutput(result.stdout);
+
+				return { success: true, files };
+			} catch (error) {
+				return {
+					success: false,
+					error:
+						error instanceof Error ? error.message : 'Unknown error'
+				};
+			}
+		}
+	);
+
+	ipcMain.handle(
+		'ssh:optimized-read',
+		async (_, config: SshConnection, filePath: string, length?: number) => {
+			try {
+				const maxSize = 1024 * 1024; // 1MB limit
+				const readSize = length ? Math.min(length, maxSize) : maxSize;
+				const command = `head -c ${readSize} "${filePath}"`;
+
+				const result = await optimizedSshManager.executeCommand(
+					config,
+					command
+				);
+
+				if (result.code !== 0) {
+					throw new Error(result.stderr || 'Failed to read file');
+				}
+
+				return { success: true, content: result.stdout };
+			} catch (error) {
+				return {
+					success: false,
+					error:
+						error instanceof Error ? error.message : 'Unknown error'
+				};
+			}
+		}
+	);
+
+	ipcMain.handle(
+		'ssh:optimized-write',
+		async (_, config: SshConnection, filePath: string, content: string) => {
+			try {
+				const command = `cat > "${filePath}" << 'EOF'\n${content}\nEOF`;
+
+				const result = await optimizedSshManager.executeCommand(
+					config,
+					command
+				);
+
+				if (result.code !== 0) {
+					throw new Error(result.stderr || 'Failed to write file');
+				}
+
+				return { success: true };
+			} catch (error) {
+				return {
+					success: false,
+					error:
+						error instanceof Error ? error.message : 'Unknown error'
+				};
+			}
+		}
+	);
+
+	ipcMain.handle(
+		'ssh:optimized-exists',
+		async (_, config: SshConnection, path: string) => {
+			try {
+				const command = `test -e "${path}" && echo "exists" || echo "not_exists"`;
+				const result = await optimizedSshManager.executeCommand(
+					config,
+					command
+				);
+
+				return {
+					success: true,
+					exists: result.stdout.trim() === 'exists'
+				};
+			} catch (error) {
+				return {
+					success: false,
+					exists: false,
+					error:
+						error instanceof Error ? error.message : 'Unknown error'
+				};
+			}
+		}
+	);
+
+	ipcMain.handle('ssh:connection-stats', () => {
+		return optimizedSshManager.getConnectionStats();
+	});
+}
+
+function parseLsOutput(output: string): any[] {
+	const lines = output.split('\n').filter((line) => line.trim());
+	const files: any[] = [];
+
+	for (const line of lines) {
+		const trimmedLine = line.trim();
+		if (!trimmedLine || trimmedLine === '.' || trimmedLine === '..')
+			continue;
+
+		let name = trimmedLine;
+		let type = 'file';
+
+		if (name.endsWith('/')) {
+			name = name.slice(0, -1);
+			type = 'directory';
+		} else if (name.endsWith('*')) {
+			name = name.slice(0, -1);
+			type = 'file';
+		} else if (name.endsWith('@')) {
+			name = name.slice(0, -1);
+			type = 'file';
+		}
+
+		if (!name || name === '.' || name === '..') continue;
+
+		files.push({
+			name,
+			type,
+			size: 0,
+			modTime: Date.now(),
+			permissions: type === 'directory' ? 'drwxr-xr-x' : '-rw-r--r--',
+			owner: 'user',
+			group: 'group'
+		});
+	}
+
+	return files;
 }
 
 export { registerSshHandlers };

@@ -65,6 +65,22 @@ export async function listRemoteFiles(
 	try {
 		const sanitizedConfig = sanitizeForIpc(sshConfig);
 
+		try {
+			const optimizedResult = await window.ipcRenderer.ssh.optimizedList(
+				sanitizedConfig,
+				dirPath
+			);
+
+			if (optimizedResult.success) {
+				return optimizedResult.files as RemoteFileEntry[];
+			}
+		} catch (optimizedError) {
+			console.warn(
+				'Optimized list failed, falling back to SFTP:',
+				optimizedError
+			);
+		}
+
 		const result = await window.ipcRenderer.ssh.listFiles(
 			sanitizedConfig,
 			dirPath
@@ -88,6 +104,22 @@ export async function readRemoteFile(
 	try {
 		const sanitizedConfig = sanitizeForIpc(sshConfig);
 
+		try {
+			const optimizedResult = await window.ipcRenderer.ssh.optimizedRead(
+				sanitizedConfig,
+				filePath
+			);
+
+			if (optimizedResult.success) {
+				return optimizedResult.content || '';
+			}
+		} catch (optimizedError) {
+			console.warn(
+				'Optimized read failed, falling back to SFTP:',
+				optimizedError
+			);
+		}
+
 		const result = await window.ipcRenderer.ssh.readFile(
 			sanitizedConfig,
 			filePath
@@ -97,7 +129,7 @@ export async function readRemoteFile(
 			throw new Error(result.error || 'Failed to read remote file');
 		}
 
-		return result.content;
+		return result.content || '';
 	} catch (error) {
 		console.error('Error reading remote file:', error);
 		throw error;
@@ -111,6 +143,23 @@ export async function writeRemoteFile(
 ): Promise<void> {
 	try {
 		const sanitizedConfig = sanitizeForIpc(sshConfig);
+
+		try {
+			const optimizedResult = await window.ipcRenderer.ssh.optimizedWrite(
+				sanitizedConfig,
+				filePath,
+				content
+			);
+
+			if (optimizedResult.success) {
+				return;
+			}
+		} catch (optimizedError) {
+			console.warn(
+				'Optimized write failed, falling back to SFTP:',
+				optimizedError
+			);
+		}
 
 		const result = await window.ipcRenderer.ssh.writeFile(
 			sanitizedConfig,
