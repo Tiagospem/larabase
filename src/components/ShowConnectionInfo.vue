@@ -81,10 +81,15 @@ async function updateProjectEnv(): Promise<void> {
 }
 
 watch(
-	() => projectStore.selectedProject,
-	(proj) => {
-		if (proj) {
-			projectStore.checkProjectDatabase();
+	[
+		() => projectStore.selectedProject,
+		() => projectStore.state.databaseMatch
+	],
+	async ([currentSelectedProject, _newDatabaseMatch]) => {
+		if (currentSelectedProject) {
+			await projectStore.checkProjectDatabase();
+
+			isDatabaseMismatch.value = !projectStore.state.databaseMatch;
 		}
 	},
 	{ immediate: true }
@@ -137,25 +142,27 @@ watch(
 				class="flex items-center text-amber-400"
 			>
 				<div class="tooltip tooltip-bottom">
-					<span class="text-error">Mismatch DB </span>
+					<span class="badge badge-xs badge-warning"
+						>Mismatch DB
+					</span>
 				</div>
 				<button
-					class="tooltip tooltip-bottom ml-1"
+					class="tooltip tooltip-bottom ml-1 btn btn-xs btn-ghost"
 					:data-tip="'Update .env'"
 					@click="updateProjectEnv"
 				>
 					<svg
+						class="size-3"
 						xmlns="http://www.w3.org/2000/svg"
 						fill="none"
 						viewBox="0 0 24 24"
 						stroke-width="1.5"
 						stroke="currentColor"
-						class="size-3"
 					>
 						<path
 							stroke-linecap="round"
 							stroke-linejoin="round"
-							d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99"
+							d="M7.5 21 3 16.5m0 0L7.5 12M3 16.5h13.5m0-13.5L21 7.5m0 0L16.5 12M21 7.5H7.5"
 						/>
 					</svg>
 				</button>

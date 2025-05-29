@@ -178,7 +178,7 @@ async function createConnectionWindow(connectionId: string, isRemote: boolean) {
 
 	connectionWindows.set(connectionId, connectionWindow);
 
-	connectionWindow.on('close', (e) => {
+	connectionWindow.on('close', (_e) => {
 		if (
 			isQuitting &&
 			process.platform !== 'darwin' &&
@@ -188,6 +188,8 @@ async function createConnectionWindow(connectionId: string, isRemote: boolean) {
 			// This is the last window and we're quitting
 			performCleanup();
 		}
+
+		updatePendingMigrationsBadge(0);
 	});
 
 	return connectionWindow;
@@ -339,7 +341,6 @@ function registerWindowHandlers() {
 	});
 }
 
-// Function to clean up all connections and resources
 async function performCleanup() {
 	cleanup();
 
@@ -367,7 +368,7 @@ app.whenReady().then(async () => {
 	registerWindowHandlers();
 });
 
-app.on('before-quit', (e) => {
+app.on('before-quit', () => {
 	isQuitting = true;
 });
 

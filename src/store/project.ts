@@ -42,6 +42,7 @@ export const useProjectStore = defineStore('project', () => {
 		const path = selectedProject.value?.projectPath;
 
 		state.isLoading = true;
+
 		try {
 			const { success, isMatch, projectDatabase } =
 				await window.ipcRenderer.compareProjectDatabase({
