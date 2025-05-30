@@ -100,7 +100,7 @@ function loadMoreKeys() {
 					:key="key.key"
 					class="border-base-300 bg-base-200 hover:bg-base-100 mb-2 cursor-pointer rounded border p-2 text-sm"
 					:class="{
-						'border-primary':
+						'!bg-base-100':
 							redisStore.currentKeyInfo?.key === key.key
 					}"
 					@click="showKeyValue(key.key, key.type)"

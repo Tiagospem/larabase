@@ -65,9 +65,9 @@ async function flushDatabase(dbId: number, event: Event) {
 			<div
 				v-for="db in sortedDatabases"
 				:key="db.id"
-				class="card card-compact bg-base-200 hover:bg-base-100 cursor-pointer shadow-sm transition-all"
+				class="card card-compact bg-base-200 hover:bg-base-100 cursor-pointer transition-all"
 				:class="{
-					'border-primary border-l-4': redisStore.selectedDb === db.id
+					'!bg-base-100': redisStore.selectedDb === db.id
 				}"
 				@click="selectDatabase(db.id)"
 			>

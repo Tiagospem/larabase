@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, watch, watchEffect } from 'vue';
+import { ref, onMounted, watch } from 'vue';
 import { useRedisStore } from '@/store/redis';
 import Modal from '@/components/Modal.vue';
 import RedisDatabaseList from '@/components/redis/RedisDatabaseList.vue';
@@ -16,13 +16,9 @@ const props = defineProps({
 const emit = defineEmits(['close']);
 
 const redisStore = useRedisStore();
-const searchTerm = ref('');
 const activeTab = ref('databases');
 const isFlushingAll = ref(false);
-const isRefreshingKeys = ref(false);
 const isRefreshingDbs = ref(false);
-let searchTimeout: ReturnType<typeof setTimeout> | null = null;
-
 function closeModal() {
 	redisStore.resetState();
 	emit('close');
@@ -48,25 +44,6 @@ async function loadDatabases() {
 
 function switchTab(tab: string) {
 	activeTab.value = tab;
-}
-
-watchEffect(() => {
-	if (searchTimeout) {
-		clearTimeout(searchTimeout);
-	}
-
-	if (redisStore.selectedDb !== null) {
-		searchTimeout = setTimeout(async () => {
-			await redisStore.fetchKeys(
-				searchTerm.value ? `*${searchTerm.value}*` : '*',
-				true
-			);
-		}, 300);
-	}
-});
-
-function clearSearch() {
-	searchTerm.value = '';
 }
 
 async function flushAllDatabases() {
@@ -99,21 +76,6 @@ async function flushAllDatabases() {
 	}
 }
 
-async function refreshData() {
-	if (redisStore.selectedDb !== null) {
-		// If a database is selected, refresh its keys
-		isRefreshingKeys.value = true;
-		try {
-			await redisStore.fetchKeys('*', true);
-		} finally {
-			isRefreshingKeys.value = false;
-		}
-	} else {
-		// Otherwise refresh the database list
-		await loadDatabases();
-	}
-}
-
 onMounted(async () => {
 	if (props.show) {
 		await loadDatabases();
@@ -140,7 +102,9 @@ onMounted(async () => {
 			class="flex h-[50vh] flex-col px-1"
 		>
 			<div class="flex flex-1 overflow-hidden">
-				<div class="h-full w-1/4 overflow-hidden border-r pr-3">
+				<div
+					class="h-full w-1/4 overflow-hidden border-r border-base-100 pr-3"
+				>
 					<div class="mb-3 flex items-center justify-between px-1">
 						<h3 class="text-sm font-semibold">Databases</h3>
 						<button
@@ -178,55 +142,13 @@ onMounted(async () => {
 				</div>
 
 				<div class="flex h-full w-3/4 flex-col">
-					<div
-						v-if="redisStore.selectedDb !== null"
-						class="mb-4 px-1"
-					>
-						<div class="flex items-center">
-							<div class="relative flex-1">
-								<input
-									v-model="searchTerm"
-									type="search"
-									placeholder="Search keys..."
-									class="input input-sm input-bordered w-full"
-								/>
-							</div>
-							<button
-								@click="refreshData"
-								class="btn btn-sm btn-ghost ml-2"
-								title="Refresh"
-								:disabled="isRefreshingKeys"
-							>
-								<span
-									v-if="isRefreshingKeys"
-									class="loading loading-spinner loading-xs"
-								></span>
-								<svg
-									v-else
-									xmlns="http://www.w3.org/2000/svg"
-									class="h-4 w-4"
-									fill="none"
-									viewBox="0 0 24 24"
-									stroke="currentColor"
-								>
-									<path
-										stroke-linecap="round"
-										stroke-linejoin="round"
-										stroke-width="2"
-										d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-									/>
-								</svg>
-							</button>
-						</div>
-					</div>
-
 					<div class="flex-1 overflow-hidden">
 						<div
 							v-if="redisStore.selectedDb !== null"
 							class="flex h-full"
 						>
 							<div
-								class="h-full w-2/5 overflow-hidden border-r pr-2"
+								class="h-full w-2/5 overflow-hidden border-r border-base-100 pr-2"
 							>
 								<RedisKeysList />
 							</div>
@@ -243,6 +165,7 @@ onMounted(async () => {
 									class="mx-auto h-8 w-8"
 									xmlns="http://www.w3.org/2000/svg"
 									viewBox="0 0 512 512"
+									fill="currentColor"
 								>
 									<path
 										d="M256 512A256 256 0 1 0 256 0a256 256 0 1 0 0 512zm0-384c13.3 0 24 10.7 24 24l0 112c0 13.3-10.7 24-24 24s-24-10.7-24-24l0-112c0-13.3 10.7-24 24-24zM224 352a32 32 0 1 1 64 0 32 32 0 1 1 -64 0z"
