@@ -20,6 +20,7 @@ const cy = ref<any>(null);
 const isLoadingGraph = ref(false);
 const selectedNode = ref<string | null>(null);
 const tooltipTimeout = ref<number | null>(null);
+const tooltipShowTimeout = ref<number | null>(null);
 
 const handleClose = () => {
 	emit('close');
@@ -205,41 +206,43 @@ const initCytoscape = () => {
 		const columns = node.data('columns');
 
 		if (columns && columns.length > 0) {
-			const primaryKeys = columns
-				.filter((c: any) => c.primary)
-				.map((c: any) => c.name);
-			const foreignKeys = columns
-				.filter((c: any) => c.foreign)
-				.map((c: any) => c.name);
+			tooltipShowTimeout.value = window.setTimeout(() => {
+				const primaryKeys = columns
+					.filter((c: any) => c.primary)
+					.map((c: any) => c.name);
+				const foreignKeys = columns
+					.filter((c: any) => c.foreign)
+					.map((c: any) => c.name);
 
-			let tooltip = `<strong>${node.data('label')}</strong><br>`;
-			tooltip += '<hr style="margin: 3px 0">';
+				let tooltip = `<strong>${node.data('label')}</strong><br>`;
+				tooltip += '<hr style="margin: 3px 0">';
 
-			if (primaryKeys.length > 0) {
-				tooltip += `<span style="color: #f59e0b">PK: ${primaryKeys.join(', ')}</span><br>`;
-			}
+				if (primaryKeys.length > 0) {
+					tooltip += `<span style="color: #f59e0b">PK: ${primaryKeys.join(', ')}</span><br>`;
+				}
 
-			if (foreignKeys.length > 0) {
-				tooltip += `<span style="color: #3b82f6">FK: ${foreignKeys.join(', ')}</span><br>`;
-			}
+				if (foreignKeys.length > 0) {
+					tooltip += `<span style="color: #3b82f6">FK: ${foreignKeys.join(', ')}</span><br>`;
+				}
 
-			tooltip += '<hr style="margin: 3px 0">';
-			tooltip += '<div style="max-height: 150px; overflow-y: auto">';
-			columns.forEach((col: any) => {
-				let colStr = `${col.name}: ${col.type}`;
-				tooltip += `<div>${colStr}</div>`;
-			});
-			tooltip += '</div>';
+				tooltip += '<hr style="margin: 3px 0">';
+				tooltip += '<div style="max-height: 150px; overflow-y: auto">';
+				columns.forEach((col: any) => {
+					let colStr = `${col.name}: ${col.type}`;
+					tooltip += `<div>${colStr}</div>`;
+				});
+				tooltip += '</div>';
 
-			tooltipEl.innerHTML = tooltip;
-			tooltipEl.style.display = 'block';
+				tooltipEl.innerHTML = tooltip;
+				tooltipEl.style.display = 'block';
 
-			positionTooltip(node);
+				positionTooltip(node);
 
-			if (tooltipTimeout.value !== null) {
-				clearTimeout(tooltipTimeout.value);
-				tooltipTimeout.value = null;
-			}
+				if (tooltipTimeout.value !== null) {
+					clearTimeout(tooltipTimeout.value);
+					tooltipTimeout.value = null;
+				}
+			}, 1500);
 		}
 	});
 
@@ -261,6 +264,11 @@ const initCytoscape = () => {
 	});
 
 	cy.value.on('mouseout', 'node', () => {
+		if (tooltipShowTimeout.value !== null) {
+			clearTimeout(tooltipShowTimeout.value);
+			tooltipShowTimeout.value = null;
+		}
+
 		tooltipTimeout.value = window.setTimeout(() => {
 			tooltipEl.style.display = 'none';
 		}, 300);
@@ -398,6 +406,11 @@ onUnmounted(() => {
 	if (tooltipTimeout.value !== null) {
 		clearTimeout(tooltipTimeout.value);
 		tooltipTimeout.value = null;
+	}
+
+	if (tooltipShowTimeout.value !== null) {
+		clearTimeout(tooltipShowTimeout.value);
+		tooltipShowTimeout.value = null;
 	}
 });
 </script>

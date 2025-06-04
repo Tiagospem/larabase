@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia';
-import { computed, ref, toRaw } from 'vue';
+import { computed, ref, toRaw, watch } from 'vue';
 import { useDatabaseStore } from '@/store/database';
 import { ModelInfo, ProjectConnection } from '@/types/project';
 import { useProjectStore } from '@/store/project';
@@ -16,14 +16,8 @@ export const useSidebarStore = defineStore('sidebar', () => {
 	const projectModels = ref<ModelInfo[]>([]);
 
 	const searchTerm = ref('');
-	const sortBy = ref(
-		localStorage.getItem(`tableSort-${connectionsStore.projectId}`) ||
-			'records'
-	);
-	const sortOrder = ref(
-		localStorage.getItem(`tableSortOrder-${connectionsStore.projectId}`) ||
-			'desc'
-	);
+	const sortBy = ref('records');
+	const sortOrder = ref('desc');
 
 	const localTables = computed(() => databaseStore.tablesList || []);
 	const isLoading = computed(() => {
@@ -58,6 +52,12 @@ export const useSidebarStore = defineStore('sidebar', () => {
 
 	function setSearchTerm(term: string) {
 		searchTerm.value = term;
+		if (connectionsStore.projectId) {
+			localStorage.setItem(
+				`tableSearch-${connectionsStore.projectId}`,
+				term
+			);
+		}
 	}
 
 	function setSortBy(value: string) {
@@ -65,20 +65,41 @@ export const useSidebarStore = defineStore('sidebar', () => {
 			toggleSortOrder();
 		} else {
 			sortBy.value = value;
-			localStorage.setItem(
-				`tableSort-${connectionsStore.projectId}`,
-				value
-			);
+			if (connectionsStore.projectId) {
+				localStorage.setItem(
+					`tableSort-${connectionsStore.projectId}`,
+					value
+				);
+			}
 		}
 	}
 
 	function toggleSortOrder() {
 		sortOrder.value = sortOrder.value === 'asc' ? 'desc' : 'asc';
-		localStorage.setItem(
-			`tableSortOrder-${connectionsStore.projectId}`,
-			sortOrder.value
-		);
+		if (connectionsStore.projectId) {
+			localStorage.setItem(
+				`tableSortOrder-${connectionsStore.projectId}`,
+				sortOrder.value
+			);
+		}
 	}
+
+	watch(
+		() => connectionsStore.projectId,
+		(newProjectId) => {
+			if (newProjectId) {
+				searchTerm.value =
+					localStorage.getItem(`tableSearch-${newProjectId}`) || '';
+				sortBy.value =
+					localStorage.getItem(`tableSort-${newProjectId}`) ||
+					'records';
+				sortOrder.value =
+					localStorage.getItem(`tableSortOrder-${newProjectId}`) ||
+					'desc';
+			}
+		},
+		{ immediate: true }
+	);
 
 	function formatRecordCount(count: number) {
 		if (count === null || count === undefined) return '0';

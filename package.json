@@ -1,6 +1,6 @@
 {
   "name": "larabase",
-  "version": "1.2.7",
+  "version": "1.2.8",
   "main": "dist-electron/main/index.js",
   "description": "An Opined Database GUI for Laravel Developers",
   "author": "Tiago Padilha <tiagospem@gmail.com>",
