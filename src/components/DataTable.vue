@@ -96,12 +96,14 @@ export default defineComponent({
 				(col) => col.width || props.initialColumnWidth
 			);
 
+			document.addEventListener('mousemove', handleMouseMove);
+			document.addEventListener('mouseup', stopResize);
+
 			if (!props.disableSelection) {
-				document.addEventListener('mousemove', handleMouseMove);
-				document.addEventListener('mouseup', stopResize);
 				document.addEventListener('mouseup', stopRowSelection);
 				document.addEventListener('keydown', handleKeyDown);
 			}
+
 			window.addEventListener('resize', handleWindowResize);
 
 			if (
@@ -115,9 +117,10 @@ export default defineComponent({
 		});
 
 		onBeforeUnmount(() => {
+			document.removeEventListener('mousemove', handleMouseMove);
+			document.removeEventListener('mouseup', stopResize);
+
 			if (!props.disableSelection) {
-				document.removeEventListener('mousemove', handleMouseMove);
-				document.removeEventListener('mouseup', stopResize);
 				document.removeEventListener('mouseup', stopRowSelection);
 				document.removeEventListener('keydown', handleKeyDown);
 			}
