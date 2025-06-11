@@ -251,6 +251,50 @@ async function safeEndConnection(connection?: PoolConnection): Promise<void> {
 	}
 }
 
+interface DatabaseRow extends RowDataPacket {
+	Database?: string;
+	database?: string;
+}
+
+async function listDatabases(
+	config: AppConnection
+): Promise<{ success: boolean; databases: string[]; message?: string }> {
+	let connection: PoolConnection;
+
+	try {
+		connection = await createConnection(config);
+
+		const [rows] = await connection.query<DatabaseRow[]>('SHOW DATABASES');
+		const databases = rows
+			.map((r: DatabaseRow) => r.Database || r.database)
+			.filter(
+				(db: string) =>
+					![
+						'information_schema',
+						'performance_schema',
+						'mysql',
+						'sys'
+					].includes(db)
+			);
+
+		return { success: true, databases };
+	} catch (err: any) {
+		let msg = err.message;
+		if (err.code === 'ER_ACCESS_DENIED_ERROR') {
+			msg = 'Access denied with the provided credentials';
+		} else if (err.code === 'ECONNREFUSED') {
+			msg = 'Connection refused - check host and port';
+		}
+		return {
+			success: false,
+			message: msg,
+			databases: []
+		};
+	} finally {
+		await safeEndConnection(connection);
+	}
+}
+
 export {
 	createConnection,
 	testConnection,
@@ -258,5 +302,6 @@ export {
 	closeAllPools,
 	releaseConnection,
 	safeEndConnection,
+	listDatabases,
 	ERROR_MESSAGES
 };

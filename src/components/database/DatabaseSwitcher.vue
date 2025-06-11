@@ -6,6 +6,7 @@ import { useSidebarStore } from '@/store/sidebar';
 import { useTabsStore } from '@/store/tabs';
 import { useProjectStore } from '@/store/project';
 import { AppConnection } from '@/types/ssh-connection';
+import { useDockMenu } from '@/composables/useDockMenu';
 
 const showAlert = inject<(message: string, type: string) => void>('showAlert')!;
 
@@ -13,6 +14,7 @@ const connectionStore = useConnectionsStore();
 const sidebarStore = useSidebarStore();
 const tabStore = useTabsStore();
 const projectStore = useProjectStore();
+const { updateDockMenuDatabases } = useDockMenu();
 
 const emit = defineEmits(['close']);
 
@@ -87,6 +89,12 @@ async function switchDatabase(databaseName: string, shouldUpdateEnv: boolean) {
 			await tabStore.closeAllTabs();
 
 			await sidebarStore.forceReloadDatabase(project.value);
+
+			await updateDockMenuDatabases(
+				availableDatabases.value,
+				databaseName,
+				projectDatabase.value || undefined
+			);
 		}
 	} catch (error: any) {
 		console.error(`Failed to switch database: ${error.message}`);
@@ -163,6 +171,12 @@ async function loadAvailableDatabases() {
 			if (project.value.projectPath) {
 				await checkProjectDatabase();
 			}
+
+			await updateDockMenuDatabases(
+				result.databases,
+				project.value.dbConfig?.database || '',
+				projectDatabase.value || undefined
+			);
 		} else {
 			showAlert(`Failed to load databases: ${result.message}`, 'error');
 			if (!hasExistingData) {

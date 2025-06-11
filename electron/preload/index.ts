@@ -323,6 +323,36 @@ contextBridge.exposeInMainWorld('ipcRenderer', {
 			ipcRenderer.invoke('git-status', projectPath),
 		initRepository: (projectPath: string) =>
 			ipcRenderer.invoke('git-init', projectPath)
+	},
+
+	/**
+	 * Dock Menu Operations
+	 */
+	dockMenu: {
+		setConnection: (
+			connectionId: string,
+			appConnection: AppConnection,
+			projectPath?: string
+		) =>
+			ipcRenderer.invoke(
+				'dock-menu:set-connection',
+				connectionId,
+				appConnection,
+				projectPath
+			),
+		clearConnection: () => ipcRenderer.invoke('dock-menu:clear-connection'),
+		updateDatabases: (
+			databases: string[],
+			currentDb: string,
+			projectDb?: string
+		) =>
+			ipcRenderer.invoke(
+				'dock-menu:update-databases',
+				databases,
+				currentDb,
+				projectDb
+			),
+		refresh: () => ipcRenderer.invoke('dock-menu:refresh')
 	}
 });
 
