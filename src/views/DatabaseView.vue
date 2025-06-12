@@ -23,10 +23,13 @@ import { useTabsStore } from '@/store/tabs';
 import { useSplitPane } from '@/composables/useSplitPane';
 import { ConnectionType } from '@/types/connection-types';
 import { AppConnection } from '@/types/ssh-connection';
+import { useDockMenu } from '@/composables/useDockMenu';
 
 const route = useRoute();
 const connectionsStore = useConnectionsStore();
 const tabsStore = useTabsStore();
+
+useDockMenu();
 
 const isContentReady = ref(false);
 const pendingMigrationsCount = ref(0);

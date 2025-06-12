@@ -2,15 +2,11 @@ import { ipcMain } from 'electron';
 import {
 	testConnection,
 	createConnection,
-	safeEndConnection
+	safeEndConnection,
+	listDatabases
 } from '../helpers/mysql';
 import { AppConnection } from '../../src/types/ssh-connection';
-import { PoolConnection, RowDataPacket } from 'mysql2/promise';
-
-interface DatabaseRow extends RowDataPacket {
-	Database?: string;
-	database?: string;
-}
+import { PoolConnection } from 'mysql2/promise';
 
 function registerMysqlHandlers() {
 	ipcMain.handle(
@@ -59,41 +55,7 @@ function registerMysqlHandlers() {
 	);
 
 	ipcMain.handle('list-databases', async (_, config: AppConnection) => {
-		let connection: PoolConnection;
-
-		try {
-			connection = await createConnection(config);
-
-			const [rows] =
-				await connection.query<DatabaseRow[]>('SHOW DATABASES');
-			const databases = rows
-				.map((r: DatabaseRow) => r.Database || r.database)
-				.filter(
-					(db: string) =>
-						![
-							'information_schema',
-							'performance_schema',
-							'mysql',
-							'sys'
-						].includes(db)
-				);
-
-			return { success: true, databases };
-		} catch (err) {
-			let msg = err.message;
-			if (err.code === 'ER_ACCESS_DENIED_ERROR') {
-				msg = 'Access denied with the provided credentials';
-			} else if (err.code === 'ECONNREFUSED') {
-				msg = 'Connection refused - check host and port';
-			}
-			return {
-				success: false,
-				message: msg,
-				databases: []
-			};
-		} finally {
-			await safeEndConnection(connection);
-		}
+		return await listDatabases(config);
 	});
 
 	ipcMain.handle(
