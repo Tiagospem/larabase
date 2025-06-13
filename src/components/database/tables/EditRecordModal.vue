@@ -1,10 +1,21 @@
 <script setup lang="ts">
-import { ref, watch, toRaw } from 'vue';
+import { ref, watch, toRaw, PropType } from 'vue';
 import Modal from '@/components/Modal.vue';
 import { useConnectionsStore } from '@/store/connections';
 import { useTableStructure } from '@/composables/useTableStructure';
 import UpdatePasswordModal from '@/components/database/tables/UpdatePasswordModal.vue';
 import { AppConnection } from '@/types/ssh-connection';
+
+interface TableColumn {
+	name: string;
+	type: string;
+	nullable: number;
+	default: string | null;
+	primary_key: number;
+	unique_key: number;
+	extra: string;
+	foreign_key: boolean;
+}
 
 const props = defineProps({
 	show: {
@@ -20,7 +31,7 @@ const props = defineProps({
 		required: true
 	},
 	tableStructure: {
-		type: Array,
+		type: Array as PropType<TableColumn[]>,
 		required: true
 	}
 });
@@ -29,6 +40,7 @@ const emit = defineEmits(['close', 'refresh']);
 
 const connectionStore = useConnectionsStore();
 const tableStructureHelper = useTableStructure();
+const rawTableStructure = ref<TableColumn[]>([]);
 
 const formData = ref<Record<string, any>>({});
 const isUpdating = ref(false);
@@ -44,11 +56,17 @@ watch(
 			Array.isArray(newStructure) &&
 			newStructure.length > 0
 		) {
+			rawTableStructure.value = newStructure;
 			tableStructureHelper.initializeWithStructure(newStructure);
 		}
 	},
 	{ immediate: true }
 );
+
+const isFieldNullable = (columnName: string): boolean => {
+	const column = rawTableStructure.value?.find((c) => c.name === columnName);
+	return column?.nullable === 1;
+};
 
 const isDateTimeColumn = (columnName: string): boolean => {
 	return tableStructureHelper.isDateTimeColumn(columnName);
@@ -112,10 +130,6 @@ const getInputType = (columnName: string): string => {
 	if (isDateTimeColumn(columnName)) {
 		const columnType = tableStructureHelper.getColumnType(columnName);
 		return columnType === 'date' ? 'date' : 'datetime-local';
-	}
-
-	if (isNumberColumn(columnName)) {
-		return 'number';
 	}
 
 	return 'text';
@@ -231,7 +245,7 @@ watch(
 							formData.value[column.name] === '0'
 						) {
 							formData.value[column.name] = false;
-						} else {
+						} else if (formData.value[column.name] !== null) {
 							formData.value[column.name] = Boolean(
 								formData.value[column.name]
 							);
@@ -282,21 +296,21 @@ const updateRecord = async () => {
 							);
 						}
 					}
-
 					delete processedFormData[`${column.name}_raw`];
-				}
-
-				if (isEnumColumn(column.name)) {
+				} else if (isEnumColumn(column.name)) {
 					if (
-						column.isNullable &&
-						processedFormData[column.name] === ''
+						processedFormData[column.name] === '' &&
+						isFieldNullable(column.name)
 					) {
 						processedFormData[column.name] = null;
 					}
-				}
-
-				if (isBooleanColumn(column.name)) {
-					if (typeof processedFormData[column.name] === 'boolean') {
+				} else if (isBooleanColumn(column.name)) {
+					if (processedFormData[column.name] === null) {
+						// Keep it null if it's null
+					} else if (
+						typeof processedFormData[column.name] === 'boolean'
+					) {
+						// Keep boolean value
 					} else if (
 						processedFormData[column.name] === '1' ||
 						processedFormData[column.name] === 1
@@ -312,12 +326,22 @@ const updateRecord = async () => {
 							processedFormData[column.name]
 						);
 					}
-				}
-
-				if (
-					column.isNullable &&
-					(processedFormData[column.name] === '' ||
-						processedFormData[column.name] === undefined)
+				} else if (
+					isNumberColumn(column.name) &&
+					processedFormData[column.name] !== null
+				) {
+					const value = processedFormData[column.name];
+					if (value === '') {
+						processedFormData[column.name] = null;
+					} else {
+						const numValue = Number(value);
+						processedFormData[column.name] = isNaN(numValue)
+							? null
+							: numValue;
+					}
+				} else if (
+					isFieldNullable(column.name) &&
+					processedFormData[column.name] === ''
 				) {
 					processedFormData[column.name] = null;
 				}
@@ -332,8 +356,7 @@ const updateRecord = async () => {
 						);
 					} catch (e) {
 						console.error(`Error serializing ${column.name}:`, e);
-
-						if (column.isNullable) {
+						if (isFieldNullable(column.name)) {
 							processedFormData[column.name] = null;
 						} else {
 							processedFormData[column.name] = String(
@@ -349,11 +372,9 @@ const updateRecord = async () => {
 			Object.entries(processedFormData)
 				.map(([key, value]) => {
 					if (key.endsWith('_raw')) return [null, null];
-
 					if (value instanceof Date) {
 						return [key, value.toISOString()];
 					}
-
 					if (value !== null && typeof value === 'object') {
 						try {
 							return [key, JSON.stringify(value)];
@@ -408,6 +429,10 @@ const handlePasswordModalClose = () => {
 
 const handlePasswordModalRefresh = () => {
 	emit('refresh');
+};
+
+const handleNullValue = (columnName: string) => {
+	formData.value[columnName] = null;
 };
 </script>
 
@@ -477,109 +502,142 @@ const handlePasswordModalRefresh = () => {
 						</template>
 
 						<template v-else-if="isJsonColumn(column.name)">
-							<textarea
-								v-model="formData[`${column.name}_raw`]"
-								class="textarea textarea-bordered w-full font-mono text-sm"
-								rows="5"
-								:placeholder="`Enter JSON for ${column.name}`"
-								@input="
-									(e) =>
-										handleJsonInput(
-											column.name,
-											(e.target as HTMLTextAreaElement)
-												.value
-										)
-								"
-							></textarea>
+							<div class="flex flex-col gap-2">
+								<div class="flex gap-2">
+									<textarea
+										v-model="formData[`${column.name}_raw`]"
+										class="textarea textarea-bordered w-full font-mono text-sm"
+										rows="5"
+										:placeholder="`Enter JSON for ${column.name}`"
+										@input="
+											(e) =>
+												handleJsonInput(
+													column.name,
+													(
+														e.target as HTMLTextAreaElement
+													).value
+												)
+										"
+									></textarea>
+								</div>
+							</div>
 						</template>
 
 						<template v-else-if="isTextColumn(column.name)">
-							<textarea
-								v-model="formData[column.name]"
-								class="textarea textarea-bordered w-full"
-								rows="4"
-								:placeholder="`Enter text for ${column.name}`"
-							></textarea>
+							<div class="flex gap-2">
+								<textarea
+									v-model="formData[column.name]"
+									class="textarea textarea-bordered w-full"
+									rows="4"
+									:placeholder="`Enter text for ${column.name}`"
+								></textarea>
+							</div>
 						</template>
 
 						<template v-else-if="isEnumColumn(column.name)">
-							<select
-								v-model="formData[column.name]"
-								class="select select-bordered w-full"
-							>
-								<option
-									v-if="column.isNullable"
-									value=""
+							<div class="flex gap-2">
+								<select
+									v-model="formData[column.name]"
+									class="select select-bordered input-sm w-full"
 								>
-									Select an option
-								</option>
-								<option
-									v-for="value in getEnumValues(column.name)"
-									:key="value"
-									:value="value"
-								>
-									{{ value }}
-								</option>
-							</select>
+									<option
+										v-if="isFieldNullable(column.name)"
+										value=""
+									>
+										NULL
+									</option>
+									<option
+										v-for="value in getEnumValues(
+											column.name
+										)"
+										:key="value"
+										:value="value"
+									>
+										{{ value }}
+									</option>
+								</select>
+							</div>
 						</template>
 
 						<template v-else-if="isBooleanColumn(column.name)">
-							<div class="mt-2 ml-2 flex items-center space-x-6">
-								<label
-									class="flex cursor-pointer items-center space-x-3"
-								>
-									<input
-										type="radio"
-										:name="`boolean-${column.name}`"
-										:checked="
-											formData[column.name] === true
-										"
-										@change="formData[column.name] = true"
-										class="radio radio-primary"
-									/>
-									<span class="text-sm">Yes</span>
-								</label>
+							<div class="flex gap-2">
+								<div class="flex-1">
+									<div
+										class="mt-2 ml-2 flex items-center space-x-6"
+									>
+										<label
+											class="flex cursor-pointer items-center space-x-3"
+										>
+											<input
+												type="radio"
+												:name="`boolean-${column.name}`"
+												:checked="
+													formData[column.name] ===
+													true
+												"
+												@change="
+													formData[column.name] = true
+												"
+												class="radio radio-primary"
+											/>
+											<span class="text-sm">Yes</span>
+										</label>
 
-								<label
-									class="flex cursor-pointer items-center space-x-3"
-								>
-									<input
-										type="radio"
-										:name="`boolean-${column.name}`"
-										:checked="
-											formData[column.name] === false
-										"
-										@change="formData[column.name] = false"
-										class="radio radio-primary"
-									/>
-									<span class="text-sm">No</span>
-								</label>
+										<label
+											class="flex cursor-pointer items-center space-x-3"
+										>
+											<input
+												type="radio"
+												:name="`boolean-${column.name}`"
+												:checked="
+													formData[column.name] ===
+													false
+												"
+												@change="
+													formData[column.name] =
+														false
+												"
+												class="radio radio-primary"
+											/>
+											<span class="text-sm">No</span>
+										</label>
+									</div>
+								</div>
 							</div>
 						</template>
 
 						<template v-else>
-							<input
-								v-model="formData[column.name]"
-								:type="getInputType(column.name)"
-								class="input input-bordered input-sm w-full"
-								:placeholder="`Enter ${column.name}`"
-								:disabled="column.isPrimaryKey"
-								:step="
-									isNumberColumn(column.name) &&
-									getInputType(column.name) === 'number'
-										? 'any'
-										: undefined
-								"
-							/>
+							<div class="flex gap-2">
+								<input
+									v-model="formData[column.name]"
+									:type="getInputType(column.name)"
+									class="input input-bordered input-sm w-full"
+									:placeholder="`Enter ${column.name}`"
+									:disabled="column.isPrimaryKey"
+								/>
+							</div>
 						</template>
 
 						<label
 							v-if="column.type"
 							class="label"
 						>
-							<span class="badge badge-sm badge-base-100">{{
-								column.type
-							}}</span>
+							<div class="flex items-center gap-2">
+								<span class="badge badge-xs badge-base-100">{{
+									column.type
+								}}</span>
+								<span
+									v-if="isFieldNullable(column.name)"
+									class="badge badge-xs badge-base-100"
+									>NULL</span
+								>
+								<span
+									v-if="isFieldNullable(column.name)"
+									class="badge badge-xs badge-base-100 cursor-pointer hover:bg-base-200"
+									@click="handleNullValue(column.name)"
+									>Set NULL</span
+								>
+							</div>
 						</label>
 					</fieldset>
 				</div>
