@@ -111,7 +111,7 @@
       "!**/node_modules/**/*.{md,markdown,MD,ts,test,tests,spec}"
     ],
     "asar": true,
-    "compression": "maximum",
+    "compression": "store",
     "artifactName": "${productName}-${version}-${os}-${arch}.${ext}",
     "publish": {
       "provider": "github",
