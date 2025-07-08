@@ -165,7 +165,7 @@ watchEffect(() => {
 			} catch (error) {
 				console.error('Error updating table counts:', error);
 			}
-		}, 500);
+		}, 1000);
 	}
 });
 </script>
@@ -469,10 +469,8 @@ watchEffect(() => {
 								v-if="!selectedProject?.isRemote"
 								class="badge badge-xs flex-shrink-0"
 								:class="{
-									'animate-pulse': table.isApproximate,
-									'badge-accent':
-										table.rowCount > 0 ||
-										table.isApproximate
+									hidden: table.isApproximate,
+									'badge-accent': table.rowCount > 0
 								}"
 							>
 								{{
