@@ -91,10 +91,7 @@ async function clearHistory() {
 		isLoading.value = true;
 		error.value = null;
 
-		const result = await window.ipcRenderer.invoke(
-			'clear-db-history',
-			projectId
-		);
+		const result = await window.ipcRenderer.clearDbHistory(projectId);
 
 		if (!result.success) {
 			error.value = result.message;
@@ -196,7 +193,7 @@ async function cleanupAndReset() {
 
 		const projectId = connectionsStore.projectId;
 		if (projectId) {
-			await window.ipcRenderer.invoke('stop-db-monitoring', projectId);
+			await window.ipcRenderer.stopDbMonitoring(projectId);
 		}
 
 		isMonitoring.value = false;

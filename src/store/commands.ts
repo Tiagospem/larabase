@@ -28,8 +28,7 @@ export const useCommandsStore = defineStore('commands', () => {
 		error.value = null;
 
 		try {
-			const result = await window.ipcRenderer.invoke(
-				'find-laravel-commands',
+			const result = await window.ipcRenderer.findLaravelCommands(
 				selectedProject.projectPath
 			);
 

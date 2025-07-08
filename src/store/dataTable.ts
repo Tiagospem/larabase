@@ -11,12 +11,13 @@ export interface TableRow {
 
 interface TableStructure {
 	name: string;
-	foreign_key?: boolean;
-	type?: string;
-	nullable?: boolean;
-	default?: string | null;
-	key?: string;
-	extra?: string;
+	type: string;
+	nullable: number;
+	default: string | null;
+	primary_key: number;
+	unique_key: number;
+	extra: string;
+	foreign_key: boolean;
 }
 
 export const useDataTableStore = (table: string) => {

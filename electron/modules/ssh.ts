@@ -109,26 +109,6 @@ function registerSshHandlers() {
 		}
 	});
 
-	ipcMain.handle(
-		'ssh:update-env',
-		async (_, config: SshConnection, content: string) => {
-			try {
-				const envPath = path.join(config.remotePath, '.env');
-				await writeRemoteFile(config, envPath, content);
-
-				return { success: true };
-			} catch (error) {
-				return {
-					success: false,
-					error:
-						error instanceof Error
-							? error.message
-							: 'Unknown error updating .env file'
-				};
-			}
-		}
-	);
-
 	ipcMain.handle('ssh:close-connection', (_, config: SshConnection) => {
 		closeConnection(config);
 		return { success: true };
@@ -255,35 +235,6 @@ function registerSshHandlers() {
 			}
 		}
 	);
-
-	ipcMain.handle(
-		'ssh:optimized-exists',
-		async (_, config: SshConnection, path: string) => {
-			try {
-				const command = `test -e "${path}" && echo "exists" || echo "not_exists"`;
-				const result = await optimizedSshManager.executeCommand(
-					config,
-					command
-				);
-
-				return {
-					success: true,
-					exists: result.stdout.trim() === 'exists'
-				};
-			} catch (error) {
-				return {
-					success: false,
-					exists: false,
-					error:
-						error instanceof Error ? error.message : 'Unknown error'
-				};
-			}
-		}
-	);
-
-	ipcMain.handle('ssh:connection-stats', () => {
-		return optimizedSshManager.getConnectionStats();
-	});
 }
 
 function parseLsOutput(output: string): any[] {

@@ -57,10 +57,7 @@ async function checkPendingMigrations() {
 			appConnection: AppConnection
 		};
 
-		const result = await window.ipcRenderer.invoke(
-			'get-migration-status',
-			config
-		);
+		const result = await window.ipcRenderer.getMigrationStatus(config);
 
 		if (result.success) {
 			pendingMigrationsCount.value = result.pendingMigrations.length;

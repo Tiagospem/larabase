@@ -285,15 +285,6 @@ function registerWindowHandlers() {
 		}
 	);
 
-	ipcMain.handle('close-connection-window', (_, connectionId) => {
-		const window = connectionWindows.get(connectionId);
-		if (window) {
-			window.close();
-			return true;
-		}
-		return false;
-	});
-
 	ipcMain.handle(
 		'open-sql-editor-window',
 		async (_, connectionId, isRemote) => {
@@ -321,23 +312,6 @@ function registerWindowHandlers() {
 			homeWindow.show();
 			homeWindow.focus();
 		}
-		return true;
-	});
-
-	ipcMain.handle('get-window-id', (event) => {
-		const win = BrowserWindow.fromWebContents(event.sender);
-		if (win === homeWindow) return 'home';
-
-		for (const [id, window] of Array.from(connectionWindows.entries())) {
-			if (window === win) return id;
-		}
-
-		return null;
-	});
-
-	ipcMain.handle('app-quit', async () => {
-		isQuitting = true;
-		app.quit();
 		return true;
 	});
 }

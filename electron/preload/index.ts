@@ -37,20 +37,13 @@ contextBridge.exposeInMainWorld('ipcRenderer', {
 		return ipcRenderer.removeAllListeners(channel);
 	},
 	/**
-	 * App Management
-	 */
-	quitApp: () => ipcRenderer.invoke('app-quit'),
-	/**
 	 * Window Management
 	 */
 	openConnectionWindow: (connectionId: string, isRemote: boolean) =>
 		ipcRenderer.invoke('open-connection-window', connectionId, isRemote),
-	closeConnectionWindow: (connectionId: string) =>
-		ipcRenderer.invoke('close-connection-window', connectionId),
 	openSqlEditorWindow: (connectionId: string, isRemote: boolean) =>
 		ipcRenderer.invoke('open-sql-editor-window', connectionId, isRemote),
 	showHomeWindow: () => ipcRenderer.invoke('show-home-window'),
-	getWindowId: () => ipcRenderer.invoke('get-window-id'),
 	/**
 	 * DB monitoring
 	 */
@@ -234,6 +227,8 @@ contextBridge.exposeInMainWorld('ipcRenderer', {
 	quitAndInstall: () => ipcRenderer.invoke('quit-and-install'),
 	getCurrentVersion: () => ipcRenderer.invoke('get-current-version'),
 	openExternal: (url: string) => ipcRenderer.invoke('open-external', url),
+	checkInternetConnection: () =>
+		ipcRenderer.invoke('check-internet-connection'),
 
 	/**
 	 * SSH Operations
@@ -249,10 +244,6 @@ contextBridge.exposeInMainWorld('ipcRenderer', {
 			ipcRenderer.invoke('ssh:write-file', config, filePath, content),
 		listFiles: (config: SshConnection, dirPath: string) =>
 			ipcRenderer.invoke('ssh:list-files', config, dirPath),
-		getEnv: (config: SshConnection) =>
-			ipcRenderer.invoke('ssh:get-env', config),
-		updateEnv: (config: SshConnection, content: string) =>
-			ipcRenderer.invoke('ssh:update-env', config, content),
 		closeConnection: (config: SshConnection) =>
 			ipcRenderer.invoke('ssh:close-connection', config),
 		createTunnel: (
@@ -284,30 +275,8 @@ contextBridge.exposeInMainWorld('ipcRenderer', {
 			filePath: string,
 			content: string
 		) =>
-			ipcRenderer.invoke(
-				'ssh:optimized-write',
-				config,
-				filePath,
-				content
-			),
-		optimizedExists: (config: SshConnection, path: string) =>
-			ipcRenderer.invoke('ssh:optimized-exists', config, path),
-		connectionStats: () => ipcRenderer.invoke('ssh:connection-stats')
+			ipcRenderer.invoke('ssh:optimized-write', config, filePath, content)
 	},
-
-	/**
-	 * SSH Tunneling
-	 */
-	findAvailablePort: (min: number, max: number) =>
-		ipcRenderer.invoke('find-available-port', { min, max }),
-	createSSHTunnel: (config: {
-		sshConfig: SshConnection;
-		localPort: number;
-		remoteHost: string;
-		remotePort: number;
-	}) => ipcRenderer.invoke('create-ssh-tunnel', config),
-	closeSSHTunnel: (tunnel: { server: unknown; connection: unknown }) =>
-		ipcRenderer.invoke('close-ssh-tunnel', tunnel),
 
 	/**
 	 * App Icon Badge

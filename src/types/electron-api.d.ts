@@ -8,6 +8,15 @@ interface IpcRendererAPI {
 	send(channel: string, ...args: any[]): void;
 	invoke(channel: string, ...args: any[]): Promise<any>;
 
+	// Update functions
+	checkForUpdates: () => Promise<any>;
+	downloadUpdate: () => Promise<any>;
+	quitAndInstall: () => Promise<any>;
+	getCurrentVersion: () => Promise<string>;
+	openExternal: (url: string) => Promise<void>;
+	checkInternetConnection: () => Promise<boolean>;
+	onUpdateStatus: (callback: Function) => () => void;
+
 	git: {
 		getStatus: (projectPath: string) => Promise<{
 			isGitInstalled: boolean;
@@ -52,18 +61,6 @@ interface IpcRendererAPI {
 		) => Promise<{
 			success: boolean;
 			files?: any[];
-			error?: string;
-		}>;
-		getEnv: (config: SshConnection) => Promise<{
-			success: boolean;
-			content?: string;
-			error?: string;
-		}>;
-		updateEnv: (
-			config: SshConnection,
-			content: string
-		) => Promise<{
-			success: boolean;
 			error?: string;
 		}>;
 		closeConnection: (
