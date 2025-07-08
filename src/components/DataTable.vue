@@ -91,9 +91,59 @@ export default defineComponent({
 		const selectionStartRow = ref<number | null>(null);
 		const selectionStartId = ref<string | number | null>(null);
 
+		const saveColumnWidth = (
+			tableName: string,
+			columnField: string,
+			width: number
+		) => {
+			try {
+				const key = `dataTable_${tableName}_${columnField}_width`;
+				localStorage.setItem(key, width.toString());
+			} catch (error) {
+				console.error(
+					'Error saving column width to localStorage:',
+					error
+				);
+			}
+		};
+
+		const loadColumnWidth = (
+			tableName: string,
+			columnField: string,
+			defaultWidth: number
+		): number => {
+			try {
+				const key = `dataTable_${tableName}_${columnField}_width`;
+				const savedWidth = localStorage.getItem(key);
+				if (savedWidth) {
+					const width = parseInt(savedWidth, 10);
+					return isNaN(width)
+						? defaultWidth
+						: Math.max(props.minColumnWidth, width);
+				}
+			} catch (error) {
+				console.error(
+					'Error loading column width from localStorage:',
+					error
+				);
+			}
+			return defaultWidth;
+		};
+
+		const loadColumnWidths = (
+			tableName: string,
+			columns: TableColumn[]
+		): number[] => {
+			return columns.map((column) => {
+				const defaultWidth = column.width || props.initialColumnWidth;
+				return loadColumnWidth(tableName, column.field, defaultWidth);
+			});
+		};
+
 		onMounted(() => {
-			columnWidths.value = props.columns.map(
-				(col) => col.width || props.initialColumnWidth
+			columnWidths.value = loadColumnWidths(
+				props.tableName,
+				props.columns
 			);
 
 			document.addEventListener('mousemove', handleMouseMove);
@@ -157,6 +207,15 @@ export default defineComponent({
 		};
 
 		const stopResize = () => {
+			if (resizingColumnIndex.value !== null) {
+				const columnIndex = resizingColumnIndex.value;
+				const column = props.columns[columnIndex];
+				const width = columnWidths.value[columnIndex];
+
+				if (column && width) {
+					saveColumnWidth(props.tableName, column.field, width);
+				}
+			}
 			resizingColumnIndex.value = null;
 		};
 
@@ -315,8 +374,9 @@ export default defineComponent({
 		watch(
 			() => props.columns,
 			(newColumns) => {
-				columnWidths.value = newColumns.map(
-					(col) => col.width || props.initialColumnWidth
+				columnWidths.value = loadColumnWidths(
+					props.tableName,
+					newColumns
 				);
 			}
 		);
