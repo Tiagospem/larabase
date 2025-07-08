@@ -9,7 +9,7 @@ jobs:
 
         strategy:
             matrix:
-                os: [macos-latest, ubuntu-latest, windows-latest]
+                os: [macos-13, ubuntu-latest, windows-latest]
 
         steps:
             - name: Check out Git repository
@@ -42,13 +42,13 @@ jobs:
                   GH_TOKEN: ${{ secrets.GH_TOKEN }}
 
             - name: 🍎 Release Mac Intel
-              if: matrix.os == 'macos-latest'
+              if: matrix.os == 'macos-13'
               run: npm run publish:mac-intel
               env:
                   GH_TOKEN: ${{ secrets.GH_TOKEN }}
 
             - name: 🍎 Release Mac Apple Silicon
-              if: matrix.os == 'macos-latest'
+              if: matrix.os == 'macos-13'
               run: npm run publish:mac-apple
               env:
                   GH_TOKEN: ${{ secrets.GH_TOKEN }}
