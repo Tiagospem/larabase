@@ -57,7 +57,7 @@ async function checkInternetConnection(): Promise<boolean> {
 			request.end();
 		});
 	} catch (error) {
-		console.log(`No internet connection: `, error)
+		console.log(`No internet connection: `, error);
 		return false;
 	}
 }
@@ -250,7 +250,7 @@ async function checkForUpdatesWithConnectivity() {
 	try {
 		await autoUpdater.checkForUpdates();
 	} catch (error) {
-		console.log(`No internet connection: `, error)
+		console.log(`No internet connection: `, error);
 	}
 }
 
