@@ -697,7 +697,7 @@ async function updateRecordHandler(_: unknown, config: UpdateTableRecord) {
 
 		const tableNameEsc = connection.escapeId(tableName);
 
-		const { id: _, ...updateData } = data;
+		const updateData = { ...data };
 
 		if (Object.keys(updateData).length === 0) {
 			return { success: true, message: 'No fields to update' };

@@ -396,7 +396,7 @@ const updateRecord = async () => {
 			appConnection: AppConnection,
 			tableName: props.tableName,
 			data: cleanData,
-			id: processedFormData.id
+			id: props.record.id
 		});
 
 		if (response.success) {
@@ -613,7 +613,6 @@ const handleNullValue = (columnName: string) => {
 									:type="getInputType(column.name)"
 									class="input input-bordered input-sm w-full"
 									:placeholder="`Enter ${column.name}`"
-									:disabled="column.isPrimaryKey"
 								/>
 							</div>
 						</template>
