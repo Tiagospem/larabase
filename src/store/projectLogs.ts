@@ -87,7 +87,7 @@ export const useProjectLogsStore = defineStore('projectLogs', () => {
 			entries.push(currentEntry);
 		}
 
-		return entries.filter((entry) => {
+		const filteredEntries = entries.filter((entry) => {
 			const matchesType = logType === 'ALL' || entry.level === logType;
 			const matchesSearch =
 				!searchTerm ||
@@ -100,6 +100,8 @@ export const useProjectLogsStore = defineStore('projectLogs', () => {
 
 			return matchesType && matchesSearch;
 		});
+
+		return filteredEntries.reverse();
 	}
 
 	function setError(err: unknown, defaultMessage: string): void {

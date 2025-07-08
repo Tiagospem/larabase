@@ -1113,7 +1113,7 @@ function registerProjectHandlers(mainWindow: Electron.BrowserWindow) {
 
 				return {
 					success: true,
-					entries: filteredEntries
+					entries: filteredEntries.reverse()
 				};
 			} catch (error) {
 				console.error('Error reading log file:', error);
