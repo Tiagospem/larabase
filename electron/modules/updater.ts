@@ -4,6 +4,7 @@ const { autoUpdater } = pkg;
 import fs from 'fs';
 import { download } from 'electron-dl';
 import path from 'path';
+import { net } from 'electron';
 
 const CONFIG = {
 	updateCheckIntervalMs: 3600000,
@@ -18,6 +19,48 @@ let mainWindow: BrowserWindow;
 let updateCheckInterval: NodeJS.Timeout | null = null;
 let globalUpdateInfo: any;
 let downloadedUpdateFilePath: string | null = null;
+
+async function checkInternetConnection(): Promise<boolean> {
+	try {
+		const request = net.request({
+			method: 'HEAD',
+			url: 'https://www.google.com'
+		});
+
+		return new Promise((resolve) => {
+			let resolved = false;
+
+			const timeout = setTimeout(() => {
+				if (!resolved) {
+					resolved = true;
+					request.abort();
+					resolve(false);
+				}
+			}, 5000);
+
+			request.on('response', () => {
+				if (!resolved) {
+					resolved = true;
+					clearTimeout(timeout);
+					resolve(true);
+				}
+			});
+
+			request.on('error', () => {
+				if (!resolved) {
+					resolved = true;
+					clearTimeout(timeout);
+					resolve(false);
+				}
+			});
+
+			request.end();
+		});
+	} catch (error) {
+		console.log(`No internet connection: `, error)
+		return false;
+	}
+}
 
 function setupAutoUpdater() {
 	if (isDev && !CONFIG.debugMode) return;
@@ -128,7 +171,8 @@ function handleDownloadUpdate() {
 				await shell.openPath(fullPath);
 				setTimeout(() => app.quit(), 300);
 			} else {
-				let downloadUrl;
+				let downloadUrl: string;
+
 				if (dmg.url.startsWith('http')) {
 					downloadUrl = dmg.url;
 				} else {
@@ -195,15 +239,30 @@ function sendStatusToWindow(status: string, data: any = null) {
 	mainWindow?.webContents.send('update-status', { status, data });
 }
 
+async function checkForUpdatesWithConnectivity() {
+	if (isDev && !CONFIG.debugMode) return;
+
+	const hasConnection = await checkInternetConnection();
+	if (!hasConnection) {
+		return;
+	}
+
+	try {
+		await autoUpdater.checkForUpdates();
+	} catch (error) {
+		console.log(`No internet connection: `, error)
+	}
+}
+
 function setupAutoUpdateCheck() {
 	if (isDev && !CONFIG.debugMode) return;
 
 	setTimeout(
-		() => autoUpdater.checkForUpdates().catch(() => {}),
+		() => checkForUpdatesWithConnectivity(),
 		CONFIG.initialCheckDelayMs
 	);
 	updateCheckInterval = setInterval(
-		() => autoUpdater.checkForUpdates().catch(() => {}),
+		() => checkForUpdatesWithConnectivity(),
 		CONFIG.updateCheckIntervalMs
 	);
 }
@@ -246,7 +305,7 @@ export function registerUpdaterHandlers(window: BrowserWindow) {
 				);
 
 				await shell.openPath(item.path);
-				setTimeout(() => app.quit(), 300);
+				setTimeout(() => app.quit(), CONFIG.quitDelayMs);
 			},
 			showBadge: true,
 			directory: app.getPath('downloads')
@@ -272,6 +331,12 @@ export function registerUpdaterHandlers(window: BrowserWindow) {
 
 	ipcMain.handle('check-for-updates', async () => {
 		if (isDev && !CONFIG.debugMode) return { updateAvailable: false };
+
+		const hasConnection = await checkInternetConnection();
+		if (!hasConnection) {
+			return { updateAvailable: false, error: 'No internet connection' };
+		}
+
 		try {
 			return await autoUpdater.checkForUpdates();
 		} catch (e: any) {
@@ -282,6 +347,12 @@ export function registerUpdaterHandlers(window: BrowserWindow) {
 	ipcMain.handle('download-update', async () => {
 		if (isDev && !CONFIG.debugMode)
 			return { success: false, skipped: true };
+
+		const hasConnection = await checkInternetConnection();
+		if (!hasConnection) {
+			return { success: false, error: 'No internet connection' };
+		}
+
 		handleDownloadUpdate();
 		return { success: true };
 	});
@@ -353,6 +424,10 @@ export function registerUpdaterHandlers(window: BrowserWindow) {
 	ipcMain.handle('open-external', (evt, url: string) =>
 		shell.openExternal(url)
 	);
+
+	ipcMain.handle('check-internet-connection', async () => {
+		return await checkInternetConnection();
+	});
 
 	if (!isDev || CONFIG.debugMode) {
 		setupAutoUpdateCheck();

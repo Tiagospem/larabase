@@ -305,7 +305,23 @@ function formatDate(dateString: string | undefined) {
 	});
 }
 
+async function checkInternetConnection(): Promise<boolean> {
+	if (window.ipcRenderer) {
+		try {
+			return await window.ipcRenderer.checkInternetConnection();
+		} catch (error) {
+			return false;
+		}
+	}
+	return navigator.onLine;
+}
+
 async function checkForUpdates() {
+	const hasConnection = await checkInternetConnection();
+	if (!hasConnection) {
+		return;
+	}
+
 	if (window.ipcRenderer && window.ipcRenderer.checkForUpdates) {
 		await window.ipcRenderer.checkForUpdates();
 	}
@@ -313,6 +329,12 @@ async function checkForUpdates() {
 
 async function downloadUpdate() {
 	try {
+		const hasConnection = await checkInternetConnection();
+		if (!hasConnection) {
+			updateError.value = 'No internet connection available';
+			return;
+		}
+
 		originalUpdateInfo.value = { ...updateInfo.value };
 
 		updateError.value = '';
