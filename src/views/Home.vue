@@ -10,7 +10,8 @@ import Settings from '@/components/Settings.vue';
 import { ConnectionType } from '@/types/connection-types';
 import RemoteBadge from '@/components/ui/RemoteBadge.vue';
 
-const router = useRouter();
+useRouter();
+
 const connectionsStore = useConnectionsStore();
 
 const restoreDatabase = ref<InstanceType<typeof RestoreDatabase> | null>(null);
