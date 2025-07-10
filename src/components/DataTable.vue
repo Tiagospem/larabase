@@ -93,7 +93,9 @@ export default defineComponent({
 		const selectionStartId = ref<string | number | null>(null);
 
 		const isColumnModalOpen = ref<boolean>(false);
-		const visibleColumns = ref<string[]>(props.columns.map(col => col.field));
+		const visibleColumns = ref<string[]>(
+			props.columns.map((col) => col.field)
+		);
 
 		const saveColumnWidth = (
 			tableName: string,
@@ -144,16 +146,25 @@ export default defineComponent({
 			});
 		};
 
-		const saveColumnVisibility = (tableName: string, visibleCols: string[]) => {
+		const saveColumnVisibility = (
+			tableName: string,
+			visibleCols: string[]
+		) => {
 			try {
 				const key = `dataTable_${tableName}_visibleColumns`;
 				localStorage.setItem(key, JSON.stringify(visibleCols));
 			} catch (error) {
-				console.error('Error saving column visibility to localStorage:', error);
+				console.error(
+					'Error saving column visibility to localStorage:',
+					error
+				);
 			}
 		};
 
-		const loadColumnVisibility = (tableName: string, columns: TableColumn[]): string[] => {
+		const loadColumnVisibility = (
+			tableName: string,
+			columns: TableColumn[]
+		): string[] => {
 			try {
 				const key = `dataTable_${tableName}_visibleColumns`;
 				const savedVisibility = localStorage.getItem(key);
@@ -164,9 +175,12 @@ export default defineComponent({
 					}
 				}
 			} catch (error) {
-				console.error('Error loading column visibility from localStorage:', error);
+				console.error(
+					'Error loading column visibility from localStorage:',
+					error
+				);
 			}
-			return columns.map(col => col.field);
+			return columns.map((col) => col.field);
 		};
 
 		onMounted(() => {
@@ -409,18 +423,18 @@ export default defineComponent({
 		};
 
 		const clearColumnFilters = () => {
-			visibleColumns.value = props.columns.map(col => col.field);
+			visibleColumns.value = props.columns.map((col) => col.field);
 			saveColumnVisibility(props.tableName, visibleColumns.value);
 		};
 
 		const filteredColumns = computed(() => {
-			return props.columns.filter(column => 
+			return props.columns.filter((column) =>
 				visibleColumns.value.includes(column.field)
 			);
 		});
 
 		const filteredColumnWidths = computed(() => {
-			return columnWidths.value.filter((_, index) => 
+			return columnWidths.value.filter((_, index) =>
 				visibleColumns.value.includes(props.columns[index].field)
 			);
 		});
@@ -534,9 +548,21 @@ export default defineComponent({
 										stroke-linecap="round"
 										stroke-linejoin="round"
 									>
-										<circle cx="12" cy="12" r="1" />
-										<circle cx="12" cy="5" r="1" />
-										<circle cx="12" cy="19" r="1" />
+										<circle
+											cx="12"
+											cy="12"
+											r="1"
+										/>
+										<circle
+											cx="12"
+											cy="5"
+											r="1"
+										/>
+										<circle
+											cx="12"
+											cy="19"
+											r="1"
+										/>
 									</svg>
 								</button>
 							</div>
@@ -579,7 +605,14 @@ export default defineComponent({
 							</div>
 							<div
 								class="hover:bg-primary group absolute top-0 right-0 bottom-0 w-1 cursor-col-resize bg-transparent"
-								@mousedown="startResize($event, props.columns.findIndex(col => col.field === column.field))"
+								@mousedown="
+									startResize(
+										$event,
+										props.columns.findIndex(
+											(col) => col.field === column.field
+										)
+									)
+								"
 							>
 								<div
 									class="group-hover:bg-primary-focus h-full w-1 opacity-0 group-hover:opacity-100"
@@ -704,7 +737,7 @@ export default defineComponent({
 				</tbody>
 			</table>
 		</div>
-		
+
 		<ColumnVisibilityModal
 			:columns="columns"
 			:visible-columns="visibleColumns"

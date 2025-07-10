@@ -122,7 +122,8 @@ function close() {
 							class="input input-bordered w-full"
 						/>
 						<p class="label">
-							Enter the OpenAI model name (e.g., gpt-4o, gpt-4, gpt-3.5-turbo)
+							Enter the OpenAI model name (e.g., gpt-4o, gpt-4,
+							gpt-3.5-turbo)
 						</p>
 					</fieldset>
 				</div>
@@ -158,7 +159,8 @@ function close() {
 							class="input input-bordered w-full"
 						/>
 						<p class="label">
-							Enter the Gemini model name (e.g., gemini-2.0-flash, gemini-2.5-pro-preview-03-25)
+							Enter the Gemini model name (e.g., gemini-2.0-flash,
+							gemini-2.5-pro-preview-03-25)
 						</p>
 					</fieldset>
 				</div>

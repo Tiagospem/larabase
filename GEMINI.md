@@ -62,13 +62,13 @@ This section provides guidance for contributing to the Larabase project.
 The project follows a strict coding style enforced by Prettier and ESLint.
 
 - **Formatting**: Code is automatically formatted using Prettier. Key style points include:
-  - Single quotes are used for strings.
-  - Lines have a maximum width of 80 characters.
-  - Tabs are used for indentation, with a width of 4 spaces.
-  - Trailing commas are not used.
-  - Brackets have spaces around them.
-  - Each attribute is on a single line.
-  - Semicolons are required at the end of statements.
+    - Single quotes are used for strings.
+    - Lines have a maximum width of 80 characters.
+    - Tabs are used for indentation, with a width of 4 spaces.
+    - Trailing commas are not used.
+    - Brackets have spaces around them.
+    - Each attribute is on a single line.
+    - Semicolons are required at the end of statements.
 - **Linting**: ESLint is used to catch code quality issues. The configuration is based on `eslint:recommended` and includes plugins for TypeScript, Vue, and unused imports.
 
 Before committing any code, please run the following commands to ensure your code adheres to the project's style:
@@ -93,14 +93,14 @@ The format is as follows:
 ```
 
 - **type**: Must be one of the following:
-  - `feat`: A new feature
-  - `fix`: A bug fix
-  - `docs`: Documentation only changes
-  - `style`: Changes that do not affect the meaning of the code (white-space, formatting, missing semi-colons, etc)
-  - `refactor`: A code change that neither fixes a bug nor adds a feature
-  - `perf`: A code change that improves performance
-  - `test`: Adding missing tests or correcting existing tests
-  - `chore`: Changes to the build process or auxiliary tools and libraries such as documentation generation
+    - `feat`: A new feature
+    - `fix`: A bug fix
+    - `docs`: Documentation only changes
+    - `style`: Changes that do not affect the meaning of the code (white-space, formatting, missing semi-colons, etc)
+    - `refactor`: A code change that neither fixes a bug nor adds a feature
+    - `perf`: A code change that improves performance
+    - `test`: Adding missing tests or correcting existing tests
+    - `chore`: Changes to the build process or auxiliary tools and libraries such as documentation generation
 - **scope**: An optional, parenthesized scope to provide additional contextual information.
 - **description**: A short, imperative-tense description of the change.
 

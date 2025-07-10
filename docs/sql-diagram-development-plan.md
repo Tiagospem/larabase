@@ -404,12 +404,10 @@ function closeSqlDiagramModal() {
 ### Technical Risks
 
 1. **SQL Parser Limitations**
-
     - Risk: `node-sql-parser` may not support all SQL dialects
     - Mitigation: Implement fallback mechanisms and clear error messages
 
 2. **Performance with Large Queries**
-
     - Risk: Complex queries may cause UI lag
     - Mitigation: Implement query complexity limits and progressive loading
 
@@ -420,7 +418,6 @@ function closeSqlDiagramModal() {
 ### Integration Risks
 
 1. **Monaco Editor Compatibility**
-
     - Risk: Context menu integration may conflict with existing features
     - Mitigation: Thorough testing with existing SQL editor functionality
 
@@ -431,7 +428,6 @@ function closeSqlDiagramModal() {
 ### User Experience Risks
 
 1. **Learning Curve**
-
     - Risk: Users may not understand diagram visualization
     - Mitigation: Provide clear documentation and intuitive UI design
 
