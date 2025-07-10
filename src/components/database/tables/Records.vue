@@ -95,6 +95,12 @@ const handleRefresh = () => {
 	dataTableStore.getTableData(props.tableName);
 };
 
+const handleTruncateRefresh = () => {
+	// Reset selected rows when table is truncated
+	dataTableStore.selectedRows = [];
+	handleRefresh();
+};
+
 const openColumnModal = () => {
 	if (dataTableRef.value) {
 		dataTableRef.value.openColumnModal();
@@ -142,7 +148,7 @@ const openColumnModal = () => {
 			</button>
 			<RefreshButton @refresh="handleRefresh" />
 			<TruncateButton
-				@refresh="handleRefresh"
+				@refresh="handleTruncateRefresh"
 				:table-name="props.tableName"
 			/>
 			<DeleteButton
