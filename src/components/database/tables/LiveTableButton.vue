@@ -35,7 +35,7 @@ function startHotReload() {
 
 	hotReloadInterval.value = setInterval(() => {
 		emit('refresh');
-	}, 3000);
+	}, 2000);
 }
 
 onMounted(() => {

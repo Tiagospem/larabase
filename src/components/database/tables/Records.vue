@@ -11,7 +11,7 @@ import FilterButton from '@/components/database/tables/FilterButton.vue';
 import TableSkeleton from '@/components/database/tables/TableSkeleton.vue';
 import { useForeignKeyNavigation } from '@/composables/useForeignKeyNavigation';
 import EditRecordModal from '@/components/database/tables/EditRecordModal.vue';
-import RecordPreviewModal from '@/components/database/tables/RecordPreviewModal.vue';
+//import RecordPreviewModal from '@/components/database/tables/RecordPreviewModal.vue';
 
 const props = defineProps<{ tableName: string }>();
 
@@ -22,8 +22,9 @@ const dataTableStore = useDataTableStore(props.tableName);
 const { navigateToForeignKey } = useForeignKeyNavigation();
 
 const showEditModal = ref(false);
-const showPreviewModal = ref(false);
+//const showPreviewModal = ref(false);
 const selectedRecord = ref<any>(null);
+const dataTableRef = ref<any>(null);
 
 type TableFilterDetail = {
 	tableName: string;
@@ -72,10 +73,10 @@ const handleRowSelected = (selectedIds: (string | number)[]) => {
 	dataTableStore.selectedRows = selectedIds;
 };
 
-const handleRowPreview = (row: any) => {
-	selectedRecord.value = row;
-	showPreviewModal.value = true;
-};
+// const handleRowPreview = (row: any) => {
+// 	selectedRecord.value = row;
+// 	showPreviewModal.value = true;
+// };
 
 const handleRowDoubleClick = (row: any) => {
 	selectedRecord.value = row;
@@ -93,6 +94,12 @@ const handleSort = (field: string) => {
 const handleRefresh = () => {
 	dataTableStore.getTableData(props.tableName);
 };
+
+const openColumnModal = () => {
+	if (dataTableRef.value) {
+		dataTableRef.value.openColumnModal();
+	}
+};
 </script>
 
 <template>
@@ -100,6 +107,39 @@ const handleRefresh = () => {
 		class="bg-base-200 border-b-base-300 flex flex-wrap items-center justify-between gap-2 border-b p-2"
 	>
 		<div class="flex flex-wrap items-center gap-0.5">
+			<button
+				class="btn btn-xs btn-ghost"
+				@click="openColumnModal"
+				title="Column visibility"
+			>
+				<svg
+					xmlns="http://www.w3.org/2000/svg"
+					width="14"
+					height="14"
+					viewBox="0 0 24 24"
+					fill="none"
+					stroke="currentColor"
+					stroke-width="2"
+					stroke-linecap="round"
+					stroke-linejoin="round"
+				>
+					<circle
+						cx="12"
+						cy="12"
+						r="1"
+					/>
+					<circle
+						cx="12"
+						cy="5"
+						r="1"
+					/>
+					<circle
+						cx="12"
+						cy="19"
+						r="1"
+					/>
+				</svg>
+			</button>
 			<RefreshButton @refresh="handleRefresh" />
 			<TruncateButton
 				@refresh="handleRefresh"
@@ -123,6 +163,7 @@ const handleRefresh = () => {
 	<TableSkeleton v-if="dataTableStore.isFirstLoad" />
 
 	<DataTable
+		ref="dataTableRef"
 		:foreign-key-columns="dataTableStore.foreignKeyColumns"
 		:is-loading="dataTableStore.isFirstLoad"
 		:columns="dataTableStore.columns"
@@ -132,7 +173,6 @@ const handleRefresh = () => {
 		:table-name="props.tableName"
 		:table-structure-data="dataTableStore.tableStructure"
 		@row-selected="handleRowSelected"
-		@row-preview="handleRowPreview"
 		@row-dblclick="handleRowDoubleClick"
 		@sort="handleSort"
 		@navigate-to-foreign-key="handleForeignKeyNavigation"
@@ -150,12 +190,12 @@ const handleRefresh = () => {
 		@refresh="handleRefresh"
 	/>
 
-	<RecordPreviewModal
-		v-if="showPreviewModal"
-		:show="showPreviewModal"
-		:record="selectedRecord"
-		:table-name="props.tableName"
-		:table-structure="dataTableStore.tableStructure"
-		@close="showPreviewModal = false"
-	/>
+	<!--	<RecordPreviewModal-->
+	<!--		v-if="showPreviewModal"-->
+	<!--		:show="showPreviewModal"-->
+	<!--		:record="selectedRecord"-->
+	<!--		:table-name="props.tableName"-->
+	<!--		:table-structure="dataTableStore.tableStructure"-->
+	<!--		@close="showPreviewModal = false"-->
+	<!--	/>-->
 </template>

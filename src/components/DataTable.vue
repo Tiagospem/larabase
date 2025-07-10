@@ -72,7 +72,6 @@ export default defineComponent({
 	},
 	emits: [
 		'row-selected',
-		'row-preview',
 		'row-dblclick',
 		'selected-action',
 		'sort',
@@ -397,10 +396,6 @@ export default defineComponent({
 			emit('row-dblclick', row);
 		};
 
-		const previewRow = (row: TableRow) => {
-			emit('row-preview', row);
-		};
-
 		const handleActionOnSelected = () => {
 			emit('selected-action', selectedRows.value);
 		};
@@ -487,7 +482,6 @@ export default defineComponent({
 			hasSelection,
 			toggleSelectAll,
 			handleRowDoubleClick,
-			previewRow,
 			handleActionOnSelected,
 			handleSort,
 			startResize,
@@ -514,60 +508,9 @@ export default defineComponent({
 		ref="tableContainerRef"
 	>
 		<div class="relative h-full flex-1 overflow-auto">
-			<table
-				class="table-pin-rows table-compact table w-full text-sm"
-				:class="{ 'table-pin-cols': !props.disableSelection }"
-			>
+			<table class="table-pin-rows table-compact table w-full text-sm">
 				<thead class="bg-base-100 sticky top-0 z-10 shadow-md">
 					<tr>
-						<th
-							v-if="!props.disableSelection"
-							class="bg-base-100 sticky left-0 z-20 w-20 shadow-md"
-						>
-							<div class="flex items-center justify-between">
-								<input
-									type="checkbox"
-									class="checkbox checkbox-xs"
-									:checked="isAllSelected"
-									:disabled="data.length === 0"
-									@change="toggleSelectAll"
-								/>
-								<button
-									class="btn btn-xs btn-ghost btn-circle"
-									@click="openColumnModal"
-									title="Column visibility"
-								>
-									<svg
-										xmlns="http://www.w3.org/2000/svg"
-										width="12"
-										height="12"
-										viewBox="0 0 24 24"
-										fill="none"
-										stroke="currentColor"
-										stroke-width="2"
-										stroke-linecap="round"
-										stroke-linejoin="round"
-									>
-										<circle
-											cx="12"
-											cy="12"
-											r="1"
-										/>
-										<circle
-											cx="12"
-											cy="5"
-											r="1"
-										/>
-										<circle
-											cx="12"
-											cy="19"
-											r="1"
-										/>
-									</svg>
-								</button>
-							</div>
-						</th>
-
 						<th
 							v-for="(column, index) in filteredColumns"
 							:key="column.field"
@@ -644,43 +587,6 @@ export default defineComponent({
 							!props.disableSelection && handleRowDoubleClick(row)
 						"
 					>
-						<td
-							v-if="!props.disableSelection"
-							class="sticky left-0 z-10 shadow-md"
-							:class="{
-								'bg-opacity-10 bg-accent text-base-100':
-									isRowSelected(row.id),
-								'bg-base-100 group-hover:bg-base-200':
-									!isRowSelected(row.id)
-							}"
-						>
-							<button
-								class="btn btn-xs btn-ghost btn-circle"
-								@click.stop="previewRow(row)"
-							>
-								<svg
-									xmlns="http://www.w3.org/2000/svg"
-									width="14"
-									height="14"
-									viewBox="0 0 24 24"
-									fill="none"
-									stroke="currentColor"
-									stroke-width="2"
-									stroke-linecap="round"
-									stroke-linejoin="round"
-								>
-									<path
-										d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"
-									/>
-									<circle
-										cx="12"
-										cy="12"
-										r="3"
-									/>
-								</svg>
-							</button>
-						</td>
-
 						<td
 							v-for="(column, colIndex) in filteredColumns"
 							:key="`${colIndex}-${rowIndex}-${column.field}`"
@@ -763,17 +669,6 @@ export default defineComponent({
 	position: sticky;
 	top: 0;
 	z-index: 10;
-}
-
-.table-pin-cols th:first-child,
-.table-pin-cols td:first-child {
-	position: sticky;
-	left: 0;
-	z-index: 1;
-}
-
-.table-pin-cols th:first-child {
-	z-index: 20;
 }
 
 .data-table-container > div.relative {
