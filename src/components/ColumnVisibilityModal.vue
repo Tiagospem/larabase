@@ -1,5 +1,13 @@
 <script lang="ts">
-import { defineComponent, PropType, ref, computed, watch } from 'vue';
+import {
+	defineComponent,
+	PropType,
+	ref,
+	computed,
+	watch,
+	nextTick,
+	triggerRef
+} from 'vue';
 import { TableColumn } from '@/types/table';
 
 export default defineComponent({
@@ -20,19 +28,12 @@ export default defineComponent({
 	},
 	emits: ['close', 'update:visibleColumns', 'clear-filters'],
 	setup(props, { emit }) {
-		const localVisibleColumns = ref<string[]>(
-			props.visibleColumns.length > 0
-				? [...props.visibleColumns]
-				: props.columns.map((col) => col.field)
-		);
+		const localVisibleColumns = ref<string[]>([...props.visibleColumns]);
 
 		watch(
 			() => props.visibleColumns,
 			(newVisibleColumns) => {
-				localVisibleColumns.value =
-					newVisibleColumns.length > 0
-						? [...newVisibleColumns]
-						: props.columns.map((col) => col.field);
+				localVisibleColumns.value = [...newVisibleColumns];
 			},
 			{ deep: true }
 		);
@@ -65,6 +66,12 @@ export default defineComponent({
 			return localVisibleColumns.value.length === props.columns.length;
 		});
 
+		const toggleAllText = computed(() => {
+			return allColumnsVisible.value ? 'Remove All' : 'Select All';
+		});
+
+		const forceUpdateKey = ref(0);
+
 		const toggleAllColumns = () => {
 			if (allColumnsVisible.value) {
 				localVisibleColumns.value = [];
@@ -73,6 +80,10 @@ export default defineComponent({
 					(col) => col.field
 				);
 			}
+
+			triggerRef(localVisibleColumns);
+			forceUpdateKey.value++;
+
 			emit('update:visibleColumns', localVisibleColumns.value);
 		};
 
@@ -83,7 +94,9 @@ export default defineComponent({
 			clearFilters,
 			closeModal,
 			allColumnsVisible,
-			toggleAllColumns
+			toggleAllColumns,
+			toggleAllText,
+			forceUpdateKey
 		};
 	}
 });
@@ -119,17 +132,24 @@ export default defineComponent({
 			</div>
 
 			<!-- Select All Section - Fixed -->
-			<div class="mb-4 flex-shrink-0">
+			<div class="flex-shrink-0">
 				<div class="form-control">
-					<label class="label cursor-pointer justify-between px-0">
-						<input
-							type="checkbox"
-							class="checkbox checkbox-primary checkbox-xs"
-							:checked="allColumnsVisible"
-							@change="toggleAllColumns"
-						/>
-						<span class="label-text font-semibold">Select All</span>
-					</label>
+					<div
+						class="w-full justify-between cursor-pointer"
+						@click="toggleAllColumns"
+					>
+						<span class="flex items-center gap-2">
+							<input
+								type="checkbox"
+								class="checkbox checkbox-primary checkbox-xs pointer-events-none"
+								:checked="allColumnsVisible"
+								readonly
+							/>
+							<span class="label-text font-semibold">{{
+								toggleAllText
+							}}</span>
+						</span>
+					</div>
 				</div>
 			</div>
 
@@ -137,10 +157,10 @@ export default defineComponent({
 
 			<!-- Scrollable Column List -->
 			<div class="flex-1 overflow-y-auto min-h-0">
-				<div>
+				<div :key="forceUpdateKey">
 					<div
 						v-for="column in columns"
-						:key="column.field"
+						:key="`${column.field}-${forceUpdateKey}`"
 						class="form-control"
 					>
 						<label
