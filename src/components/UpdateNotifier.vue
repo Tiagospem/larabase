@@ -122,12 +122,12 @@ onMounted(async () => {
 										downloading.value = false;
 										showModal.value = true;
 									} else if (data.status === 'update-error') {
-										updateAvailable.value = true;
-										updateError.value =
-											data.data?.message ||
-											'Error updating application';
-										downloading.value = false;
-										showModal.value = true;
+										if (downloading.value) {
+											updateError.value =
+												data.data?.message ||
+												'Error updating application';
+											downloading.value = false;
+										}
 									}
 								}
 							);
