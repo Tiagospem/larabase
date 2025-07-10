@@ -115,14 +115,15 @@ function close() {
 						<label class="label">
 							<span class="label-text">AI Model</span>
 						</label>
-						<select
+						<input
 							v-model="settingsStore.settings.openai.model"
-							class="select select-bordered w-full"
-						>
-							<option value="gpt-3.5-turbo">GPT-3.5 Turbo</option>
-							<option value="gpt-4">GPT-4</option>
-							<option value="gpt-4-turbo">GPT-4 Turbo</option>
-						</select>
+							type="text"
+							placeholder="e.g., gpt-4o, gpt-4, gpt-3.5-turbo"
+							class="input input-bordered w-full"
+						/>
+						<p class="label">
+							Enter the OpenAI model name (e.g., gpt-4o, gpt-4, gpt-3.5-turbo)
+						</p>
 					</fieldset>
 				</div>
 			</div>
@@ -150,20 +151,15 @@ function close() {
 						<label class="label">
 							<span class="label-text">AI Model</span>
 						</label>
-						<select
+						<input
 							v-model="settingsStore.settings.gemini.model"
-							class="select select-bordered w-full"
-						>
-							<option value="gemini-2.5-pro-preview-03-25">
-								Gemini 2.5 Pro (Preview)
-							</option>
-							<option value="gemini-2.0-flash">
-								Gemini 2.0 Flash
-							</option>
-							<option value="gemini-2.0-flash-lite">
-								Gemini 2.0 Flash-Lite
-							</option>
-						</select>
+							type="text"
+							placeholder="e.g., gemini-2.0-flash, gemini-2.5-pro-preview-03-25"
+							class="input input-bordered w-full"
+						/>
+						<p class="label">
+							Enter the Gemini model name (e.g., gemini-2.0-flash, gemini-2.5-pro-preview-03-25)
+						</p>
 					</fieldset>
 				</div>
 			</div>
