@@ -12,6 +12,7 @@ import {
 import { TableColumn } from '@/types/table';
 import SortIcon from '@/components/database/tables/SortIcon.vue';
 import { useTableStructure } from '@/composables/useTableStructure';
+import ColumnVisibilityModal from '@/components/ColumnVisibilityModal.vue';
 
 interface TableRow {
 	id: string | number;
@@ -20,7 +21,7 @@ interface TableRow {
 
 export default defineComponent({
 	name: 'DataTable',
-	components: { SortIcon },
+	components: { SortIcon, ColumnVisibilityModal },
 	props: {
 		columns: {
 			type: Array as PropType<TableColumn[]>,
@@ -91,6 +92,9 @@ export default defineComponent({
 		const selectionStartRow = ref<number | null>(null);
 		const selectionStartId = ref<string | number | null>(null);
 
+		const isColumnModalOpen = ref<boolean>(false);
+		const visibleColumns = ref<string[]>(props.columns.map(col => col.field));
+
 		const saveColumnWidth = (
 			tableName: string,
 			columnField: string,
@@ -140,8 +144,37 @@ export default defineComponent({
 			});
 		};
 
+		const saveColumnVisibility = (tableName: string, visibleCols: string[]) => {
+			try {
+				const key = `dataTable_${tableName}_visibleColumns`;
+				localStorage.setItem(key, JSON.stringify(visibleCols));
+			} catch (error) {
+				console.error('Error saving column visibility to localStorage:', error);
+			}
+		};
+
+		const loadColumnVisibility = (tableName: string, columns: TableColumn[]): string[] => {
+			try {
+				const key = `dataTable_${tableName}_visibleColumns`;
+				const savedVisibility = localStorage.getItem(key);
+				if (savedVisibility) {
+					const parsed = JSON.parse(savedVisibility);
+					if (Array.isArray(parsed) && parsed.length > 0) {
+						return parsed;
+					}
+				}
+			} catch (error) {
+				console.error('Error loading column visibility from localStorage:', error);
+			}
+			return columns.map(col => col.field);
+		};
+
 		onMounted(() => {
 			columnWidths.value = loadColumnWidths(
+				props.tableName,
+				props.columns
+			);
+			visibleColumns.value = loadColumnVisibility(
 				props.tableName,
 				props.columns
 			);
@@ -362,6 +395,36 @@ export default defineComponent({
 			emit('sort', field);
 		};
 
+		const openColumnModal = () => {
+			isColumnModalOpen.value = true;
+		};
+
+		const closeColumnModal = () => {
+			isColumnModalOpen.value = false;
+		};
+
+		const updateVisibleColumns = (newVisibleColumns: string[]) => {
+			visibleColumns.value = newVisibleColumns;
+			saveColumnVisibility(props.tableName, newVisibleColumns);
+		};
+
+		const clearColumnFilters = () => {
+			visibleColumns.value = props.columns.map(col => col.field);
+			saveColumnVisibility(props.tableName, visibleColumns.value);
+		};
+
+		const filteredColumns = computed(() => {
+			return props.columns.filter(column => 
+				visibleColumns.value.includes(column.field)
+			);
+		});
+
+		const filteredColumnWidths = computed(() => {
+			return columnWidths.value.filter((_, index) => 
+				visibleColumns.value.includes(props.columns[index].field)
+			);
+		});
+
 		watch(
 			() => props.data,
 			() => {
@@ -375,6 +438,10 @@ export default defineComponent({
 			() => props.columns,
 			(newColumns) => {
 				columnWidths.value = loadColumnWidths(
+					props.tableName,
+					newColumns
+				);
+				visibleColumns.value = loadColumnVisibility(
 					props.tableName,
 					newColumns
 				);
@@ -412,6 +479,14 @@ export default defineComponent({
 			startResize,
 			handleWindowResize,
 			formatCellValue,
+			isColumnModalOpen,
+			visibleColumns,
+			openColumnModal,
+			closeColumnModal,
+			updateVisibleColumns,
+			clearColumnFilters,
+			filteredColumns,
+			filteredColumnWidths,
 			props
 		};
 	}
@@ -433,25 +508,48 @@ export default defineComponent({
 					<tr>
 						<th
 							v-if="!props.disableSelection"
-							class="bg-base-100 sticky left-0 z-20 w-12 shadow-md"
+							class="bg-base-100 sticky left-0 z-20 w-20 shadow-md"
 						>
-							<input
-								type="checkbox"
-								class="checkbox checkbox-xs"
-								:checked="isAllSelected"
-								:disabled="data.length === 0"
-								@change="toggleSelectAll"
-							/>
+							<div class="flex items-center justify-between">
+								<input
+									type="checkbox"
+									class="checkbox checkbox-xs"
+									:checked="isAllSelected"
+									:disabled="data.length === 0"
+									@change="toggleSelectAll"
+								/>
+								<button
+									class="btn btn-xs btn-ghost btn-circle"
+									@click="openColumnModal"
+									title="Column visibility"
+								>
+									<svg
+										xmlns="http://www.w3.org/2000/svg"
+										width="12"
+										height="12"
+										viewBox="0 0 24 24"
+										fill="none"
+										stroke="currentColor"
+										stroke-width="2"
+										stroke-linecap="round"
+										stroke-linejoin="round"
+									>
+										<circle cx="12" cy="12" r="1" />
+										<circle cx="12" cy="5" r="1" />
+										<circle cx="12" cy="19" r="1" />
+									</svg>
+								</button>
+							</div>
 						</th>
 
 						<th
-							v-for="(column, index) in columns"
+							v-for="(column, index) in filteredColumns"
 							:key="column.field"
 							class="group relative overflow-hidden whitespace-nowrap"
 							:style="{
-								minWidth: `${columnWidths[index]}px`,
-								width: `${columnWidths[index]}px`,
-								maxWidth: `${columnWidths[index]}px`
+								minWidth: `${filteredColumnWidths[index]}px`,
+								width: `${filteredColumnWidths[index]}px`,
+								maxWidth: `${filteredColumnWidths[index]}px`
 							}"
 						>
 							<div
@@ -481,7 +579,7 @@ export default defineComponent({
 							</div>
 							<div
 								class="hover:bg-primary group absolute top-0 right-0 bottom-0 w-1 cursor-col-resize bg-transparent"
-								@mousedown="startResize($event, index)"
+								@mousedown="startResize($event, props.columns.findIndex(col => col.field === column.field))"
 							>
 								<div
 									class="group-hover:bg-primary-focus h-full w-1 opacity-0 group-hover:opacity-100"
@@ -551,12 +649,12 @@ export default defineComponent({
 						</td>
 
 						<td
-							v-for="(column, colIndex) in columns"
+							v-for="(column, colIndex) in filteredColumns"
 							:key="`${colIndex}-${rowIndex}-${column.field}`"
 							class="z-10 overflow-hidden p-1 whitespace-nowrap"
 							:style="{
-								maxWidth: `${columnWidths[colIndex]}px`,
-								width: `${columnWidths[colIndex]}px`
+								maxWidth: `${filteredColumnWidths[colIndex]}px`,
+								width: `${filteredColumnWidths[colIndex]}px`
 							}"
 						>
 							<div
@@ -606,6 +704,15 @@ export default defineComponent({
 				</tbody>
 			</table>
 		</div>
+		
+		<ColumnVisibilityModal
+			:columns="columns"
+			:visible-columns="visibleColumns"
+			:is-open="isColumnModalOpen"
+			@close="closeColumnModal"
+			@update:visible-columns="updateVisibleColumns"
+			@clear-filters="clearColumnFilters"
+		/>
 	</div>
 </template>
 

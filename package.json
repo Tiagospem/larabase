@@ -1,6 +1,6 @@
 {
   "name": "larabase",
-  "version": "1.3.1",
+  "version": "1.3.2",
   "main": "dist-electron/main/index.js",
   "description": "An Opined Database GUI for Laravel Developers",
   "author": "Tiago Padilha <tiagospem@gmail.com>",
@@ -111,7 +111,7 @@
       "!**/node_modules/**/*.{md,markdown,MD,ts,test,tests,spec}"
     ],
     "asar": true,
-    "compression": "store",
+    "compression": "maximum",
     "artifactName": "${productName}-${version}-${os}-${arch}.${ext}",
     "publish": {
       "provider": "github",
